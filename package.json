@@ -12,7 +12,8 @@
     "cli": "bun run src/cli.ts",
     "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
     "matrix:start": "bun run src/interfaces/matrix.ts",
-    "start": "pm2 start src/interfaces/matrix.ts --interpreter bun-run --name personal-brain",
+    "matrix:logout": "bun run src/interfaces/matrix-logout.ts",
+    "start": "pm2 start src/interfaces/matrix.ts --interpreter $(which bun) --name personal-brain",
     "stop": "pm2 stop personal-brain",
     "restart": "pm2 restart personal-brain || npm run start"
   },
