@@ -1,0 +1,36 @@
+{
+  "name": "personal-brain",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "typecheck": "tsc --noEmit",
+    "dev": "bun run src/index.ts",
+    "import": "bun run src/import.ts",
+    "delete": "bun run src/delete.ts",
+    "cli": "bun run src/cli.ts",
+    "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
+    "matrix:start": "bun run src/interfaces/matrix.ts",
+    "start": "pm2 start src/interfaces/matrix.ts --interpreter bun-run --name personal-brain",
+    "stop": "pm2 stop personal-brain",
+    "restart": "pm2 restart personal-brain || npm run start"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "drizzle-kit": "^0.30.5",
+    "pm2": "^5.3.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^0.2.48",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "drizzle-orm": "^0.40.1",
+    "drizzle-zod": "^0.7.0",
+    "matrix-js-sdk": "^37.1.0",
+    "nanoid": "^5.1.4",
+    "zod": "^3.24.2"
+  }
+}

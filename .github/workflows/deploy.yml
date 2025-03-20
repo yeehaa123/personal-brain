@@ -1,0 +1,60 @@
+name: Deploy Bot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          
+      - name: Deploy to server
+        env:
+          MATRIX_HOMESERVER_URL: ${{ secrets.MATRIX_HOMESERVER_URL }}
+          MATRIX_USER_ID: ${{ secrets.MATRIX_USER_ID }}
+          MATRIX_ACCESS_TOKEN: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          MATRIX_ROOM_IDS: ${{ secrets.MATRIX_ROOM_IDS }}
+          COMMAND_PREFIX: ${{ secrets.COMMAND_PREFIX }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            # Create project directory if it doesn't exist
+            mkdir -p ${{ secrets.PROJECT_PATH }}
+            
+            # Check if repository already exists
+            if [ -d \"${{ secrets.PROJECT_PATH }}/.git\" ]; then
+              cd ${{ secrets.PROJECT_PATH }}
+              git pull
+            else
+              # First time clone
+              git clone https://github.com/${{ github.repository }} ${{ secrets.PROJECT_PATH }}
+              cd ${{ secrets.PROJECT_PATH }}
+            fi
+            
+            # Install dependencies
+            bun install
+            
+            # Create .env file with secrets
+            cat > .env << 'EOL'
+            MATRIX_HOMESERVER_URL=\"${{ secrets.MATRIX_HOMESERVER_URL }}\"
+            MATRIX_USER_ID=\"${{ secrets.MATRIX_USER_ID }}\"
+            MATRIX_ACCESS_TOKEN=\"${{ secrets.MATRIX_ACCESS_TOKEN }}\"
+            MATRIX_ROOM_IDS=\"${{ secrets.MATRIX_ROOM_IDS }}\"
+            COMMAND_PREFIX=\"${{ secrets.COMMAND_PREFIX }}\"
+            ANTHROPIC_API_KEY=\"${{ secrets.ANTHROPIC_API_KEY }}\"
+            EOL
+            
+            # Set up database if needed
+            bun run db:generate
+            bun run db:migrate
+            
+            # Restart the bot
+            bun run restart
+          "
