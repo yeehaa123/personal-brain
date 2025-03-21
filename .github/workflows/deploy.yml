@@ -75,23 +75,14 @@ jobs:
             bun run db:generate
             bun run db:migrate
             
-            # Restart the bot
-            echo \"Running restart command...\"
+            # Print working directory for debugging
+            echo \"Working directory: $(pwd)\"
             
-            # Ensure node_modules/.bin is in PATH
-            export PATH="$PATH:$(pwd)/node_modules/.bin"
-            echo \"PATH: $PATH\"
+            # List files to ensure we have the right content
+            echo \"Files in directory:\"
+            ls -la
             
-            # Delete any stale processes
-            if [ -f \"$(pwd)/node_modules/.bin/pm2\" ]; then
-              echo \"Cleaning up any existing processes...\"
-              ./node_modules/.bin/pm2 delete personal-brain 2>/dev/null || true
-            fi
-            
-            # Start the application using the package.json script
+            # Directly start the application - simple approach
             echo \"Starting personal-brain...\"
             bun run start
-            
-            # Show running processes
-            ./node_modules/.bin/pm2 list
           "
