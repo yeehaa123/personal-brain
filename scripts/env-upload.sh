@@ -66,6 +66,14 @@ while IFS= read -r line || [ -n "$line" ]; do
   upload_if_needed "$KEY" "$VALUE"
 done < .env
 
+# Check if SSH key exists and add it
+if [ -f ~/.ssh/id_ed25519 ]; then
+  echo "Adding SSH private key to GitHub secrets..."
+  upload_if_needed "SSH_PRIVATE_KEY" "$(cat ~/.ssh/id_ed25519)"
+else
+  echo "No SSH key found at ~/.ssh/id_ed25519"
+fi
+
 # Clean up
 rm -f "$TEMP_FILE"
 
