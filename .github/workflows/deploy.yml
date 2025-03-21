@@ -41,8 +41,12 @@ jobs:
               cd /opt/personal-brain
             fi
             
-            # Install Bun if not already installed
+            # Install prerequisites and Bun if not already installed
             if ! command -v bun &> /dev/null; then
+              echo \"Installing prerequisites for Bun...\"
+              sudo apt-get update
+              sudo apt-get install -y unzip
+              
               echo \"Installing Bun...\"
               curl -fsSL https://bun.sh/install | bash
               export BUN_INSTALL=\"\$HOME/.bun\"
