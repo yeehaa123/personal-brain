@@ -10,11 +10,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       
-      - name: Set up SSH
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-          
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY_BASE64 }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+      
       - name: Deploy to server
         env:
           MATRIX_HOMESERVER_URL: ${{ secrets.MATRIX_HOMESERVER_URL }}
@@ -24,28 +26,28 @@ jobs:
           COMMAND_PREFIX: ${{ secrets.COMMAND_PREFIX }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
             # Create project directory if it doesn't exist
-            mkdir -p ${{ secrets.PROJECT_PATH }}
+            mkdir -p /opt/personal-brain
             
             # Check if repository already exists
-            if [ -d \"${{ secrets.PROJECT_PATH }}/.git\" ]; then
-              cd ${{ secrets.PROJECT_PATH }}
+            if [ -d \"/opt/personal-brain/.git\" ]; then
+              cd /opt/personal-brain
               git pull
             else
               # First time clone
-              git clone https://github.com/${{ github.repository }} ${{ secrets.PROJECT_PATH }}
-              cd ${{ secrets.PROJECT_PATH }}
+              git clone https://github.com/${{ github.repository }} /opt/personal-brain
+              cd /opt/personal-brain
             fi
             
             # Install Bun if not already installed
             if ! command -v bun &> /dev/null; then
-              echo "Installing Bun..."
+              echo \"Installing Bun...\"
               curl -fsSL https://bun.sh/install | bash
-              export BUN_INSTALL="$HOME/.bun"
-              export PATH="$BUN_INSTALL/bin:$PATH"
+              export BUN_INSTALL=\"\$HOME/.bun\"
+              export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
             else
-              echo "Bun is already installed"
+              echo \"Bun is already installed\"
             fi
             
             # Install dependencies
@@ -53,12 +55,12 @@ jobs:
             
             # Create .env file with secrets
             cat > .env << 'EOL'
-            MATRIX_HOMESERVER_URL=\"${{ secrets.MATRIX_HOMESERVER_URL }}\"
-            MATRIX_USER_ID=\"${{ secrets.MATRIX_USER_ID }}\"
-            MATRIX_ACCESS_TOKEN=\"${{ secrets.MATRIX_ACCESS_TOKEN }}\"
-            MATRIX_ROOM_IDS=\"${{ secrets.MATRIX_ROOM_IDS }}\"
-            COMMAND_PREFIX=\"${{ secrets.COMMAND_PREFIX }}\"
-            ANTHROPIC_API_KEY=\"${{ secrets.ANTHROPIC_API_KEY }}\"
+            MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
+            MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}
+            MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}
+            MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}
+            COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             EOL
             
             # Set up database if needed
