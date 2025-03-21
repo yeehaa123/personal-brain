@@ -58,6 +58,9 @@ jobs:
             # Install dependencies
             bun install
             
+            # No need to install PM2 globally as it's in package.json
+            # It will be installed with bun install
+            
             # Create .env file with secrets
             cat > .env << 'EOL'
             MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
@@ -73,5 +76,22 @@ jobs:
             bun run db:migrate
             
             # Restart the bot
-            bun run restart
+            echo \"Running restart command...\"
+            
+            # Ensure node_modules/.bin is in PATH
+            export PATH="$PATH:$(pwd)/node_modules/.bin"
+            echo \"PATH: $PATH\"
+            
+            # Delete any stale processes
+            if [ -f \"$(pwd)/node_modules/.bin/pm2\" ]; then
+              echo \"Cleaning up any existing processes...\"
+              ./node_modules/.bin/pm2 delete personal-brain 2>/dev/null || true
+            fi
+            
+            # Start the application using the package.json script
+            echo \"Starting personal-brain...\"
+            bun run start
+            
+            # Show running processes
+            ./node_modules/.bin/pm2 list
           "
