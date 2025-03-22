@@ -76,7 +76,7 @@ jobs:
             bun run db:migrate
             
             # Generate embeddings for all notes
-            echo "Generating embeddings for all notes..."
+            echo \"Generating embeddings for all notes...\"
             bun run db:embeddings
             
             # Print working directory for debugging
