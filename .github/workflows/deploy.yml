@@ -49,19 +49,18 @@ jobs:
               
               echo \"Installing Bun...\"
               curl -fsSL https://bun.sh/install | bash
-              export BUN_INSTALL=\"\$HOME/.bun\"
-              export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
-            else
-              echo \"Bun is already installed\"
             fi
             
-            # Install dependencies
-            bun install
+            # Add Bun to PATH for this session
+            echo \"Setting up Bun in PATH...\"
+            export BUN_INSTALL=\"\$HOME/.bun\"
+            export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
             
-            # No need to install PM2 globally as it's in package.json
-            # It will be installed with bun install
+            # Check Bun is available
+            echo \"Bun version: \$(bun --version)\"
             
             # Create .env file with secrets
+            echo \"Creating .env file...\"
             echo "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}" > .env
             echo "MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}" >> .env
             echo "MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}" >> .env
@@ -69,13 +68,18 @@ jobs:
             echo "COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}" >> .env
             echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
             
+            # Install dependencies
+            echo \"Installing dependencies...\"
+            $HOME/.bun/bin/bun install
+            
             # Set up database if needed
-            bun run db:generate
-            bun run db:migrate
+            echo \"Running database migrations...\"
+            $HOME/.bun/bin/bun run db:generate
+            $HOME/.bun/bin/bun run db:migrate
             
             # Generate embeddings for all notes
             echo \"Generating embeddings for all notes...\"
-            bun run db:embeddings
+            $HOME/.bun/bin/bun run db:embeddings
             
             # Print working directory for debugging
             echo \"Working directory: $(pwd)\"
@@ -86,5 +90,5 @@ jobs:
             
             # Directly start the application - simple approach
             echo \"Starting personal-brain...\"
-            bun run start
+            $HOME/.bun/bin/bun run start
           "
