@@ -62,11 +62,12 @@ jobs:
             # It will be installed with bun install
             
             # Create .env file directly with environment variables
-            cat > .env << 'EOL'
-            MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
-            MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}
-            MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}
-            MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}
+            cat > .env << EOL
+            MATRIX_HOMESERVER_URL=${MATRIX_HOMESERVER_URL}
+            MATRIX_USER_ID=${MATRIX_USER_ID}
+            MATRIX_ACCESS_TOKEN=${MATRIX_ACCESS_TOKEN}
+            MATRIX_ROOM_IDS=${MATRIX_ROOM_IDS}
+            COMMAND_PREFIX=${COMMAND_PREFIX}
             EOL
             
             # Print number of lines in .env to verify
