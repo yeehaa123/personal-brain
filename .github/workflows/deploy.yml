@@ -60,26 +60,25 @@ jobs:
             echo \"Bun version: \$(bun --version)\"
             
             # Create .env file with secrets
-            echo \"Creating .env file...\"
-            echo "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}" > .env
-            echo "MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}" >> .env
-            echo "MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}" >> .env
-            echo "MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}" >> .env
-            echo "COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}" >> .env
-            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
+            cat > .env << 'EOL'
+            MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
+            MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}
+            MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}
+            MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}
+            COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            EOL
             
             # Install dependencies
-            echo \"Installing dependencies...\"
-            $HOME/.bun/bin/bun install
+            bun install
             
             # Set up database if needed
-            echo \"Running database migrations...\"
-            $HOME/.bun/bin/bun run db:generate
-            $HOME/.bun/bin/bun run db:migrate
+            bun run db:generate
+            bun run db:migrate
             
             # Generate embeddings for all notes
             echo \"Generating embeddings for all notes...\"
-            $HOME/.bun/bin/bun run db:embeddings
+            bun run db:embeddings
             
             # Print working directory for debugging
             echo \"Working directory: $(pwd)\"
@@ -90,5 +89,5 @@ jobs:
             
             # Directly start the application - simple approach
             echo \"Starting personal-brain...\"
-            $HOME/.bun/bin/bun run start
+            bun run start
           "
