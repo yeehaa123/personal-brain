@@ -49,31 +49,27 @@ jobs:
               
               echo \"Installing Bun...\"
               curl -fsSL https://bun.sh/install | bash
+              export BUN_INSTALL=\"\$HOME/.bun\"
+              export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
+            else
+              echo \"Bun is already installed\"
             fi
-            
-            # Add Bun to PATH for this session
-            echo \"Setting up Bun in PATH...\"
-            export BUN_INSTALL=\"\$HOME/.bun\"
-            export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
-            
-            # Check Bun is available
-            echo \"Bun version: \$(bun --version)\"
-            
-            # Create .env file with simplified approach
-            echo "Creating .env file with required variables"
-            echo "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}" > .env
-            echo "MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}" >> .env
-            echo "MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}" >> .env
-            echo "MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}" >> .env
-            echo "COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}" >> .env
-            echo "ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" >> .env
-            
-            # Verify .env file was created
-            echo "Verifying .env file was created:"
-            ls -la .env
             
             # Install dependencies
             bun install
+            
+            # No need to install PM2 globally as it's in package.json
+            # It will be installed with bun install
+            
+            # Create .env file with secrets
+            cat > .env << 'EOL'
+            MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
+            MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}
+            MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}
+            MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}
+            COMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}
+            ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+            EOL
             
             # Set up database if needed
             bun run db:generate
