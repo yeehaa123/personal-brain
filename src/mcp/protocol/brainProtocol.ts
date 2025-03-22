@@ -22,7 +22,7 @@ export class BrainProtocol {
   
   constructor(apiKey?: string) {
     this.model = new ClaudeModel(apiKey);
-    this.context = new NoteContext();
+    this.context = new NoteContext(apiKey);
   }
   
   /**
@@ -79,11 +79,12 @@ export class BrainProtocol {
     
     console.log(`Query: "${cleanQuery}", Tags: [${tags.join(', ')}]`);
     
-    // Try the search with both query and tags
+    // Use semantic search by default for better results
     let results = await this.context.searchNotes({
       query: cleanQuery,
       tags: tags.length > 0 ? tags : undefined,
-      limit: 5
+      limit: 5,
+      semanticSearch: true
     });
     
     // If no results and we have tags, try with just tags
@@ -91,25 +92,20 @@ export class BrainProtocol {
       console.log('No results with query and tags, trying tags only');
       results = await this.context.searchNotes({
         tags,
-        limit: 5
+        limit: 5,
+        semanticSearch: false // Tags only doesn't benefit from semantic search
       });
     }
     
-    // If still no results, try with a simplified query
-    if (results.length === 0 && cleanQuery.split(' ').length > 1) {
-      console.log('No results, trying with simplified query');
-      // Take the most significant words (remove common words)
-      const significantWords = cleanQuery
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(word => word.length > 3 && !['what', 'who', 'how', 'when', 'where', 'why', 'is', 'are', 'the', 'a', 'an'].includes(word));
-      
-      if (significantWords.length > 0) {
-        results = await this.context.searchNotes({
-          query: significantWords.join(' '),
-          limit: 5
-        });
-      }
+    // If still no results, fall back to keyword search
+    if (results.length === 0) {
+      console.log('No results with semantic search, trying keyword search');
+      results = await this.context.searchNotes({
+        query: cleanQuery,
+        tags: tags.length > 0 ? tags : undefined,
+        limit: 5,
+        semanticSearch: false
+      });
     }
     
     // If no matches, return all notes as a fallback (limited to 3)
@@ -138,8 +134,12 @@ export class BrainProtocol {
       };
       citations.push(citation);
       
-      // Add the context block
-      contextText += `\n\nCONTEXT [${index + 1}]:\nTitle: ${note.title}\n${note.content}\n`;
+      // Add the context block with tags if available
+      const tagInfo = note.tags && note.tags.length > 0 
+        ? `Tags: ${note.tags.join(', ')}\n` 
+        : '';
+      
+      contextText += `\n\nCONTEXT [${index + 1}]:\nTitle: ${note.title}\n${tagInfo}${note.content}\n`;
     });
     
     // Format the final prompt with context and query
@@ -169,11 +169,17 @@ ${query}`;
    * Get a short excerpt from the content
    */
   private getExcerpt(content: string, maxLength = 150): string {
-    if (content.length <= maxLength) {
-      return content;
+    // Skip the source ID comment if present
+    let cleanContent = content;
+    if (content.startsWith('<!--') && content.includes('-->')) {
+      cleanContent = content.substring(content.indexOf('-->') + 3).trim();
     }
     
-    return content.substring(0, maxLength) + '...';
+    if (cleanContent.length <= maxLength) {
+      return cleanContent;
+    }
+    
+    return cleanContent.substring(0, maxLength) + '...';
   }
   
   /**
@@ -188,6 +194,7 @@ Guidelines:
 2. If the context doesn't contain enough information, acknowledge this limitation
 3. Format your response in markdown for readability
 4. Keep responses clear and concise
-5. Do not make up information that's not in the provided context`;
+5. Do not make up information that's not in the provided context
+6. When appropriate, mention related topics from the notes that the user might want to explore further`;
   }
 }

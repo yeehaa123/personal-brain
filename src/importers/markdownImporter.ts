@@ -4,6 +4,8 @@ import { nanoid } from 'nanoid';
 import { db } from '../db';
 import { notes } from '../db/schema';
 import { sql } from 'drizzle-orm';
+import { NoteContext } from '../mcp/context/noteContext';
+import { EmbeddingService } from '../mcp/model/embeddings';
 
 interface MarkdownMetadata {
   title?: string;
@@ -16,6 +18,9 @@ interface ParsedMarkdown {
   metadata: MarkdownMetadata;
   content: string;
 }
+
+const context = new NoteContext();
+const embeddingService = new EmbeddingService();
 
 /**
  * Parses a markdown file with optional frontmatter
@@ -73,7 +78,7 @@ export function parseMarkdown(markdownContent: string): ParsedMarkdown {
 }
 
 /**
- * Imports a single markdown file into the database
+ * Imports a single markdown file into the database with embeddings
  */
 export async function importMarkdownFile(filePath: string): Promise<string> {
   const fileContent = await readFile(filePath, 'utf-8');
@@ -97,6 +102,20 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     .where(sql`${notes.content} LIKE ${`%<!-- ${sourceId} -->%`}`)
     .limit(1);
   
+  const processedContent = `<!-- ${sourceId} -->\n${content}`;
+  
+  // Try to generate an embedding for the content
+  let embedding: number[] | undefined;
+  try {
+    // Generate embedding for combined title and content
+    const combinedText = `${title} ${content}`;
+    const embeddingResult = await embeddingService.getEmbedding(combinedText);
+    embedding = embeddingResult.embedding;
+  } catch (error) {
+    console.error(`Couldn't generate embedding for ${filePath}:`, error);
+    // Continue without embedding if there's an error
+  }
+  
   let id: string;
   
   if (existingNotes.length > 0) {
@@ -107,25 +126,28 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
       .update(notes)
       .set({
         title,
-        content: `<!-- ${sourceId} -->\n${content}`,
+        content: processedContent,
         tags,
+        embedding,
         updatedAt: now
       })
       .where(sql`${notes.id} = ${id}`);
       
     console.log(`Updated existing note: ${id}`);
   } else {
-    // Create new note
-    id = nanoid();
-    
-    await db.insert(notes).values({
-      id,
+    // Create new note using the improved NoteContext API
+    const noteData = {
+      id: nanoid(),
       title,
-      content: `<!-- ${sourceId} -->\n${content}`,
+      content: processedContent,
       tags,
+      embedding,
       createdAt: now,
       updatedAt: now
-    });
+    };
+    
+    // Use the context's createNote method which handles chunking too
+    id = await context.createNote(noteData);
     
     console.log(`Created new note: ${id}`);
   }

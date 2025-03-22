@@ -5,6 +5,7 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
+    "db:embeddings": "bun run src/embed.ts",
     "typecheck": "tsc --noEmit",
     "dev": "bun run src/index.ts",
     "import": "bun run src/import.ts",
@@ -32,6 +33,7 @@
     "drizzle-zod": "^0.7.0",
     "matrix-js-sdk": "^37.1.0",
     "nanoid": "^5.1.4",
+    "openai": "^4.89.0",
     "zod": "^3.24.2"
   }
 }

@@ -1,0 +1,30 @@
+{
+  "properties": [
+    "baseURL",
+    "maxRetries",
+    "timeout",
+    "httpAgent",
+    "fetch",
+    "completions",
+    "messages",
+    "models",
+    "beta",
+    "_options",
+    "apiKey",
+    "authToken"
+  ],
+  "prototype": [
+    "constructor",
+    "defaultQuery",
+    "defaultHeaders",
+    "validateHeaders",
+    "authHeaders",
+    "apiKeyAuth",
+    "bearerAuth"
+  ],
+  "beta": [
+    "_client",
+    "models",
+    "messages"
+  ]
+}
