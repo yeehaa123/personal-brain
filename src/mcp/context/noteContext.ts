@@ -52,11 +52,11 @@ export class NoteContext {
       }
     }
     
-    // Insert the note
+    // Insert the note with the embedding array directly
     await db.insert(notes).values({
       ...note,
       id,
-      embedding,
+      embedding: embedding,
       createdAt: note.createdAt || now,
       updatedAt: note.updatedAt || now
     });
@@ -84,6 +84,7 @@ export class NoteContext {
       const now = new Date();
       
       for (let i = 0; i < chunks.length; i++) {
+        // Use the embedding array directly
         await db.insert(noteChunks).values({
           id: nanoid(),
           noteId,
@@ -345,7 +346,7 @@ export class NoteContext {
         const combinedText = `${note.title} ${note.content}`;
         const result = await this.embeddingService.getEmbedding(combinedText);
         
-        // Update the note with the embedding
+        // Update the note with the embedding directly
         await db
           .update(notes)
           .set({ embedding: result.embedding })
