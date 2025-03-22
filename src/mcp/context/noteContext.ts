@@ -1,16 +1,29 @@
 import { db } from '../../db';
-import { notes } from '../../db/schema';
-import { eq, like, inArray, and, or, desc, sql } from 'drizzle-orm';
+import { notes, noteChunks } from '../../db/schema';
+import { eq, like, inArray, and, or, desc, sql, isNull, not } from 'drizzle-orm';
 import type { Note } from '../../models/note';
+import { EmbeddingService } from '../model/embeddings';
+import { nanoid } from 'nanoid';
 
 export interface SearchOptions {
   query?: string;
   tags?: string[];
   limit?: number;
   offset?: number;
+  semanticSearch?: boolean;
+}
+
+interface NoteWithScore extends Note {
+  score?: number;
 }
 
 export class NoteContext {
+  private embeddingService: EmbeddingService;
+  
+  constructor(apiKey?: string) {
+    this.embeddingService = new EmbeddingService(apiKey);
+  }
+
   /**
    * Retrieve a note by its ID
    */
@@ -20,9 +33,90 @@ export class NoteContext {
   }
 
   /**
-   * Search notes based on query text and/or tags
+   * Create a new note with embeddings
+   */
+  async createNote(note: Omit<Note, 'embedding'> & { embedding?: number[] }): Promise<string> {
+    const now = new Date();
+    const id = note.id || nanoid();
+    
+    let embedding = note.embedding;
+    
+    // Generate embedding if not provided
+    if (!embedding) {
+      try {
+        const combinedText = `${note.title} ${note.content}`;
+        const result = await this.embeddingService.getEmbedding(combinedText);
+        embedding = result.embedding;
+      } catch (error) {
+        console.error('Error generating embedding:', error);
+      }
+    }
+    
+    // Insert the note
+    await db.insert(notes).values({
+      ...note,
+      id,
+      embedding,
+      createdAt: note.createdAt || now,
+      updatedAt: note.updatedAt || now
+    });
+    
+    // If the note is long, also create chunks
+    if (note.content.length > 1000) {
+      await this.createNoteChunks(id, note.content);
+    }
+    
+    return id;
+  }
+  
+  /**
+   * Create chunks for a note and generate embeddings for each chunk
+   */
+  private async createNoteChunks(noteId: string, content: string): Promise<void> {
+    try {
+      // Chunk the content
+      const chunks = this.embeddingService.chunkText(content, 1000, 200);
+      
+      // Generate embeddings for all chunks in batch
+      const embeddingResults = await this.embeddingService.getBatchEmbeddings(chunks);
+      
+      // Insert each chunk with its embedding
+      const now = new Date();
+      
+      for (let i = 0; i < chunks.length; i++) {
+        await db.insert(noteChunks).values({
+          id: nanoid(),
+          noteId,
+          content: chunks[i],
+          embedding: embeddingResults[i].embedding,
+          chunkIndex: i,
+          createdAt: now
+        });
+      }
+    } catch (error) {
+      console.error('Error creating note chunks:', error);
+    }
+  }
+
+  /**
+   * Search notes based on query text and/or tags with optional semantic search
    */
   async searchNotes(options: SearchOptions): Promise<Note[]> {
+    const { query, tags, limit = 10, offset = 0, semanticSearch = true } = options;
+    
+    // If semantic search is enabled and there's a query, perform vector search
+    if (semanticSearch && query) {
+      return this.semanticSearch(query, tags, limit, offset);
+    }
+    
+    // Otherwise, fall back to keyword search
+    return this.keywordSearch(options);
+  }
+  
+  /**
+   * Search using traditional keyword matching
+   */
+  private async keywordSearch(options: SearchOptions): Promise<Note[]> {
     const { query, tags, limit = 10, offset = 0 } = options;
     
     let conditions = [];
@@ -83,16 +177,104 @@ export class NoteContext {
       .limit(limit)
       .offset(offset);
   }
+  
+  /**
+   * Search using vector similarity
+   */
+  private async semanticSearch(query: string, tags?: string[], limit = 10, offset = 0): Promise<Note[]> {
+    try {
+      // Get embedding for the query
+      const queryEmbedding = await this.embeddingService.getEmbedding(query);
+      
+      // Get all notes (with embeddings)
+      let notesWithEmbeddings = await db
+        .select()
+        .from(notes)
+        .where(not(isNull(notes.embedding)));
+      
+      // Filter by tags if provided
+      if (tags && tags.length > 0) {
+        notesWithEmbeddings = notesWithEmbeddings.filter(note => {
+          if (!note.tags) return false;
+          return tags.some(tag => note.tags?.includes(tag));
+        });
+      }
+      
+      // Calculate similarity scores
+      const scoredNotes: NoteWithScore[] = notesWithEmbeddings
+        .filter(note => note.embedding && note.embedding.length > 0)
+        .map(note => {
+          const score = this.embeddingService.cosineSimilarity(
+            queryEmbedding.embedding,
+            note.embedding as number[]
+          );
+          return { ...note, score };
+        });
+      
+      // Sort by similarity score (highest first)
+      scoredNotes.sort((a, b) => (b.score || 0) - (a.score || 0));
+      
+      // Apply pagination
+      return scoredNotes.slice(offset, offset + limit);
+    } catch (error) {
+      console.error('Error in semantic search:', error);
+      // Fall back to keyword search
+      return this.keywordSearch({ query, tags, limit, offset });
+    }
+  }
 
   /**
-   * Get related notes based on content similarity
-   * Simple implementation looking for overlapping keywords
+   * Get related notes based on vector similarity
    */
   async getRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
     const sourceNote = await this.getNoteById(noteId);
+    if (!sourceNote || !sourceNote.embedding) {
+      // Fall back to keyword-based similarity if note has no embedding
+      return this.getKeywordRelatedNotes(noteId, maxResults);
+    }
+    
+    try {
+      // Get all notes except the source note
+      const otherNotes = await db
+        .select()
+        .from(notes)
+        .where(
+          and(
+            not(eq(notes.id, noteId)),
+            not(isNull(notes.embedding))
+          )
+        );
+      
+      // Calculate similarity scores
+      const scoredNotes: NoteWithScore[] = otherNotes
+        .filter(note => note.embedding && note.embedding.length > 0)
+        .map(note => {
+          const score = this.embeddingService.cosineSimilarity(
+            sourceNote.embedding as number[],
+            note.embedding as number[]
+          );
+          return { ...note, score };
+        });
+      
+      // Sort by similarity score (highest first)
+      scoredNotes.sort((a, b) => (b.score || 0) - (a.score || 0));
+      
+      // Return top matches
+      return scoredNotes.slice(0, maxResults);
+    } catch (error) {
+      console.error('Error finding related notes:', error);
+      return this.getKeywordRelatedNotes(noteId, maxResults);
+    }
+  }
+  
+  /**
+   * Fall back to keyword-based related notes
+   */
+  private async getKeywordRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
+    const sourceNote = await this.getNoteById(noteId);
     if (!sourceNote) return [];
     
-    // Extract keywords from the source note (basic implementation)
+    // Extract keywords from the source note
     const keywords = this.extractKeywords(sourceNote.content);
     
     // Find notes that contain these keywords
@@ -101,9 +283,8 @@ export class NoteContext {
       .from(notes)
       .where(
         and(
-          ...keywords.map(keyword => like(notes.content, `%${keyword}%`)),
-          // Exclude the source note itself
-          noteId ? eq(notes.id, noteId) : sql`1=1`
+          not(eq(notes.id, noteId)),
+          or(...keywords.map(keyword => like(notes.content, `%${keyword}%`)))
         )
       )
       .limit(maxResults);
@@ -112,7 +293,7 @@ export class NoteContext {
   }
   
   /**
-   * Very simple keyword extraction (would need improvement in a real app)
+   * Extract keywords from text
    */
   private extractKeywords(text: string): string[] {
     // Remove markdown syntax, common words, keep only words > 4 chars
@@ -142,5 +323,47 @@ export class NoteContext {
       .from(notes)
       .orderBy(desc(notes.updatedAt))
       .limit(limit);
+  }
+  
+  /**
+   * Generate or update embeddings for existing notes
+   */
+  async generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
+    let updated = 0;
+    let failed = 0;
+    
+    // Get all notes without embeddings
+    const notesWithoutEmbeddings = await db
+      .select()
+      .from(notes)
+      .where(isNull(notes.embedding));
+    
+    console.log(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
+    
+    for (const note of notesWithoutEmbeddings) {
+      try {
+        const combinedText = `${note.title} ${note.content}`;
+        const result = await this.embeddingService.getEmbedding(combinedText);
+        
+        // Update the note with the embedding
+        await db
+          .update(notes)
+          .set({ embedding: result.embedding })
+          .where(eq(notes.id, note.id));
+        
+        // Also create chunks for longer notes
+        if (note.content.length > 1000) {
+          await this.createNoteChunks(note.id, note.content);
+        }
+        
+        updated++;
+        console.log(`Updated embedding for note: ${note.id}`);
+      } catch (error) {
+        failed++;
+        console.error(`Failed to update embedding for note ${note.id}:`, error);
+      }
+    }
+    
+    return { updated, failed };
   }
 }
