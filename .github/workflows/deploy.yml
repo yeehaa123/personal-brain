@@ -61,13 +61,19 @@ jobs:
             # No need to install PM2 globally as it's in package.json
             # It will be installed with bun install
             
-            echo -e "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}\nMATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}\nMATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}\nMATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}\nCOMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}" > .env
+            # Create .env file directly with environment variables
+            cat > .env << 'EOL'
+            MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}
+            MATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}
+            MATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}
+            MATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}
+            EOL
             
             # Print number of lines in .env to verify
             echo \"Verifying .env file was created with \$(wc -l < .env) lines\"
             
             # Ensure API key is directly set in environment for embeddings
-            export ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"            echo -e "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}\nMATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}\nMATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKname
+            export ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"            
             
             # Set up database if needed
             bun run db:generate
