@@ -62,7 +62,7 @@ jobs:
             # It will be installed with bun install
             
             # Create .env file directly with environment variables
-            echo -e "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}\nMATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}\nMATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}\nMATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}\nCOMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }}\nANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}" > .env
+            echo -e "MATRIX_HOMESERVER_URL=${{ secrets.MATRIX_HOMESERVER_URL }}\nMATRIX_USER_ID=${{ secrets.MATRIX_USER_ID }}\nMATRIX_ACCESS_TOKEN=${{ secrets.MATRIX_ACCESS_TOKEN }}\nMATRIX_ROOM_IDS=${{ secrets.MATRIX_ROOM_IDS }}\nCOMMAND_PREFIX=${{ secrets.COMMAND_PREFIX }" > .env
             
             # Print number of lines in .env to verify
             echo \"Verifying .env file was created with \$(wc -l < .env) lines\"
