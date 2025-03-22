@@ -71,6 +71,12 @@ jobs:
             ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
             EOL
             
+            # Print number of lines in .env to verify
+            echo \"Verifying .env file was created with \$(wc -l < .env) lines\"
+            
+            # Ensure API key is directly set in environment for embeddings
+            export ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"
+            
             # Set up database if needed
             bun run db:generate
             bun run db:migrate
