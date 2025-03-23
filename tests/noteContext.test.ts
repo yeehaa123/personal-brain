@@ -1,6 +1,40 @@
-import { test, expect, describe, beforeEach, mock } from 'bun:test';
+import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { NoteContext } from '../src/mcp/context/noteContext';
 import { EmbeddingService } from '../src/mcp/model/embeddings';
+
+import { createMockEmbedding } from './mocks';
+
+// Mock the Anthropic client
+mock.module('@anthropic-ai/sdk', () => {
+  return {
+    default: class MockAnthropic {
+      constructor() {
+        // Mock constructor
+      }
+      
+      messages = {
+        create: async () => ({
+          id: 'mock-msg-id',
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Mock response' }],
+          model: 'claude-3-haiku-20240307',
+          stop_reason: 'end_turn'
+        })
+      }
+    }
+  };
+});
+
+// Override specific methods in EmbeddingService
+EmbeddingService.prototype.getEmbedding = async function(text: string) {
+  console.log('Using mocked getEmbedding in noteContext tests');
+  const embedding = createMockEmbedding(text);
+  return {
+    embedding,
+    truncated: false
+  };
+};
 
 describe('NoteContext', () => {
   let context: NoteContext;
@@ -8,9 +42,19 @@ describe('NoteContext', () => {
   // Use a simple mock of the embedding service without trying to mock DB
   // This creates a real NoteContext but avoids API calls
   
+  beforeAll(() => {
+    // Set up mock environment
+    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+  });
+  
+  afterAll(() => {
+    // Clean up mock environment
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+  
   beforeEach(() => {
-    // Create a new context with a fake API key for each test
-    context = new NoteContext('fake-api-key');
+    // Create a new context with a mock API key for each test
+    context = new NoteContext('mock-api-key');
   });
 
   test('extractKeywords should extract meaningful keywords', () => {

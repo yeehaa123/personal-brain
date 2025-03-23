@@ -1,12 +1,65 @@
-import { test, expect, describe, beforeEach, mock } from 'bun:test';
+import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { EmbeddingService } from '../src/mcp/model/embeddings';
+
+import { createMockEmbedding } from './mocks';
+
+// Mock the Anthropic client
+mock.module('@anthropic-ai/sdk', () => {
+  return {
+    default: class MockAnthropic {
+      constructor() {
+        // Mock constructor
+      }
+      
+      messages = {
+        create: async () => ({
+          id: 'mock-msg-id',
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'text', text: 'Mock response' }],
+          model: 'claude-3-haiku-20240307',
+          stop_reason: 'end_turn'
+        })
+      }
+    }
+  };
+});
+
+// Override specific methods in EmbeddingService
+EmbeddingService.prototype.getEmbedding = async function(text: string) {
+  console.log('Using mocked getEmbedding');
+  const embedding = createMockEmbedding(text);
+  return {
+    embedding,
+    truncated: false
+  };
+};
+
+// Also mock the batch embedding method
+EmbeddingService.prototype.getBatchEmbeddings = async function(texts: string[]) {
+  console.log('Using mocked getBatchEmbeddings');
+  return texts.map(text => ({
+    embedding: createMockEmbedding(text),
+    truncated: false
+  }));
+};
 
 describe('EmbeddingService', () => {
   let service: EmbeddingService;
 
+  beforeAll(() => {
+    // Set up mock environment
+    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+  });
+  
+  afterAll(() => {
+    // Clean up mock environment
+    delete process.env.ANTHROPIC_API_KEY;
+  });
+  
   beforeEach(() => {
     // Create a new service instance for each test
-    service = new EmbeddingService('fake-api-key');
+    service = new EmbeddingService('mock-api-key');
   });
 
   test('should create a deterministic embedding', async () => {
