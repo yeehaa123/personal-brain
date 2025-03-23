@@ -91,5 +91,5 @@ jobs:
             
             # Directly start the application - simple approach
             echo \"Starting personal-brain...\"
-            bun run start
+            bun run restart
           "
