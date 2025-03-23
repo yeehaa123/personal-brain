@@ -4,6 +4,7 @@ import { eq, like, inArray, and, or, desc, sql, isNull, not } from 'drizzle-orm'
 import type { Note } from '../../models/note';
 import { EmbeddingService } from '../model/embeddings';
 import { nanoid } from 'nanoid';
+import { extractKeywords } from '../../utils/textUtils';
 
 export interface SearchOptions {
   query?: string;
@@ -54,11 +55,13 @@ export class NoteContext {
     
     // Insert the note with the embedding array directly
     await db.insert(notes).values({
-      ...note,
       id,
+      title: note.title,
+      content: note.content,
       embedding: embedding,
       createdAt: note.createdAt || now,
-      updatedAt: note.updatedAt || now
+      updatedAt: note.updatedAt || now,
+      tags: Array.isArray(note.tags) ? (note.tags as string[]) : undefined
     });
     
     // If the note is long, also create chunks
@@ -297,22 +300,7 @@ export class NoteContext {
    * Extract keywords from text
    */
   private extractKeywords(text: string): string[] {
-    // Remove markdown syntax, common words, keep only words > 4 chars
-    const cleanedText = text
-      .replace(/[#*_`>\\+\\=\\[\\]\\(\\)\\{\\}\\|]/g, ' ')
-      .toLowerCase();
-    
-    // Split into words and filter
-    const words = cleanedText.split(/\s+/);
-    const commonWords = new Set([
-      'the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but'
-    ]);
-    
-    return [...new Set(
-      words.filter(word => 
-        word.length > 4 && !commonWords.has(word)
-      )
-    )].slice(0, 10); // Take top 10 keywords
+    return extractKeywords(text, 10); // Take top 10 keywords
   }
   
   /**

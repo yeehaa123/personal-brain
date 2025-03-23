@@ -1,8 +1,13 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
+import { ClientEvent } from 'matrix-js-sdk';
+import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
+import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
+import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { BrainProtocol } from '../mcp/protocol/brainProtocol';
 import { NoteContext } from '../mcp/context/noteContext';
 import type { Note } from '../models/note';
+import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
 
 // Configuration
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
@@ -94,15 +99,15 @@ class MatrixBrainInterface {
     console.log(`Starting Matrix brain interface as ${USER_ID}`);
     
     // Register event handlers
-    this.client.on('Room.timeline', this.handleRoomMessage.bind(this));
-    this.client.on('RoomMember.membership', this.handleMembership.bind(this));
+    this.client.on(RoomEvent.Timeline, this.handleRoomMessage.bind(this));
+    this.client.on(RoomMemberEvent.Membership, this.handleMembership.bind(this));
     
     // Start the client
     await this.client.startClient({ initialSyncLimit: 10 });
     console.log('Matrix client started, waiting for sync');
     
     // Wait for the client to sync
-    this.client.once('sync', (state: any) => {
+    this.client.once(ClientEvent.Sync, (state: string) => {
       if (state === 'PREPARED') {
         console.log('Client sync complete');
         this.isReady = true;
@@ -125,8 +130,8 @@ class MatrixBrainInterface {
       try {
         await this.client.joinRoom(roomId);
         console.log(`Joined room ${roomId}`);
-      } catch (error) {
-        console.error(`Failed to join room ${roomId}:`, error);
+      } catch (error: unknown) {
+        console.error(`Failed to join room ${roomId}:`, error instanceof Error ? error.message : String(error));
       }
     }
   }
@@ -143,8 +148,8 @@ class MatrixBrainInterface {
           member.roomId,
           `Hello! I'm your personal brain assistant. Type \`${COMMAND_PREFIX} help\` to see available commands.`
         );
-      } catch (error) {
-        console.error(`Failed to join room ${member.roomId}:`, error);
+      } catch (error: unknown) {
+        console.error(`Failed to join room ${member.roomId}:`, error instanceof Error ? error.message : String(error));
       }
     }
   }
@@ -202,9 +207,9 @@ class MatrixBrainInterface {
       const commandText = text.substring(COMMAND_PREFIX.length).trim();
       try {
         await this.processCommand(commandText, room.roomId, event);
-      } catch (error) {
-        console.error("Error processing command:", error);
-        this.sendMessage(room.roomId, `Error: ${error.message}`);
+      } catch (error: unknown) {
+        console.error("Error processing command:", error instanceof Error ? error.message : String(error));
+        this.sendMessage(room.roomId, `Error: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
       console.log("Not a command");
@@ -239,7 +244,7 @@ class MatrixBrainInterface {
         await handler.handler(args, roomId, event);
       } catch (error) {
         console.error(`Error executing command ${command}:`, error);
-        this.sendMessage(roomId, `❌ Error executing command: ${error.message}`);
+        this.sendMessage(roomId, `❌ Error executing command: ${error instanceof Error ? error.message : String(error)}`);
       }
     } else {
       console.log(`Unknown command: ${command}`);
@@ -285,9 +290,9 @@ class MatrixBrainInterface {
       ].join('\n');
       
       this.sendMessage(roomId, results);
-    } catch (error) {
-      console.error('Search error:', error);
-      this.sendMessage(roomId, `❌ Error searching notes: ${error.message}`);
+    } catch (error: unknown) {
+      console.error('Search error:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error searching notes: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -302,7 +307,9 @@ class MatrixBrainInterface {
       allNotes.forEach(note => {
         if (note.tags && Array.isArray(note.tags)) {
           note.tags.forEach(tag => {
-            tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            if (typeof tag === 'string') {
+              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+            }
           });
         }
       });
@@ -324,9 +331,9 @@ class MatrixBrainInterface {
       ].join('\n');
       
       this.sendMessage(roomId, message);
-    } catch (error) {
-      console.error('Tags error:', error);
-      this.sendMessage(roomId, `❌ Error retrieving tags: ${error.message}`);
+    } catch (error: unknown) {
+      console.error('Tags error:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error retrieving tags: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -362,9 +369,9 @@ class MatrixBrainInterface {
       ].join('\n');
       
       this.sendMessage(roomId, message);
-    } catch (error) {
-      console.error('List error:', error);
-      this.sendMessage(roomId, `❌ Error listing notes: ${error.message}`);
+    } catch (error: unknown) {
+      console.error('List error:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error listing notes: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -407,9 +414,9 @@ class MatrixBrainInterface {
       ].join('\n');
       
       this.sendMessage(roomId, message);
-    } catch (error) {
-      console.error('Note error:', error);
-      this.sendMessage(roomId, `❌ Error retrieving note: ${error.message}`);
+    } catch (error: unknown) {
+      console.error('Note error:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error retrieving note: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -453,30 +460,16 @@ class MatrixBrainInterface {
       }
       
       this.sendMessage(roomId, message.join('\n'));
-    } catch (error) {
-      console.error('Ask error:', error);
-      this.sendMessage(roomId, `❌ Error processing question: ${error.message}`);
+    } catch (error: unknown) {
+      console.error('Ask error:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error processing question: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
   // Helper methods
   
   private formatNotePreview(note: Note, index: number, includeNewlines = true): string {
-    const nl = includeNewlines ? '\n' : ' ';
-    const title = `**${index}. ${note.title}**`;
-    const id = `ID: \`${note.id}\``;
-    
-    const tags = note.tags && note.tags.length > 0
-      ? `Tags: ${note.tags.map(tag => `\`${tag}\``).join(', ')}`
-      : 'No tags';
-    
-    // Extract a content preview
-    const contentWithoutSource = note.content.replace(/<!--\s*source:[^>]+-->\n?/, '');
-    const preview = contentWithoutSource.length > 100
-      ? contentWithoutSource.substring(0, 100) + '...'
-      : contentWithoutSource;
-    
-    return `${title}${nl}${id} - ${tags}${nl}${preview}`;
+    return formatNotePreview(note, index, includeNewlines);
   }
   
   private sendMessage(roomId: string, message: string) {
@@ -485,17 +478,17 @@ class MatrixBrainInterface {
     try {
       // First try sendMessage without HTML
       this.client.sendMessage(roomId, {
-        msgtype: 'm.text',
+        msgtype: MsgType.Text,
         body: message
-      }).catch(error => {
-        console.error(`Error sending plain message to ${roomId}:`, error);
+      }).catch((error: unknown) => {
+        console.error(`Error sending plain message to ${roomId}:`, error instanceof Error ? error.message : String(error));
         
         // Fallback to HTML message
         this.client.sendHtmlMessage(roomId, message, this.markdownToHtml(message))
-          .catch(htmlError => console.error(`Error sending HTML message to ${roomId}:`, htmlError));
+          .catch((htmlError: unknown) => console.error(`Error sending HTML message to ${roomId}:`, htmlError instanceof Error ? htmlError.message : String(htmlError)));
       });
-    } catch (error) {
-      console.error(`Exception in sendMessage to ${roomId}:`, error);
+    } catch (error: unknown) {
+      console.error(`Exception in sendMessage to ${roomId}:`, error instanceof Error ? error.message : String(error));
     }
   }
   

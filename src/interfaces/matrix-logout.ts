@@ -31,8 +31,8 @@ async function logoutMatrixClient() {
     console.log('The access token has been invalidated.');
     console.log('You will need to generate a new token to reconnect.');
 
-  } catch (error) {
-    console.error('Error during logout:', error.message);
+  } catch (error: unknown) {
+    console.error('Error during logout:', error instanceof Error ? error.message : String(error));
   }
 }
 

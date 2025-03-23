@@ -1,5 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { RequestInit, Response } from 'node-fetch';
+import type { RequestInit, Response } from 'node-fetch';
+import { cosineSimilarity, normalizeVector } from '../../utils/vectorUtils';
+import { prepareText, chunkText } from '../../utils/textUtils';
 
 interface EmbeddingResult {
   embedding: number[];
@@ -110,8 +112,7 @@ export class EmbeddingService {
     });
     
     // Normalize the embedding
-    const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
-    return embedding.map(val => val / magnitude);
+    return normalizeVector(embedding);
   }
 
   /**
@@ -176,41 +177,17 @@ export class EmbeddingService {
    * @returns Cleaned text
    */
   private prepareText(text: string): string {
-    return text
-      .replace(/\s+/g, ' ')      // Replace multiple spaces with a single space
-      .replace(/\n+/g, ' ')      // Replace newlines with spaces
-      .trim();                   // Trim whitespace from beginning and end
+    return prepareText(text);
   }
 
   /**
    * Calculate cosine similarity between two vectors
    * @param vec1 First vector
    * @param vec2 Second vector
-   * @returns Similarity score (0-1)
+   * @returns Similarity score (-1 to 1)
    */
   cosineSimilarity(vec1: number[], vec2: number[]): number {
-    if (vec1.length !== vec2.length) {
-      throw new Error('Vectors must have the same dimensions');
-    }
-
-    let dotProduct = 0;
-    let mag1 = 0;
-    let mag2 = 0;
-
-    for (let i = 0; i < vec1.length; i++) {
-      dotProduct += vec1[i] * vec2[i];
-      mag1 += vec1[i] * vec1[i];
-      mag2 += vec2[i] * vec2[i];
-    }
-
-    mag1 = Math.sqrt(mag1);
-    mag2 = Math.sqrt(mag2);
-
-    if (mag1 === 0 || mag2 === 0) {
-      return 0;
-    }
-
-    return dotProduct / (mag1 * mag2);
+    return cosineSimilarity(vec1, vec2);
   }
 
   /**
@@ -221,41 +198,6 @@ export class EmbeddingService {
    * @returns An array of text chunks
    */
   chunkText(text: string, chunkSize = 512, overlap = 100): string[] {
-    const chunks: string[] = [];
-    const sentences = text.split(/(?<=[.!?])\s+/);
-    
-    let currentChunk = '';
-    
-    for (const sentence of sentences) {
-      // If adding this sentence would exceed the chunk size and we already have some content
-      if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-        chunks.push(currentChunk);
-        // Start a new chunk with overlap
-        const words = currentChunk.split(' ');
-        const overlapWords = words.slice(Math.max(0, words.length - overlap / 5));
-        currentChunk = overlapWords.join(' ') + ' ' + sentence;
-      } else {
-        currentChunk += (currentChunk ? ' ' : '') + sentence;
-      }
-    }
-    
-    // Add the last chunk if it has content
-    if (currentChunk.length > 0) {
-      chunks.push(currentChunk);
-    }
-    
-    return chunks;
-  }
-
-  /**
-   * Prepare text for embedding by cleaning and normalizing
-   * @param text Text to prepare
-   * @returns Cleaned text
-   */
-  private prepareText(text: string): string {
-    return text
-      .replace(/\s+/g, ' ')      // Replace multiple spaces with a single space
-      .replace(/\n+/g, ' ')      // Replace newlines with spaces
-      .trim();                   // Trim whitespace from beginning and end
+    return chunkText(text, chunkSize, overlap);
   }
 }

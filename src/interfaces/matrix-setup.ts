@@ -59,8 +59,8 @@ ANTHROPIC_API_KEY=""
     console.log('Template saved to .env.matrix');
     console.log('Copy this file to .env and fill in any missing information.');
 
-  } catch (error) {
-    console.error('Error during setup:', error.message);
+  } catch (error: unknown) {
+    console.error('Error during setup:', error instanceof Error ? error.message : String(error));
   }
 }
 

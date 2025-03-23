@@ -1,2 +1,0 @@
-edit b8b5fe4 Add semantic search with embeddings
-pick b340e1b Fix embeddings implementation with deterministic embeddings

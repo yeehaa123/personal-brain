@@ -3,6 +3,7 @@ import type { ModelResponse } from '../model/claude';
 import { NoteContext } from '../context/noteContext';
 import type { SearchOptions } from '../context/noteContext';
 import type { Note } from '../../models/note';
+import { getExcerpt } from '../../utils/noteUtils';
 
 export interface ProtocolResponse {
   answer: string;
@@ -169,17 +170,7 @@ ${query}`;
    * Get a short excerpt from the content
    */
   private getExcerpt(content: string, maxLength = 150): string {
-    // Skip the source ID comment if present
-    let cleanContent = content;
-    if (content.startsWith('<!--') && content.includes('-->')) {
-      cleanContent = content.substring(content.indexOf('-->') + 3).trim();
-    }
-    
-    if (cleanContent.length <= maxLength) {
-      return cleanContent;
-    }
-    
-    return cleanContent.substring(0, maxLength) + '...';
+    return getExcerpt(content, maxLength);
   }
   
   /**

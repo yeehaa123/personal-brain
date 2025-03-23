@@ -2,27 +2,7 @@
 import { createInterface } from 'readline/promises';
 import { BrainProtocol } from './mcp/protocol/brainProtocol';
 import { NoteContext } from './mcp/context/noteContext';
-import type { Note } from './models/note';
-
-// Helper function to display notes
-function displayNotes(notes: Note[]) {
-  if (notes.length === 0) {
-    console.log('No notes found.');
-    return;
-  }
-  
-  notes.forEach((note, index) => {
-    console.log(`\n[${index + 1}] ${note.title}`);
-    console.log(`ID: ${note.id}`);
-    console.log(`Tags: ${note.tags ? note.tags.join(', ') : 'none'}`);
-    
-    // Show a preview of the content (first 100 characters)
-    const contentPreview = note.content.length > 100 
-      ? note.content.substring(0, 100) + '...' 
-      : note.content;
-    console.log(`Preview: ${contentPreview}`);
-  });
-}
+import { displayNotes } from './utils/noteUtils';
 
 async function main() {
   const rl = createInterface({
