@@ -1,5 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
-import type { RequestInit, Response } from 'node-fetch';
 import { cosineSimilarity, normalizeVector } from '../../utils/vectorUtils';
 import { prepareText, chunkText } from '../../utils/textUtils';
 
@@ -8,83 +6,62 @@ interface EmbeddingResult {
   truncated: boolean;
 }
 
-interface AnthropicEmbeddingResponse {
-  id: string;
-  embeddings: Array<{
-    index: number;
-    embedding: number[];
-    truncated: boolean;
-  }>;
-  model: string;
-}
-
 export class EmbeddingService {
-  private client: Anthropic;
   private apiKey: string;
-  private model: string;
-  private embeddingModel: string = 'claude-3-haiku-20240307';
-  private embeddingApiUrl: string = 'https://api.anthropic.com/v1/messages';
+  private embeddingModel: string = 'text-embedding-3-small';
+  private embeddingDimension: number = 1536; // OpenAI embedding dimensions
 
-  constructor(apiKey?: string, model = 'claude-3-opus-20240229') {
-    this.apiKey = apiKey || process.env.ANTHROPIC_API_KEY || '';
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey || process.env.OPENAI_API_KEY || '';
     console.log(`API Key available: ${Boolean(this.apiKey)}`);
     
     try {
-      this.client = new Anthropic({
-        apiKey: this.apiKey
-      });
-      
-      console.log('Anthropic client initialized');
-      this.model = model;
+      console.log('Using OpenAI for embeddings');
     } catch (error) {
-      console.error('Error initializing Anthropic client:', error);
+      console.error('Error initializing embeddings:', error);
       throw error;
     }
   }
 
   /**
-   * Generate embeddings for text content using direct API call to Anthropic Embeddings API
+   * Generate AI embeddings for text content using OpenAI's embedding API
    * @param text The text to generate embeddings for
    * @returns A vector representation of the text
    */
   async getEmbedding(text: string): Promise<EmbeddingResult> {
     try {
       if (!this.apiKey) {
-        console.warn('No API key available, using dummy embeddings');
-        return this.getDummyEmbedding(text);
+        console.warn('No API key available, using fallback embeddings');
+        return this.getFallbackEmbedding(text);
       }
 
-      console.log(`Using Anthropic client for embeddings`);
+      console.log(`Using OpenAI embedding API`);
       
-      // Use the SDK client directly since direct API calls are failing
       try {
-        const response = await this.client.messages.create({
+        const preparedText = this.prepareText(text);
+        
+        // Use standard OpenAI library directly
+        const { OpenAI } = await import('openai');
+        const client = new OpenAI({ apiKey: this.apiKey });
+        
+        const result = await client.embeddings.create({
           model: this.embeddingModel,
-          max_tokens: 1024,
-          messages: [
-            { role: "user", content: this.prepareText(text) }
-          ],
-          system: "Encode this text for embedding purposes."
+          input: preparedText
         });
         
-        // Since we can't get actual embeddings, we'll create deterministic 
-        // embeddings based on the text content for now
-        const hash = this.hashString(text);
-        const embedding = this.createDeterministicEmbedding(hash);
-        
-        console.log(`Created deterministic embedding from message response`);
+        console.log(`Generated embedding with model: ${this.embeddingModel}`);
         
         return {
-          embedding,
+          embedding: result.data[0].embedding,
           truncated: false
         };
       } catch (clientError) {
-        console.error('Error using client API, falling back to dummy:', clientError);
-        return this.getDummyEmbedding(text);
+        console.error('Error using OpenAI API, using fallback embedding:', clientError);
+        return this.getFallbackEmbedding(text);
       }
     } catch (error) {
-      console.error('Error generating embedding, falling back to dummy:', error);
-      return this.getDummyEmbedding(text);
+      console.error('Error generating embedding, using fallback embedding:', error);
+      return this.getFallbackEmbedding(text);
     }
   }
   
@@ -100,36 +77,27 @@ export class EmbeddingService {
     }
     return hash;
   }
-  
+
   /**
-   * Create a deterministic embedding from a seed value
+   * Generate a fallback embedding when no API key is available
+   * @param text The text to base the embedding on
+   * @returns A consistent embedding based on text content
    */
-  private createDeterministicEmbedding(seed: number): number[] {
-    // Create a deterministic but reasonable-looking embedding
-    const embedding = Array(1536).fill(0).map((_, i) => {
-      const x = Math.sin(seed + i * 0.1) * 10000;
+  private getFallbackEmbedding(text: string): EmbeddingResult {
+    console.log(`Generating fallback embedding for text (${text.length} chars)`);
+    
+    // Create a deterministic embedding based on text hash
+    const hash = this.hashString(text);
+    const embedding = Array(this.embeddingDimension).fill(0).map((_, i) => {
+      const x = Math.sin(hash + i * 0.1) * 10000;
       return (x - Math.floor(x)) * 0.8 - 0.4; // Values between -0.4 and 0.4
     });
     
-    // Normalize the embedding
-    return normalizeVector(embedding);
-  }
-
-  /**
-   * Generate a dummy embedding when API calls fail
-   * @param text The text to base the dummy embedding on
-   * @returns A consistent dummy embedding
-   */
-  private getDummyEmbedding(text: string): EmbeddingResult {
-    console.log(`Generating dummy embedding for text (${text.length} chars)`);
-    
-    // Generate a consistent dummy embedding based on text length
-    const embedding = Array(1536).fill(0).map((_, i) => {
-      return Math.sin(i * (text.length % 10)) / 2 + 0.5;
-    });
+    // Normalize to unit length as OpenAI embeddings are normalized
+    const normalizedEmbedding = normalizeVector(embedding);
     
     return {
-      embedding,
+      embedding: normalizedEmbedding,
       truncated: false
     };
   }
@@ -142,32 +110,57 @@ export class EmbeddingService {
   async getBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
     try {
       if (!this.apiKey) {
-        console.warn('No API key available, using dummy batch embeddings');
-        return Promise.all(texts.map(text => this.getDummyEmbedding(text)));
+        console.warn('No API key available, using fallback batch embeddings');
+        return Promise.all(texts.map(text => this.getFallbackEmbedding(text)));
       }
 
-      console.log(`Generating deterministic embeddings for ${texts.length} texts`);
+      console.log(`Generating embeddings for ${texts.length} texts using OpenAI API`);
       
-      // Process texts in batches of 10 to avoid overloading the API
-      const batchSize = 10;
-      const results: EmbeddingResult[] = [];
-      
-      for (let i = 0; i < texts.length; i += batchSize) {
-        console.log(`Processing batch ${i/batchSize + 1} of ${Math.ceil(texts.length/batchSize)}`);
-        const batch = texts.slice(i, i + batchSize);
+      try {
+        // Prepare the texts
+        const preparedTexts = texts.map(text => this.prepareText(text));
         
-        // Process each text in the batch in parallel
-        const batchResults = await Promise.all(
-          batch.map(text => this.getEmbedding(text))
-        );
+        // Use standard OpenAI library directly
+        const { OpenAI } = await import('openai');
+        const client = new OpenAI({ apiKey: this.apiKey });
         
-        results.push(...batchResults);
+        // Use the batch endpoint
+        const result = await client.embeddings.create({
+          model: this.embeddingModel,
+          input: preparedTexts
+        });
+        
+        console.log(`Generated ${result.data.length} embeddings`);
+        
+        // Convert to our internal format
+        return result.data.map((item) => ({
+          embedding: item.embedding,
+          truncated: false
+        }));
+      } catch (batchError) {
+        console.error('Error using batch embedding API, falling back to individual processing:', batchError);
+        
+        // Fallback to processing in smaller batches
+        const batchSize = 10;
+        const results: EmbeddingResult[] = [];
+        
+        for (let i = 0; i < texts.length; i += batchSize) {
+          console.log(`Processing batch ${i/batchSize + 1} of ${Math.ceil(texts.length/batchSize)}`);
+          const batch = texts.slice(i, i + batchSize);
+          
+          // Process each text in the batch in parallel
+          const batchResults = await Promise.all(
+            batch.map(text => this.getEmbedding(text))
+          );
+          
+          results.push(...batchResults);
+        }
+        
+        return results;
       }
-      
-      return results;
     } catch (error) {
-      console.error('Error generating batch embeddings, falling back to dummy embeddings:', error);
-      return Promise.all(texts.map(text => this.getDummyEmbedding(text)));
+      console.error('Error generating batch embeddings, using fallback embeddings:', error);
+      return Promise.all(texts.map(text => this.getFallbackEmbedding(text)));
     }
   }
 

@@ -3,7 +3,36 @@ import { EmbeddingService } from '../src/mcp/model/embeddings';
 
 import { createMockEmbedding } from './mocks';
 
-// Mock the Anthropic client
+// Mock OpenAI
+mock.module('openai', () => {
+  return {
+    OpenAI: class MockOpenAI {
+      constructor() {
+        // Mock constructor
+      }
+      
+      embeddings = {
+        create: async () => ({
+          data: [
+            {
+              embedding: Array(1536).fill(0.1),
+              index: 0,
+              object: 'embedding'
+            }
+          ],
+          model: 'text-embedding-3-small',
+          object: 'list',
+          usage: {
+            prompt_tokens: 10,
+            total_tokens: 10
+          }
+        })
+      };
+    }
+  };
+});
+
+// Mock Anthropic
 mock.module('@anthropic-ai/sdk', () => {
   return {
     default: class MockAnthropic {
@@ -18,9 +47,13 @@ mock.module('@anthropic-ai/sdk', () => {
           role: 'assistant',
           content: [{ type: 'text', text: 'Mock response' }],
           model: 'claude-3-haiku-20240307',
-          stop_reason: 'end_turn'
+          stop_reason: 'end_turn',
+          usage: {
+            input_tokens: 10,
+            output_tokens: 20
+          }
         })
-      }
+      };
     }
   };
 });
@@ -49,12 +82,12 @@ describe('EmbeddingService', () => {
 
   beforeAll(() => {
     // Set up mock environment
-    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+    process.env.OPENAI_API_KEY = 'mock-api-key';
   });
   
   afterAll(() => {
     // Clean up mock environment
-    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENAI_API_KEY;
   });
   
   beforeEach(() => {
