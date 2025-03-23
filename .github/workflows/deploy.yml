@@ -80,7 +80,7 @@ jobs:
             
             # Generate embeddings for all notes
             echo \"Generating embeddings for all notes...\"
-            bun run db:embeddings
+            bun run db:embeddings -- --force
             
             # Print working directory for debugging
             echo \"Working directory: $(pwd)\"
