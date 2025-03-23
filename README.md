@@ -106,18 +106,27 @@ personal-brain/
 ├── src/
 │   ├── db/              # Database setup and schema
 │   ├── importers/       # Importers for markdown files
+│   ├── interfaces/      # User interfaces (Matrix, etc.)
 │   ├── models/          # Data models and validation
 │   ├── mcp/             # MCP architecture components
 │   │   ├── model/       # AI model integration (Claude)
 │   │   ├── context/     # Context management for notes
 │   │   └── protocol/    # Interaction protocol between model and context
+│   ├── utils/           # Shared utility functions
+│   │   ├── noteUtils.ts    # Note display and formatting
+│   │   ├── textUtils.ts    # Text processing utilities
+│   │   └── vectorUtils.ts  # Vector operation utilities 
 │   ├── cli.ts           # CLI interface
 │   ├── import.ts        # Import script
 │   ├── delete.ts        # Delete script
 │   └── index.ts         # Main application
+├── tests/               # Unit tests
+│   ├── embeddings.test.ts  # Tests for embedding service
+│   ├── noteContext.test.ts # Tests for note context
+│   └── note.test.ts        # Tests for note model
 ├── articles/            # Directory for your markdown files
 ├── drizzle/             # Database migrations
-│   └── 0000_rich_radioactive_man.sql
+│   └── migrations/      # SQL migration files
 ├── drizzle.config.ts    # Drizzle ORM configuration
 └── package.json         # Project dependencies
 ```
@@ -130,6 +139,26 @@ bun run dev
 
 # Typecheck
 bun run typecheck
+
+# Run tests
+bun test
+
+# Run tests with coverage
+bun test --coverage
+```
+
+### Testing
+
+The project uses Bun's built-in test runner. Tests are located in the `tests/` directory:
+
+- `embeddings.test.ts` - Tests for the embedding service
+- `noteContext.test.ts` - Tests for the note context operations  
+- `note.test.ts` - Tests for note validation
+
+To run all tests:
+
+```bash
+bun test
 ```
 
 ## Deployment
