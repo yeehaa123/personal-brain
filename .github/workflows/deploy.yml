@@ -68,13 +68,13 @@ jobs:
             MATRIX_ACCESS_TOKEN=${MATRIX_ACCESS_TOKEN}
             MATRIX_ROOM_IDS=${MATRIX_ROOM_IDS}
             COMMAND_PREFIX=${COMMAND_PREFIX}
+            ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
             EOL
             
             # Print number of lines in .env to verify
             echo \"Verifying .env file was created with \$(wc -l < .env) lines\"
             
-            # Ensure API key is directly set in environment for embeddings
-            export ANTHROPIC_API_KEY="${{ secrets.ANTHROPIC_API_KEY }}"            
+            # API key is already set in the .env file            
             
             # Set up database if needed
             bun run db:generate
