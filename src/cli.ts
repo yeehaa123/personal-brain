@@ -77,7 +77,7 @@ async function processCommand(command: string, args: string, context: NoteContex
         console.log('\nProfile has embeddings: Yes');
       } else {
         console.log('\nProfile has embeddings: No');
-        console.log('Run "bun run src/embed.ts profile" to generate embeddings.');
+        console.log('Run "bun run embed:profile" to generate embeddings.');
       }
       
       // Display tags if available
@@ -86,7 +86,7 @@ async function processCommand(command: string, args: string, context: NoteContex
         console.log(profile.tags.join(', '));
       } else {
         console.log('\nProfile Tags: None');
-        console.log('Run "bun run tag" to generate tags.');
+        console.log('Run "bun run tag:profile" to generate tags.');
       }
       
       // If we have args "related", show notes related to profile
@@ -111,7 +111,7 @@ async function processCommand(command: string, args: string, context: NoteContex
           displayNotes(relatedNotes);
         } else {
           console.log('No related notes found. Try generating embeddings and tags for your notes and profile.');
-          console.log('You can run "bun run tag" to generate profile tags.');
+          console.log('You can run "bun run tag:profile" to generate profile tags.');
         }
       }
       
