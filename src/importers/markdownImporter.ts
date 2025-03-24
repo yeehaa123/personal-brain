@@ -6,6 +6,7 @@ import { notes } from '../db/schema';
 import { sql } from 'drizzle-orm';
 import { NoteContext } from '../mcp/context/noteContext';
 import { EmbeddingService } from '../mcp/model/embeddings';
+import { extractTags } from '../utils/tagExtractor';
 
 interface MarkdownMetadata {
   title?: string;
@@ -85,8 +86,27 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   const { metadata, content } = parseMarkdown(fileContent);
   
   const title = metadata.title || basename(filePath, extname(filePath));
-  const tags = metadata.tags || [];
+  let tags = metadata.tags || [];
   const now = new Date();
+  
+  // Generate tags with AI if none were provided in the frontmatter
+  if (tags.length === 0) {
+    try {
+      console.log(`Generating tags for: ${title}`);
+      // Use the combined title and content for better tag context
+      const tagContent = `${title}\n\n${content}`;
+      
+      // Use the same tag extractor we use for profiles
+      const generatedTags = await extractTags(tagContent, [], 7);
+      if (generatedTags && generatedTags.length > 0) {
+        tags = generatedTags;
+        console.log(`Generated tags: ${tags.join(', ')}`);
+      }
+    } catch (error) {
+      console.error(`Error generating tags for ${filePath}:`, error);
+      // Continue with no tags if there's an error
+    }
+  }
   
   // Create a stable ID based on the file basename
   // This ensures the same file always gets the same ID

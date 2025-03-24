@@ -12,6 +12,7 @@
     "delete": "bun run src/delete.ts",
     "cli": "bun run src/cli.ts",
     "tag": "bun run src/tag-profile.ts",
+    "tag:notes": "bun run src/tag-notes.ts",
     "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
     "matrix:start": "bun run src/interfaces/matrix.ts",
     "matrix:logout": "bun run src/interfaces/matrix-logout.ts",
