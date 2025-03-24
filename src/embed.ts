@@ -4,19 +4,46 @@ import { ProfileContext } from './mcp/context/profileContext';
 import { db } from './db';
 import { notes, profiles } from './db/schema';
 
+const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;
+type EntityType = typeof ENTITY_TYPES[number];
+
 async function generateEmbeddings() {
-  const forceAll = process.argv.includes('--force');
-  const entityType = process.argv[2]?.toLowerCase();
+  // Parse arguments
+  const args = process.argv.slice(2);
+  const forceRegenerate = args.includes('--force');
   
-  if (entityType === 'profile') {
-    await generateProfileEmbeddings(forceAll);
-  } else {
-    await generateNoteEmbeddings(forceAll);
+  // Determine what to embed (profile, notes, or all)
+  let entityType: EntityType = 'notes'; // Default to notes for backward compatibility
+  for (const arg of args) {
+    if (ENTITY_TYPES.includes(arg as EntityType)) {
+      entityType = arg as EntityType;
+      break;
+    }
+  }
+
+  console.log(`Generating embeddings${entityType !== 'notes' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
+
+  try {
+    // Process based on entity type
+    if (entityType === 'profile' || entityType === 'all') {
+      await generateProfileEmbeddings(forceRegenerate);
+    }
+    
+    if (entityType === 'notes' || entityType === 'all') {
+      await generateNoteEmbeddings(forceRegenerate);
+    }
+    
+    console.log('\nEmbedding generation complete!');
+  } catch (error) {
+    console.error('Error generating embeddings:', error);
+    process.exit(1);
   }
 }
 
-async function generateNoteEmbeddings(forceAll: boolean) {
-  if (forceAll) {
+async function generateNoteEmbeddings(forceRegenerate: boolean) {
+  console.log('\n=== Processing Note Embeddings ===');
+  
+  if (forceRegenerate) {
     console.log('Force regenerating embeddings for ALL notes...');
     await db.update(notes).set({ embedding: null });
   } else {
@@ -28,7 +55,6 @@ async function generateNoteEmbeddings(forceAll: boolean) {
     const context = new NoteContext();
     const result = await context.generateEmbeddingsForAllNotes();
 
-    console.log(`Note embedding generation complete!`);
     console.log(`Notes updated: ${result.updated}`);
     console.log(`Notes failed: ${result.failed}`);
 
@@ -37,12 +63,13 @@ async function generateNoteEmbeddings(forceAll: boolean) {
     }
   } catch (error) {
     console.error('Error generating note embeddings:', error);
-    process.exit(1);
   }
 }
 
-async function generateProfileEmbeddings(forceAll: boolean) {
-  if (forceAll) {
+async function generateProfileEmbeddings(forceRegenerate: boolean) {
+  console.log('\n=== Processing Profile Embedding ===');
+  
+  if (forceRegenerate) {
     console.log('Force regenerating embedding for profile...');
     await db.update(profiles).set({ embedding: null });
   } else {
@@ -54,7 +81,6 @@ async function generateProfileEmbeddings(forceAll: boolean) {
     const context = new ProfileContext();
     const result = await context.generateEmbeddingForProfile();
 
-    console.log(`Profile embedding generation complete!`);
     console.log(`Profile updated: ${result.updated ? 'Yes' : 'No'}`);
 
     if (!result.updated) {
@@ -62,20 +88,30 @@ async function generateProfileEmbeddings(forceAll: boolean) {
     }
   } catch (error) {
     console.error('Error generating profile embedding:', error);
-    process.exit(1);
   }
 }
 
-// If no arguments, print usage
-if (process.argv.length <= 2) {
+// Show usage if help flag is provided
+if (process.argv.includes('--help') || process.argv.length === 2) {
   console.log(`
 Usage:
-  bun run src/embed.ts [options]         Generate embeddings for all notes
-  bun run src/embed.ts profile [options] Generate embedding for profile
+  bun run src/embed.ts [entity-type] [options]
+
+Entity Types:
+  profile     Generate embedding for the user profile
+  notes       Generate embeddings for all notes (default)
+  all         Generate embeddings for both profile and notes
 
 Options:
-  --force  Force regenerate all embeddings (even if they already exist)
+  --force     Force regeneration of embeddings even if they already exist
+  --help      Show this help message
+
+Examples:
+  bun run src/embed.ts                  # Generate embeddings for notes
+  bun run src/embed.ts profile          # Generate embedding for profile
+  bun run src/embed.ts all --force      # Force regenerate all embeddings
   `);
-} else {
-  generateEmbeddings();
+  process.exit(0);
 }
+
+generateEmbeddings();
