@@ -11,6 +11,7 @@
     "import": "bun run src/import.ts",
     "delete": "bun run src/delete.ts",
     "cli": "bun run src/cli.ts",
+    "tag": "bun run src/tag-profile.ts",
     "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
     "matrix:start": "bun run src/interfaces/matrix.ts",
     "matrix:logout": "bun run src/interfaces/matrix-logout.ts",
