@@ -148,6 +148,37 @@ export class MatrixRenderer {
         
         this.sendMessageFn(roomId, askMessage.join('\n'));
         break;
+        
+      case 'status':
+        const statusMsg = [
+          '### System Status',
+          '',
+          `**API Connection**: ${result.status.apiConnected ? '✅ Connected' : '❌ Disconnected'}`,
+          `**Database**: ${result.status.dbConnected ? '✅ Connected' : '❌ Disconnected'}`,
+          `**Notes**: ${result.status.noteCount}`,
+          `**External Sources**: ${result.status.externalSourcesEnabled ? '✅ Enabled' : '⚠️ Disabled'}`,
+          ''
+        ];
+        
+        // Add external sources availability
+        if (Object.keys(result.status.externalSources).length > 0) {
+          statusMsg.push('#### Available External Sources');
+          
+          Object.entries(result.status.externalSources).forEach(([name, available]) => {
+            statusMsg.push(`- **${name}**: ${available ? '✅ Available' : '❌ Unavailable'}`);
+          });
+        } else {
+          statusMsg.push('⚠️ No external sources configured');
+        }
+        
+        this.sendMessageFn(roomId, statusMsg.join('\n'));
+        break;
+        
+      case 'external':
+        const externalStatusIcon = result.enabled ? '✅' : '⚠️';
+        const externalMsg = `${externalStatusIcon} ${result.message}`;
+        this.sendMessageFn(roomId, externalMsg);
+        break;
     }
   }
 

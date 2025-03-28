@@ -13,14 +13,17 @@ describe('BrainProtocol External Sources', () => {
     
     // Verify useExternalSources is false by default
     expect(protocol['useExternalSources']).toBe(false);
+    expect(protocol.getUseExternalSources()).toBe(false);
     
     // Disable
     protocol.setUseExternalSources(false);
     expect(protocol['useExternalSources']).toBe(false);
+    expect(protocol.getUseExternalSources()).toBe(false);
     
     // Enable again
     protocol.setUseExternalSources(true);
     expect(protocol['useExternalSources']).toBe(true);
+    expect(protocol.getUseExternalSources()).toBe(true);
   });
   
   test('should provide access to external source context', () => {

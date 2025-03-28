@@ -389,4 +389,18 @@ export class NoteContext {
 
     return { updated, failed };
   }
+  
+  /**
+   * Get the total count of notes in the database
+   */
+  async getNoteCount(): Promise<number> {
+    try {
+      // Try a simpler approach - just get all notes and count them
+      const allNotes = await db.select({ id: notes.id }).from(notes);
+      return allNotes.length;
+    } catch (error) {
+      console.error('Error getting note count:', error);
+      throw error;
+    }
+  }
 }

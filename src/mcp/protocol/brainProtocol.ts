@@ -86,6 +86,13 @@ export class BrainProtocol {
     this.useExternalSources = enabled;
     logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
   }
+  
+  /**
+   * Get the current status of external sources
+   */
+  getUseExternalSources(): boolean {
+    return this.useExternalSources;
+  }
 
   /**
    * Load the user profile

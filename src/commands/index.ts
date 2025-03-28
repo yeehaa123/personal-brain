@@ -349,15 +349,36 @@ export class CommandHandler {
     let noteCount = 0;
     
     try {
+      // First, attempt to get the note count
       noteCount = await this.noteContext.getNoteCount();
       dbConnected = true;
-    } catch (error) {
-      // Database connection failed
+      // If we get here, the database is connected
+    } catch (firstError) {
+      console.error('Error checking database connection:', firstError);
+      
+      // Try a second fallback approach - just try to get one note
+      try {
+        const notes = await this.noteContext.getRecentNotes(1);
+        // If we can get at least one note, the database is connected
+        dbConnected = true;
+        noteCount = notes.length; // This might be 0 if there are no notes
+      } catch (secondError) {
+        console.error('Fallback database check also failed:', secondError);
+        // Both attempts failed, database is definitely not connected
+        dbConnected = false;
+      }
     }
     
-    // Check external sources
-    const externalSources = await this.externalContext.checkSourcesAvailability();
-    const externalSourcesEnabled = this.brainProtocol['useExternalSources'] ?? false;
+    // Check external sources with error handling
+    let externalSources = {};
+    try {
+      externalSources = await this.externalContext.checkSourcesAvailability();
+    } catch (error) {
+      console.error('Error checking external sources:', error);
+      // Failed to check external sources, continue with empty object
+    }
+    
+    const externalSourcesEnabled = this.brainProtocol.getUseExternalSources();
     
     return {
       type: 'status',

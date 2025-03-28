@@ -244,4 +244,34 @@ export class ExternalSourceContext {
     
     logger.debug(`Pruned ${removeCount} items from external source cache`);
   }
+  
+  /**
+   * Check if all registered sources are available
+   */
+  async checkSourcesAvailability(): Promise<Record<string, boolean>> {
+    const availabilityMap: Record<string, boolean> = {};
+    
+    // If no sources, return empty object
+    if (this.sources.size === 0) {
+      return availabilityMap;
+    }
+    
+    // Check each source in parallel
+    const checkPromises: Promise<void>[] = [];
+    
+    for (const [name, source] of this.sources.entries()) {
+      checkPromises.push(
+        source.checkAvailability()
+          .then(available => {
+            availabilityMap[name] = available;
+          })
+          .catch(() => {
+            availabilityMap[name] = false;
+          })
+      );
+    }
+    
+    await Promise.all(checkPromises);
+    return availabilityMap;
+  }
 }

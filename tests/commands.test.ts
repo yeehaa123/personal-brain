@@ -72,6 +72,10 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
       setUseExternalSources(enabled) {
         this.useExternalSources = enabled;
       }
+      
+      getUseExternalSources() {
+        return this.useExternalSources;
+      }
     }
   };
 });
@@ -205,6 +209,38 @@ describe('CommandHandler', () => {
       
       // The query is not returned in the result, so we don't test for it
       // expect(result.query).toBe('What is ecosystem architecture?');
+    });
+  });
+  
+  describe('status command', () => {
+    test('should handle status command', async () => {
+      // Set ANTHROPIC_API_KEY for test
+      process.env.ANTHROPIC_API_KEY = 'test-key';
+      
+      const result = await commandHandler.processCommand('status', '');
+      
+      expect(result).toBeDefined();
+      expect(result.type).toBe('status');
+      expect(result.status).toBeDefined();
+      expect(result.status.apiConnected).toBe(true);
+      expect(result.status.dbConnected).toBe(true);
+      expect(result.status.noteCount).toBe(10);
+      expect(result.status.externalSourcesEnabled).toBe(false);
+      expect(result.status.externalSources).toBeDefined();
+      expect(result.status.externalSources.Wikipedia).toBe(true);
+      expect(result.status.externalSources.NewsAPI).toBe(false);
+    });
+    
+    test('should toggle external sources', async () => {
+      // Enable external sources
+      await commandHandler.processCommand('external', 'on');
+      let result = await commandHandler.processCommand('status', '');
+      expect(result.status.externalSourcesEnabled).toBe(true);
+      
+      // Disable external sources
+      await commandHandler.processCommand('external', 'off');
+      result = await commandHandler.processCommand('status', '');
+      expect(result.status.externalSourcesEnabled).toBe(false);
     });
   });
 });
