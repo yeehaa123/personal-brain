@@ -23,9 +23,9 @@ export function displayNotes(notes: Note[]) {
     CLIInterface.print(`\n${CLIInterface.styles.number(`[${index + 1}]`)} ${CLIInterface.styles.subtitle(note.title)}`);
     
     // Display metadata using label-value formatting
-    CLIInterface.printLabelValue('ID', note.id, { formatter: CLIInterface.formatId });
-    CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'none' });
-    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: CLIInterface.formatDate });
+    CLIInterface.printLabelValue('ID', note.id, { formatter: id => CLIInterface.formatId(id) });
+    CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'none', formatter: tag => CLIInterface.styles.tag(`#${tag}`) });
+    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: date => CLIInterface.formatDate(date) });
 
     // Content preview
     const contentPreview = note.content.length > 100
