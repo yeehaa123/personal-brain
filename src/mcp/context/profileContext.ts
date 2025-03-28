@@ -1,30 +1,30 @@
 import { db } from '../../db';
 import { profiles } from '../../db/schema';
-import { eq, isNull, not } from 'drizzle-orm';
-import type { Profile, EnhancedProfile } from '../../models/profile';
+import { eq, SQL } from 'drizzle-orm';
+import type { 
+  Profile, 
+  ProfileEducation, 
+  ProfileExperience, 
+  ProfilePublication, 
+  ProfileProject 
+} from '../../models/profile';
 import { nanoid } from 'nanoid';
 import { EmbeddingService } from '../model/embeddings';
 import { extractTags } from '../../utils/tagExtractor';
 
+interface NoteContext {
+  searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<any[]>;
+  searchNotes: (options: { query?: string; limit?: number; includeContent?: boolean }) => Promise<any[]>;
+}
+
+/**
+ * Manages a user profile with vector embeddings and tag generation
+ */
 export class ProfileContext {
   private embeddingService: EmbeddingService;
-  private profile?: Profile;
 
   constructor(apiKey?: string) {
     this.embeddingService = new EmbeddingService(apiKey);
-    // Load profile asynchronously
-    this.loadProfile();
-  }
-  
-  /**
-   * Load the profile data asynchronously
-   */
-  private async loadProfile(): Promise<void> {
-    try {
-      this.profile = await this.getProfile();
-    } catch (error) {
-      console.error('Error loading profile data:', error);
-    }
   }
 
   /**
@@ -36,108 +36,92 @@ export class ProfileContext {
   }
 
   /**
-   * Create or update the user profile with automatic tag generation
+   * Create or update the user profile with automatic tag and embedding generation
    */
-  async saveProfile(profile: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'> & { embedding?: number[], tags?: string[] }): Promise<string> {
+  async saveProfile(
+    profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'> & { 
+      embedding?: number[]; 
+      tags?: string[] 
+    }
+  ): Promise<string> {
     const now = new Date();
+    const profileText = this.getProfileTextForEmbedding(profileData);
     
     // Generate embedding if not provided
-    let embedding = profile.embedding;
-    if (!embedding) {
-      try {
-        const profileText = this.getProfileTextForEmbedding(profile);
-        const result = await this.embeddingService.getEmbedding(profileText);
-        embedding = result.embedding;
-      } catch (error) {
-        console.error('Error generating profile embedding:', error);
-      }
-    }
+    const embedding = profileData.embedding || await this.generateEmbedding(profileText);
     
     // Generate tags if not provided
-    let tags = profile.tags;
-    if (!tags || tags.length === 0) {
-      try {
-        console.log('Generating tags for profile...');
-        const profileText = this.getProfileTextForEmbedding(profile);
-        tags = await this.generateProfileTags(profileText);
-        console.log(`Generated ${tags.length} tags: ${tags.join(', ')}`);
-      } catch (error) {
-        console.error('Error generating profile tags:', error);
-      }
-    }
-    
+    const tags = profileData.tags?.length 
+      ? profileData.tags
+      : await this.generateProfileTags(profileText);
+
     // Check if a profile already exists
     const existingProfile = await this.getProfile();
-    
+
     if (existingProfile) {
       // Update existing profile
-      await db.update(profiles)
-        .set({
-          ...profile,
-          embedding,
-          tags,
-          updatedAt: now
-        })
-        .where(eq(profiles.id, existingProfile.id));
+      const updateData: any = {
+        ...profileData,
+        updatedAt: now
+      };
       
+      // Only set these fields if we have values
+      if (embedding?.length) updateData.embedding = embedding;
+      if (tags?.length) updateData.tags = tags;
+
+      await db.update(profiles)
+        .set(updateData)
+        .where(eq(profiles.id, existingProfile.id));
+
       return existingProfile.id;
     } else {
       // Create new profile
       const id = nanoid();
       
-      await db.insert(profiles).values({
+      const insertData: any = {
         id,
-        ...profile,
-        embedding,
-        tags,
+        ...profileData,
         createdAt: now,
         updatedAt: now
-      });
+      };
       
+      // Only set these fields if we have values
+      if (embedding?.length) insertData.embedding = embedding;
+      if (tags?.length) insertData.tags = tags;
+
+      await db.insert(profiles).values(insertData);
+
       return id;
     }
   }
 
   /**
-   * Merge partial data into existing profile
+   * Update partial profile data with automatic embedding regeneration when needed
    */
   async updateProfile(profileData: Partial<Profile>): Promise<void> {
     const existingProfile = await this.getProfile();
-    
+
     if (!existingProfile) {
       throw new Error('No profile exists to update');
     }
-    
+
     const now = new Date();
-    
+    const updatedData: Record<string, any> = { ...profileData, updatedAt: now };
+
     // If profile content is being updated, regenerate the embedding
     if (this.shouldRegenerateEmbedding(profileData)) {
-      try {
-        // Get full profile with updates to generate embedding
-        const updatedProfile = { ...existingProfile, ...profileData };
-        const profileText = this.getProfileTextForEmbedding(updatedProfile);
-        const result = await this.embeddingService.getEmbedding(profileText);
-        
-        await db.update(profiles)
-          .set({
-            ...profileData,
-            embedding: result.embedding,
-            updatedAt: now
-          })
-          .where(eq(profiles.id, existingProfile.id));
-          
-        return;
-      } catch (error) {
-        console.error('Error regenerating profile embedding:', error);
+      const updatedProfile = { ...existingProfile, ...profileData };
+      const profileText = this.getProfileTextForEmbedding(updatedProfile);
+      const embedding = await this.generateEmbedding(profileText);
+      
+      if (embedding?.length) {
+        updatedData.embedding = embedding;
       }
     }
-    
-    // Regular update without regenerating embedding
+
+    // Update the profile with all changes
     await db.update(profiles)
-      .set({
-        ...profileData,
-        updatedAt: now
-      })
+      .set(updatedData as any)
       .where(eq(profiles.id, existingProfile.id));
   }
 
@@ -147,24 +131,248 @@ export class ProfileContext {
   async generateEmbeddingForProfile(): Promise<{ updated: boolean }> {
     const profile = await this.getProfile();
     if (!profile) {
-      console.log('No profile found to generate embedding for');
       return { updated: false };
     }
 
     try {
       const profileText = this.getProfileTextForEmbedding(profile);
-      const result = await this.embeddingService.getEmbedding(profileText);
+      const embedding = await this.generateEmbedding(profileText);
 
       await db.update(profiles)
-        .set({ embedding: result.embedding })
+        .set({ embedding: embedding } as any)
         .where(eq(profiles.id, profile.id));
 
-      console.log(`Updated embedding for profile: ${profile.id}`);
       return { updated: true };
     } catch (error) {
       console.error(`Failed to update embedding for profile ${profile.id}:`, error);
       return { updated: false };
     }
+  }
+
+  /**
+   * Update or generate tags for an existing profile
+   */
+  async updateProfileTags(forceRegenerate = false): Promise<string[] | null> {
+    const profile = await this.getProfile();
+
+    if (!profile) {
+      return null;
+    }
+
+    // Check if we need to generate tags
+    if (!forceRegenerate && profile.tags && profile.tags.length > 0) {
+      return profile.tags as string[];
+    }
+
+    try {
+      const profileText = this.getProfileTextForEmbedding(profile);
+      const tags = await this.generateProfileTags(profileText);
+
+      await db.update(profiles)
+        .set({ tags: tags } as any)
+        .where(eq(profiles.id, profile.id));
+
+      return tags;
+    } catch (error) {
+      console.error('Error updating profile tags:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find notes related to the profile using tags or embeddings
+   */
+  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<any[]> {
+    const profile = await this.getProfile();
+    if (!profile) {
+      return [];
+    }
+
+    // Try to find notes based on tags if available
+    if (profile.tags?.length) {
+      try {
+        const tagResults = await this.findNotesWithSimilarTags(noteContext, profile.tags as string[], limit);
+        if (tagResults.length > 0) {
+          return tagResults;
+        }
+      } catch (error) {
+        console.error('Error finding notes with similar tags:', error);
+      }
+    }
+
+    // Fall back to embedding or keyword search
+    try {
+      // If profile has embeddings, use semantic search
+      if (profile.embedding?.length) {
+        return await noteContext.searchNotesWithEmbedding(
+          profile.embedding as number[],
+          limit
+        );
+      } 
+      
+      // Otherwise fall back to keyword search
+      const keywords = this.extractProfileKeywords(profile);
+      return await noteContext.searchNotes({
+        query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
+        limit
+      });
+    } catch (error) {
+      console.error('Error finding notes related to profile:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Find notes that have similar tags to the profile
+   */
+  async findNotesWithSimilarTags(
+    noteContext: NoteContext, 
+    profileTags: string[], 
+    limit = 5
+  ): Promise<any[]> {
+    if (!profileTags?.length) {
+      return [];
+    }
+
+    // Get all notes with tags
+    const allNotes = await noteContext.searchNotes({
+      limit: 100,
+      includeContent: false
+    });
+
+    // Filter to notes that have tags and score them
+    const scoredNotes = allNotes
+      .filter(note => note.tags?.length > 0)
+      .map(note => {
+        const matchCount = this.calculateTagMatchScore(note.tags, profileTags);
+        return {
+          ...note,
+          tagScore: matchCount,
+          matchRatio: matchCount / note.tags.length
+        };
+      })
+      .filter(note => note.tagScore > 0);
+
+    // Sort by tag match score and ratio
+    const sortedNotes = scoredNotes
+      .sort((a, b) => {
+        // First sort by absolute number of matches
+        if (b.tagScore !== a.tagScore) {
+          return b.tagScore - a.tagScore;
+        }
+        // Then by ratio of matches to total tags
+        return b.matchRatio - a.matchRatio;
+      })
+      .map(({ tagScore, matchRatio, ...note }) => note);
+
+    return sortedNotes.slice(0, limit);
+  }
+
+  // PRIVATE METHODS
+
+  /**
+   * Calculate how well tags match between a note and profile
+   */
+  private calculateTagMatchScore(noteTags: string[], profileTags: string[]): number {
+    return noteTags.reduce((count, noteTag) => {
+      // Direct match (exact tag match)
+      const directMatch = profileTags.includes(noteTag);
+      
+      // Partial match (tag contains or is contained by a profile tag)
+      const partialMatch = !directMatch && profileTags.some(profileTag =>
+        noteTag.includes(profileTag) || profileTag.includes(noteTag)
+      );
+      
+      return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
+    }, 0);
+  }
+
+  /**
+   * Generate embedding for profile text
+   */
+  private async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      const result = await this.embeddingService.getEmbedding(text);
+      return result.embedding;
+    } catch (error) {
+      console.error('Error generating profile embedding:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Generate tags for a profile using AI
+   */
+  private async generateProfileTags(profileText: string): Promise<string[]> {
+    try {
+      const tags = await extractTags(profileText, [], 10);
+      
+      if (!tags?.length) {
+        const profile = await this.getProfile();
+        return this.extractProfileKeywords(profile || {});
+      }
+      
+      return tags;
+    } catch (error) {
+      console.error('Error generating profile tags:', error);
+      const profile = await this.getProfile();
+      return this.extractProfileKeywords(profile || {});
+    }
+  }
+
+  /**
+   * Extract keywords from profile to use for searching notes
+   */
+  private extractProfileKeywords(profile: Partial<Profile>): string[] {
+    const keywords: string[] = [];
+    const commonWords = ['the', 'and', 'that', 'with', 'have', 'this', 'from'];
+
+    // Add important terms from summary
+    if (profile.summary) {
+      const summaryTerms = profile.summary
+        .toLowerCase()
+        .split(/\W+/)
+        .filter(term => term.length > 3 && !commonWords.includes(term));
+      keywords.push(...summaryTerms);
+    }
+
+    // Add job titles
+    if (profile.experiences?.length) {
+      (profile.experiences as ProfileExperience[]).forEach((exp: ProfileExperience) => {
+        if (exp.title) {
+          const titleParts = exp.title.toLowerCase().split(/\W+/).filter(p => p.length > 2);
+          keywords.push(...titleParts);
+        }
+      });
+    }
+
+    // Add languages
+    if (profile.languages?.length) {
+      keywords.push(...(profile.languages as string[]).map(lang => lang.toLowerCase()));
+    }
+
+    // Add education fields
+    if (profile.education?.length) {
+      (profile.education as ProfileEducation[]).forEach((edu: ProfileEducation) => {
+        if (edu.degree_name) {
+          const degreeParts = edu.degree_name.toLowerCase().split(/\W+/).filter(p => p.length > 2);
+          keywords.push(...degreeParts);
+        }
+      });
+    }
+
+    // Add projects
+    if (profile.accomplishmentProjects?.length) {
+      (profile.accomplishmentProjects as ProfileProject[]).forEach((proj: ProfileProject) => {
+        if (proj.title) {
+          const projParts = proj.title.toLowerCase().split(/\W+/).filter(p => p.length > 2);
+          keywords.push(...projParts);
+        }
+      });
+    }
+
+    // Remove duplicates
+    return Array.from(new Set(keywords));
   }
 
   /**
@@ -180,242 +388,6 @@ export class ProfileContext {
     ];
 
     return semanticFields.some(field => field in profileData);
-  }
-  
-  /**
-   * Generate tags for a profile using AI
-   * @param profileText Formatted profile text
-   * @returns Array of generated tags
-   */
-  async generateProfileTags(profileText: string): Promise<string[]> {
-    try {
-      // Use the AI-based tag extractor
-      const tags = await extractTags(profileText, [], 10);
-      
-      // Make sure we got valid tags
-      if (!tags || tags.length === 0) {
-        console.warn('No tags were generated, using fallback keywords');
-        return this.extractProfileKeywords(this.profile || {});
-      }
-      
-      return tags;
-    } catch (error) {
-      console.error('Error generating profile tags:', error);
-      // Fallback to keyword extraction from profile
-      return this.extractProfileKeywords(this.profile || {});
-    }
-  }
-  
-  /**
-   * Update or generate tags for an existing profile
-   * @param forceRegenerate Whether to force regeneration even if tags exist
-   * @returns The updated tags
-   */
-  async updateProfileTags(forceRegenerate: boolean = false): Promise<string[] | null> {
-    const profile = await this.getProfile();
-    
-    if (!profile) {
-      console.log('No profile found to generate tags for');
-      return null;
-    }
-    
-    // Check if we need to generate tags
-    if (!forceRegenerate && profile.tags && profile.tags.length > 0) {
-      console.log('Profile already has tags, skipping generation');
-      return profile.tags;
-    }
-    
-    try {
-      // Generate profile text for tagging
-      const profileText = this.getProfileTextForEmbedding(profile);
-      
-      // Generate tags
-      const tags = await this.generateProfileTags(profileText);
-      
-      // Update the profile with the new tags
-      await db.update(profiles)
-        .set({ tags })
-        .where(eq(profiles.id, profile.id));
-      
-      console.log(`Updated tags for profile: ${tags.join(', ')}`);
-      return tags;
-    } catch (error) {
-      console.error('Error updating profile tags:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Extract keywords from profile to use for searching notes
-   */
-  extractProfileKeywords(profile: Profile): string[] {
-    const keywords: string[] = [];
-    
-    // Add important terms from summary
-    if (profile.summary) {
-      // Extract key terms from summary (skip common words)
-      const summaryTerms = profile.summary
-        .toLowerCase()
-        .split(/\W+/)
-        .filter(term => 
-          term.length > 3 && 
-          !['the', 'and', 'that', 'with', 'have', 'this', 'from'].includes(term)
-        );
-      keywords.push(...summaryTerms);
-    }
-    
-    // Add job titles
-    if (profile.experiences) {
-      profile.experiences.forEach(exp => {
-        if (exp.title) {
-          // Split title into words and add
-          const titleParts = exp.title.toLowerCase().split(/\W+/).filter(p => p.length > 2);
-          keywords.push(...titleParts);
-        }
-      });
-    }
-    
-    // Add skills
-    if (profile.languages) {
-      keywords.push(...profile.languages.map(lang => lang.toLowerCase()));
-    }
-    
-    // Add education fields and majors
-    if (profile.education) {
-      profile.education.forEach(edu => {
-        if (edu.degree) {
-          const degreeParts = edu.degree.toLowerCase().split(/\W+/).filter(p => p.length > 2);
-          keywords.push(...degreeParts);
-        }
-      });
-    }
-    
-    // Add projects
-    if (profile.accomplishmentProjects) {
-      profile.accomplishmentProjects.forEach(proj => {
-        if (proj.name) {
-          const projParts = proj.name.toLowerCase().split(/\W+/).filter(p => p.length > 2);
-          keywords.push(...projParts);
-        }
-      });
-    }
-    
-    // Remove duplicates and return
-    return [...new Set(keywords)];
-  }
-  
-  /**
-   * Find notes that are related to the profile based on keywords or tags
-   */
-  async findRelatedNotes(noteContext: any, limit = 5): Promise<any[]> {
-    const profile = await this.getProfile();
-    if (!profile) {
-      return [];
-    }
-    
-    // First try to find notes based on tags if available
-    if (profile.tags && profile.tags.length > 0) {
-      try {
-        console.log(`Finding notes with similar tags to profile: ${profile.tags.join(', ')}`);
-        const tagResults = await this.findNotesWithSimilarTags(noteContext, profile.tags, limit);
-        
-        // If we found notes with tags, return them
-        if (tagResults.length > 0) {
-          return tagResults;
-        }
-      } catch (tagError) {
-        console.error('Error finding notes with similar tags:', tagError);
-      }
-    }
-    
-    // Extract keywords from profile as fallback
-    const keywords = this.extractProfileKeywords(profile);
-    
-    // Search for notes with these keywords
-    try {
-      // If profile has embeddings, use semantic search with profile embedding
-      if (profile.embedding) {
-        const results = await noteContext.searchNotesWithEmbedding(
-          profile.embedding, 
-          limit
-        );
-        return results;
-      } else {
-        // Otherwise fall back to keyword search
-        const results = await noteContext.searchNotes({
-          query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
-          limit
-        });
-        return results;
-      }
-    } catch (error) {
-      console.error('Error finding notes related to profile:', error);
-      return [];
-    }
-  }
-  
-  /**
-   * Find notes that have similar tags to the profile
-   * @param noteContext Note context instance
-   * @param profileTags Array of profile tags
-   * @param limit Maximum number of notes to return
-   * @returns Array of notes with matching tags
-   */
-  async findNotesWithSimilarTags(noteContext: any, profileTags: string[], limit = 5): Promise<any[]> {
-    if (!profileTags || profileTags.length === 0) {
-      return [];
-    }
-    
-    // Get all notes with tags
-    const allNotes = await noteContext.searchNotes({
-      limit: 100,
-      includeContent: false // Just get metadata to save bandwidth
-    });
-    
-    // Filter to notes that have tags
-    const notesWithTags = allNotes.filter(note => note.tags && note.tags.length > 0);
-    
-    // Score each note based on tag matches
-    const scoredNotes = notesWithTags.map(note => {
-      // Count how many profile tags match this note's tags
-      const matchCount = note.tags.reduce((count, noteTag) => {
-        // Look for direct matches or partial matches (hyphenated tags)
-        const directMatch = profileTags.includes(noteTag);
-        
-        // Look for partial matches (e.g. "ecosystem" matches "ecosystem-architecture")
-        const partialMatch = !directMatch && profileTags.some(profileTag => 
-          noteTag.includes(profileTag) || profileTag.includes(noteTag)
-        );
-        
-        return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
-      }, 0);
-      
-      return {
-        ...note,
-        tagScore: matchCount,
-        matchRatio: matchCount / note.tags.length // Normalize by number of tags
-      };
-    });
-    
-    // Sort by tag match score (higher is better)
-    const sortedNotes = scoredNotes
-      .filter(note => note.tagScore > 0) // Only include notes with at least one tag match
-      .sort((a, b) => {
-        // First sort by absolute number of matches
-        if (b.tagScore !== a.tagScore) {
-          return b.tagScore - a.tagScore;
-        }
-        // Then by ratio of matches to total tags (higher is better)
-        return b.matchRatio - a.matchRatio;
-      })
-      .map(note => {
-        // Remove our scoring properties before returning
-        const { tagScore, matchRatio, ...cleanNote } = note;
-        return cleanNote;
-      });
-    
-    // Return top N results
-    return sortedNotes.slice(0, limit);
   }
 
   /**
@@ -437,42 +409,41 @@ export class ProfileContext {
     if (location) parts.push(`Location: ${location}`);
 
     // Add experiences
-    if (profile.experiences && profile.experiences.length > 0) {
+    if (profile.experiences?.length) {
       parts.push('Experience:');
-      profile.experiences.forEach(exp => {
-        const duration = [exp.startDate, exp.endDate].filter(Boolean).join(' - ');
+      (profile.experiences as ProfileExperience[]).forEach((exp: ProfileExperience) => {
+        const duration = [exp.starts_at, exp.ends_at].filter(Boolean).join(' - ');
         parts.push(`- ${exp.title} at ${exp.company} (${duration})`);
         if (exp.description) parts.push(`  ${exp.description}`);
       });
     }
 
     // Add education
-    if (profile.education && profile.education.length > 0) {
+    if (profile.education?.length) {
       parts.push('Education:');
-      profile.education.forEach(edu => {
-        parts.push(`- ${edu.degree} at ${edu.school}`);
+      (profile.education as ProfileEducation[]).forEach((edu: ProfileEducation) => {
+        parts.push(`- ${edu.degree_name} at ${edu.school}`);
       });
     }
 
     // Add publications
-    if (profile.accomplishmentPublications && profile.accomplishmentPublications.length > 0) {
+    if (profile.accomplishmentPublications?.length) {
       parts.push('Publications:');
-      profile.accomplishmentPublications.forEach(pub => {
+      (profile.accomplishmentPublications as ProfilePublication[]).forEach((pub: ProfilePublication) => {
         parts.push(`- ${pub.name}`);
         if (pub.description) parts.push(`  ${pub.description}`);
       });
     }
 
     // Add projects
-    if (profile.accomplishmentProjects && profile.accomplishmentProjects.length > 0) {
+    if (profile.accomplishmentProjects?.length) {
       parts.push('Projects:');
-      profile.accomplishmentProjects.forEach(proj => {
-        parts.push(`- ${proj.name}`);
+      (profile.accomplishmentProjects as ProfileProject[]).forEach((proj: ProfileProject) => {
+        parts.push(`- ${proj.title}`);
         if (proj.description) parts.push(`  ${proj.description}`);
       });
     }
 
-    // Join all parts with newlines
     return parts.join('\n');
   }
 }
