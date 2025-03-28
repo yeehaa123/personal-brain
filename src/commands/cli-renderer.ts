@@ -5,6 +5,9 @@
 
 import type { CommandResult, CommandInfo } from './index';
 import { displayNotes } from '../utils/noteUtils';
+import { CLIInterface } from '../utils/cliInterface';
+import chalk from 'chalk';
+import logger from '../utils/logger';
 
 /**
  * Render command results for the CLI
@@ -14,10 +17,22 @@ export class CLIRenderer {
    * Render help command
    */
   renderHelp(commands: CommandInfo[]): void {
-    console.log('\nAvailable commands:');
+    CLIInterface.displayTitle('Available Commands');
+    
     commands.forEach(cmd => {
-      console.log(`  ${cmd.usage.padEnd(20)} - ${cmd.description}`);
+      const usageText = cmd.usage.padEnd(20);
+      CLIInterface.print(`  ${chalk.cyan(usageText)} - ${cmd.description}`);
+      
+      // Show examples if available
+      if (cmd.examples && cmd.examples.length > 0) {
+        CLIInterface.print(`    ${chalk.dim('Examples:')}`);
+        cmd.examples.forEach(example => {
+          CLIInterface.print(`    ${chalk.dim('>')} ${chalk.italic(example)}`);
+        });
+      }
     });
+    
+    CLIInterface.print(''); // Add space after commands
   }
 
   /**
@@ -26,17 +41,28 @@ export class CLIRenderer {
   render(result: CommandResult): void {
     switch (result.type) {
       case 'error':
-        console.log(`\nError: ${result.message}`);
+        CLIInterface.error(result.message);
         break;
         
       case 'search':
-        console.log(`\nSearching for: ${result.query}`);
-        displayNotes(result.notes);
+        CLIInterface.displayTitle(`Search Results for "${result.query}"`);
+        logger.info(`Searching for: ${result.query}`);
+        
+        if (result.notes.length === 0) {
+          CLIInterface.warn('No results found.');
+        } else {
+          displayNotes(result.notes);
+        }
         break;
         
       case 'notes':
-        console.log(`\n${result.title || 'Notes'}:`);
-        displayNotes(result.notes);
+        CLIInterface.displayTitle(result.title || 'Notes');
+        
+        if (result.notes.length === 0) {
+          CLIInterface.warn('No notes found.');
+        } else {
+          displayNotes(result.notes);
+        }
         break;
         
       case 'note':
@@ -44,10 +70,16 @@ export class CLIRenderer {
         break;
         
       case 'tags':
-        console.log('\nAvailable Tags:');
-        result.tags.forEach(({ tag, count }) => {
-          console.log(`- ${tag} (${count})`);
-        });
+        CLIInterface.displayTitle('Available Tags');
+        
+        if (result.tags.length === 0) {
+          CLIInterface.warn('No tags found in the system.');
+        } else {
+          CLIInterface.displayList(
+            result.tags,
+            ({ tag, count }) => `${chalk.bold(tag)} (${count})`
+          );
+        }
         break;
         
       case 'profile':
@@ -57,52 +89,53 @@ export class CLIRenderer {
       case 'profile-related':
         this.renderProfile(result.profile, result.keywords);
         
-        console.log('\nFinding notes related to your profile...');
-        console.log('\nNotes related to your profile:');
+        CLIInterface.info('Finding notes related to your profile...');
+        CLIInterface.displayTitle('Notes Related to Your Profile');
         
         if (result.relatedNotes.length > 0) {
           // Explain how we found the notes
           switch (result.matchType) {
             case 'tags':
-              console.log('(Matched by profile tags and semantic similarity)\n');
+              CLIInterface.print(chalk.dim('(Matched by profile tags and semantic similarity)\n'));
               break;
             case 'semantic':
-              console.log('(Matched by semantic similarity)\n');
+              CLIInterface.print(chalk.dim('(Matched by semantic similarity)\n'));
               break;
             case 'keyword':
-              console.log('(Matched by keyword similarity)\n');
+              CLIInterface.print(chalk.dim('(Matched by keyword similarity)\n'));
               break;
           }
           
           displayNotes(result.relatedNotes);
         } else {
-          console.log('No related notes found. Try generating embeddings and tags for your notes and profile.');
-          console.log('You can run "bun run tag:profile" to generate profile tags.');
+          CLIInterface.warn('No related notes found. Try generating embeddings and tags for your notes and profile.');
+          CLIInterface.info('You can run "bun run tag:profile" to generate profile tags.');
         }
         break;
         
       case 'ask':
-        console.log('\nAnswer:');
-        console.log(result.answer);
+        CLIInterface.displayTitle('Answer');
+        CLIInterface.print(result.answer);
         
         if (result.citations.length > 0) {
-          console.log('\nCitations:');
-          result.citations.forEach(citation => {
-            console.log(`- ${citation.noteTitle} (${citation.noteId})`);
-          });
+          CLIInterface.displayTitle('Sources');
+          CLIInterface.displayList(
+            result.citations,
+            (citation) => `${chalk.bold(citation.noteTitle)} (${chalk.dim(citation.noteId)})`
+          );
         }
         
         if (result.relatedNotes.length > 0) {
-          console.log('\nRelated Notes:');
+          CLIInterface.displayTitle('Related Notes');
           displayNotes(result.relatedNotes);
         }
         
         // Display profile if it was included in the response
         if (result.profile) {
-          console.log('\nProfile Information:');
-          console.log(`Name: ${result.profile.fullName}`);
-          if (result.profile.occupation) console.log(`Occupation: ${result.profile.occupation}`);
-          if (result.profile.headline) console.log(`Headline: ${result.profile.headline}`);
+          CLIInterface.displayTitle('Profile Information');
+          CLIInterface.print(`${chalk.bold('Name:')} ${result.profile.fullName}`);
+          if (result.profile.occupation) CLIInterface.print(`${chalk.bold('Occupation:')} ${result.profile.occupation}`);
+          if (result.profile.headline) CLIInterface.print(`${chalk.bold('Headline:')} ${result.profile.headline}`);
         }
         break;
     }
@@ -112,86 +145,87 @@ export class CLIRenderer {
    * Render a note
    */
   private renderNote(note: any): void {
-    console.log(`\n# ${note.title}`);
-    console.log(`ID: ${note.id}`);
+    CLIInterface.displayTitle(note.title);
+    CLIInterface.print(`${chalk.bold('ID:')} ${note.id}`);
     
     if (note.tags && note.tags.length > 0) {
-      console.log(`Tags: ${note.tags.join(', ')}`);
+      CLIInterface.print(`${chalk.bold('Tags:')} ${note.tags.map(tag => chalk.cyan(tag)).join(', ')}`);
     } else {
-      console.log('Tags: None');
+      CLIInterface.print(`${chalk.bold('Tags:')} ${chalk.dim('None')}`);
     }
     
-    console.log(`Created: ${new Date(note.createdAt).toLocaleString()}`);
-    console.log(`Updated: ${new Date(note.updatedAt).toLocaleString()}`);
+    CLIInterface.print(`${chalk.bold('Created:')} ${new Date(note.createdAt).toLocaleString()}`);
+    CLIInterface.print(`${chalk.bold('Updated:')} ${new Date(note.updatedAt).toLocaleString()}`);
     
-    console.log('\nContent:');
-    console.log(note.content);
+    CLIInterface.print('\n' + chalk.bold('Content:'));
+    CLIInterface.print(note.content);
   }
 
   /**
    * Render profile information
    */
   private renderProfile(profile: any, keywords: string[]): void {
-    console.log('\nProfile Information:');
-    console.log(`Name: ${profile.fullName}`);
-    if (profile.headline) console.log(`Headline: ${profile.headline}`);
-    if (profile.occupation) console.log(`Occupation: ${profile.occupation}`);
+    CLIInterface.displayTitle('Profile Information');
+    CLIInterface.print(`${chalk.bold('Name:')} ${profile.fullName}`);
+    if (profile.headline) CLIInterface.print(`${chalk.bold('Headline:')} ${profile.headline}`);
+    if (profile.occupation) CLIInterface.print(`${chalk.bold('Occupation:')} ${profile.occupation}`);
     
     // Display location
     const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
-    if (location) console.log(`Location: ${location}`);
+    if (location) CLIInterface.print(`${chalk.bold('Location:')} ${location}`);
     
     // Display summary
     if (profile.summary) {
-      console.log('\nSummary:');
-      console.log(profile.summary);
+      CLIInterface.print(`\n${chalk.bold('Summary:')}`);
+      CLIInterface.print(profile.summary);
     }
     
     // Display current experience
     if (profile.experiences && profile.experiences.length > 0) {
-      console.log('\nCurrent Work:');
+      CLIInterface.print(`\n${chalk.bold('Current Work:')}`);
       const currentExperiences = profile.experiences.filter((exp: any) => !exp.endDate);
       if (currentExperiences.length > 0) {
         currentExperiences.forEach((exp: any) => {
-          console.log(`- ${exp.title} at ${exp.company}`);
+          CLIInterface.print(`- ${chalk.bold(exp.title)} at ${chalk.cyan(exp.company)}`);
           if (exp.description) {
             // Trim long descriptions
             const desc = exp.description.length > 100 
               ? exp.description.substring(0, 100) + '...' 
               : exp.description;
-            console.log(`  ${desc}`);
+            CLIInterface.print(`  ${chalk.dim(desc)}`);
           }
         });
       } else {
-        console.log('No current work experiences found.');
+        CLIInterface.print(chalk.dim('No current work experiences found.'));
       }
     }
     
     // Display skills
     if (profile.languages && profile.languages.length > 0) {
-      console.log('\nLanguages:');
-      console.log(profile.languages.join(', '));
+      CLIInterface.print(`\n${chalk.bold('Languages:')}`);
+      CLIInterface.print(profile.languages.map(lang => chalk.cyan(lang)).join(', '));
     }
     
     // Check for embedding
+    CLIInterface.print('');
     if (profile.embedding) {
-      console.log('\nProfile has embeddings: Yes');
+      CLIInterface.print(`${chalk.bold('Profile has embeddings:')} ${chalk.green('Yes')}`);
     } else {
-      console.log('\nProfile has embeddings: No');
-      console.log('Run "bun run embed:profile" to generate embeddings.');
+      CLIInterface.print(`${chalk.bold('Profile has embeddings:')} ${chalk.red('No')}`);
+      CLIInterface.print(chalk.dim('Run "bun run embed:profile" to generate embeddings.'));
     }
     
     // Display tags if available
     if (profile.tags && profile.tags.length > 0) {
-      console.log('\nProfile Tags:');
-      console.log(profile.tags.join(', '));
+      CLIInterface.print(`\n${chalk.bold('Profile Tags:')}`);
+      CLIInterface.print(profile.tags.map(tag => chalk.cyan(tag)).join(', '));
     } else {
-      console.log('\nProfile Tags: None');
-      console.log('Run "bun run tag:profile" to generate tags.');
+      CLIInterface.print(`\n${chalk.bold('Profile Tags:')} ${chalk.dim('None')}`);
+      CLIInterface.print(chalk.dim('Run "bun run tag:profile" to generate tags.'));
     }
     
     // Show keywords
-    console.log('\nProfile Keywords:');
-    console.log(keywords.join(', '));
+    CLIInterface.print(`\n${chalk.bold('Profile Keywords:')}`);
+    CLIInterface.print(keywords.map(kw => chalk.cyan(kw)).join(', '));
   }
 }

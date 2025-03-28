@@ -1,8 +1,11 @@
 #!/usr/bin/env bun
-import { createInterface } from 'readline/promises';
+import inquirer from 'inquirer';
+import chalk from 'chalk';
 import { BrainProtocol } from './mcp/protocol/brainProtocol';
 import { CommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
+import { CLIInterface } from './utils/cliInterface';
+import logger from './utils/logger';
 
 async function main() {
   const brainProtocol = new BrainProtocol();
@@ -13,6 +16,8 @@ async function main() {
   if (process.argv.length > 2) {
     const command = process.argv[2].toLowerCase();
     const args = process.argv.slice(3).join(' ');
+    
+    logger.info(`Running command: ${command} ${args}`);
     
     if (command === 'help') {
       renderer.renderHelp(commandHandler.getCommands());
@@ -25,19 +30,26 @@ async function main() {
   }
   
   // Interactive mode
-  const rl = createInterface({
-    input: process.stdin,
-    output: process.stdout
-  });
+  CLIInterface.displayTitle('Personal Brain CLI');
+  CLIInterface.info('Type "help" to see available commands, or "exit" to quit');
   
-  console.log('Welcome to your Personal Brain CLI!');
-  console.log('Type "help" to see available commands, or "exit" to quit');
-  
-  while (true) {
-    const input = await rl.question('\n> ');
+  let running = true;
+  while (running) {
+    const { action } = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'action',
+        message: chalk.cyan('brain>'),
+        prefix: ''
+      }
+    ]);
+    
+    const input = action.trim();
+    logger.info(`User entered: ${input}`);
     
     if (input.toLowerCase() === 'exit' || input.toLowerCase() === 'quit') {
-      break;
+      running = false;
+      continue;
     }
     
     if (input.toLowerCase() === 'help') {
@@ -56,12 +68,29 @@ async function main() {
       command = input.toLowerCase();
     }
     
-    const result = await commandHandler.processCommand(command, args);
-    renderer.render(result);
+    try {
+      // Show a spinner for commands that might take time
+      if (['search', 'ask', 'profile'].includes(command) && args) {
+        await CLIInterface.withSpinner(`Processing ${command} command...`, async () => {
+          const result = await commandHandler.processCommand(command, args);
+          renderer.render(result);
+          return null;
+        });
+      } else {
+        const result = await commandHandler.processCommand(command, args);
+        renderer.render(result);
+      }
+    } catch (error) {
+      CLIInterface.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
+    }
   }
   
-  rl.close();
-  console.log('Goodbye!');
+  CLIInterface.success('Goodbye!');
 }
 
-main();
+main().catch(error => {
+  logger.error('Fatal error:', error);
+  CLIInterface.error(`A fatal error occurred: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+});

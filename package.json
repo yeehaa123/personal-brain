@@ -17,7 +17,7 @@
     "tag:profile": "bun run src/tag.ts profile",
     "tag:notes": "bun run src/tag.ts notes",
     "matrix": "bun run src/interfaces/matrix.ts",
-    "matrix:setup": "bun run src/interfaces/matrix-setup.ts", 
+    "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
     "matrix:logout": "bun run src/interfaces/matrix-logout.ts",
     "start": "pm2 start src/interfaces/matrix.ts --interpreter $(which bun) --name personal-brain",
     "stop": "pm2 stop personal-brain",
@@ -39,11 +39,14 @@
     "@anthropic-ai/claude-code": "^0.2.48",
     "@anthropic-ai/sdk": "^0.39.0",
     "ai": "^4.2.0",
+    "chalk": "^5.4.1",
     "drizzle-orm": "^0.40.1",
     "drizzle-zod": "^0.7.0",
+    "inquirer": "^12.5.0",
     "matrix-js-sdk": "^37.1.0",
     "nanoid": "^5.1.4",
     "openai": "^4.89.0",
+    "winston": "^3.17.0",
     "zod": "^3.24.2"
   }
 }

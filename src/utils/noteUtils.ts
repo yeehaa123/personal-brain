@@ -1,4 +1,7 @@
 import type { Note } from '../models/note';
+import chalk from 'chalk';
+import { CLIInterface } from './cliInterface';
+import logger from './logger';
 
 /**
  * Helper functions for displaying and formatting notes
@@ -9,21 +12,34 @@ import type { Note } from '../models/note';
  */
 export function displayNotes(notes: Note[]) {
   if (notes.length === 0) {
-    console.log('No notes found.');
+    CLIInterface.warn('No notes found.');
     return;
   }
 
+  logger.info(`Displaying ${notes.length} notes`);
+  
   notes.forEach((note, index) => {
-    console.log(`\n[${index + 1}] ${note.title}`);
-    console.log(`ID: ${note.id}`);
-    console.log(`Tags: ${note.tags ? note.tags.join(', ') : 'none'}`);
-    console.log(`Created: ${new Date(note.createdAt).toLocaleString()}`);
+    // Title with index
+    CLIInterface.print(`\n${chalk.cyan(`[${index + 1}]`)} ${chalk.bold(note.title)}`);
+    
+    // ID
+    CLIInterface.print(`${chalk.dim('ID:')} ${note.id}`);
+    
+    // Tags with color
+    if (note.tags && note.tags.length > 0) {
+      CLIInterface.print(`${chalk.dim('Tags:')} ${note.tags.map(tag => chalk.cyan(`#${tag}`)).join(' ')}`);
+    } else {
+      CLIInterface.print(`${chalk.dim('Tags:')} ${chalk.italic('none')}`);
+    }
+    
+    // Date
+    CLIInterface.print(`${chalk.dim('Created:')} ${new Date(note.createdAt).toLocaleString()}`);
 
-    // Show a preview of the content (first 100 characters)
+    // Content preview
     const contentPreview = note.content.length > 100
       ? note.content.substring(0, 100) + '...'
       : note.content;
-    console.log(`Preview: ${contentPreview}`);
+    CLIInterface.print(`${chalk.dim('Preview:')} ${contentPreview}`);
   });
 }
 
