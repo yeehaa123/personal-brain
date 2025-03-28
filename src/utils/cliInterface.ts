@@ -29,6 +29,8 @@ export class CLIInterface {
       number: chalk.cyan,                 // Cyan for numbers
       command: chalk.cyan,                // Cyan for commands
       example: chalk.italic,              // Italic for examples
+      url: chalk.blue.underline,          // Blue underlined for URLs
+      warn: chalk.yellow,                 // Yellow for warnings
       
       // Icon styles
       successIcon: chalk.green('✓'),      // Green checkmark for success

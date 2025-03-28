@@ -6,6 +6,8 @@ import { createMockEmbedding, mockEnv, resetMocks } from './mocks';
 mock.module('../src/mcp/protocol/brainProtocol', () => {
   return {
     BrainProtocol: class MockBrainProtocol {
+      useExternalSources = false;
+      
       getProfileContext() {
         return {
           getProfile: async () => ({
@@ -109,7 +111,17 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
               };
             }
             return null;
-          }
+          },
+          getNoteCount: async () => 10
+        };
+      }
+      
+      getExternalSourceContext() {
+        return {
+          checkSourcesAvailability: async () => ({
+            'Wikipedia': true,
+            'NewsAPI': false
+          })
         };
       }
       
@@ -119,6 +131,10 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
           citations: [],
           relatedNotes: []
         });
+      }
+      
+      setUseExternalSources(enabled) {
+        this.useExternalSources = enabled;
       }
     }
   };
@@ -136,7 +152,10 @@ describe('CommandHandler', () => {
   });
   
   beforeEach(() => {
-    const mockBrainProtocol = new (require('../src/mcp/protocol/brainProtocol').BrainProtocol)();
+    // Import directly from the mocked module to avoid reference error
+    const { BrainProtocol } = require('../src/mcp/protocol/brainProtocol');
+    const mockBrainProtocol = new BrainProtocol();
+    
     commandHandler = new CommandHandler(mockBrainProtocol);
   });
   

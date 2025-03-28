@@ -1,7 +1,7 @@
 import { cosineSimilarity, normalizeVector } from '../../utils/vectorUtils';
 import { prepareText, chunkText } from '../../utils/textUtils';
 
-interface EmbeddingResult {
+export interface EmbeddingResult {
   embedding: number[];
   truncated: boolean;
 }

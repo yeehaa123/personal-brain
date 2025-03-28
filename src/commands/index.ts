@@ -8,6 +8,7 @@ import type { Profile } from '../models/profile';
 import type { BrainProtocol } from '../mcp/protocol/brainProtocol';
 import type { NoteContext } from '../mcp/context/noteContext';
 import type { ProfileContext } from '../mcp/context/profileContext';
+import type { ExternalSourceContext } from '../mcp/context/externalSourceContext';
 
 /**
  * Interface for command descriptions
@@ -22,6 +23,8 @@ export interface CommandInfo {
 /**
  * Command result types to make interfaces easier to manage
  */
+import type { ExternalCitation } from '../mcp/protocol/brainProtocol';
+
 export type CommandResult = 
   | { type: 'error'; message: string }
   | { type: 'profile'; profile: Profile; keywords: string[] }
@@ -30,7 +33,15 @@ export type CommandResult =
   | { type: 'note'; note: Note }
   | { type: 'tags'; tags: Array<{ tag: string; count: number }> }
   | { type: 'search'; query: string; notes: Note[] }
-  | { type: 'ask'; answer: string; citations: any[]; relatedNotes: Note[]; profile?: Profile };
+  | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; profile?: Profile; externalSources?: ExternalCitation[] }
+  | { type: 'external'; enabled: boolean; message: string }
+  | { type: 'status'; status: { 
+      apiConnected: boolean; 
+      dbConnected: boolean; 
+      noteCount: number; 
+      externalSources: Record<string, boolean>;
+      externalSourcesEnabled: boolean;
+    }};
 
 /**
  * Command handler for processing commands and returning structured results
@@ -39,11 +50,13 @@ export class CommandHandler {
   private brainProtocol: BrainProtocol;
   private noteContext: NoteContext;
   private profileContext: ProfileContext;
+  private externalContext: ExternalSourceContext;
 
   constructor(brainProtocol: BrainProtocol) {
     this.brainProtocol = brainProtocol;
     this.noteContext = brainProtocol.getNoteContext();
     this.profileContext = brainProtocol.getProfileContext();
+    this.externalContext = brainProtocol.getExternalSourceContext();
   }
 
   /**
@@ -90,6 +103,18 @@ export class CommandHandler {
         description: 'Ask a question to your brain',
         usage: 'ask <question>',
         examples: ['ask "What are the principles of ecosystem architecture?"']
+      },
+      {
+        command: 'external',
+        description: 'Enable or disable external knowledge sources',
+        usage: 'external <on|off>',
+        examples: ['external on', 'external off']
+      },
+      {
+        command: 'status',
+        description: 'Check system status including external sources',
+        usage: 'status',
+        examples: ['status']
       }
     ];
   }
@@ -112,6 +137,10 @@ export class CommandHandler {
           return await this.handleProfile(args);
         case 'ask':
           return await this.handleAsk(args);
+        case 'external':
+          return await this.handleExternal(args);
+        case 'status':
+          return await this.handleStatus();
         default:
           return { type: 'error', message: `Unknown command: ${command}` };
       }
@@ -272,10 +301,73 @@ export class CommandHandler {
         answer: result.answer,
         citations: result.citations,
         relatedNotes: result.relatedNotes,
-        profile: result.profile
+        profile: result.profile,
+        externalSources: result.externalSources
       };
     } catch (error: unknown) {
       return { type: 'error', message: `Error processing question: ${error instanceof Error ? error.message : String(error)}` };
     }
+  }
+  
+  /**
+   * Handle external command - toggle external sources
+   */
+  private async handleExternal(args: string): Promise<CommandResult> {
+    const arg = args.trim().toLowerCase();
+    
+    if (arg === 'on' || arg === 'enable') {
+      this.brainProtocol.setUseExternalSources(true);
+      return {
+        type: 'external',
+        enabled: true,
+        message: 'External knowledge sources have been enabled.'
+      };
+    } else if (arg === 'off' || arg === 'disable') {
+      this.brainProtocol.setUseExternalSources(false);
+      return {
+        type: 'external',
+        enabled: false,
+        message: 'External knowledge sources have been disabled.'
+      };
+    } else {
+      return { 
+        type: 'error', 
+        message: 'Usage: external <on|off> - Enable or disable external knowledge sources' 
+      };
+    }
+  }
+  
+  /**
+   * Handle status command - check system status
+   */
+  private async handleStatus(): Promise<CommandResult> {
+    // Check API connection (simple test)
+    const apiConnected = !!process.env.ANTHROPIC_API_KEY || !!process.env.OPENAI_API_KEY;
+    
+    // Check database connection (assume connected if we can get note count)
+    let dbConnected = false;
+    let noteCount = 0;
+    
+    try {
+      noteCount = await this.noteContext.getNoteCount();
+      dbConnected = true;
+    } catch (error) {
+      // Database connection failed
+    }
+    
+    // Check external sources
+    const externalSources = await this.externalContext.checkSourcesAvailability();
+    const externalSourcesEnabled = this.brainProtocol['useExternalSources'] ?? false;
+    
+    return {
+      type: 'status',
+      status: {
+        apiConnected,
+        dbConnected,
+        noteCount,
+        externalSources,
+        externalSourcesEnabled
+      }
+    };
   }
 }

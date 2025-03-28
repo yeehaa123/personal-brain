@@ -110,11 +110,24 @@ export class CLIRenderer {
         CLIInterface.displayTitle('Answer');
         CLIInterface.print(result.answer);
         
-        if (result.citations.length > 0) {
+        if (result.citations && result.citations.length > 0) {
           CLIInterface.displayTitle('Sources');
           CLIInterface.displayList(
             result.citations,
             (citation) => `${CLIInterface.styles.subtitle(citation.noteTitle)} (${CLIInterface.formatId(citation.noteId)})`
+          );
+        }
+        
+        if (result.externalSources && result.externalSources.length > 0) {
+          CLIInterface.displayTitle('External Sources');
+          CLIInterface.displayList(
+            result.externalSources,
+            (source) => {
+              const title = CLIInterface.styles.subtitle(source.title);
+              const sourceInfo = CLIInterface.styles.highlight(source.source);
+              const url = CLIInterface.styles.url(source.url);
+              return `${title} - ${sourceInfo}\n  ${url}`;
+            }
           );
         }
         
@@ -129,6 +142,63 @@ export class CLIRenderer {
           CLIInterface.printLabelValue('Name', result.profile.fullName);
           if (result.profile.occupation) CLIInterface.printLabelValue('Occupation', result.profile.occupation);
           if (result.profile.headline) CLIInterface.printLabelValue('Headline', result.profile.headline);
+        }
+        break;
+        
+      case 'external':
+        if (result.enabled) {
+          CLIInterface.success(result.message);
+        } else {
+          CLIInterface.warn(result.message);
+        }
+        break;
+        
+      case 'status':
+        CLIInterface.displayTitle('System Status');
+        
+        // API Connection
+        CLIInterface.printLabelValue(
+          'API Connection', 
+          result.status.apiConnected ? 'Connected' : 'Disconnected',
+          { formatter: val => result.status.apiConnected ? CLIInterface.styles.success(val) : CLIInterface.styles.error(val) }
+        );
+        
+        // Database Connection
+        CLIInterface.printLabelValue(
+          'Database', 
+          result.status.dbConnected ? 'Connected' : 'Disconnected',
+          { formatter: val => result.status.dbConnected ? CLIInterface.styles.success(val) : CLIInterface.styles.error(val) }
+        );
+        
+        // Note Count
+        CLIInterface.printLabelValue('Notes', result.status.noteCount.toString());
+        
+        // External Sources Status
+        CLIInterface.printLabelValue(
+          'External Sources', 
+          result.status.externalSourcesEnabled ? 'Enabled' : 'Disabled',
+          { 
+            formatter: val => result.status.externalSourcesEnabled ? 
+              CLIInterface.styles.success(val) : CLIInterface.styles.warn(val) 
+          }
+        );
+        
+        // External Sources Availability
+        if (Object.keys(result.status.externalSources).length > 0) {
+          CLIInterface.displaySubtitle('Available External Sources');
+          
+          Object.entries(result.status.externalSources).forEach(([name, available]) => {
+            CLIInterface.printLabelValue(
+              name, 
+              available ? 'Available' : 'Unavailable',
+              { 
+                formatter: val => available ? 
+                  CLIInterface.styles.success(val) : CLIInterface.styles.error(val) 
+              }
+            );
+          });
+        } else {
+          CLIInterface.warn('No external sources configured');
         }
         break;
     }
