@@ -20,26 +20,18 @@ export function displayNotes(notes: Note[]) {
   
   notes.forEach((note, index) => {
     // Title with index
-    CLIInterface.print(`\n${chalk.cyan(`[${index + 1}]`)} ${chalk.bold(note.title)}`);
+    CLIInterface.print(`\n${CLIInterface.styles.number(`[${index + 1}]`)} ${CLIInterface.styles.subtitle(note.title)}`);
     
-    // ID
-    CLIInterface.print(`${chalk.dim('ID:')} ${note.id}`);
-    
-    // Tags with color
-    if (note.tags && note.tags.length > 0) {
-      CLIInterface.print(`${chalk.dim('Tags:')} ${note.tags.map(tag => chalk.cyan(`#${tag}`)).join(' ')}`);
-    } else {
-      CLIInterface.print(`${chalk.dim('Tags:')} ${chalk.italic('none')}`);
-    }
-    
-    // Date
-    CLIInterface.print(`${chalk.dim('Created:')} ${new Date(note.createdAt).toLocaleString()}`);
+    // Display metadata using label-value formatting
+    CLIInterface.printLabelValue('ID', note.id, { formatter: CLIInterface.formatId });
+    CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'none' });
+    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: CLIInterface.formatDate });
 
     // Content preview
     const contentPreview = note.content.length > 100
       ? note.content.substring(0, 100) + '...'
       : note.content;
-    CLIInterface.print(`${chalk.dim('Preview:')} ${contentPreview}`);
+    CLIInterface.printLabelValue('Preview', contentPreview);
   });
 }
 

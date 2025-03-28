@@ -22,32 +22,49 @@ const consoleFormat = winston.format.combine(
   })
 );
 
+// Create a custom format for file output
+const fileFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.json()
+);
+
+// Filter to exclude debug messages from console
+const excludeDebug = winston.format((info) => {
+  if (info.level.includes('debug')) {
+    return false;
+  }
+  return info;
+})();
+
 // Create the Winston logger
 const logger = winston.createLogger({
   levels: logLevels,
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL || 'debug', // Setting default to debug to capture all logs
   format: winston.format.json(),
   transports: [
-    // Console transport
+    // Console transport (excluding debug messages)
     new winston.transports.Console({
-      format: consoleFormat
+      format: winston.format.combine(
+        excludeDebug,
+        consoleFormat
+      )
     }),
     // File transport for errors
     new winston.transports.File({ 
       filename: 'error.log', 
       level: 'error',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
+      format: fileFormat
     }),
     // File transport for combined logs
     new winston.transports.File({ 
       filename: 'combined.log',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.json()
-      )
+      format: fileFormat
+    }),
+    // File transport specifically for debug logs
+    new winston.transports.File({ 
+      filename: 'debug.log',
+      level: 'debug',
+      format: fileFormat
     })
   ]
 });

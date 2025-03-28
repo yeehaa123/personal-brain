@@ -20,16 +20,7 @@ export class CLIRenderer {
     CLIInterface.displayTitle('Available Commands');
     
     commands.forEach(cmd => {
-      const usageText = cmd.usage.padEnd(20);
-      CLIInterface.print(`  ${chalk.cyan(usageText)} - ${cmd.description}`);
-      
-      // Show examples if available
-      if (cmd.examples && cmd.examples.length > 0) {
-        CLIInterface.print(`    ${chalk.dim('Examples:')}`);
-        cmd.examples.forEach(example => {
-          CLIInterface.print(`    ${chalk.dim('>')} ${chalk.italic(example)}`);
-        });
-      }
+      CLIInterface.print(CLIInterface.formatCommand(cmd.usage, cmd.description, cmd.examples));
     });
     
     CLIInterface.print(''); // Add space after commands
@@ -77,7 +68,7 @@ export class CLIRenderer {
         } else {
           CLIInterface.displayList(
             result.tags,
-            ({ tag, count }) => `${chalk.bold(tag)} (${count})`
+            ({ tag, count }) => `${CLIInterface.styles.tag(tag)} (${CLIInterface.styles.dim(count.toString())})`
           );
         }
         break;
@@ -94,17 +85,19 @@ export class CLIRenderer {
         
         if (result.relatedNotes.length > 0) {
           // Explain how we found the notes
+          let matchDescription = '';
           switch (result.matchType) {
             case 'tags':
-              CLIInterface.print(chalk.dim('(Matched by profile tags and semantic similarity)\n'));
+              matchDescription = 'Matched by profile tags and semantic similarity';
               break;
             case 'semantic':
-              CLIInterface.print(chalk.dim('(Matched by semantic similarity)\n'));
+              matchDescription = 'Matched by semantic similarity';
               break;
             case 'keyword':
-              CLIInterface.print(chalk.dim('(Matched by keyword similarity)\n'));
+              matchDescription = 'Matched by keyword similarity';
               break;
           }
+          CLIInterface.print(CLIInterface.styles.dim(`(${matchDescription})\n`));
           
           displayNotes(result.relatedNotes);
         } else {
@@ -121,7 +114,7 @@ export class CLIRenderer {
           CLIInterface.displayTitle('Sources');
           CLIInterface.displayList(
             result.citations,
-            (citation) => `${chalk.bold(citation.noteTitle)} (${chalk.dim(citation.noteId)})`
+            (citation) => `${CLIInterface.styles.subtitle(citation.noteTitle)} (${CLIInterface.formatId(citation.noteId)})`
           );
         }
         
@@ -133,9 +126,9 @@ export class CLIRenderer {
         // Display profile if it was included in the response
         if (result.profile) {
           CLIInterface.displayTitle('Profile Information');
-          CLIInterface.print(`${chalk.bold('Name:')} ${result.profile.fullName}`);
-          if (result.profile.occupation) CLIInterface.print(`${chalk.bold('Occupation:')} ${result.profile.occupation}`);
-          if (result.profile.headline) CLIInterface.print(`${chalk.bold('Headline:')} ${result.profile.headline}`);
+          CLIInterface.printLabelValue('Name', result.profile.fullName);
+          if (result.profile.occupation) CLIInterface.printLabelValue('Occupation', result.profile.occupation);
+          if (result.profile.headline) CLIInterface.printLabelValue('Headline', result.profile.headline);
         }
         break;
     }
@@ -146,18 +139,15 @@ export class CLIRenderer {
    */
   private renderNote(note: any): void {
     CLIInterface.displayTitle(note.title);
-    CLIInterface.print(`${chalk.bold('ID:')} ${note.id}`);
     
-    if (note.tags && note.tags.length > 0) {
-      CLIInterface.print(`${chalk.bold('Tags:')} ${note.tags.map(tag => chalk.cyan(tag)).join(', ')}`);
-    } else {
-      CLIInterface.print(`${chalk.bold('Tags:')} ${chalk.dim('None')}`);
-    }
+    // Print metadata using label-value formatting
+    CLIInterface.printLabelValue('ID', note.id, { formatter: CLIInterface.formatId });
+    CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'None' });
+    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: CLIInterface.formatDate });
+    CLIInterface.printLabelValue('Updated', new Date(note.updatedAt), { formatter: CLIInterface.formatDate });
     
-    CLIInterface.print(`${chalk.bold('Created:')} ${new Date(note.createdAt).toLocaleString()}`);
-    CLIInterface.print(`${chalk.bold('Updated:')} ${new Date(note.updatedAt).toLocaleString()}`);
-    
-    CLIInterface.print('\n' + chalk.bold('Content:'));
+    // Display content
+    CLIInterface.displaySubtitle('Content');
     CLIInterface.print(note.content);
   }
 
@@ -166,66 +156,80 @@ export class CLIRenderer {
    */
   private renderProfile(profile: any, keywords: string[]): void {
     CLIInterface.displayTitle('Profile Information');
-    CLIInterface.print(`${chalk.bold('Name:')} ${profile.fullName}`);
-    if (profile.headline) CLIInterface.print(`${chalk.bold('Headline:')} ${profile.headline}`);
-    if (profile.occupation) CLIInterface.print(`${chalk.bold('Occupation:')} ${profile.occupation}`);
+    
+    // Print basic information using label-value formatting
+    CLIInterface.printLabelValue('Name', profile.fullName);
+    if (profile.headline) CLIInterface.printLabelValue('Headline', profile.headline);
+    if (profile.occupation) CLIInterface.printLabelValue('Occupation', profile.occupation);
     
     // Display location
     const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
-    if (location) CLIInterface.print(`${chalk.bold('Location:')} ${location}`);
+    if (location) CLIInterface.printLabelValue('Location', location);
     
     // Display summary
     if (profile.summary) {
-      CLIInterface.print(`\n${chalk.bold('Summary:')}`);
+      CLIInterface.displaySubtitle('Summary');
       CLIInterface.print(profile.summary);
     }
     
     // Display current experience
     if (profile.experiences && profile.experiences.length > 0) {
-      CLIInterface.print(`\n${chalk.bold('Current Work:')}`);
+      CLIInterface.displaySubtitle('Current Work');
       const currentExperiences = profile.experiences.filter((exp: any) => !exp.endDate);
+      
       if (currentExperiences.length > 0) {
         currentExperiences.forEach((exp: any) => {
-          CLIInterface.print(`- ${chalk.bold(exp.title)} at ${chalk.cyan(exp.company)}`);
+          const title = CLIInterface.styles.subtitle(exp.title);
+          const company = CLIInterface.styles.highlight(exp.company);
+          CLIInterface.print(`- ${title} at ${company}`);
+          
           if (exp.description) {
             // Trim long descriptions
             const desc = exp.description.length > 100 
               ? exp.description.substring(0, 100) + '...' 
               : exp.description;
-            CLIInterface.print(`  ${chalk.dim(desc)}`);
+            CLIInterface.print(`  ${CLIInterface.styles.dim(desc)}`);
           }
         });
       } else {
-        CLIInterface.print(chalk.dim('No current work experiences found.'));
+        CLIInterface.print(CLIInterface.styles.dim('No current work experiences found.'));
       }
     }
     
     // Display skills
     if (profile.languages && profile.languages.length > 0) {
-      CLIInterface.print(`\n${chalk.bold('Languages:')}`);
-      CLIInterface.print(profile.languages.map(lang => chalk.cyan(lang)).join(', '));
+      CLIInterface.displaySubtitle('Languages');
+      CLIInterface.printLabelValue('Skills', profile.languages);
     }
     
     // Check for embedding
     CLIInterface.print('');
     if (profile.embedding) {
-      CLIInterface.print(`${chalk.bold('Profile has embeddings:')} ${chalk.green('Yes')}`);
+      CLIInterface.printLabelValue('Profile has embeddings', 'Yes', { 
+        formatter: val => CLIInterface.styles.success(val) 
+      });
     } else {
-      CLIInterface.print(`${chalk.bold('Profile has embeddings:')} ${chalk.red('No')}`);
-      CLIInterface.print(chalk.dim('Run "bun run embed:profile" to generate embeddings.'));
+      CLIInterface.printLabelValue('Profile has embeddings', 'No', { 
+        formatter: val => CLIInterface.styles.error(val) 
+      });
+      CLIInterface.print(CLIInterface.styles.dim('Run "bun run embed:profile" to generate embeddings.'));
     }
     
     // Display tags if available
+    CLIInterface.displaySubtitle('Profile Tags');
     if (profile.tags && profile.tags.length > 0) {
-      CLIInterface.print(`\n${chalk.bold('Profile Tags:')}`);
-      CLIInterface.print(profile.tags.map(tag => chalk.cyan(tag)).join(', '));
+      CLIInterface.printLabelValue('Tags', profile.tags);
     } else {
-      CLIInterface.print(`\n${chalk.bold('Profile Tags:')} ${chalk.dim('None')}`);
-      CLIInterface.print(chalk.dim('Run "bun run tag:profile" to generate tags.'));
+      CLIInterface.printLabelValue('Tags', '', { emptyText: 'None' });
+      CLIInterface.print(CLIInterface.styles.dim('Run "bun run tag:profile" to generate tags.'));
     }
     
     // Show keywords
-    CLIInterface.print(`\n${chalk.bold('Profile Keywords:')}`);
-    CLIInterface.print(keywords.map(kw => chalk.cyan(kw)).join(', '));
+    CLIInterface.displaySubtitle('Profile Keywords');
+    if (keywords.length > 0) {
+      CLIInterface.print(keywords.map(kw => CLIInterface.styles.tag(kw)).join(' '));
+    } else {
+      CLIInterface.print(CLIInterface.styles.dim('No keywords found.'));
+    }
   }
 }
