@@ -169,18 +169,30 @@ export class ExternalSourceContext {
    * Check availability of all sources
    */
   async checkSourcesAvailability(): Promise<Record<string, boolean>> {
-    const availability: Record<string, boolean> = {};
+    const availabilityMap: Record<string, boolean> = {};
     
-    for (const [name, source] of this.sources.entries()) {
-      try {
-        availability[name] = await source.checkAvailability();
-      } catch (error) {
-        logger.error(`Error checking availability for ${name}:`, error);
-        availability[name] = false;
-      }
+    // If no sources, return empty object
+    if (this.sources.size === 0) {
+      return availabilityMap;
     }
     
-    return availability;
+    // Check each source in parallel
+    const checkPromises: Promise<void>[] = [];
+    
+    for (const [name, source] of this.sources.entries()) {
+      checkPromises.push(
+        source.checkAvailability()
+          .then(available => {
+            availabilityMap[name] = available;
+          })
+          .catch(() => {
+            availabilityMap[name] = false;
+          })
+      );
+    }
+    
+    await Promise.all(checkPromises);
+    return availabilityMap;
   }
   
   /**
@@ -245,33 +257,4 @@ export class ExternalSourceContext {
     logger.debug(`Pruned ${removeCount} items from external source cache`);
   }
   
-  /**
-   * Check if all registered sources are available
-   */
-  async checkSourcesAvailability(): Promise<Record<string, boolean>> {
-    const availabilityMap: Record<string, boolean> = {};
-    
-    // If no sources, return empty object
-    if (this.sources.size === 0) {
-      return availabilityMap;
-    }
-    
-    // Check each source in parallel
-    const checkPromises: Promise<void>[] = [];
-    
-    for (const [name, source] of this.sources.entries()) {
-      checkPromises.push(
-        source.checkAvailability()
-          .then(available => {
-            availabilityMap[name] = available;
-          })
-          .catch(() => {
-            availabilityMap[name] = false;
-          })
-      );
-    }
-    
-    await Promise.all(checkPromises);
-    return availabilityMap;
-  }
 }

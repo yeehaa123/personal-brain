@@ -81,7 +81,8 @@ export class WikipediaSource implements ExternalSourceInterface {
     try {
       const response = await fetch(`${this.baseUrl}?action=query&meta=siteinfo&siprop=general&format=json`);
       const data = await response.json();
-      return data && data.query && data.query.general;
+      // Handle both response formats: nested format with data.query.general or flat format with data.sitename
+      return !!(data && (data.query?.general || data.sitename));
     } catch (error) {
       logger.error('Wikipedia API not available:', error);
       return false;

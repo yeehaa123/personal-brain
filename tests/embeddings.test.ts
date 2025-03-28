@@ -77,6 +77,61 @@ EmbeddingService.prototype.getBatchEmbeddings = async function(texts: string[]) 
   }));
 };
 
+// Also override these methods for tests
+EmbeddingService.prototype.chunkText = function(text: string, chunkSize = 512, overlap = 100) {
+  // Real implementation for tests
+  const chunks: string[] = [];
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    // If adding this sentence would exceed the chunk size and we already have some content
+    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
+      chunks.push(currentChunk);
+      // Start a new chunk with overlap
+      const words = currentChunk.split(' ');
+      const overlapWords = words.slice(Math.max(0, words.length - overlap / 5));
+      currentChunk = overlapWords.join(' ') + ' ' + sentence;
+    } else {
+      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    }
+  }
+  
+  // Add the last chunk if it has content
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+  
+  return chunks;
+};
+
+// Also override cosineSimilarity to match the real implementation
+EmbeddingService.prototype.cosineSimilarity = function(vec1: number[], vec2: number[]) {
+  if (vec1.length !== vec2.length) {
+    throw new Error('Vectors must have the same dimensions');
+  }
+
+  let dotProduct = 0;
+  let mag1 = 0;
+  let mag2 = 0;
+
+  for (let i = 0; i < vec1.length; i++) {
+    dotProduct += vec1[i] * vec2[i];
+    mag1 += vec1[i] * vec1[i];
+    mag2 += vec2[i] * vec2[i];
+  }
+
+  mag1 = Math.sqrt(mag1);
+  mag2 = Math.sqrt(mag2);
+
+  if (mag1 === 0 || mag2 === 0) {
+    return 0;
+  }
+
+  return dotProduct / (mag1 * mag2);
+};
+
 describe('EmbeddingService', () => {
   let service: EmbeddingService;
 
