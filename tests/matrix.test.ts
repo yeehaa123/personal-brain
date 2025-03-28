@@ -1,5 +1,7 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { MatrixBrainInterface } from '../src/interfaces/matrix';
+import { CommandHandler } from '../src/commands';
+import { MatrixRenderer } from '../src/commands/matrix-renderer';
 import { createMockEmbedding, mockEnv, resetMocks } from './mocks';
 
 // Mock matrix-js-sdk
@@ -75,13 +77,13 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
             }
           ]
         };
-      };
+      }
       
       getNoteContext() {
         return {
           searchNotes: async () => []
         };
-      };
+      }
       
       processQuery() {
         return Promise.resolve({
@@ -89,6 +91,92 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
           citations: [],
           relatedNotes: []
         });
+      }
+    }
+  };
+});
+
+// Mock the CommandHandler and MatrixRenderer
+mock.module('../src/commands', () => {
+  return {
+    CommandHandler: class MockCommandHandler {
+      getCommands() {
+        return [
+          {
+            command: 'help',
+            description: 'Show available commands',
+            usage: 'help'
+          },
+          {
+            command: 'profile',
+            description: 'View your profile information',
+            usage: 'profile [related]'
+          }
+        ];
+      }
+      
+      async processCommand(command: string, args: string) {
+        if (command === 'profile') {
+          if (args === 'related') {
+            return {
+              type: 'profile-related',
+              profile: {
+                fullName: 'John Doe',
+                occupation: 'Ecosystem Architect'
+              },
+              relatedNotes: [
+                {
+                  id: 'note-1',
+                  title: 'Ecosystem Architecture Principles',
+                  content: 'Test content',
+                  tags: ['test']
+                }
+              ],
+              matchType: 'tags',
+              keywords: ['ecosystem', 'architect']
+            };
+          }
+          
+          return {
+            type: 'profile',
+            profile: {
+              fullName: 'John Doe',
+              occupation: 'Ecosystem Architect'
+            },
+            keywords: ['ecosystem', 'architect']
+          };
+        }
+        
+        return {
+          type: 'error',
+          message: `Unknown command: ${command}`
+        };
+      }
+    }
+  };
+});
+
+// Mock the MatrixRenderer
+mock.module('../src/commands/matrix-renderer', () => {
+  return {
+    MatrixRenderer: class MockMatrixRenderer {
+      constructor(commandPrefix, sendMessageFn) {
+        this.commandPrefix = commandPrefix;
+        this.sendMessageFn = sendMessageFn;
+      }
+      
+      renderHelp(roomId, commands) {
+        this.sendMessageFn(roomId, 'Mock help: Personal Brain Commands, profile');
+      }
+      
+      render(roomId, result) {
+        if (result.type === 'profile') {
+          this.sendMessageFn(roomId, `Mock profile: John Doe`);
+        } else if (result.type === 'profile-related') {
+          this.sendMessageFn(roomId, `Mock profile with Notes related to your profile`);
+        } else {
+          this.sendMessageFn(roomId, `Mock result: ${result.type}`);
+        }
       }
     }
   };
@@ -119,65 +207,74 @@ describe('MatrixBrainInterface', () => {
   
   beforeEach(() => {
     sentMessages = [];
+    
+    // Create MatrixBrainInterface with overridden sendMessage
     matrixInterface = new MatrixBrainInterface();
     
-    // Override sendMessage to capture output
-    matrixInterface.sendMessage = (roomId: string, message: string) => {
-      sentMessages.push({ roomId, message });
+    // Override the renderer to use our mocked sendMessage
+    matrixInterface.renderer = {
+      renderHelp: (roomId, commands) => {
+        sentMessages.push({ 
+          roomId, 
+          message: 'Mock help: Personal Brain Commands, profile' 
+        });
+      },
+      render: (roomId, result) => {
+        if (result.type === 'profile') {
+          sentMessages.push({ 
+            roomId, 
+            message: 'Mock profile: John Doe' 
+          });
+        } else if (result.type === 'profile-related') {
+          sentMessages.push({ 
+            roomId, 
+            message: 'Mock profile with Notes related to your profile' 
+          });
+        } else {
+          sentMessages.push({ 
+            roomId, 
+            message: `Mock result: ${result.type}` 
+          });
+        }
+      }
     };
   });
   
-  test('should register profile command', () => {
-    const commands = matrixInterface.commandHandlers.map((handler: any) => handler.command);
-    expect(commands).toContain('profile');
+  test('should have command handler and renderer', () => {
+    expect(matrixInterface.commandHandler).toBeDefined();
+    expect(matrixInterface.renderer).toBeDefined();
   });
   
-  test('should provide help message with profile command', async () => {
-    await matrixInterface.handleHelp('', 'test-room', {});
+  test('should process help command', async () => {
+    await matrixInterface.processCommand('help', 'test-room', {});
     
     // Check that at least one message was sent
     expect(sentMessages.length).toBe(1);
     
     // Verify message content
     const helpMessage = sentMessages[0].message;
+    expect(helpMessage).toContain('Mock help');
     expect(helpMessage).toContain('profile');
-    expect(helpMessage).toContain('View your profile information');
   });
   
-  test('should handle profile command', async () => {
-    await matrixInterface.handleProfile('', 'test-room', {});
+  test('should process profile command', async () => {
+    await matrixInterface.processCommand('profile', 'test-room', {});
     
     // Check that at least one message was sent
     expect(sentMessages.length).toBe(1);
     
-    // Verify message content
-    const profileMessage = sentMessages[0].message;
-    expect(profileMessage).toContain('Profile Information');
-    expect(profileMessage).toContain('John Doe');
-    expect(profileMessage).toContain('Ecosystem Architect');
+    // Verify message content contains profile info
+    expect(sentMessages[0].message).toContain('Mock profile: John Doe');
   });
   
-  test('should handle profile related command', async () => {
-    await matrixInterface.handleProfile('related', 'test-room', {});
+  test('should process profile related command', async () => {
+    // Use the underlying processCommand method directly
+    await matrixInterface.processCommand('profile related', 'test-room', {});
     
-    // Check that at least one message was sent
+    // Verify message was sent
     expect(sentMessages.length).toBe(1);
     
-    // Verify message content
-    const profileMessage = sentMessages[0].message;
-    expect(profileMessage).toContain('Notes related to your profile');
-    expect(profileMessage).toContain('Ecosystem Architecture Principles');
-  });
-  
-  test('should process profile command via command processor', async () => {
-    await matrixInterface.processCommand('profile', '', 'test-room', {});
-    
-    // Check that at least one message was sent
-    expect(sentMessages.length).toBe(1);
-    
-    // Verify message content
-    const profileMessage = sentMessages[0].message;
-    expect(profileMessage).toContain('Profile Information');
-    expect(profileMessage).toContain('John Doe');
+    // Check for related notes content
+    expect(sentMessages[0].message).toContain('Notes related to your profile');
   });
 });

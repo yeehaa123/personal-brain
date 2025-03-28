@@ -5,11 +5,10 @@ import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { BrainProtocol } from '../mcp/protocol/brainProtocol';
-import { NoteContext } from '../mcp/context/noteContext';
-import { ProfileContext } from '../mcp/context/profileContext';
+import { CommandHandler } from '../commands';
+import { MatrixRenderer } from '../commands/matrix-renderer';
 import type { Note } from '../models/note';
-import type { Profile } from '../models/profile';
-import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
+import { formatNotePreview } from '../utils/noteUtils';
 
 // Configuration
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
@@ -35,17 +34,11 @@ if (ROOM_IDS.length === 0) {
   console.error('Warning: No MATRIX_ROOM_IDS provided, the bot will not automatically join any rooms');
 }
 
-interface CommandHandler {
-  command: string;
-  description: string;
-  handler: (args: string, roomId: string, event: any) => Promise<void>;
-}
-
 class MatrixBrainInterface {
   private client: sdk.MatrixClient;
   private brainProtocol: BrainProtocol;
-  private context: NoteContext;
-  private commandHandlers: CommandHandler[] = [];
+  private commandHandler: CommandHandler;
+  private renderer: MatrixRenderer;
   private isReady = false;
 
   constructor() {
@@ -55,51 +48,14 @@ class MatrixBrainInterface {
       userId: USER_ID,
     });
 
-    this.context = new NoteContext();
     this.brainProtocol = new BrainProtocol();
-
-    // Register command handlers
-    this.registerCommands();
-  }
-
-  private registerCommands() {
-    this.commandHandlers = [
-      {
-        command: 'help',
-        description: 'Show available commands',
-        handler: this.handleHelp.bind(this)
-      },
-      {
-        command: 'search',
-        description: 'Search for notes: !brain search <query>',
-        handler: this.handleSearch.bind(this)
-      },
-      {
-        command: 'tags',
-        description: 'List all tags in the system',
-        handler: this.handleTags.bind(this)
-      },
-      {
-        command: 'list',
-        description: 'List all notes or notes with a specific tag: !brain list [tag]',
-        handler: this.handleList.bind(this)
-      },
-      {
-        command: 'note',
-        description: 'Show a specific note by ID: !brain note <id>',
-        handler: this.handleNote.bind(this)
-      },
-      {
-        command: 'profile',
-        description: 'View your profile information: !brain profile [related]',
-        handler: this.handleProfile.bind(this)
-      },
-      {
-        command: 'ask',
-        description: 'Ask a question to your brain: !brain ask <question>',
-        handler: this.handleAsk.bind(this)
-      }
-    ];
+    this.commandHandler = new CommandHandler(this.brainProtocol);
+    
+    // Initialize renderer with message sending function
+    this.renderer = new MatrixRenderer(
+      COMMAND_PREFIX, 
+      this.sendMessage.bind(this)
+    );
   }
 
   async start() {
@@ -231,7 +187,7 @@ class MatrixBrainInterface {
     // Handle empty command (just the prefix) as help
     if (!commandText) {
       console.log("Empty command - showing help");
-      await this.handleHelp('', roomId, event);
+      this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
     
@@ -242,374 +198,30 @@ class MatrixBrainInterface {
     
     console.log(`Command: "${command}", Args: "${args}"`);
     
-    // Find and execute the matching command handler
-    const handler = this.commandHandlers.find(h => h.command === command);
-    
-    if (handler) {
-      console.log(`Found handler for command: ${command}`);
-      try {
-        await handler.handler(args, roomId, event);
-      } catch (error) {
-        console.error(`Error executing command ${command}:`, error);
-        this.sendMessage(roomId, `❌ Error executing command: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    } else {
-      console.log(`Unknown command: ${command}`);
-      this.sendMessage(
-        roomId,
-        `Unknown command: ${command}. Type \`${COMMAND_PREFIX} help\` to see available commands.`
-      );
-    }
-  }
-  
-  // Command Handlers
-  
-  private async handleHelp(args: string, roomId: string, event: any) {
-    const helpText = [
-      '### Personal Brain Commands',
-      '',
-      '- `!brain search [query]`    - Search for notes',
-      '- `!brain list`              - List all notes',
-      '- `!brain list [tag]`        - List notes with a specific tag',
-      '- `!brain note [id]`         - Show a specific note by ID',
-      '- `!brain tags`              - List all tags in the system',
-      '- `!brain profile`           - View your profile information',
-      '- `!brain profile related`   - Find notes related to your profile',
-      '- `!brain ask [question]`    - Ask a question to your brain (requires API key)',
-      '- `!brain help`              - Show this help message'
-    ].join('\n');
-    
-    this.sendMessage(roomId, helpText);
-  }
-  
-  private async handleProfile(args: string, roomId: string, event: any) {
-    try {
-      // Get the profile using the protocol's profile context
-      const profileContext = this.brainProtocol.getProfileContext();
-      const profile = await profileContext.getProfile();
-      
-      if (!profile) {
-        this.sendMessage(roomId, 'No profile found. Use "bun run src/import.ts profile <path/to/profile.yaml>" to import a profile.');
-        return;
-      }
-      
-      // Build the message
-      const infoLines = [];
-      
-      infoLines.push('### Profile Information');
-      infoLines.push('');
-      infoLines.push(`**Name**: ${profile.fullName}`);
-      if (profile.headline) infoLines.push(`**Headline**: ${profile.headline}`);
-      if (profile.occupation) infoLines.push(`**Occupation**: ${profile.occupation}`);
-      
-      // Display location
-      const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
-      if (location) infoLines.push(`**Location**: ${location}`);
-      
-      // Display summary
-      if (profile.summary) {
-        infoLines.push('');
-        infoLines.push('**Summary**:');
-        infoLines.push(profile.summary);
-      }
-      
-      // Display current experience
-      if (profile.experiences && profile.experiences.length > 0) {
-        infoLines.push('');
-        infoLines.push('**Current Work**:');
-        const currentExperiences = profile.experiences.filter(exp => !exp.endDate);
-        if (currentExperiences.length > 0) {
-          currentExperiences.forEach(exp => {
-            infoLines.push(`- ${exp.title} at ${exp.company}`);
-            if (exp.description) {
-              // Trim long descriptions
-              const desc = exp.description.length > 100 
-                ? exp.description.substring(0, 100) + '...' 
-                : exp.description;
-              infoLines.push(`  ${desc}`);
-            }
-          });
-        } else {
-          infoLines.push('No current work experiences found.');
-        }
-      }
-      
-      // Display skills
-      if (profile.languages && profile.languages.length > 0) {
-        infoLines.push('');
-        infoLines.push('**Languages**:');
-        infoLines.push(profile.languages.join(', '));
-      }
-      
-      // Check for embedding
-      infoLines.push('');
-      if (profile.embedding) {
-        infoLines.push('**Profile has embeddings**: Yes');
-      } else {
-        infoLines.push('**Profile has embeddings**: No');
-        infoLines.push('Run "bun run embed:profile" to generate embeddings.');
-      }
-      
-      // Display tags if available
-      if (profile.tags && profile.tags.length > 0) {
-        infoLines.push('');
-        infoLines.push('**Profile Tags**:');
-        infoLines.push(profile.tags.join(', '));
-      } else {
-        infoLines.push('');
-        infoLines.push('**Profile Tags**: None');
-        infoLines.push('Run "bun run tag:profile" to generate tags.');
-      }
-      
-      // If we have args "related", show notes related to profile
-      if (args && args.toLowerCase() === 'related') {
-        infoLines.push('');
-        infoLines.push('### Finding notes related to your profile...');
-        
-        // Find notes related to profile
-        const noteContext = this.brainProtocol.getNoteContext();
-        const relatedNotes = await profileContext.findRelatedNotes(noteContext, 5);
-        
-        infoLines.push('');
-        infoLines.push('### Notes related to your profile:');
-        if (relatedNotes.length > 0) {
-          // Explain how we found the notes
-          if (profile.tags && profile.tags.length > 0) {
-            infoLines.push('(Matched by profile tags and semantic similarity)');
-          } else if (profile.embedding) {
-            infoLines.push('(Matched by semantic similarity)');
-          } else {
-            infoLines.push('(Matched by keyword similarity)');
-          }
-          
-          infoLines.push('');
-          relatedNotes.forEach((note, index) => {
-            infoLines.push(this.formatNotePreview(note, index + 1));
-          });
-        } else {
-          infoLines.push('No related notes found. Try generating embeddings and tags for your notes and profile.');
-          infoLines.push('You can run "bun run tag:profile" to generate profile tags.');
-        }
-      }
-      
-      // Extract profile keywords for search purposes
-      const keywords = profileContext.extractProfileKeywords(profile);
-      infoLines.push('');
-      infoLines.push('**Profile Keywords**:');
-      infoLines.push(keywords.slice(0, 15).join(', '));
-      
-      this.sendMessage(roomId, infoLines.join('\n'));
-      
-    } catch (error: unknown) {
-      console.error('Error fetching profile:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error fetching profile: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  private async handleSearch(query: string, roomId: string, event: any) {
-    if (!query) {
-      this.sendMessage(roomId, `Please provide a search query: \`${COMMAND_PREFIX} search <query>\``);
+    // Handle help command specially
+    if (command === 'help') {
+      this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
     
-    this.sendMessage(roomId, `🔍 Searching for: ${query}`);
-    
+    // Process the command through our shared command handler
     try {
-      const notes = await this.context.searchNotes({ query, limit: 5 });
-      
-      if (notes.length === 0) {
-        this.sendMessage(roomId, 'No results found.');
-        return;
+      // Special case for "ask" command to show "thinking" message
+      if (command === 'ask' && args) {
+        this.sendMessage(roomId, `🤔 Thinking about: "${args}"...`);
       }
       
-      const results = [
-        `### Search Results for "${query}"`,
-        '',
-        ...notes.map((note, index) => this.formatNotePreview(note, index + 1))
-      ].join('\n');
+      const result = await this.commandHandler.processCommand(command, args);
       
-      this.sendMessage(roomId, results);
-    } catch (error: unknown) {
-      console.error('Search error:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error searching notes: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  private async handleTags(args: string, roomId: string, event: any) {
-    try {
-      // Get all notes
-      const allNotes = await this.context.searchNotes({ limit: 1000 });
-      
-      // Extract and count all tags
-      const tagCounts: { [tag: string]: number } = {};
-      
-      allNotes.forEach(note => {
-        if (note.tags && Array.isArray(note.tags)) {
-          note.tags.forEach(tag => {
-            if (typeof tag === 'string') {
-              tagCounts[tag] = (tagCounts[tag] || 0) + 1;
-            }
-          });
-        }
-      });
-      
-      // Sort tags by count
-      const sortedTags = Object.entries(tagCounts)
-        .sort((a, b) => b[1] - a[1])
-        .map(([tag, count]) => `- \`${tag}\` (${count})`);
-      
-      if (sortedTags.length === 0) {
-        this.sendMessage(roomId, 'No tags found in the system.');
-        return;
-      }
-      
-      const message = [
-        '### Available Tags',
-        '',
-        ...sortedTags
-      ].join('\n');
-      
-      this.sendMessage(roomId, message);
-    } catch (error: unknown) {
-      console.error('Tags error:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error retrieving tags: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  private async handleList(tagFilter: string, roomId: string, event: any) {
-    try {
-      let notes: Note[];
-      
-      if (tagFilter) {
-        // List notes with the specific tag
-        notes = await this.context.searchNotes({ 
-          tags: [tagFilter], 
-          limit: 10 
-        });
-        
-        if (notes.length === 0) {
-          this.sendMessage(roomId, `No notes found with tag: ${tagFilter}`);
-          return;
-        }
-      } else {
-        // List all notes
-        notes = await this.context.searchNotes({ limit: 10 });
-        
-        if (notes.length === 0) {
-          this.sendMessage(roomId, 'No notes found in the system.');
-          return;
-        }
-      }
-      
-      const message = [
-        tagFilter ? `### Notes with tag: ${tagFilter}` : '### Recent Notes',
-        '',
-        ...notes.map((note, index) => this.formatNotePreview(note, index + 1))
-      ].join('\n');
-      
-      this.sendMessage(roomId, message);
-    } catch (error: unknown) {
-      console.error('List error:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error listing notes: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  private async handleNote(noteId: string, roomId: string, event: any) {
-    if (!noteId) {
-      this.sendMessage(roomId, `Please provide a note ID: \`${COMMAND_PREFIX} note <id>\``);
-      return;
-    }
-    
-    try {
-      const note = await this.context.getNoteById(noteId);
-      
-      if (!note) {
-        this.sendMessage(roomId, `Note with ID ${noteId} not found.`);
-        return;
-      }
-      
-      // Format the note content
-      const formattedContent = note.content
-        // Remove source comment if present
-        .replace(/<!--\s*source:[^>]+-->\n?/, '')
-        // Ensure the content has proper newlines
-        .trim();
-      
-      const tags = note.tags && note.tags.length > 0
-        ? `Tags: ${note.tags.map(tag => `\`${tag}\``).join(', ')}`
-        : 'No tags';
-      
-      const message = [
-        `## ${note.title}`,
-        '',
-        tags,
-        `ID: \`${note.id}\``,
-        `Created: ${new Date(note.createdAt).toLocaleString()}`,
-        `Updated: ${new Date(note.updatedAt).toLocaleString()}`,
-        '',
-        '---',
-        '',
-        formattedContent
-      ].join('\n');
-      
-      this.sendMessage(roomId, message);
-    } catch (error: unknown) {
-      console.error('Note error:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error retrieving note: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  
-  private async handleAsk(question: string, roomId: string, event: any) {
-    if (!question) {
-      this.sendMessage(roomId, `Please provide a question: \`${COMMAND_PREFIX} ask <question>\``);
-      return;
-    }
-    
-    if (!process.env.ANTHROPIC_API_KEY) {
-      this.sendMessage(
-        roomId, 
-        '❌ No Anthropic API key found. Set the ANTHROPIC_API_KEY environment variable to use this feature.'
-      );
-      return;
-    }
-    
-    this.sendMessage(roomId, `🤔 Thinking about: "${question}"...`);
-    
-    try {
-      const result = await this.brainProtocol.processQuery(question);
-      
-      let message = [
-        '### Answer',
-        '',
-        result.answer,
-      ];
-      
-      if (result.citations.length > 0) {
-        message.push('', '#### Sources');
-        result.citations.forEach(citation => {
-          message.push(`- ${citation.noteTitle} (\`${citation.noteId}\`)`);
-        });
-      }
-      
-      if (result.relatedNotes.length > 0) {
-        message.push('', '#### Related Notes');
-        result.relatedNotes.forEach((note, index) => {
-          message.push(this.formatNotePreview(note, index + 1, false));
-        });
-      }
-      
-      this.sendMessage(roomId, message.join('\n'));
-    } catch (error: unknown) {
-      console.error('Ask error:', error instanceof Error ? error.message : String(error));
-      this.sendMessage(roomId, `❌ Error processing question: ${error instanceof Error ? error.message : String(error)}`);
+      // Render the result using our Matrix renderer
+      this.renderer.render(roomId, result);
+    } catch (error) {
+      console.error(`Error executing command ${command}:`, error);
+      this.sendMessage(roomId, `❌ Error executing command: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
   // Helper methods
-  
-  private formatNotePreview(note: Note, index: number, includeNewlines = true): string {
-    return formatNotePreview(note, index, includeNewlines);
-  }
   
   private sendMessage(roomId: string, message: string) {
     console.log(`Sending message to ${roomId}: "${message.substring(0, 50)}..."`);
