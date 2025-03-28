@@ -38,7 +38,10 @@ export class ProfileImporter {
   /**
    * Transform YAML data to profile format
    */
-  private transformYamlToProfile(data: Record<string, any>): Omit<Profile, 'id' | 'createdAt' | 'updatedAt'> {
+  private transformYamlToProfile(data: Record<string, any>): Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'> & { 
+    embedding?: number[]; 
+    tags?: string[] 
+  } {
     // Convert snake_case from YAML to camelCase for database
     return {
       publicIdentifier: data.public_identifier,
@@ -62,7 +65,9 @@ export class ProfileImporter {
       accomplishmentPublications: data.accomplishment_publications,
       accomplishmentHonorsAwards: data.accomplishment_honors_awards,
       accomplishmentProjects: data.accomplishment_projects,
-      volunteerWork: data.volunteer_work
+      volunteerWork: data.volunteer_work,
+      embedding: data.embedding,
+      tags: data.tags
     };
   }
 }

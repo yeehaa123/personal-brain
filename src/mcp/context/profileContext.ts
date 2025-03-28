@@ -323,7 +323,7 @@ export class ProfileContext {
   /**
    * Extract keywords from profile to use for searching notes
    */
-  private extractProfileKeywords(profile: Partial<Profile>): string[] {
+  extractProfileKeywords(profile: Partial<Profile>): string[] {
     const keywords: string[] = [];
     const commonWords = ['the', 'and', 'that', 'with', 'have', 'this', 'from'];
 

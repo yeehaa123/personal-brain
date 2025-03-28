@@ -2,14 +2,12 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { ClaudeModel } from '../model/claude';
-import type { ModelResponse } from '../model/claude';
 import { NoteContext } from '../context/noteContext';
 import { ProfileContext } from '../context/profileContext';
 import { ExternalSourceContext } from '../context/externalSourceContext';
-import type { SearchOptions } from '../context/noteContext';
 import type { ExternalSourceResult } from '../context/sources/externalSourceInterface';
 import type { Note } from '../../models/note';
-import type { Profile } from '../../models/profile';
+import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '../../models/profile';
 import { getExcerpt } from '../../utils/noteUtils';
 import { EmbeddingService } from '../model/embeddings';
 import logger from '../../utils/logger';
@@ -51,34 +49,34 @@ export class BrainProtocol {
     this.externalContext = new ExternalSourceContext(apiKey, newsApiKey);
     this.embeddingService = new EmbeddingService(apiKey);
     this.useExternalSources = useExternalSources;
-    
+
     // Load profile asynchronously
     this.loadProfile();
-    
+
     logger.info(`Brain protocol initialized with external sources ${useExternalSources ? 'enabled' : 'disabled'}`);
   }
-  
+
   /**
    * Get the note context to allow external access to note operations
    */
   getNoteContext(): NoteContext {
     return this.context;
   }
-  
+
   /**
    * Get the profile context to allow external access to profile operations
    */
   getProfileContext(): ProfileContext {
     return this.profileContext;
   }
-  
+
   /**
    * Get the external source context to allow access to external knowledge operations
    */
   getExternalSourceContext(): ExternalSourceContext {
     return this.externalContext;
   }
-  
+
   /**
    * Enable or disable the use of external sources
    */
@@ -86,7 +84,7 @@ export class BrainProtocol {
     this.useExternalSources = enabled;
     logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
   }
-  
+
   /**
    * Get the current status of external sources
    */
@@ -120,19 +118,19 @@ export class BrainProtocol {
     // Check if this is a profile-related query through keywords or semantics
     let isProfileQuery = this.isProfileQuery(query);
     let profileRelevance = 0;
-    
+
     // Get the profile relevance score for contextual prompting
     if (this.profile?.embedding) {
       profileRelevance = await this.getProfileRelevance(query);
       logger.debug(`Profile semantic relevance: ${profileRelevance.toFixed(2)}`);
-      
+
       // If relevance is high enough, consider it a profile query
       if (profileRelevance > 0.6 && !isProfileQuery) {
         logger.info('Query is semantically relevant to profile');
         isProfileQuery = true;
       }
     }
-    
+
     // 1. Retrieve relevant context from the database
     const relevantNotes = await this.fetchRelevantContext(query);
     logger.info(`Found ${relevantNotes.length} relevant notes`);
@@ -140,19 +138,19 @@ export class BrainProtocol {
     if (relevantNotes.length > 0) {
       logger.debug(`Top note: "${relevantNotes[0].title}"`);
     }
-    
+
     // 2. Fetch relevant external knowledge if enabled
     let externalResults: ExternalSourceResult[] = [];
     let externalCitations: ExternalCitation[] = [];
-    
+
     if (this.useExternalSources) {
       // Determine if we should query external sources
       const shouldQueryExternal = this.shouldQueryExternalSources(query, relevantNotes);
-      
+
       if (shouldQueryExternal) {
         logger.info('Querying external sources for additional context');
         externalResults = await this.fetchExternalContext(query);
-        
+
         if (externalResults.length > 0) {
           logger.info(`Found ${externalResults.length} relevant external sources`);
           // Convert to citations format
@@ -170,7 +168,7 @@ export class BrainProtocol {
     // For highly relevant profile queries, always include profile context
     const includeProfile = isProfileQuery || profileRelevance > 0.4;
     const { formattedPrompt, citations } = this.formatPromptWithContext(
-      query, 
+      query,
       relevantNotes,
       externalResults,
       includeProfile,
@@ -187,7 +185,7 @@ export class BrainProtocol {
     // 6. Return the formatted protocol response
     // For medium-high relevance, include profile even if not a direct profile query
     const includeProfileInResponse = isProfileQuery || profileRelevance > 0.5;
-    
+
     return {
       answer: modelResponse.response,
       citations,
@@ -196,7 +194,7 @@ export class BrainProtocol {
       externalSources: externalCitations.length > 0 ? externalCitations : undefined
     };
   }
-  
+
   /**
    * Determine if the query is profile-related
    */
@@ -207,23 +205,23 @@ export class BrainProtocol {
       'my information', 'tell me about myself', 'my professional', 'resume',
       'cv', 'curriculum vitae', 'career', 'expertise', 'professional identity'
     ];
-    
+
     const lowercaseQuery = query.toLowerCase();
-    
+
     // First, check if the query contains explicit profile-related keywords
     if (profileKeywords.some(keyword => lowercaseQuery.includes(keyword))) {
       return true;
     }
-    
+
     // If no explicit keywords, try to use semantic relevance if available
     if (this.profile?.embedding) {
       // We'll check the semantic relevance score asynchronously in processQuery
       return false; // Initial value, will be updated with semantic relevance
     }
-    
+
     return false;
   }
-  
+
   /**
    * Get profile similarity score to the query using semantic search
    */
@@ -232,16 +230,16 @@ export class BrainProtocol {
       if (!this.profile || !this.profile.embedding) {
         return this.isProfileQuery(query) ? 0.9 : 0.2;
       }
-      
+
       // Get embedding for the query
       const queryEmbedding = await this.embeddingService.getEmbedding(query);
-      
+
       // Calculate similarity score between query and profile
       const similarity = this.embeddingService.cosineSimilarity(
         queryEmbedding.embedding,
-        this.profile.embedding
+        this.profile.embedding as any
       );
-      
+
       // Scale the similarity to be more decisive
       // (values closer to 0 or 1 rather than middle range)
       return Math.pow(similarity * 0.5 + 0.5, 2);
@@ -311,7 +309,7 @@ export class BrainProtocol {
 
     return results;
   }
-  
+
   /**
    * Determine if we should query external sources
    */
@@ -320,24 +318,24 @@ export class BrainProtocol {
     if (this.isProfileQuery(query)) {
       return false;
     }
-    
+
     // Always use external sources if no relevant notes found
     if (relevantNotes.length === 0) {
       return true;
     }
-    
+
     // Look for explicit requests for external information
     const externalKeywords = [
       'search', 'external', 'online', 'web', 'internet', 'look up',
       'wikipedia', 'reference', 'latest', 'recent', 'current',
       'what is', 'who is', 'where is', 'when did', 'how to'
     ];
-    
+
     const lowercaseQuery = query.toLowerCase();
     if (externalKeywords.some(keyword => lowercaseQuery.includes(keyword))) {
       return true;
     }
-    
+
     // Calculate coverage of the query by internal notes
     // This is a heuristic and could be improved with semantic relevance
     let highestCoverage = 0;
@@ -345,11 +343,11 @@ export class BrainProtocol {
       const coverage = this.calculateCoverage(query, note);
       highestCoverage = Math.max(highestCoverage, coverage);
     }
-    
+
     // If internal notes have low coverage, use external sources
     return highestCoverage < 0.6;
   }
-  
+
   /**
    * Calculate how well a note covers a query (simple heuristic)
    */
@@ -360,19 +358,19 @@ export class BrainProtocol {
         .split(/\s+/)
         .filter(word => word.length > 3)
     );
-    
+
     const noteContent = note.content.toLowerCase();
     let matchedWords = 0;
-    
+
     queryWords.forEach(word => {
       if (noteContent.includes(word)) {
         matchedWords++;
       }
     });
-    
+
     return queryWords.size > 0 ? matchedWords / queryWords.size : 0;
   }
-  
+
   /**
    * Fetch relevant context from external sources
    */
@@ -391,9 +389,9 @@ export class BrainProtocol {
    * Format the prompt with retrieved context
    */
   private formatPromptWithContext(
-    query: string, 
+    query: string,
     notes: Note[],
-    externalSources: ExternalSourceResult[] = [], 
+    externalSources: ExternalSourceResult[] = [],
     includeProfile: boolean = false,
     profileRelevance: number = 1.0
   ): { formattedPrompt: string, citations: Citation[] } {
@@ -422,7 +420,7 @@ export class BrainProtocol {
 
       contextText += `\n\nINTERNAL CONTEXT [${index + 1}]:\nTitle: ${note.title}\n${tagInfo}${note.content}\n`;
     });
-    
+
     // Add external information if available
     if (externalSources.length > 0) {
       contextText += '\n\n--- EXTERNAL INFORMATION ---\n';
@@ -433,7 +431,7 @@ export class BrainProtocol {
 
     // Build an enhanced prompt that guides response formatting based on context type
     let promptPrefix = '';
-    
+
     if (includeProfile && notes.length > 0 && externalSources.length > 0) {
       // We have profile, notes, and external sources
       promptPrefix = "I have the following information from my personal knowledge base, my profile, and external sources:";
@@ -459,7 +457,7 @@ export class BrainProtocol {
       // Fallback if no context (shouldn't happen)
       promptPrefix = "I have limited information in my personal knowledge base:";
     }
-    
+
     // Format the final prompt with context and query
     const formattedPrompt = `${promptPrefix}
 ${contextText}
@@ -481,25 +479,25 @@ ${query}`;
 
     const profile = this.profile;
     let profileContext = '\n\nPROFILE INFORMATION:\n';
-    
+
     // Basic information (always included)
     profileContext += `Name: ${profile.fullName}\n`;
     if (profile.headline) profileContext += `Headline: ${profile.headline}\n`;
     if (profile.occupation) profileContext += `Occupation: ${profile.occupation}\n`;
-    
+
     // Location (always included)
     if (profile.city || profile.country) {
       profileContext += `Location: ${[profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ')}\n`;
     }
-    
+
     // Summary (always included)
     if (profile.summary) {
       profileContext += `\nSummary:\n${profile.summary}\n`;
     }
-    
+
     // Current Experience (always included)
-    if (profile.experiences && profile.experiences.length > 0) {
-      const currentExperiences = profile.experiences.filter(exp => !exp.endDate);
+    if (profile.experiences?.length) {
+      const currentExperiences = (profile.experiences as ProfileExperience[]).filter(exp => !exp.ends_at);
       if (currentExperiences.length > 0) {
         profileContext += '\nCurrent Work:\n';
         currentExperiences.forEach(exp => {
@@ -509,22 +507,22 @@ ${query}`;
         });
       }
     }
-    
+
     // For higher relevance queries, include more detail
     if (queryRelevance > 0.5) {
       // Past Experience
-      if (profile.experiences && profile.experiences.length > 0) {
-        const pastExperiences = profile.experiences.filter(exp => exp.endDate).slice(0, 5);
+      if (profile.experiences?.length) {
+        const pastExperiences = (profile.experiences as ProfileExperience[]).filter(exp => exp.ends_at).slice(0, 5);
         if (pastExperiences.length > 0) {
           profileContext += '\nPast Experience:\n';
           pastExperiences.forEach(exp => {
             profileContext += `- ${exp.title} at ${exp.company}`;
-            if (exp.startDate && exp.endDate) {
-              profileContext += ` (${exp.startDate} - ${exp.endDate})`;
+            if (exp.starts_at && exp.ends_at) {
+              profileContext += ` (${exp.starts_at} - ${exp.ends_at})`;
             }
             if (exp.description) {
-              const shortDesc = exp.description.length > 100 
-                ? exp.description.substring(0, 100) + '...' 
+              const shortDesc = exp.description.length > 100
+                ? exp.description.substring(0, 100) + '...'
                 : exp.description;
               profileContext += `: ${shortDesc}\n`;
             } else {
@@ -533,24 +531,24 @@ ${query}`;
           });
         }
       }
-      
+
       // Education
-      if (profile.education && profile.education.length > 0) {
+      if (profile.education?.length) {
         profileContext += '\nEducation:\n';
-        profile.education.forEach(edu => {
-          profileContext += `- ${edu.degree} at ${edu.school}`;
-          if (edu.startDate && edu.endDate) {
-            profileContext += ` (${edu.startDate} - ${edu.endDate})`;
+        (profile.education as ProfileEducation[]).forEach(edu => {
+          profileContext += `- ${edu.degree_name} at ${edu.school}`;
+          if (edu.starts_at && edu.ends_at) {
+            profileContext += ` (${edu.starts_at} - ${edu.ends_at})`;
           }
           profileContext += '\n';
         });
       }
-      
+
       // Projects
-      if (profile.accomplishmentProjects && profile.accomplishmentProjects.length > 0) {
+      if (profile.accomplishmentProjects?.length) {
         profileContext += '\nProjects:\n';
-        profile.accomplishmentProjects.slice(0, 3).forEach(proj => {
-          profileContext += `- ${proj.name}`;
+        (profile.accomplishmentProjects as ProfileProject[]).slice(0, 3).forEach(proj => {
+          profileContext += `- ${proj.title}`;
           if (proj.description) {
             const shortDesc = proj.description.length > 100
               ? proj.description.substring(0, 100) + '...'
@@ -562,13 +560,13 @@ ${query}`;
         });
       }
     }
-    
+
     // Skills (Languages) - always included but more detailed for higher relevance
     if (profile.languages && profile.languages.length > 0) {
       profileContext += '\nSkills & Languages:\n';
       profileContext += profile.languages.join(', ') + '\n';
     }
-    
+
     // Add machine-readable section to help the model understand the profile structure
     profileContext += '\nProfile Structure:\n';
     profileContext += `- Full Name: ${profile.fullName}\n`;
@@ -578,7 +576,7 @@ ${query}`;
     profileContext += `- Number of Past Roles: ${profile.experiences ? profile.experiences.length : 0}\n`;
     profileContext += `- Number of Projects: ${profile.accomplishmentProjects ? profile.accomplishmentProjects.length : 0}\n`;
     profileContext += `- Number of Skills: ${profile.languages ? profile.languages.length : 0}\n`;
-    
+
     return profileContext;
   }
 
@@ -623,7 +621,7 @@ Guidelines:
 9. Indicate when information comes from an external source versus personal notes
 10. When the user asks for advice or opportunities, connect their expertise with concepts from their notes and relevant external information`;
     }
-    
+
     // For when we have external sources but no profile relevance
     if (hasExternalSources && !isProfileQuery && profileRelevance < 0.5) {
       return `You are a helpful assistant integrated with a personal knowledge base and external knowledge sources.
@@ -641,7 +639,7 @@ Guidelines:
 9. If internal and external information conflict, acknowledge the difference and prioritize internal knowledge
 10. Use external information to provide additional context, examples, or supporting evidence`;
     }
-    
+
     // For direct profile queries
     if (isProfileQuery) {
       return `You are a helpful assistant integrated with a personal knowledge base and detailed profile information.
@@ -658,7 +656,7 @@ Guidelines:
 8. Be conversational but professional when discussing personal information
 9. When the user asks for advice or opportunities related to their background, connect their expertise with concepts from their notes`;
     }
-    
+
     // For queries with high profile relevance but not direct profile questions
     if (profileRelevance > 0.7) {
       return `You are a helpful assistant integrated with a personal knowledge base and profile information.
@@ -674,13 +672,13 @@ Guidelines:
 7. When discussing topics related to the user's expertise, acknowledge their background
 8. Feel free to suggest applications or connections to the user's work or projects`;
     }
-    
+
     // For queries with medium profile relevance, possibly with external sources
     if (profileRelevance > 0.4) {
-      const externalSourcesGuideline = hasExternalSources 
-        ? "\n8. When using external information, clearly indicate the source\n9. Integrate external knowledge with personal insights when appropriate" 
+      const externalSourcesGuideline = hasExternalSources
+        ? "\n8. When using external information, clearly indicate the source\n9. Integrate external knowledge with personal insights when appropriate"
         : "";
-        
+
       return `You are a helpful assistant integrated with a personal knowledge base and profile information.
 Your task is to provide accurate, helpful responses based primarily on the user's notes, with background context from their profile.
 
@@ -693,7 +691,7 @@ Guidelines:
 6. When appropriate, mention how the topic might relate to the user's background or interests
 7. Feel free to highlight connections between the notes and the user's professional domain${externalSourcesGuideline}`;
     }
-    
+
     // Default system prompt for low or no profile relevance, potentially with external sources
     const externalSourcesPrompt = hasExternalSources
       ? `You are a helpful assistant integrated with a personal knowledge base and external knowledge sources.
@@ -719,7 +717,7 @@ Guidelines:
 4. Keep responses clear and concise
 5. Do not make up information that's not in the provided context
 6. When appropriate, mention related topics from the notes that the user might want to explore further`;
-      
+
     return externalSourcesPrompt;
   }
 }
