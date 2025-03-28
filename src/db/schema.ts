@@ -1,4 +1,14 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import type {
+  ProfileExperience,
+  ProfileEducation,
+  ProfileLanguageProficiency,
+  ProfilePublication,
+  ProfileProject,
+  ProfileAward,
+  ProfileVolunteerWork
+
+} from "../models/profile"
 
 export const notes = sqliteTable('notes', {
   id: text('id').primaryKey(),
