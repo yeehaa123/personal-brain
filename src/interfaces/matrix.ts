@@ -6,7 +6,9 @@ import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { BrainProtocol } from '../mcp/protocol/brainProtocol';
 import { NoteContext } from '../mcp/context/noteContext';
+import { ProfileContext } from '../mcp/context/profileContext';
 import type { Note } from '../models/note';
+import type { Profile } from '../models/profile';
 import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
 
 // Configuration
@@ -86,6 +88,11 @@ class MatrixBrainInterface {
         command: 'note',
         description: 'Show a specific note by ID: !brain note <id>',
         handler: this.handleNote.bind(this)
+      },
+      {
+        command: 'profile',
+        description: 'View your profile information: !brain profile [related]',
+        handler: this.handleProfile.bind(this)
       },
       {
         command: 'ask',
@@ -261,10 +268,142 @@ class MatrixBrainInterface {
     const helpText = [
       '### Personal Brain Commands',
       '',
-      ...this.commandHandlers.map(handler => `- \`${COMMAND_PREFIX} ${handler.command}\`: ${handler.description}`)
+      '- `!brain search [query]`    - Search for notes',
+      '- `!brain list`              - List all notes',
+      '- `!brain list [tag]`        - List notes with a specific tag',
+      '- `!brain note [id]`         - Show a specific note by ID',
+      '- `!brain tags`              - List all tags in the system',
+      '- `!brain profile`           - View your profile information',
+      '- `!brain profile related`   - Find notes related to your profile',
+      '- `!brain ask [question]`    - Ask a question to your brain (requires API key)',
+      '- `!brain help`              - Show this help message'
     ].join('\n');
     
     this.sendMessage(roomId, helpText);
+  }
+  
+  private async handleProfile(args: string, roomId: string, event: any) {
+    try {
+      // Get the profile using the protocol's profile context
+      const profileContext = this.brainProtocol.getProfileContext();
+      const profile = await profileContext.getProfile();
+      
+      if (!profile) {
+        this.sendMessage(roomId, 'No profile found. Use "bun run src/import.ts profile <path/to/profile.yaml>" to import a profile.');
+        return;
+      }
+      
+      // Build the message
+      const infoLines = [];
+      
+      infoLines.push('### Profile Information');
+      infoLines.push('');
+      infoLines.push(`**Name**: ${profile.fullName}`);
+      if (profile.headline) infoLines.push(`**Headline**: ${profile.headline}`);
+      if (profile.occupation) infoLines.push(`**Occupation**: ${profile.occupation}`);
+      
+      // Display location
+      const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
+      if (location) infoLines.push(`**Location**: ${location}`);
+      
+      // Display summary
+      if (profile.summary) {
+        infoLines.push('');
+        infoLines.push('**Summary**:');
+        infoLines.push(profile.summary);
+      }
+      
+      // Display current experience
+      if (profile.experiences && profile.experiences.length > 0) {
+        infoLines.push('');
+        infoLines.push('**Current Work**:');
+        const currentExperiences = profile.experiences.filter(exp => !exp.endDate);
+        if (currentExperiences.length > 0) {
+          currentExperiences.forEach(exp => {
+            infoLines.push(`- ${exp.title} at ${exp.company}`);
+            if (exp.description) {
+              // Trim long descriptions
+              const desc = exp.description.length > 100 
+                ? exp.description.substring(0, 100) + '...' 
+                : exp.description;
+              infoLines.push(`  ${desc}`);
+            }
+          });
+        } else {
+          infoLines.push('No current work experiences found.');
+        }
+      }
+      
+      // Display skills
+      if (profile.languages && profile.languages.length > 0) {
+        infoLines.push('');
+        infoLines.push('**Languages**:');
+        infoLines.push(profile.languages.join(', '));
+      }
+      
+      // Check for embedding
+      infoLines.push('');
+      if (profile.embedding) {
+        infoLines.push('**Profile has embeddings**: Yes');
+      } else {
+        infoLines.push('**Profile has embeddings**: No');
+        infoLines.push('Run "bun run embed:profile" to generate embeddings.');
+      }
+      
+      // Display tags if available
+      if (profile.tags && profile.tags.length > 0) {
+        infoLines.push('');
+        infoLines.push('**Profile Tags**:');
+        infoLines.push(profile.tags.join(', '));
+      } else {
+        infoLines.push('');
+        infoLines.push('**Profile Tags**: None');
+        infoLines.push('Run "bun run tag:profile" to generate tags.');
+      }
+      
+      // If we have args "related", show notes related to profile
+      if (args && args.toLowerCase() === 'related') {
+        infoLines.push('');
+        infoLines.push('### Finding notes related to your profile...');
+        
+        // Find notes related to profile
+        const noteContext = this.brainProtocol.getNoteContext();
+        const relatedNotes = await profileContext.findRelatedNotes(noteContext, 5);
+        
+        infoLines.push('');
+        infoLines.push('### Notes related to your profile:');
+        if (relatedNotes.length > 0) {
+          // Explain how we found the notes
+          if (profile.tags && profile.tags.length > 0) {
+            infoLines.push('(Matched by profile tags and semantic similarity)');
+          } else if (profile.embedding) {
+            infoLines.push('(Matched by semantic similarity)');
+          } else {
+            infoLines.push('(Matched by keyword similarity)');
+          }
+          
+          infoLines.push('');
+          relatedNotes.forEach((note, index) => {
+            infoLines.push(this.formatNotePreview(note, index + 1));
+          });
+        } else {
+          infoLines.push('No related notes found. Try generating embeddings and tags for your notes and profile.');
+          infoLines.push('You can run "bun run tag:profile" to generate profile tags.');
+        }
+      }
+      
+      // Extract profile keywords for search purposes
+      const keywords = profileContext.extractProfileKeywords(profile);
+      infoLines.push('');
+      infoLines.push('**Profile Keywords**:');
+      infoLines.push(keywords.slice(0, 15).join(', '));
+      
+      this.sendMessage(roomId, infoLines.join('\n'));
+      
+    } catch (error: unknown) {
+      console.error('Error fetching profile:', error instanceof Error ? error.message : String(error));
+      this.sendMessage(roomId, `❌ Error fetching profile: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   
   private async handleSearch(query: string, roomId: string, event: any) {
