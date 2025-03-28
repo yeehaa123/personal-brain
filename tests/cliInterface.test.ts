@@ -1,20 +1,23 @@
-import { test, expect, describe } from 'bun:test';
+import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
 import { CLIInterface } from '../src/utils/cliInterface';
 import logger from '../src/utils/logger';
+import { mockLogger, restoreLogger } from './mocks';
+import { captureOutput } from './test-utils';
 
-// Store original logger methods
-const originalLoggerInfo = logger.info;
-const originalLoggerDebug = logger.debug;
-const originalLoggerWarn = logger.warn;
-const originalLoggerError = logger.error;
-
-// Silence logger during tests
-logger.info = () => {};
-logger.debug = () => {};
-logger.warn = () => {};
-logger.error = () => {};
+// Store the original logger methods
+let originalLogger: any;
 
 describe('CLIInterface', () => {
+  
+  beforeAll(() => {
+    // Silence logger during tests
+    originalLogger = mockLogger(logger);
+  });
+  
+  afterAll(() => {
+    // Restore original logger functions
+    restoreLogger(logger, originalLogger);
+  });
   
   describe('styles', () => {
     test('should have tag style defined', () => {
@@ -82,6 +85,39 @@ describe('CLIInterface', () => {
     test('should use formatter for values when provided', () => {
       const formatter = (val) => `[${val}]`;
       expect(formatter('value')).toBe('[value]');
+    });
+    
+    test('should print label and value correctly', () => {
+      const capture = captureOutput();
+      
+      try {
+        CLIInterface.printLabelValue('Tags', ['tag1', 'tag2'], {
+          formatter: tag => CLIInterface.styles.tag(`#${tag}`)
+        });
+        
+        const output = capture.getOutput();
+        expect(output).toContain('Tags');
+        expect(output).toContain('#tag1');
+        expect(output).toContain('#tag2');
+      } finally {
+        capture.restore();
+      }
+    });
+    
+    test('should handle empty values with emptyText', () => {
+      const capture = captureOutput();
+      
+      try {
+        CLIInterface.printLabelValue('Tags', [], {
+          emptyText: 'No tags found'
+        });
+        
+        const output = capture.getOutput();
+        expect(output).toContain('Tags');
+        expect(output).toContain('No tags found');
+      } finally {
+        capture.restore();
+      }
     });
   });
 });

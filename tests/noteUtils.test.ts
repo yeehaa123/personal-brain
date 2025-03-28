@@ -2,87 +2,30 @@ import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { displayNotes, formatNotePreview, getExcerpt } from '../src/utils/noteUtils';
 import { CLIInterface } from '../src/utils/cliInterface';
 import type { Note } from '../src/models/note';
-
-// Store track of mock calls instead of replacing functions
-let printCalls: Array<[string]> = [];
-let printLabelValueCalls: Array<[string, any, any]> = [];
-let warnCalls: Array<[string]> = [];
-
-// Mock functions for logger
 import logger from '../src/utils/logger';
-
-// Save original logger methods
-const originalLoggerInfo = logger.info;
-const originalLoggerDebug = logger.debug;
-const originalLoggerWarn = logger.warn;
-const originalLoggerError = logger.error;
+import { createMockNotes, createTrackers, mockLogger, restoreLogger } from './mocks';
+import { mockCLIInterface, restoreCLIInterface } from './test-utils';
 
 describe('noteUtils', () => {
   let mockNotes: Note[];
+  let trackers: ReturnType<typeof createTrackers>;
+  let originalCLI: any;
+  let originalLogger: any;
   
   beforeEach(() => {
     // Create sample notes for testing
-    mockNotes = [
-      {
-        id: 'note-1',
-        title: 'Test Note 1',
-        content: 'This is the content of test note 1',
-        tags: ['tag1', 'tag2'],
-        createdAt: new Date('2025-01-01'),
-        updatedAt: new Date('2025-01-02')
-      },
-      {
-        id: 'note-2',
-        title: 'Test Note 2',
-        content: 'This is the content of test note 2',
-        tags: [],
-        createdAt: new Date('2025-01-03'),
-        updatedAt: new Date('2025-01-04')
-      }
-    ];
+    mockNotes = createMockNotes();
     
-    // Clear call tracking arrays
-    printCalls = [];
-    printLabelValueCalls = [];
-    warnCalls = [];
-    
-    // Save original methods
-    const originalPrint = CLIInterface.print;
-    const originalPrintLabelValue = CLIInterface.printLabelValue;
-    const originalWarn = CLIInterface.warn;
-    
-    // Create spy methods that track calls but still invoke the original
-    CLIInterface.print = function(message) {
-      printCalls.push([message]);
-      // Don't actually print during tests
-      // return originalPrint(message);
-    };
-    
-    CLIInterface.printLabelValue = function(label, value, options) {
-      printLabelValueCalls.push([label, value, options]);
-      // Don't actually print during tests
-      // return originalPrintLabelValue(label, value, options);
-    };
-    
-    CLIInterface.warn = function(message) {
-      warnCalls.push([message]);
-      // Don't actually print during tests
-      // return originalWarn(message);
-    };
-    
-    // Mock logger methods to suppress output
-    logger.info = () => {};
-    logger.debug = () => {};
-    logger.warn = () => {};
-    logger.error = () => {};
+    // Set up trackers and mocks
+    trackers = createTrackers();
+    originalCLI = mockCLIInterface(trackers);
+    originalLogger = mockLogger(logger);
   });
   
   afterEach(() => {
-    // Restore original logger methods
-    logger.info = originalLoggerInfo;
-    logger.debug = originalLoggerDebug;
-    logger.warn = originalLoggerWarn;
-    logger.error = originalLoggerError;
+    // Restore original functionality
+    restoreCLIInterface(originalCLI);
+    restoreLogger(logger, originalLogger);
   });
   
   describe('displayNotes', () => {
@@ -91,15 +34,15 @@ describe('noteUtils', () => {
       displayNotes(mockNotes);
       
       // Check that print was called at least once for each note
-      expect(printCalls.length).toBeGreaterThanOrEqual(mockNotes.length);
+      expect(trackers.printCalls.length).toBeGreaterThanOrEqual(mockNotes.length);
       
       // Check that printLabelValue was called 4 times per note (ID, Tags, Created, Preview)
-      expect(printLabelValueCalls.length).toBe(mockNotes.length * 4);
+      expect(trackers.printLabelValueCalls.length).toBe(mockNotes.length * 4);
       
       // Check specific calls for the first note
       let foundTitleCall = false;
-      for (const call of printCalls) {
-        if (call[0].includes('Test Note 1')) {
+      for (const call of trackers.printCalls) {
+        if (call.includes('Test Note 1')) {
           foundTitleCall = true;
           break;
         }
@@ -107,7 +50,7 @@ describe('noteUtils', () => {
       expect(foundTitleCall).toBeTrue();
       
       // Check Tags formatter exists
-      const tagsCall = printLabelValueCalls.find(call => 
+      const tagsCall = trackers.printLabelValueCalls.find(call => 
         call[0] === 'Tags' && 
         Array.isArray(call[1]) && 
         call[1].includes('tag1')
@@ -126,7 +69,7 @@ describe('noteUtils', () => {
       }
       
       // Check empty tags handling
-      const emptyTagsCall = printLabelValueCalls.find(call => 
+      const emptyTagsCall = trackers.printLabelValueCalls.find(call => 
         call[0] === 'Tags' && 
         Array.isArray(call[1]) && 
         call[1].length === 0
@@ -143,12 +86,12 @@ describe('noteUtils', () => {
       displayNotes([]);
       
       // Check warn was called
-      expect(warnCalls.length).toBe(1);
-      expect(warnCalls[0][0]).toBe('No notes found.');
+      expect(trackers.warnCalls.length).toBe(1);
+      expect(trackers.warnCalls[0]).toBe('No notes found.');
       
       // Print shouldn't be called for note display
-      const relevantPrintCalls = printCalls.filter(
-        call => call[0].includes('Test Note')
+      const relevantPrintCalls = trackers.printCalls.filter(
+        call => call.includes('Test Note')
       );
       expect(relevantPrintCalls.length).toBe(0);
     });
@@ -160,7 +103,7 @@ describe('noteUtils', () => {
       expect(result).toContain('**1. Test Note 1**');
       expect(result).toContain('ID: `note-1`');
       expect(result).toContain('Tags: `tag1`, `tag2`');
-      expect(result).toContain('This is the content of test note 1');
+      expect(result).toContain('This is the content of Test Note 1');
     });
     
     test('should handle notes without tags', () => {
