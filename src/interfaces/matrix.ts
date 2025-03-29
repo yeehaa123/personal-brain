@@ -7,8 +7,6 @@ import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { BrainProtocol } from '../mcp/protocol/brainProtocol';
 import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
-import type { Note } from '../models/note';
-import { formatNotePreview } from '../utils/noteUtils';
 
 // Configuration
 const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
@@ -17,13 +15,14 @@ const USER_ID = process.env.MATRIX_USER_ID;
 const ROOM_IDS = (process.env.MATRIX_ROOM_IDS || '').split(',').filter(Boolean);
 const COMMAND_PREFIX = process.env.COMMAND_PREFIX || '!brain';
 
-// Debug environment variables
-console.log('Environment variables:');
-console.log(`MATRIX_HOMESERVER_URL: ${HOMESERVER_URL}`);
-console.log(`MATRIX_USER_ID: ${USER_ID}`);
-console.log(`MATRIX_ACCESS_TOKEN: ${ACCESS_TOKEN ? 'Set (hidden)' : 'Not set'}`);
-console.log(`MATRIX_ROOM_IDS: ${ROOM_IDS.join(', ')}`);
-console.log(`COMMAND_PREFIX: ${COMMAND_PREFIX}`);
+// Matrix environment variables check
+if (process.env.NODE_ENV !== 'production') {
+  console.debug(`MATRIX_HOMESERVER_URL: ${HOMESERVER_URL}`);
+  console.debug(`MATRIX_USER_ID: ${USER_ID}`);
+  console.debug(`MATRIX_ACCESS_TOKEN: ${ACCESS_TOKEN ? 'Set (hidden)' : 'Not set'}`);
+  console.debug(`MATRIX_ROOM_IDS: ${ROOM_IDS.join(', ')}`);
+  console.debug(`COMMAND_PREFIX: ${COMMAND_PREFIX}`);
+}
 
 if (!ACCESS_TOKEN || !USER_ID) {
   console.error('Error: MATRIX_ACCESS_TOKEN and MATRIX_USER_ID environment variables are required');
@@ -118,54 +117,28 @@ class MatrixBrainInterface {
   }
   
   private async handleRoomMessage(event: any, room: any) {
-    console.log("=========== DEBUGGING MESSAGE RECEIPT ===========");
-    console.log(`Room ID: ${room.roomId}`);
-    console.log(`Event type: ${event.getType()}`);
-    console.log(`Sender: ${event.getSender()}`);
-    
-    if (event.getType() === 'm.room.message') {
-      const content = event.getContent();
-      console.log(`Message type: ${content.msgtype}`);
-      if (content.msgtype === 'm.text') {
-        console.log(`Message content: "${content.body}"`);
-      }
-    }
     
     // Only process messages if the client is ready
     if (!this.isReady) {
-      console.log("Client not ready yet");
       return;
     }
     
     // Ignore non-text messages 
     if (event.getType() !== 'm.room.message') {
-      console.log("Ignoring non-message event");
       return;
     }
     
-    // Debug sender info but don't filter out bot messages
-    if (event.getSender() === USER_ID) {
-      console.log("Message from self detected - processing anyway");
-    }
     
     const content = event.getContent();
     
     // Only process text messages
     if (content.msgtype !== 'm.text') {
-      console.log("Ignoring non-text message");
       return;
     }
     
     const text = content.body.trim();
-    console.log(`Processing text: "${text}"`);
-    console.log(`Command prefix: "${COMMAND_PREFIX}"`);
-    
-    // Try a simpler approach - just check if the text starts with the prefix
+    // Check if the text starts with the command prefix
     if (text.startsWith(COMMAND_PREFIX)) {
-      console.log("Command detected!");
-      
-      // Always send a confirmation message for debugging
-      this.sendMessage(room.roomId, `I received your command: ${text}`);
       
       const commandText = text.substring(COMMAND_PREFIX.length).trim();
       try {
@@ -174,19 +147,14 @@ class MatrixBrainInterface {
         console.error("Error processing command:", error instanceof Error ? error.message : String(error));
         this.sendMessage(room.roomId, `Error: ${error instanceof Error ? error.message : String(error)}`);
       }
-    } else {
-      console.log("Not a command");
     }
     
     console.log("=================================================");
   }
   
   private async processCommand(commandText: string, roomId: string, event: any) {
-    console.log(`Processing command text: "${commandText}"`);
-    
     // Handle empty command (just the prefix) as help
     if (!commandText) {
-      console.log("Empty command - showing help");
       this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
@@ -195,8 +163,6 @@ class MatrixBrainInterface {
     const parts = commandText.split(' ');
     const command = parts[0].toLowerCase();
     const args = parts.slice(1).join(' ');
-    
-    console.log(`Command: "${command}", Args: "${args}"`);
     
     // Handle help command specially
     if (command === 'help') {
@@ -224,8 +190,6 @@ class MatrixBrainInterface {
   // Helper methods
   
   private sendMessage(roomId: string, message: string) {
-    console.log(`Sending message to ${roomId}: "${message.substring(0, 50)}..."`);
-    
     try {
       // First try sendMessage without HTML
       this.client.sendMessage(roomId, {

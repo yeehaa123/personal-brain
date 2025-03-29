@@ -1,6 +1,8 @@
-import { z } from 'zod';
 import { extractKeywords } from './textUtils';
-import Anthropic from '@anthropic-ai/sdk';
+import { anthropic } from '@ai-sdk/anthropic';
+import { generateObject } from 'ai';
+import { z } from 'zod';
+
 
 /**
  * Extract tags from content using Claude AI
@@ -10,8 +12,8 @@ import Anthropic from '@anthropic-ai/sdk';
  * @returns Array of extracted tags
  */
 export async function extractTags(
-  content: string, 
-  existingTags: string[] = [], 
+  content: string,
+  existingTags: string[] = [],
   maxTags: number = 7
 ): Promise<string[]> {
   try {
@@ -22,13 +24,11 @@ export async function extractTags(
       return extractKeywords(content, maxTags);
     }
 
-    console.log('API Key available:', !!apiKey);
-
     // Truncate content if it's too long
-    const truncatedContent = content.length > 10000 
-      ? content.substring(0, 10000) + '... [content truncated]' 
+    const truncatedContent = content.length > 10000
+      ? content.substring(0, 10000) + '... [content truncated]'
       : content;
-    
+
     // Build the prompt
     const prompt = `You are a precise tag extraction system. Your task is to extract the most relevant tags from the provided content.
 
@@ -48,49 +48,19 @@ Extract up to ${maxTags} tags that best represent this content.
 
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
-    // Use Anthropic's SDK directly
-    try {
-      const anthropic = new Anthropic({
-        apiKey: apiKey,
-      });
-      
-      const message = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 300,
-        temperature: 0.0,
-        system: "You extract tags from content. Only respond with the tags, nothing else.",
-        messages: [
-          { role: "user", content: prompt }
-        ]
-      });
-      
-      // Parse comma-separated tags from the response
-      // Extract the text content from the message
-      let rawTags = '';
-      if (message.content && Array.isArray(message.content) && message.content.length > 0) {
-        const content = message.content[0];
-        if (typeof content === 'string') {
-          rawTags = content.trim();
-        } else if (content && typeof content === 'object' && 'text' in content && typeof content.text === 'string') {
-          rawTags = content.text.trim();
-        }
-      }
-      const tags = rawTags
-        .split(/,\s*/)
-        .map((tag: string) => tag.trim().toLowerCase())
-        .filter((tag: string) => tag.length > 0);
-      
-      // Return the tags (limit to maxTags if needed)
-      return tags.slice(0, maxTags);
-    } catch (aiError) {
-      console.error('Error with Anthropic SDK:', aiError);
-      return extractKeywords(content, maxTags);
-    }
+    const { object } = await generateObject({
+      model: anthropic('claude-3-7-sonnet-20250219'),
+      prompt,
+      temperature: 0.0,
+      system: "You extract tags from content. Only respond with the tags, nothing else.",
+      schema: z.object({
+        tags: z.array(z.string()).max(maxTags)
+      })
+    });
+    return object.tags;
   } catch (error) {
     console.error('Error extracting tags with Claude:', error);
     // Fallback to simple keyword extraction
     return extractKeywords(content, maxTags);
   }
 }
-
-// We're now using extractKeywords from textUtils instead

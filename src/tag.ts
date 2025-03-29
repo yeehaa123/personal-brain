@@ -1,10 +1,9 @@
 #!/usr/bin/env bun
 import { db } from './db';
-import { notes, profiles } from './db/schema';
+import { notes } from './db/schema';
 import { sql } from 'drizzle-orm';
 import { extractTags } from './utils/tagExtractor';
 import { ProfileContext } from './mcp/context/profileContext';
-import { EmbeddingService } from './mcp/model/embeddings';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;
 type EntityType = typeof ENTITY_TYPES[number];
@@ -13,7 +12,7 @@ async function generateTags() {
   // Parse arguments
   const args = process.argv.slice(2);
   const forceRegenerate = args.includes('--force');
-  
+
   // Determine what to tag (profile, notes, or all)
   let entityType: EntityType = 'all';
   for (const arg of args) {
@@ -24,7 +23,6 @@ async function generateTags() {
   }
 
   // Initialize services
-  const embeddingService = new EmbeddingService();
   const profileContext = new ProfileContext();
 
   console.log(`Generating tags${entityType !== 'all' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
@@ -34,11 +32,11 @@ async function generateTags() {
     if (entityType === 'profile' || entityType === 'all') {
       await generateProfileTags(profileContext, forceRegenerate);
     }
-    
+
     if (entityType === 'notes' || entityType === 'all') {
       await generateNoteTags(forceRegenerate);
     }
-    
+
     console.log('\nTag generation complete!');
   } catch (error) {
     console.error('Error generating tags:', error);
@@ -48,26 +46,26 @@ async function generateTags() {
 
 async function generateProfileTags(profileContext: ProfileContext, forceRegenerate: boolean = false) {
   console.log('\n=== Processing Profile Tags ===');
-  
+
   try {
     // Check if profile exists
     const profile = await profileContext.getProfile();
-    
+
     if (!profile) {
       console.log('No profile found. Import a profile first.');
       return;
     }
-    
+
     // Check if we need to generate tags
     if (!forceRegenerate && profile.tags && profile.tags.length > 0) {
       console.log('Profile already has tags:', profile.tags.join(', '));
       console.log('Use --force to regenerate tags.');
       return;
     }
-    
+
     // Generate tags
     const tags = await profileContext.updateProfileTags(forceRegenerate);
-    
+
     if (tags) {
       console.log(`Generated tags for profile: ${tags.join(', ')}`);
     } else {
@@ -93,12 +91,12 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
     } else {
       allNotes = await db.select().from(notes);
     }
-    
+
     if (allNotes.length === 0) {
       console.log('No notes found that need tag generation');
       return;
     }
-    
+
     console.log(`Found ${allNotes.length} notes to process`);
     let updated = 0;
     let failed = 0;
@@ -110,24 +108,24 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
           console.log(`Skipping note "${note.title}" (already has tags)`);
           continue;
         }
-        
+
         console.log(`Generating tags for note: "${note.title}"`);
-        
+
         // Use title + content for better tagging context
         const tagContent = `${note.title}\n\n${note.content}`;
-        
+
         // Get existing tags to consider (if any)
         const existingTags = note.tags || [];
-        
+
         // Generate tags
         const generatedTags = await extractTags(tagContent, existingTags, 7);
-        
+
         if (generatedTags && generatedTags.length > 0) {
           // Update the note with the new tags
           await db.update(notes)
             .set({ tags: generatedTags })
             .where(sql`${notes.id} = ${note.id}`);
-          
+
           console.log(`Updated tags for "${note.title}": ${generatedTags.join(', ')}`);
           updated++;
         } else {

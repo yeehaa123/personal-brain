@@ -89,11 +89,11 @@ export class MatrixRenderer {
         break;
         
       case 'profile':
-        this.renderProfile(roomId, result.profile, result.keywords);
+        this.renderProfile(roomId, result.profile);
         break;
         
       case 'profile-related':
-        const profileRelatedMsg = this.buildProfileMessage(result.profile, result.keywords);
+        const profileRelatedMsg = this.buildProfileMessage(result.profile);
         
         // Add related notes section
         profileRelatedMsg.push('');
@@ -216,15 +216,15 @@ export class MatrixRenderer {
   /**
    * Render profile information
    */
-  private renderProfile(roomId: string, profile: any, keywords: string[]): void {
-    const message = this.buildProfileMessage(profile, keywords);
+  private renderProfile(roomId: string, profile: any): void {
+    const message = this.buildProfileMessage(profile);
     this.sendMessageFn(roomId, message.join('\n'));
   }
 
   /**
    * Build profile message lines
    */
-  private buildProfileMessage(profile: any, keywords: string[]): string[] {
+  private buildProfileMessage(profile: any): string[] {
     const infoLines = [];
     
     infoLines.push('### Profile Information');
@@ -291,11 +291,6 @@ export class MatrixRenderer {
       infoLines.push('**Profile Tags**: None');
       infoLines.push('Run "bun run tag:profile" to generate tags.');
     }
-    
-    // Show keywords
-    infoLines.push('');
-    infoLines.push('**Profile Keywords**:');
-    infoLines.push(keywords.join(', '));
     
     return infoLines;
   }

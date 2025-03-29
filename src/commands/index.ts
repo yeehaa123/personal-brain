@@ -6,9 +6,6 @@
 import type { Note } from '../models/note';
 import type { Profile } from '../models/profile';
 import type { BrainProtocol } from '../mcp/protocol/brainProtocol';
-import type { NoteContext } from '../mcp/context/noteContext';
-import type { ProfileContext } from '../mcp/context/profileContext';
-import type { ExternalSourceContext } from '../mcp/context/externalSourceContext';
 
 /**
  * Interface for command descriptions
@@ -24,24 +21,29 @@ export interface CommandInfo {
  * Command result types to make interfaces easier to manage
  */
 import type { ExternalCitation } from '../mcp/protocol/brainProtocol';
+import type { NoteContext } from '../mcp/context/noteContext';
+import type { ProfileContext } from '../mcp/context/profileContext';
+import type { ExternalSourceContext } from '../mcp/context/externalSourceContext';
 
-export type CommandResult = 
+export type CommandResult =
   | { type: 'error'; message: string }
-  | { type: 'profile'; profile: Profile; keywords: string[] }
-  | { type: 'profile-related'; profile: Profile; relatedNotes: Note[]; matchType: 'tags' | 'semantic' | 'keyword'; keywords: string[] }
+  | { type: 'profile'; profile: Profile }
+  | { type: 'profile-related'; profile: Profile; relatedNotes: Note[]; matchType: 'tags' | 'semantic' | 'keyword' }
   | { type: 'notes'; notes: Note[]; title?: string }
   | { type: 'note'; note: Note }
   | { type: 'tags'; tags: Array<{ tag: string; count: number }> }
   | { type: 'search'; query: string; notes: Note[] }
   | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; profile?: Profile; externalSources?: ExternalCitation[] }
   | { type: 'external'; enabled: boolean; message: string }
-  | { type: 'status'; status: { 
-      apiConnected: boolean; 
-      dbConnected: boolean; 
-      noteCount: number; 
+  | {
+    type: 'status'; status: {
+      apiConnected: boolean;
+      dbConnected: boolean;
+      noteCount: number;
       externalSources: Record<string, boolean>;
       externalSourcesEnabled: boolean;
-    }};
+    }
+  };
 
 /**
  * Command handler for processing commands and returning structured results
@@ -174,14 +176,14 @@ export class CommandHandler {
     if (tagFilter) {
       notes = await this.noteContext.searchNotes({ tags: [tagFilter], limit: 10 });
       title = `Notes with tag: ${tagFilter}`;
-      
+
       if (notes.length === 0) {
         return { type: 'error', message: `No notes found with tag: ${tagFilter}` };
       }
     } else {
       notes = await this.noteContext.searchNotes({ limit: 10 });
       title = 'Recent Notes';
-      
+
       if (notes.length === 0) {
         return { type: 'error', message: 'No notes found in the system' };
       }
@@ -196,10 +198,10 @@ export class CommandHandler {
   private async handleTags(): Promise<CommandResult> {
     // Get all notes
     const allNotes = await this.noteContext.searchNotes({ limit: 1000 });
-    
+
     // Extract and count all tags
     const tagCounts: { [tag: string]: number } = {};
-    
+
     allNotes.forEach(note => {
       if (note.tags && Array.isArray(note.tags)) {
         note.tags.forEach(tag => {
@@ -209,16 +211,16 @@ export class CommandHandler {
         });
       }
     });
-    
+
     // Sort tags by count
     const sortedTags = Object.entries(tagCounts)
       .sort((a, b) => b[1] - a[1])
       .map(([tag, count]) => ({ tag, count }));
-    
+
     if (sortedTags.length === 0) {
       return { type: 'error', message: 'No tags found in the system' };
     }
-    
+
     return { type: 'tags', tags: sortedTags };
   }
 
@@ -229,13 +231,13 @@ export class CommandHandler {
     if (!noteId) {
       return { type: 'error', message: 'Please provide a note ID' };
     }
-    
+
     const note = await this.noteContext.getNoteById(noteId);
-    
+
     if (!note) {
       return { type: 'error', message: `Note with ID ${noteId} not found` };
     }
-    
+
     return { type: 'note', note };
   }
 
@@ -244,19 +246,16 @@ export class CommandHandler {
    */
   private async handleProfile(args: string): Promise<CommandResult> {
     const profile = await this.profileContext.getProfile();
-    
+
     if (!profile) {
       return { type: 'error', message: 'No profile found. Use "bun run src/import.ts profile <path/to/profile.yaml>" to import a profile.' };
     }
-    
-    // Extract profile keywords
-    const keywords = this.profileContext.extractProfileKeywords(profile);
-    
+
     // Check if we want related notes
     if (args && args.toLowerCase() === 'related') {
       const noteContext = this.brainProtocol.getNoteContext();
       const relatedNotes = await this.profileContext.findRelatedNotes(noteContext, 5);
-      
+
       // Determine match type
       let matchType: 'tags' | 'semantic' | 'keyword' = 'keyword';
       if (profile.tags && profile.tags.length > 0) {
@@ -264,20 +263,18 @@ export class CommandHandler {
       } else if (profile.embedding) {
         matchType = 'semantic';
       }
-      
-      return { 
-        type: 'profile-related', 
-        profile, 
-        relatedNotes, 
-        matchType,
-        keywords: keywords.slice(0, 15)
+
+      return {
+        type: 'profile-related',
+        profile,
+        relatedNotes,
+        matchType
       };
     }
-    
-    return { 
-      type: 'profile', 
-      profile,
-      keywords: keywords.slice(0, 15)
+
+    return {
+      type: 'profile',
+      profile
     };
   }
 
@@ -288,14 +285,14 @@ export class CommandHandler {
     if (!question) {
       return { type: 'error', message: 'Please provide a question' };
     }
-    
+
     if (!process.env.ANTHROPIC_API_KEY) {
       return { type: 'error', message: 'No Anthropic API key found. Set the ANTHROPIC_API_KEY environment variable to use this feature.' };
     }
-    
+
     try {
       const result = await this.brainProtocol.processQuery(question);
-      
+
       return {
         type: 'ask',
         answer: result.answer,
@@ -308,13 +305,13 @@ export class CommandHandler {
       return { type: 'error', message: `Error processing question: ${error instanceof Error ? error.message : String(error)}` };
     }
   }
-  
+
   /**
    * Handle external command - toggle external sources
    */
   private async handleExternal(args: string): Promise<CommandResult> {
     const arg = args.trim().toLowerCase();
-    
+
     if (arg === 'on' || arg === 'enable') {
       this.brainProtocol.setUseExternalSources(true);
       return {
@@ -330,45 +327,43 @@ export class CommandHandler {
         message: 'External knowledge sources have been disabled.'
       };
     } else {
-      return { 
-        type: 'error', 
-        message: 'Usage: external <on|off> - Enable or disable external knowledge sources' 
+      return {
+        type: 'error',
+        message: 'Usage: external <on|off> - Enable or disable external knowledge sources'
       };
     }
   }
-  
+
   /**
    * Handle status command - check system status
    */
   private async handleStatus(): Promise<CommandResult> {
     // Check API connection (simple test)
     const apiConnected = !!process.env.ANTHROPIC_API_KEY || !!process.env.OPENAI_API_KEY;
-    
-    // Check database connection (assume connected if we can get note count)
+
+    // Check database connection with a single operation
     let dbConnected = false;
     let noteCount = 0;
-    
+
     try {
-      // First, attempt to get the note count
-      noteCount = await this.noteContext.getNoteCount();
+      // Get recent notes - this operation will tell us both if DB is connected
+      // and how many notes exist (length of returned array)
+      const notes = await this.noteContext.searchNotes({ limit: 1 });
       dbConnected = true;
-      // If we get here, the database is connected
-    } catch (firstError) {
-      console.error('Error checking database connection:', firstError);
-      
-      // Try a second fallback approach - just try to get one note
+
+      // If we were able to get notes, we can also get the total count
       try {
-        const notes = await this.noteContext.getRecentNotes(1);
-        // If we can get at least one note, the database is connected
-        dbConnected = true;
-        noteCount = notes.length; // This might be 0 if there are no notes
-      } catch (secondError) {
-        console.error('Fallback database check also failed:', secondError);
-        // Both attempts failed, database is definitely not connected
-        dbConnected = false;
+        noteCount = await this.noteContext.getNoteCount();
+      } catch (countError) {
+        // If count fails but we got notes, use the notes array length as fallback
+        noteCount = notes.length;
+        console.error('Error getting note count, using fallback:', countError);
       }
+    } catch (error) {
+      console.error('Error checking database connection:', error);
+      dbConnected = false;
     }
-    
+
     // Check external sources with error handling
     let externalSources = {};
     try {
@@ -377,9 +372,9 @@ export class CommandHandler {
       console.error('Error checking external sources:', error);
       // Failed to check external sources, continue with empty object
     }
-    
+
     const externalSourcesEnabled = this.brainProtocol.getUseExternalSources();
-    
+
     return {
       type: 'status',
       status: {

@@ -74,11 +74,11 @@ export class CLIRenderer {
         break;
         
       case 'profile':
-        this.renderProfile(result.profile, result.keywords);
+        this.renderProfile(result.profile);
         break;
         
       case 'profile-related':
-        this.renderProfile(result.profile, result.keywords);
+        this.renderProfile(result.profile);
         
         CLIInterface.info('Finding notes related to your profile...');
         CLIInterface.displayTitle('Notes Related to Your Profile');
@@ -224,7 +224,7 @@ export class CLIRenderer {
   /**
    * Render profile information
    */
-  private renderProfile(profile: any, keywords: string[]): void {
+  private renderProfile(profile: any): void {
     CLIInterface.displayTitle('Profile Information');
     
     // Print basic information using label-value formatting
@@ -292,14 +292,6 @@ export class CLIRenderer {
     } else {
       CLIInterface.printLabelValue('Tags', '', { emptyText: 'None' });
       CLIInterface.print(CLIInterface.styles.dim('Run "bun run tag:profile" to generate tags.'));
-    }
-    
-    // Show keywords
-    CLIInterface.displaySubtitle('Profile Keywords');
-    if (keywords.length > 0) {
-      CLIInterface.print(keywords.map(kw => CLIInterface.styles.tag(kw)).join(' '));
-    } else {
-      CLIInterface.print(CLIInterface.styles.dim('No keywords found.'));
     }
   }
 }
