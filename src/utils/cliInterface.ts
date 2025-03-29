@@ -117,7 +117,7 @@ export class CLIInterface {
   /**
    * Format and print a label-value pair
    */
-  static printLabelValue(label: string, value: string | number | string[], options?: { 
+  static printLabelValue(label: string, value: string | number | string[] | null, options?: { 
     emptyText?: string,
     formatter?: (val: string) => string
   }): void {
@@ -257,7 +257,7 @@ export class CLIInterface {
   static async withSpinner<T>(message: string, task: () => Promise<T>): Promise<T> {
     const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let frameIndex = 0;
-    let spinner: NodeJS.Timeout;
+    let spinner: NodeJS.Timer;
     
     // Start the spinner
     process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);

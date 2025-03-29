@@ -10,9 +10,9 @@ export const selectProfileSchema = createSelectSchema(profiles);
 export type Profile = z.infer<typeof selectProfileSchema>;
 export type NewProfile = z.infer<typeof insertProfileSchema>;
 
-// Enhanced profile with auto-generated tags
-export interface EnhancedProfile extends Profile {
-  tags?: string[];
+// Enhanced profile with auto-generated tags and related notes
+export interface EnhancedProfile extends Omit<Profile, 'tags'> {
+  tags: string[] | null;
   relatedNotes?: Array<{
     id: string;
     title: string;

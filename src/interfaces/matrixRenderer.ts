@@ -3,7 +3,7 @@
  */
 import type { ProtocolResponse } from '../mcp/protocol/brainProtocol';
 import type { Note } from '../models/note';
-import type { Profile } from '../models/profile';
+import type { Profile, ProfileExperience } from '../models/profile';
 import type { ExternalCitation } from '../mcp/protocol/brainProtocol';
 
 /**
@@ -191,7 +191,9 @@ Type any of these commands to get started!`;
     
     // Show current experiences
     if (profile.experiences && profile.experiences.length > 0) {
-      const currentExperiences = profile.experiences.filter(exp => !exp.endDate);
+      // Cast to the expected type
+      const typedExperiences = profile.experiences as ProfileExperience[];
+      const currentExperiences = typedExperiences.filter(exp => !exp.ends_at);
       
       if (currentExperiences.length > 0) {
         result += '### Current Work\n\n';

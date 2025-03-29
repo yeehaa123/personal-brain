@@ -3,7 +3,7 @@
  * Requires a NewsAPI key from https://newsapi.org/
  */
 import logger from '../../../utils/logger';
-import { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
+import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
 
 export class NewsApiSource implements ExternalSourceInterface {

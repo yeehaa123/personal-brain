@@ -65,11 +65,20 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
       });
       
       // Parse comma-separated tags from the response
-      const rawTags = message.content[0].text.trim();
+      // Extract the text content from the message
+      let rawTags = '';
+      if (message.content && Array.isArray(message.content) && message.content.length > 0) {
+        const content = message.content[0];
+        if (typeof content === 'string') {
+          rawTags = content.trim();
+        } else if (content && typeof content === 'object' && 'text' in content && typeof content.text === 'string') {
+          rawTags = content.text.trim();
+        }
+      }
       const tags = rawTags
         .split(/,\s*/)
-        .map(tag => tag.trim().toLowerCase())
-        .filter(tag => tag.length > 0);
+        .map((tag: string) => tag.trim().toLowerCase())
+        .filter((tag: string) => tag.length > 0);
       
       // Return the tags (limit to maxTags if needed)
       return tags.slice(0, maxTags);

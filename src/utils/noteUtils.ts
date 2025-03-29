@@ -24,8 +24,10 @@ export function displayNotes(notes: Note[]) {
     
     // Display metadata using label-value formatting
     CLIInterface.printLabelValue('ID', note.id, { formatter: id => CLIInterface.formatId(id) });
-    CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'none', formatter: tag => CLIInterface.styles.tag(`#${tag}`) });
-    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: date => CLIInterface.formatDate(date) });
+    // Convert tags to a proper string array or null to handle database types
+    const tagArray = note.tags ? Array.isArray(note.tags) ? note.tags.map(String) : null : null;
+    CLIInterface.printLabelValue('Tags', tagArray, { emptyText: 'none', formatter: tag => CLIInterface.styles.tag(`#${tag}`) });
+    CLIInterface.printLabelValue('Created', CLIInterface.formatDate(new Date(note.createdAt)));
 
     // Content preview
     const contentPreview = note.content.length > 100

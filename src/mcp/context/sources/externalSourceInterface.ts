@@ -1,7 +1,8 @@
 /**
  * Interface defining external knowledge source capabilities
  */
-import { EmbeddingService, EmbeddingResult } from '../../model/embeddings';
+import { EmbeddingService } from '../../model/embeddings';
+import type { EmbeddingResult } from '../../model/embeddings';
 
 export interface ExternalSourceResult {
   content: string;

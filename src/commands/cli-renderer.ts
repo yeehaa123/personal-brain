@@ -213,8 +213,8 @@ export class CLIRenderer {
     // Print metadata using label-value formatting
     CLIInterface.printLabelValue('ID', note.id, { formatter: CLIInterface.formatId });
     CLIInterface.printLabelValue('Tags', note.tags, { emptyText: 'None' });
-    CLIInterface.printLabelValue('Created', new Date(note.createdAt), { formatter: CLIInterface.formatDate });
-    CLIInterface.printLabelValue('Updated', new Date(note.updatedAt), { formatter: CLIInterface.formatDate });
+    CLIInterface.printLabelValue('Created', CLIInterface.formatDate(new Date(note.createdAt)));
+    CLIInterface.printLabelValue('Updated', CLIInterface.formatDate(new Date(note.updatedAt)));
     
     // Display content
     CLIInterface.displaySubtitle('Content');

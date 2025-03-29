@@ -2,7 +2,7 @@
  * Wikipedia external knowledge source implementation
  */
 import logger from '../../../utils/logger';
-import { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
+import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
 
 export class WikipediaSource implements ExternalSourceInterface {

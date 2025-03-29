@@ -3,7 +3,7 @@
  */
 import logger from '../../utils/logger';
 import { EmbeddingService } from '../model/embeddings';
-import { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './sources/externalSourceInterface';
+import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './sources/externalSourceInterface';
 import { WikipediaSource } from './sources/wikipediaSource';
 import { NewsApiSource } from './sources/newsApiSource';
 

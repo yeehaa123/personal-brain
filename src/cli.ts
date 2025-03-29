@@ -35,14 +35,11 @@ async function main() {
   
   let running = true;
   while (running) {
-    const { action } = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'action',
-        message: chalk.cyan('brain>'),
-        prefix: ''
-      }
-    ]);
+    const { action } = await inquirer.prompt({
+      type: 'input',
+      name: 'action',
+      message: chalk.cyan('brain>')
+    });
     
     const input = action.trim();
     logger.info(`User entered: ${input}`);

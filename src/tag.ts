@@ -83,17 +83,16 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
 
   try {
     // Get all notes from the database
-    let notesQuery = db.select().from(notes);
-    
     // If not forced, only process notes without tags
+    let allNotes;
     if (!forceRegenerate) {
       // For SQLite with JSON columns, we check if the tags field is NULL or an empty array
-      notesQuery = notesQuery.where(
+      allNotes = await db.select().from(notes).where(
         sql`${notes.tags} IS NULL OR ${notes.tags} = '[]'`
       );
+    } else {
+      allNotes = await db.select().from(notes);
     }
-    
-    const allNotes = await notesQuery;
     
     if (allNotes.length === 0) {
       console.log('No notes found that need tag generation');
