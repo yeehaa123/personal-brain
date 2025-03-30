@@ -7,7 +7,7 @@
     "db:migrate": "bun run src/db/migrate.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint --ext .ts src/ tests/",
-    "lint:fix": "eslint --ext .ts src/ tests/ --fix",
+    "lint:fix": "eslint --ext .ts src/ --fix",
     "lint:strict": "eslint --ext .ts src/ tests/ --max-warnings=0",
     "fmt": "eslint --ext .ts src/ tests/ --fix",
     "dev": "bun run src/index.ts",

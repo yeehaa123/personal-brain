@@ -144,7 +144,7 @@ export class ExternalSourceContext {
         .slice(0, limit);
       
       // Remove the similarity score property before returning
-      return sortedResults.map(({ similarityScore, ...result }) => result);
+      return sortedResults.map(({ similarityScore: _score, ...result }) => result);
     } catch (error) {
       logger.error('Error in semantic search for external sources:', error);
       // Fall back to regular search
@@ -240,7 +240,7 @@ export class ExternalSourceContext {
    * Remove oldest items from cache
    */
   private pruneCache(): void {
-    const now = Date.now();
+    // Get entries from cache
     const entries = Array.from(this.sourceCache.entries());
     
     // Sort by age (oldest first)

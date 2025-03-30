@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from 'fs/promises';
+import { readdir, readFile } from 'fs/promises';
 import { join, basename, extname } from 'path';
 import { nanoid } from 'nanoid';
 import { db } from '../db';

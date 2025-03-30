@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 
 async function deleteNoteById(id: string) {
   try {
-    const result = await db.delete(notes).where(eq(notes.id, id));
+    await db.delete(notes).where(eq(notes.id, id));
     console.log(`Note with ID ${id} deleted successfully.`);
     return true;
   } catch (error) {

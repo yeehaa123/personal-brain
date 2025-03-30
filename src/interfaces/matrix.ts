@@ -98,7 +98,7 @@ class MatrixBrainInterface {
     }
   }
   
-  private async handleMembership(event: any, member: any) {
+  private async handleMembership(event: unknown, member: { userId: string; membership: string; roomId: string }) {
     // Auto-accept invites for the bot
     if (member.userId === USER_ID && member.membership === 'invite') {
       console.log(`Received invite to room ${member.roomId}, auto-joining`);
@@ -116,7 +116,7 @@ class MatrixBrainInterface {
     }
   }
   
-  private async handleRoomMessage(event: any, room: any) {
+  private async handleRoomMessage(event: { getType: () => string; getSender: () => string; getContent: () => { msgtype: string; body: string } }, room: { roomId: string }) {
     
     // Only process messages if the client is ready
     if (!this.isReady) {
@@ -152,7 +152,7 @@ class MatrixBrainInterface {
     console.log('=================================================');
   }
   
-  private async processCommand(commandText: string, roomId: string, event: any) {
+  private async processCommand(commandText: string, roomId: string, _event: unknown) {
     // Handle empty command (just the prefix) as help
     if (!commandText) {
       this.renderer.renderHelp(roomId, this.commandHandler.getCommands());

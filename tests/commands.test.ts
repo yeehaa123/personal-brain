@@ -92,10 +92,10 @@ describe('CommandHandler', () => {
     resetMocks();
   });
 
-  beforeEach(() => {
-    // Import directly from the mocked module to avoid reference error
-    const { BrainProtocol } = require('../src/mcp/protocol/brainProtocol');
-    const mockBrainProtocol = new BrainProtocol();
+  beforeEach(async () => {
+    // Import dynamically to avoid issues with mocking
+    const brainModule = await import('../src/mcp/protocol/brainProtocol');
+    const mockBrainProtocol = new brainModule.BrainProtocol();
 
     commandHandler = new CommandHandler(mockBrainProtocol);
   });

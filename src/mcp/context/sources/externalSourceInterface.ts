@@ -1,8 +1,6 @@
 /**
  * Interface defining external knowledge source capabilities
  */
-import { EmbeddingService } from '../../model/embeddings';
-import type { EmbeddingResult } from '../../model/embeddings';
 
 export interface ExternalSourceResult {
   content: string;
@@ -43,5 +41,5 @@ export interface ExternalSourceInterface {
   /**
    * Get source metadata including usage limits, rate limits, etc.
    */
-  getSourceMetadata(): Promise<Record<string, any>>;
+  getSourceMetadata(): Promise<Record<string, unknown>>;
 }

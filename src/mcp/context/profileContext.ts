@@ -1,6 +1,6 @@
 import { db } from '../../db';
 import { profiles } from '../../db/schema';
-import { eq, SQL } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import type { 
   Profile, 
   ProfileEducation, 
@@ -268,7 +268,7 @@ export class ProfileContext {
         // Then by ratio of matches to total tags
         return b.matchRatio - a.matchRatio;
       })
-      .map(({ tagScore, matchRatio, ...note }) => note);
+      .map(({ tagScore: _tagScore, matchRatio: _matchRatio, ...note }) => note);
 
     return sortedNotes.slice(0, limit);
   }

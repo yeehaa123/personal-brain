@@ -9,7 +9,7 @@ mock.module('matrix-js-sdk', () => {
   return {
     createClient: () => ({
       startClient: () => Promise.resolve(),
-      once: (event: string, callback: Function) => {
+      once: (event: string, callback: (state: string) => void) => {
         // Simulate the sync event being emitted
         if (event === 'sync') {
           callback('PREPARED');

@@ -1,5 +1,4 @@
 import type { Note } from '../models/note';
-import chalk from 'chalk';
 import { CLIInterface } from './cliInterface';
 import logger from './logger';
 

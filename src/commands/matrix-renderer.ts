@@ -200,7 +200,7 @@ export class MatrixRenderer {
   /**
    * Render a note
    */
-  private renderNote(roomId: string, note: Note): void {
+  private renderNote(roomId: string, note: Note & { tags?: string[] | null }): void {
     // Format the note content
     const formattedContent = note.content
       // Remove source comment if present
@@ -239,7 +239,9 @@ export class MatrixRenderer {
   /**
    * Build profile message lines
    */
-  private buildProfileMessage(profile: EnhancedProfile): string[] {
+  private buildProfileMessage(profile: EnhancedProfile & { 
+    experiences?: { title: string; company: string; description?: string | null }[] 
+  }): string[] {
     const infoLines = [];
     
     infoLines.push('### Profile Information');
