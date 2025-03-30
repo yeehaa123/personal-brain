@@ -4,9 +4,7 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import logger from './logger';
-// Add explicit imports
 import { setInterval, clearInterval } from 'timers';
-import type { Timer } from 'timers';
 
 export class CLIInterface {
   // Color styles
@@ -24,7 +22,7 @@ export class CLIInterface {
       warning: chalk.yellow,              // Yellow for warnings
       info: chalk.blue,                   // Blue for info messages
       dim: chalk.dim,                     // Dim for less important text
-      
+
       // Specialized styles
       id: chalk.gray,                     // Gray for IDs
       tag: chalk.cyan,                    // Cyan for tags
@@ -34,7 +32,7 @@ export class CLIInterface {
       example: chalk.italic,              // Italic for examples
       url: chalk.blue.underline,          // Blue underlined for URLs
       warn: chalk.yellow,                 // Yellow for warnings
-      
+
       // Icon styles
       successIcon: chalk.green('✓'),      // Green checkmark for success
       errorIcon: chalk.red('✖'),          // Red X for errors
@@ -49,10 +47,10 @@ export class CLIInterface {
   static displayTitle(title: string): void {
     const separator = '='.repeat(title.length + 4);
     const formattedTitle = `\n${this.styles.separator(separator)}\n${this.styles.title(`  ${title}  `)}\n${this.styles.separator(separator)}\n`;
-    
+
     // Output to console
     process.stdout.write(formattedTitle);
-    
+
     // Log to file only, not to console
     logger.debug(`Displayed title: ${title}`);
   }
@@ -63,13 +61,13 @@ export class CLIInterface {
   static displaySubtitle(subtitle: string): void {
     // Add a separator line before subtitle
     const line = '─'.repeat(subtitle.length + 4);
-    
+
     // Format with separator line for clearer hierarchy
     const formattedSubtitle = `\n${this.styles.dim(line)}\n${this.styles.subtitle(subtitle)}\n`;
-    
+
     // Output to console
     process.stdout.write(formattedSubtitle);
-    
+
     // Log to file only, not to console
     logger.debug(`Displayed subtitle: ${subtitle}`);
   }
@@ -120,15 +118,15 @@ export class CLIInterface {
   /**
    * Format and print a label-value pair
    */
-  static printLabelValue(label: string, value: string | number | string[] | null, options?: { 
+  static printLabelValue(label: string, value: string | number | string[] | null, options?: {
     emptyText?: string,
     formatter?: (val: string) => string
   }): void {
     const emptyText = options?.emptyText || 'None';
-    
+
     // Format the label
     const formattedLabel = `${this.styles.label(label + ':')}`;
-    
+
     // Handle array values
     if (Array.isArray(value)) {
       if (value.length === 0) {
@@ -142,8 +140,8 @@ export class CLIInterface {
       if (value === undefined || value === null || value === '') {
         process.stdout.write(`${formattedLabel} ${this.styles.dim(emptyText)}\n`);
       } else {
-        const displayValue = options?.formatter 
-          ? options.formatter(value.toString()) 
+        const displayValue = options?.formatter
+          ? options.formatter(value.toString())
           : value.toString();
         process.stdout.write(`${formattedLabel} ${displayValue}\n`);
       }
@@ -156,12 +154,12 @@ export class CLIInterface {
   static displayList<T>(items: T[], formatter?: (item: T, index: number) => string): void {
     // Log the list operation
     logger.info(`Displaying list of ${items.length} items`);
-    
+
     items.forEach((item, index) => {
       const display = formatter ? formatter(item, index) : item.toString();
       process.stdout.write(`${this.styles.number(index + 1)}. ${display}\n`);
     });
-    
+
     // Add a blank line after the list
     process.stdout.write('\n');
   }
@@ -171,11 +169,11 @@ export class CLIInterface {
    */
   static formatCommand(command: string, description: string, examples?: string[]): string {
     const cmdText = `  ${this.styles.command(command.padEnd(20))} - ${description}`;
-    
+
     if (!examples || examples.length === 0) {
       return cmdText;
     }
-    
+
     return [
       cmdText,
       ...examples.map(ex => `    ${this.styles.dim('>')} ${this.styles.example(ex)}`),
@@ -196,7 +194,7 @@ export class CLIInterface {
     if (!tags || tags.length === 0) {
       return this.styles.dim('No tags');
     }
-    
+
     return tags.map(tag => this.styles.tag(`#${tag}`)).join(' ');
   }
 
@@ -211,7 +209,7 @@ export class CLIInterface {
   /**
    * Prompt for a selection from a list of choices
    */
-  static async select<T>(message: string, choices: Array<{name: string, value: T}>): Promise<T> {
+  static async select<T>(message: string, choices: Array<{ name: string, value: T }>): Promise<T> {
     const { selection } = await inquirer.prompt([
       {
         type: 'list',
@@ -260,18 +258,17 @@ export class CLIInterface {
   static async withSpinner<T>(message: string, task: () => Promise<T>): Promise<T> {
     const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let frameIndex = 0;
-    let spinner: Timer;
-    
+
     // Start the spinner
     process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);
-    
-    spinner = setInterval(() => {
+
+    const spinner = setInterval(() => {
       frameIndex = (frameIndex + 1) % spinnerFrames.length;
       process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
       process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);
     }, 80);
-    
+
     try {
       const result = await task();
       // Stop the spinner and show success

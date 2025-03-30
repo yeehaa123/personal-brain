@@ -4,9 +4,9 @@
  */
 
 import type { CommandResult, CommandInfo } from './index';
-import { formatNotePreview } from '../utils/noteUtils';
 import type { Note } from '../models/note';
-import type { EnhancedProfile } from '../models/profile';
+import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
+import { formatNotePreview } from '../utils/noteUtils';
 
 /**
  * Render command results for Matrix
@@ -33,7 +33,7 @@ export class MatrixRenderer {
         return `- ${usage.padEnd(30)} - ${cmd.description}`;
       }),
     ].join('\n');
-    
+
     this.sendMessageFn(roomId, helpText);
   }
 
@@ -46,67 +46,67 @@ export class MatrixRenderer {
       this.sendMessageFn(roomId, `❌ ${result.message}`);
       break;
     }
-        
+
     case 'search': {
       if (result.notes.length === 0) {
         this.sendMessageFn(roomId, 'No results found.');
         return;
       }
-        
+
       const searchResults = [
         `### Search Results for "${result.query}"`,
         '',
         ...result.notes.map((note, index) => formatNotePreview(note, index + 1)),
       ].join('\n');
-        
+
       this.sendMessageFn(roomId, searchResults);
       break;
     }
-        
+
     case 'notes': {
       if (result.notes.length === 0) {
         this.sendMessageFn(roomId, 'No notes found.');
         return;
       }
-        
+
       const notesResults = [
         `### ${result.title || 'Notes'}`,
         '',
         ...result.notes.map((note, index) => formatNotePreview(note, index + 1)),
       ].join('\n');
-        
+
       this.sendMessageFn(roomId, notesResults);
       break;
     }
-        
+
     case 'note': {
       this.renderNote(roomId, result.note);
       break;
     }
-        
+
     case 'tags': {
       const tagsMessage = [
         '### Available Tags',
         '',
         ...result.tags.map(({ tag, count }) => `- \`${tag}\` (${count})`),
       ].join('\n');
-        
+
       this.sendMessageFn(roomId, tagsMessage);
       break;
     }
-        
+
     case 'profile': {
-      this.renderProfile(roomId, result.profile);
+      this.renderProfile(roomId, result.profile as EnhancedProfile);
       break;
     }
-        
+
     case 'profile-related': {
       const profileRelatedMsg = this.buildProfileMessage(result.profile);
-        
+
       // Add related notes section
       profileRelatedMsg.push('');
       profileRelatedMsg.push('### Notes related to your profile:');
-        
+
       if (result.relatedNotes.length > 0) {
         // Explain how we found the notes
         switch (result.matchType) {
@@ -123,7 +123,7 @@ export class MatrixRenderer {
           break;
         }
         }
-          
+
         profileRelatedMsg.push('');
         result.relatedNotes.forEach((note, index) => {
           profileRelatedMsg.push(formatNotePreview(note, index + 1));
@@ -132,36 +132,36 @@ export class MatrixRenderer {
         profileRelatedMsg.push('No related notes found. Try generating embeddings and tags for your notes and profile.');
         profileRelatedMsg.push('You can run "bun run tag:profile" to generate profile tags.');
       }
-        
+
       this.sendMessageFn(roomId, profileRelatedMsg.join('\n'));
       break;
     }
-        
+
     case 'ask': {
       let askMessage = [
         '### Answer',
         '',
         result.answer,
       ];
-        
+
       if (result.citations.length > 0) {
         askMessage.push('', '#### Sources');
         result.citations.forEach(citation => {
           askMessage.push(`- ${citation.noteTitle} (\`${citation.noteId}\`)`);
         });
       }
-        
+
       if (result.relatedNotes.length > 0) {
         askMessage.push('', '#### Related Notes');
         result.relatedNotes.forEach((note, index) => {
           askMessage.push(formatNotePreview(note, index + 1, false));
         });
       }
-        
+
       this.sendMessageFn(roomId, askMessage.join('\n'));
       break;
     }
-        
+
     case 'status': {
       const statusMsg = [
         '### System Status',
@@ -172,22 +172,22 @@ export class MatrixRenderer {
         `**External Sources**: ${result.status.externalSourcesEnabled ? '✅ Enabled' : '⚠️ Disabled'}`,
         '',
       ];
-        
+
       // Add external sources availability
       if (Object.keys(result.status.externalSources).length > 0) {
         statusMsg.push('#### Available External Sources');
-          
+
         Object.entries(result.status.externalSources).forEach(([name, available]) => {
           statusMsg.push(`- **${name}**: ${available ? '✅ Available' : '❌ Unavailable'}`);
         });
       } else {
         statusMsg.push('⚠️ No external sources configured');
       }
-        
+
       this.sendMessageFn(roomId, statusMsg.join('\n'));
       break;
     }
-        
+
     case 'external': {
       const externalStatusIcon = result.enabled ? '✅' : '⚠️';
       const externalMsg = `${externalStatusIcon} ${result.message}`;
@@ -200,18 +200,18 @@ export class MatrixRenderer {
   /**
    * Render a note
    */
-  private renderNote(roomId: string, note: Note & { tags?: string[] | null }): void {
+  private renderNote(roomId: string, note: Note): void {
     // Format the note content
     const formattedContent = note.content
       // Remove source comment if present
       .replace(/<!--\s*source:[^>]+-->\n?/, '')
       // Ensure the content has proper newlines
       .trim();
-    
+
     const tags = note.tags && note.tags.length > 0
-      ? `Tags: ${note.tags.map((tag: string) => `\`${tag}\``).join(', ')}`
+      ? `Tags: ${(note.tags as string[]).map((tag: string) => `\`${tag}\``).join(', ')}`
       : 'No tags';
-    
+
     const message = [
       `## ${note.title}`,
       '',
@@ -224,7 +224,7 @@ export class MatrixRenderer {
       '',
       formattedContent,
     ].join('\n');
-    
+
     this.sendMessageFn(roomId, message);
   }
 
@@ -239,40 +239,38 @@ export class MatrixRenderer {
   /**
    * Build profile message lines
    */
-  private buildProfileMessage(profile: EnhancedProfile & { 
-    experiences?: { title: string; company: string; description?: string | null }[] 
-  }): string[] {
+  private buildProfileMessage(profile: Profile) {
     const infoLines = [];
-    
     infoLines.push('### Profile Information');
     infoLines.push('');
     infoLines.push(`**Name**: ${profile.fullName}`);
     if (profile.headline) infoLines.push(`**Headline**: ${profile.headline}`);
     if (profile.occupation) infoLines.push(`**Occupation**: ${profile.occupation}`);
-    
+
     // Display location
     const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
     if (location) infoLines.push(`**Location**: ${location}`);
-    
+
     // Display summary
     if (profile.summary) {
       infoLines.push('');
       infoLines.push('**Summary**:');
       infoLines.push(profile.summary);
     }
-    
+
     // Display current experience
     if (profile.experiences && profile.experiences.length > 0) {
       infoLines.push('');
       infoLines.push('**Current Work**:');
-      const currentExperiences = profile.experiences.filter((exp: any) => !exp.endDate);
+      const experiences = profile.experiences as ProfileExperience[];
+      const currentExperiences = experiences.filter((exp: ProfileExperience) => !exp.ends_at);
       if (currentExperiences.length > 0) {
-        currentExperiences.forEach((exp: any) => {
+        currentExperiences.forEach(exp => {
           infoLines.push(`- ${exp.title} at ${exp.company}`);
           if (exp.description) {
             // Trim long descriptions
-            const desc = exp.description.length > 100 
-              ? exp.description.substring(0, 100) + '...' 
+            const desc = exp.description.length > 100
+              ? exp.description.substring(0, 100) + '...'
               : exp.description;
             infoLines.push(`  ${desc}`);
           }
@@ -281,14 +279,14 @@ export class MatrixRenderer {
         infoLines.push('No current work experiences found.');
       }
     }
-    
+
     // Display skills
     if (profile.languages && profile.languages.length > 0) {
       infoLines.push('');
       infoLines.push('**Languages**:');
       infoLines.push(profile.languages.join(', '));
     }
-    
+
     // Check for embedding
     infoLines.push('');
     if (profile.embedding) {
@@ -297,7 +295,7 @@ export class MatrixRenderer {
       infoLines.push('**Profile has embeddings**: No');
       infoLines.push('Run "bun run embed:profile" to generate embeddings.');
     }
-    
+
     // Display tags if available
     if (profile.tags && profile.tags.length > 0) {
       infoLines.push('');
@@ -308,7 +306,7 @@ export class MatrixRenderer {
       infoLines.push('**Profile Tags**: None');
       infoLines.push('Run "bun run tag:profile" to generate tags.');
     }
-    
+
     return infoLines;
   }
 }

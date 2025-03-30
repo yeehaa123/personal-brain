@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
+import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
 import { ClientEvent } from 'matrix-js-sdk';
 import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
@@ -49,31 +50,31 @@ class MatrixBrainInterface {
 
     this.brainProtocol = new BrainProtocol();
     this.commandHandler = new CommandHandler(this.brainProtocol);
-    
+
     // Initialize renderer with message sending function
     this.renderer = new MatrixRenderer(
-      COMMAND_PREFIX, 
+      COMMAND_PREFIX,
       this.sendMessage.bind(this),
     );
   }
 
   async start() {
     console.log(`Starting Matrix brain interface as ${USER_ID}`);
-    
+
     // Register event handlers
     this.client.on(RoomEvent.Timeline, this.handleRoomMessage.bind(this));
     this.client.on(RoomMemberEvent.Membership, this.handleMembership.bind(this));
-    
+
     // Start the client
     await this.client.startClient({ initialSyncLimit: 10 });
     console.log('Matrix client started, waiting for sync');
-    
+
     // Wait for the client to sync
     this.client.once(ClientEvent.Sync, (state: string) => {
       if (state === 'PREPARED') {
         console.log('Client sync complete');
         this.isReady = true;
-        
+
         // Auto-join configured rooms
         this.joinConfiguredRooms();
       } else {
@@ -82,12 +83,12 @@ class MatrixBrainInterface {
       }
     });
   }
-  
+
   private async joinConfiguredRooms() {
     if (ROOM_IDS.length === 0) return;
-    
+
     console.log(`Joining ${ROOM_IDS.length} configured rooms...`);
-    
+
     for (const roomId of ROOM_IDS) {
       try {
         await this.client.joinRoom(roomId);
@@ -97,14 +98,14 @@ class MatrixBrainInterface {
       }
     }
   }
-  
-  private async handleMembership(event: unknown, member: { userId: string; membership: string; roomId: string }) {
+
+  private async handleMembership(_event: MatrixEvent, member: RoomMember) {
     // Auto-accept invites for the bot
     if (member.userId === USER_ID && member.membership === 'invite') {
       console.log(`Received invite to room ${member.roomId}, auto-joining`);
       try {
         await this.client.joinRoom(member.roomId);
-        
+
         // Send welcome message
         this.sendMessage(
           member.roomId,
@@ -115,31 +116,36 @@ class MatrixBrainInterface {
       }
     }
   }
-  
-  private async handleRoomMessage(event: { getType: () => string; getSender: () => string; getContent: () => { msgtype: string; body: string } }, room: { roomId: string }) {
-    
+
+  private async handleRoomMessage(event: MatrixEvent, room: Room | undefined) {
+
     // Only process messages if the client is ready
     if (!this.isReady) {
       return;
     }
-    
+
     // Ignore non-text messages 
     if (event.getType() !== 'm.room.message') {
       return;
     }
-    
-    
+
+    if (!room) {
+      console.error('ROOM UNDEFINED');
+      return;
+    }
+
+
     const content = event.getContent();
-    
+
     // Only process text messages
     if (content.msgtype !== 'm.text') {
       return;
     }
-    
+
     const text = content.body.trim();
     // Check if the text starts with the command prefix
     if (text.startsWith(COMMAND_PREFIX)) {
-      
+
       const commandText = text.substring(COMMAND_PREFIX.length).trim();
       try {
         await this.processCommand(commandText, room.roomId, event);
@@ -148,37 +154,37 @@ class MatrixBrainInterface {
         this.sendMessage(room.roomId, `Error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    
+
     console.log('=================================================');
   }
-  
+
   private async processCommand(commandText: string, roomId: string, _event: unknown) {
     // Handle empty command (just the prefix) as help
     if (!commandText) {
       this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
-    
+
     // Split into command and arguments
     const parts = commandText.split(' ');
     const command = parts[0].toLowerCase();
     const args = parts.slice(1).join(' ');
-    
+
     // Handle help command specially
     if (command === 'help') {
       this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
-    
+
     // Process the command through our shared command handler
     try {
       // Special case for "ask" command to show "thinking" message
       if (command === 'ask' && args) {
         this.sendMessage(roomId, `🤔 Thinking about: "${args}"...`);
       }
-      
+
       const result = await this.commandHandler.processCommand(command, args);
-      
+
       // Render the result using our Matrix renderer
       this.renderer.render(roomId, result);
     } catch (error) {
@@ -186,9 +192,9 @@ class MatrixBrainInterface {
       this.sendMessage(roomId, `❌ Error executing command: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  
+
   // Helper methods
-  
+
   private sendMessage(roomId: string, message: string) {
     try {
       // First try sendMessage without HTML
@@ -197,7 +203,7 @@ class MatrixBrainInterface {
         body: message,
       }).catch((error: unknown) => {
         console.error(`Error sending plain message to ${roomId}:`, error instanceof Error ? error.message : String(error));
-        
+
         // Fallback to HTML message
         this.client.sendHtmlMessage(roomId, message, this.markdownToHtml(message))
           .catch((htmlError: unknown) => console.error(`Error sending HTML message to ${roomId}:`, htmlError instanceof Error ? htmlError.message : String(htmlError)));
@@ -206,7 +212,7 @@ class MatrixBrainInterface {
       console.error(`Exception in sendMessage to ${roomId}:`, error instanceof Error ? error.message : String(error));
     }
   }
-  
+
   private markdownToHtml(markdown: string): string {
     // This is a very basic markdown to HTML conversion
     // In a production app, you would use a proper markdown parser
@@ -225,9 +231,9 @@ class MatrixBrainInterface {
 async function main() {
   const matrixInterface = new MatrixBrainInterface();
   await matrixInterface.start();
-  
+
   console.log('Matrix brain interface is running');
-  
+
   // Keep the process alive
   process.on('SIGINT', () => {
     console.log('Shutting down...');

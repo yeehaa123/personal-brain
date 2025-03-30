@@ -1,9 +1,10 @@
 import { z } from 'zod';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { createInsertSchema, createUpdateSchema, createSelectSchema } from 'drizzle-zod';
 import { profiles } from '../db/schema';
 
 // Create Zod schemas from Drizzle schema
 export const insertProfileSchema = createInsertSchema(profiles);
+export const updateProfileSchema = createUpdateSchema(profiles);
 export const selectProfileSchema = createSelectSchema(profiles);
 
 // Type definitions based on the schemas

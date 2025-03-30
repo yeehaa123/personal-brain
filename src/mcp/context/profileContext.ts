@@ -1,12 +1,14 @@
 import { db } from '../../db';
 import { profiles } from '../../db/schema';
 import { eq } from 'drizzle-orm';
-import type { 
-  Profile, 
-  ProfileEducation, 
-  ProfileExperience, 
-  ProfilePublication, 
-  ProfileProject, 
+import {
+  type Profile,
+  type ProfileEducation,
+  type ProfileExperience,
+  type ProfilePublication,
+  type ProfileProject,
+  updateProfileSchema,
+  insertProfileSchema,
 } from '../../models/profile';
 import type { Note } from '../../models/note';
 import { nanoid } from 'nanoid';
@@ -44,58 +46,49 @@ export class ProfileContext {
    * Create or update the user profile with automatic tag and embedding generation
    */
   async saveProfile(
-    profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'> & { 
-      embedding?: number[]; 
-      tags?: string[] 
-    },
+    profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'>
   ): Promise<string> {
     const now = new Date();
     const profileText = this.getProfileTextForEmbedding(profileData);
-    
-    // Generate embedding if not provided
-    const embedding = profileData.embedding || await this.generateEmbedding(profileText);
-    
-    // Generate tags if not provided
-    const tags = profileData.tags?.length 
-      ? profileData.tags
-      : await this.generateProfileTags(profileText);
+
+    const embedding = await this.generateEmbedding(profileText);
+    const tags = await this.generateProfileTags(profileText);
 
     // Check if a profile already exists
+
+    if (!embedding || !tags) {
+      throw ("We need embeddings and tags");
+    }
     const existingProfile = await this.getProfile();
+    const experiences = JSON.stringify(profileData.experiences)
 
     if (existingProfile) {
-      // Update existing profile
-      const updateData: Partial<Profile> & { updatedAt: Date } = {
+      const { id, createdAt } = existingProfile;
+      const updateData = updateProfileSchema.parse({
         ...profileData,
-        updatedAt: now,
-      };
-      
-      // Only set these fields if we have values
-      if (embedding?.length) updateData.embedding = embedding;
-      if (tags?.length) updateData.tags = tags;
-
+        id,
+        createdAt,
+        experiences,
+        embedding,
+        tags,
+        updatedAt: Date.now()
+      })
       await db.update(profiles)
         .set(updateData)
         .where(eq(profiles.id, existingProfile.id));
-
       return existingProfile.id;
     } else {
-      // Create new profile
       const id = nanoid();
-      
-      const insertData: Partial<Profile> & { id: string; createdAt: Date; updatedAt: Date } = {
+      const insertData = insertProfileSchema.parse({
         id,
         ...profileData,
+        experiences,
+        embedding,
+        tags,
         createdAt: now,
         updatedAt: now,
-      };
-      
-      // Only set these fields if we have values
-      if (embedding?.length) insertData.embedding = embedding;
-      if (tags?.length) insertData.tags = tags;
-
+      });
       await db.insert(profiles).values(insertData);
-
       return id;
     }
   }
@@ -118,7 +111,7 @@ export class ProfileContext {
       const updatedProfile = { ...existingProfile, ...profileData };
       const profileText = this.getProfileTextForEmbedding(updatedProfile);
       const embedding = await this.generateEmbedding(profileText);
-      
+
       if (embedding?.length) {
         updatedData.embedding = embedding;
       }
@@ -213,8 +206,8 @@ export class ProfileContext {
           profile.embedding as number[],
           limit,
         );
-      } 
-      
+      }
+
       // Otherwise fall back to keyword search
       const keywords = this.extractProfileKeywords(profile);
       return await noteContext.searchNotes({
@@ -231,8 +224,8 @@ export class ProfileContext {
    * Find notes that have similar tags to the profile
    */
   async findNotesWithSimilarTags(
-    noteContext: NoteContext, 
-    profileTags: string[], 
+    noteContext: NoteContext,
+    profileTags: string[],
     limit = 5,
   ): Promise<NoteWithSimilarity[]> {
     if (!profileTags?.length) {
@@ -282,12 +275,12 @@ export class ProfileContext {
     return noteTags.reduce((count, noteTag) => {
       // Direct match (exact tag match)
       const directMatch = profileTags.includes(noteTag);
-      
+
       // Partial match (tag contains or is contained by a profile tag)
       const partialMatch = !directMatch && profileTags.some(profileTag =>
         noteTag.includes(profileTag) || profileTag.includes(noteTag),
       );
-      
+
       return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
     }, 0);
   }
@@ -295,7 +288,7 @@ export class ProfileContext {
   /**
    * Generate embedding for profile text
    */
-  private async generateEmbedding(text: string): Promise<number[]> {
+  async generateEmbedding(text: string): Promise<number[]> {
     try {
       const result = await this.embeddingService.getEmbedding(text);
       return result.embedding;
@@ -308,15 +301,15 @@ export class ProfileContext {
   /**
    * Generate tags for a profile using AI
    */
-  private async generateProfileTags(profileText: string): Promise<string[]> {
+  async generateProfileTags(profileText: string): Promise<string[]> {
     try {
       const tags = await extractTags(profileText, [], 10);
-      
+
       if (!tags?.length) {
         const profile = await this.getProfile();
         return this.extractProfileKeywords(profile || {});
       }
-      
+
       return tags;
     } catch (error) {
       console.error('Error generating profile tags:', error);
@@ -398,7 +391,7 @@ export class ProfileContext {
   /**
    * Prepare profile text for embedding
    */
-  private getProfileTextForEmbedding(profile: Partial<Profile>): string {
+  getProfileTextForEmbedding(profile: Partial<Profile>): string {
     const parts: string[] = [];
 
     // Add basic profile information
