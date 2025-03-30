@@ -10,7 +10,7 @@ const logLevels = {
   info: 2,
   verbose: 3,
   debug: 4,
-  silly: 5
+  silly: 5,
 };
 
 // Create a custom format for console output
@@ -19,13 +19,13 @@ const consoleFormat = winston.format.combine(
   winston.format.colorize({ all: true }),
   winston.format.printf(({ level, message, timestamp }) => {
     return `[${timestamp}] ${level}: ${message}`;
-  })
+  }),
 );
 
 // Create a custom format for file output
 const fileFormat = winston.format.combine(
   winston.format.timestamp(),
-  winston.format.json()
+  winston.format.json(),
 );
 
 // Filter to exclude debug messages from console
@@ -46,27 +46,27 @@ const logger = winston.createLogger({
     new winston.transports.Console({
       format: winston.format.combine(
         excludeDebug,
-        consoleFormat
-      )
+        consoleFormat,
+      ),
     }),
     // File transport for errors
     new winston.transports.File({ 
       filename: 'error.log', 
       level: 'error',
-      format: fileFormat
+      format: fileFormat,
     }),
     // File transport for combined logs
     new winston.transports.File({ 
       filename: 'combined.log',
-      format: fileFormat
+      format: fileFormat,
     }),
     // File transport specifically for debug logs
     new winston.transports.File({ 
       filename: 'debug.log',
       level: 'debug',
-      format: fileFormat
-    })
-  ]
+      format: fileFormat,
+    }),
+  ],
 });
 
 // Set log level based on environment

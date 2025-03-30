@@ -19,10 +19,10 @@ mock.module('@anthropic-ai/sdk', () => {
           role: 'assistant',
           content: [{ type: 'text', text: 'Mock response' }],
           model: 'claude-3-haiku-20240307',
-          stop_reason: 'end_turn'
-        })
-      }
-    }
+          stop_reason: 'end_turn',
+        }),
+      };
+    },
   };
 });
 
@@ -32,7 +32,7 @@ EmbeddingService.prototype.getEmbedding = async function(text: string) {
   const embedding = createMockEmbedding(text);
   return {
     embedding,
-    truncated: false
+    truncated: false,
   };
 };
 
@@ -115,7 +115,7 @@ describe('NoteContext', () => {
   test('extractKeywords should extract meaningful keywords', () => {
     // Access the private method using any type assertion
     const keywords = (context as any).extractKeywords(
-      "This is a test document with important keywords about artificial intelligence and machine learning"
+      'This is a test document with important keywords about artificial intelligence and machine learning',
     );
     
     expect(Array.isArray(keywords)).toBe(true);
@@ -133,10 +133,10 @@ describe('NoteContext', () => {
     // Create an embedding service to test chunking
     const embeddingService = new EmbeddingService('fake-api-key');
     
-    const longText = "First sentence. Second sentence. " + 
-                    "Third sentence. Fourth sentence. " +
-                    "Fifth sentence. Sixth sentence. " +
-                    "Seventh sentence. Eighth sentence.";
+    const longText = 'First sentence. Second sentence. ' + 
+                    'Third sentence. Fourth sentence. ' +
+                    'Fifth sentence. Sixth sentence. ' +
+                    'Seventh sentence. Eighth sentence.';
     
     const chunks = embeddingService.chunkText(longText, 30, 10);
     

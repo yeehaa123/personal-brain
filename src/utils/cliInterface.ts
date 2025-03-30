@@ -4,6 +4,9 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
 import logger from './logger';
+// Add explicit imports
+import { setInterval, clearInterval } from 'timers';
+import type { Timer } from 'timers';
 
 export class CLIInterface {
   // Color styles
@@ -36,7 +39,7 @@ export class CLIInterface {
       successIcon: chalk.green('✓'),      // Green checkmark for success
       errorIcon: chalk.red('✖'),          // Red X for errors
       warningIcon: chalk.yellow('⚠'),     // Yellow warning symbol
-      infoIcon: chalk.blue('ℹ')           // Blue info symbol
+      infoIcon: chalk.blue('ℹ'),           // Blue info symbol
     };
   }
 
@@ -150,7 +153,7 @@ export class CLIInterface {
   /**
    * Display a formatted list of items
    */
-  static displayList(items: any[], formatter?: (item: any, index: number) => string): void {
+  static displayList<T>(items: T[], formatter?: (item: T, index: number) => string): void {
     // Log the list operation
     logger.info(`Displaying list of ${items.length} items`);
     
@@ -175,7 +178,7 @@ export class CLIInterface {
     
     return [
       cmdText,
-      ...examples.map(ex => `    ${this.styles.dim('>')} ${this.styles.example(ex)}`)
+      ...examples.map(ex => `    ${this.styles.dim('>')} ${this.styles.example(ex)}`),
     ].join('\n');
   }
 
@@ -214,8 +217,8 @@ export class CLIInterface {
         type: 'list',
         name: 'selection',
         message,
-        choices
-      }
+        choices,
+      },
     ]);
     return selection;
   }
@@ -229,8 +232,8 @@ export class CLIInterface {
         type: 'input',
         name: 'input',
         message,
-        default: defaultValue
-      }
+        default: defaultValue,
+      },
     ]);
     return input;
   }
@@ -244,8 +247,8 @@ export class CLIInterface {
         type: 'confirm',
         name: 'confirmed',
         message,
-        default: defaultValue
-      }
+        default: defaultValue,
+      },
     ]);
     return confirmed;
   }
@@ -257,7 +260,7 @@ export class CLIInterface {
   static async withSpinner<T>(message: string, task: () => Promise<T>): Promise<T> {
     const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let frameIndex = 0;
-    let spinner: NodeJS.Timer;
+    let spinner: Timer;
     
     // Start the spinner
     process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);
@@ -275,14 +278,14 @@ export class CLIInterface {
       clearInterval(spinner);
       process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
-      this.success(message + " Completed!");
+      this.success(message + ' Completed!');
       return result;
     } catch (error) {
       // Stop the spinner and show error
       clearInterval(spinner);
       process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
-      this.error(message + " Failed! " + (error instanceof Error ? error.message : String(error)));
+      this.error(message + ' Failed! ' + (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }

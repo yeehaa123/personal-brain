@@ -40,7 +40,7 @@ describe('CLIRenderer', () => {
       const result: CommandResult = {
         type: 'notes',
         notes: mockNotes,
-        title: 'Test Notes'
+        title: 'Test Notes',
       };
       
       renderer.render(result);
@@ -53,7 +53,7 @@ describe('CLIRenderer', () => {
       const result: CommandResult = {
         type: 'notes',
         notes: [],
-        title: 'Empty Notes'
+        title: 'Empty Notes',
       };
       
       renderer.render(result);
@@ -65,7 +65,7 @@ describe('CLIRenderer', () => {
     test('should handle error result', () => {
       const result: CommandResult = {
         type: 'error',
-        message: 'Test error message'
+        message: 'Test error message',
       };
       
       renderer.render(result);
@@ -77,7 +77,7 @@ describe('CLIRenderer', () => {
       const result: CommandResult = {
         type: 'search',
         query: 'test query',
-        notes: mockNotes
+        notes: mockNotes,
       };
       
       renderer.render(result);
@@ -90,8 +90,8 @@ describe('CLIRenderer', () => {
         type: 'tags',
         tags: [
           { tag: 'tag1', count: 5 },
-          { tag: 'tag2', count: 3 }
-        ]
+          { tag: 'tag2', count: 3 },
+        ],
       };
       
       renderer.render(result);

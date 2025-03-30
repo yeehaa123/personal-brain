@@ -14,7 +14,7 @@ import { z } from 'zod';
 export async function extractTags(
   content: string,
   existingTags: string[] = [],
-  maxTags: number = 7
+  maxTags: number = 7,
 ): Promise<string[]> {
   try {
     // Check for API key
@@ -52,10 +52,10 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
       model: anthropic('claude-3-7-sonnet-20250219'),
       prompt,
       temperature: 0.0,
-      system: "You extract tags from content. Only respond with the tags, nothing else.",
+      system: 'You extract tags from content. Only respond with the tags, nothing else.',
       schema: z.object({
-        tags: z.array(z.string()).max(maxTags)
-      })
+        tags: z.array(z.string()).max(maxTags),
+      }),
     });
     return object.tags;
   } catch (error) {

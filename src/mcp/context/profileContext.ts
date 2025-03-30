@@ -6,15 +6,20 @@ import type {
   ProfileEducation, 
   ProfileExperience, 
   ProfilePublication, 
-  ProfileProject 
+  ProfileProject, 
 } from '../../models/profile';
+import type { Note } from '../../models/note';
 import { nanoid } from 'nanoid';
 import { EmbeddingService } from '../model/embeddings';
 import { extractTags } from '../../utils/tagExtractor';
 
+interface NoteWithSimilarity extends Note {
+  similarity?: number;
+}
+
 interface NoteContext {
-  searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<any[]>;
-  searchNotes: (options: { query?: string; limit?: number; includeContent?: boolean }) => Promise<any[]>;
+  searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<NoteWithSimilarity[]>;
+  searchNotes: (options: { query?: string; limit?: number; includeContent?: boolean }) => Promise<NoteWithSimilarity[]>;
 }
 
 /**
@@ -42,7 +47,7 @@ export class ProfileContext {
     profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'> & { 
       embedding?: number[]; 
       tags?: string[] 
-    }
+    },
   ): Promise<string> {
     const now = new Date();
     const profileText = this.getProfileTextForEmbedding(profileData);
@@ -60,9 +65,9 @@ export class ProfileContext {
 
     if (existingProfile) {
       // Update existing profile
-      const updateData: any = {
+      const updateData: Partial<Profile> & { updatedAt: Date } = {
         ...profileData,
-        updatedAt: now
+        updatedAt: now,
       };
       
       // Only set these fields if we have values
@@ -78,11 +83,11 @@ export class ProfileContext {
       // Create new profile
       const id = nanoid();
       
-      const insertData: any = {
+      const insertData: Partial<Profile> & { id: string; createdAt: Date; updatedAt: Date } = {
         id,
         ...profileData,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
       };
       
       // Only set these fields if we have values
@@ -106,7 +111,7 @@ export class ProfileContext {
     }
 
     const now = new Date();
-    const updatedData: Record<string, any> = { ...profileData, updatedAt: now };
+    const updatedData: Partial<Profile> & { updatedAt: Date } = { ...profileData, updatedAt: now };
 
     // If profile content is being updated, regenerate the embedding
     if (this.shouldRegenerateEmbedding(profileData)) {
@@ -121,7 +126,7 @@ export class ProfileContext {
 
     // Update the profile with all changes
     await db.update(profiles)
-      .set(updatedData as any)
+      .set(updatedData)
       .where(eq(profiles.id, existingProfile.id));
   }
 
@@ -139,7 +144,7 @@ export class ProfileContext {
       const embedding = await this.generateEmbedding(profileText);
 
       await db.update(profiles)
-        .set({ embedding: embedding } as any)
+        .set({ embedding })
         .where(eq(profiles.id, profile.id));
 
       return { updated: true };
@@ -169,7 +174,7 @@ export class ProfileContext {
       const tags = await this.generateProfileTags(profileText);
 
       await db.update(profiles)
-        .set({ tags: tags } as any)
+        .set({ tags })
         .where(eq(profiles.id, profile.id));
 
       return tags;
@@ -182,7 +187,7 @@ export class ProfileContext {
   /**
    * Find notes related to the profile using tags or embeddings
    */
-  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<any[]> {
+  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<NoteWithSimilarity[]> {
     const profile = await this.getProfile();
     if (!profile) {
       return [];
@@ -206,7 +211,7 @@ export class ProfileContext {
       if (profile.embedding?.length) {
         return await noteContext.searchNotesWithEmbedding(
           profile.embedding as number[],
-          limit
+          limit,
         );
       } 
       
@@ -214,7 +219,7 @@ export class ProfileContext {
       const keywords = this.extractProfileKeywords(profile);
       return await noteContext.searchNotes({
         query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
-        limit
+        limit,
       });
     } catch (error) {
       console.error('Error finding notes related to profile:', error);
@@ -228,8 +233,8 @@ export class ProfileContext {
   async findNotesWithSimilarTags(
     noteContext: NoteContext, 
     profileTags: string[], 
-    limit = 5
-  ): Promise<any[]> {
+    limit = 5,
+  ): Promise<NoteWithSimilarity[]> {
     if (!profileTags?.length) {
       return [];
     }
@@ -237,7 +242,7 @@ export class ProfileContext {
     // Get all notes with tags
     const allNotes = await noteContext.searchNotes({
       limit: 100,
-      includeContent: false
+      includeContent: false,
     });
 
     // Filter to notes that have tags and score them
@@ -248,7 +253,7 @@ export class ProfileContext {
         return {
           ...note,
           tagScore: matchCount,
-          matchRatio: matchCount / note.tags.length
+          matchRatio: matchCount / note.tags.length,
         };
       })
       .filter(note => note.tagScore > 0);
@@ -280,7 +285,7 @@ export class ProfileContext {
       
       // Partial match (tag contains or is contained by a profile tag)
       const partialMatch = !directMatch && profileTags.some(profileTag =>
-        noteTag.includes(profileTag) || profileTag.includes(noteTag)
+        noteTag.includes(profileTag) || profileTag.includes(noteTag),
       );
       
       return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
@@ -384,7 +389,7 @@ export class ProfileContext {
       'fullName', 'occupation', 'headline', 'summary',
       'experiences', 'education', 'accomplishmentProjects',
       'accomplishmentPublications', 'accomplishmentHonorsAwards',
-      'volunteerWork'
+      'volunteerWork',
     ];
 
     return semanticFields.some(field => field in profileData);

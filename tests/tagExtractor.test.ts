@@ -36,12 +36,12 @@ mock.module('@anthropic-ai/sdk', () => {
             stop_reason: 'end_turn',
             usage: {
               input_tokens: 10,
-              output_tokens: 20
-            }
+              output_tokens: 20,
+            },
           };
-        }
+        },
       };
-    }
+    },
   };
 });
 
@@ -53,7 +53,7 @@ mock.module('../src/utils/textUtils', () => {
       const words = text.toLowerCase().split(/\s+/);
       const filteredWords = words.filter(word => word.length > 3);
       return [...new Set(filteredWords)].slice(0, maxKeywords);
-    }
+    },
   };
 });
 
@@ -97,7 +97,7 @@ describe('Tag Extractor', () => {
   });
   
   test('should consider existing tags when generating new ones', async () => {
-    const content = `Technology is rapidly evolving and changing how we live and work.`;
+    const content = 'Technology is rapidly evolving and changing how we live and work.';
     const existingTags = ['innovation', 'future'];
     
     const tags = await extractTags(content, existingTags, 5);

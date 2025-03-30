@@ -17,18 +17,18 @@ mock.module('openai', () => {
             {
               embedding: Array(1536).fill(0.1),
               index: 0,
-              object: 'embedding'
-            }
+              object: 'embedding',
+            },
           ],
           model: 'text-embedding-3-small',
           object: 'list',
           usage: {
             prompt_tokens: 10,
-            total_tokens: 10
-          }
-        })
+            total_tokens: 10,
+          },
+        }),
       };
-    }
+    },
   };
 });
 
@@ -50,11 +50,11 @@ mock.module('@anthropic-ai/sdk', () => {
           stop_reason: 'end_turn',
           usage: {
             input_tokens: 10,
-            output_tokens: 20
-          }
-        })
+            output_tokens: 20,
+          },
+        }),
       };
-    }
+    },
   };
 });
 
@@ -64,7 +64,7 @@ EmbeddingService.prototype.getEmbedding = async function(text: string) {
   const embedding = createMockEmbedding(text);
   return {
     embedding,
-    truncated: false
+    truncated: false,
   };
 };
 
@@ -73,7 +73,7 @@ EmbeddingService.prototype.getBatchEmbeddings = async function(texts: string[]) 
   console.log('Using mocked getBatchEmbeddings');
   return texts.map(text => ({
     embedding: createMockEmbedding(text),
-    truncated: false
+    truncated: false,
   }));
 };
 

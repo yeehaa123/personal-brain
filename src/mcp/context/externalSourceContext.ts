@@ -27,7 +27,7 @@ export class ExternalSourceContext {
     this.options = {
       enabledSources: options.enabledSources || ['Wikipedia', 'NewsAPI'],
       maxResults: options.maxResults || 10,
-      cacheTtl: options.cacheTtl || 1000 * 60 * 60 // 1 hour by default
+      cacheTtl: options.cacheTtl || 1000 * 60 * 60, // 1 hour by default
     };
     
     // Initialize embedding service
@@ -77,7 +77,7 @@ export class ExternalSourceContext {
     const searchOptions: ExternalSearchOptions = {
       query,
       limit: options.limit || Math.ceil(this.options.maxResults! / enabledSources.length),
-      addEmbeddings: options.addEmbeddings || false
+      addEmbeddings: options.addEmbeddings || false,
     };
     
     // Search all enabled sources in parallel
@@ -86,7 +86,7 @@ export class ExternalSourceContext {
         .catch(error => {
           logger.error(`Error searching ${source.name}:`, error);
           return [] as ExternalSourceResult[];
-        })
+        }),
     );
     
     const results = await Promise.all(searchPromises);
@@ -129,12 +129,12 @@ export class ExternalSourceContext {
         
         const similarity = this.embeddingService.cosineSimilarity(
           queryEmbedding.embedding,
-          result.embedding
+          result.embedding,
         );
         
         return {
           ...result,
-          similarityScore: similarity
+          similarityScore: similarity,
         };
       });
       
@@ -187,7 +187,7 @@ export class ExternalSourceContext {
           })
           .catch(() => {
             availabilityMap[name] = false;
-          })
+          }),
       );
     }
     
@@ -227,7 +227,7 @@ export class ExternalSourceContext {
   private cacheResults(cacheKey: string, results: ExternalSourceResult[]): void {
     this.sourceCache.set(cacheKey, {
       data: results,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     });
     
     // Prune cache if it gets too large

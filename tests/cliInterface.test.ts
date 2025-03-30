@@ -67,7 +67,7 @@ describe('CLIInterface', () => {
     test('should handle formatter option for arrays', () => {
       const options = { 
         formatter: (tag) => `#${tag}`,
-        emptyText: 'none'
+        emptyText: 'none',
       };
       
       // Verify formatter works
@@ -92,7 +92,7 @@ describe('CLIInterface', () => {
       
       try {
         CLIInterface.printLabelValue('Tags', ['tag1', 'tag2'], {
-          formatter: tag => CLIInterface.styles.tag(`#${tag}`)
+          formatter: tag => CLIInterface.styles.tag(`#${tag}`),
         });
         
         const output = capture.getOutput();
@@ -109,7 +109,7 @@ describe('CLIInterface', () => {
       
       try {
         CLIInterface.printLabelValue('Tags', [], {
-          emptyText: 'No tags found'
+          emptyText: 'No tags found',
         });
         
         const output = capture.getOutput();

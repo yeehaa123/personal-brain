@@ -22,16 +22,16 @@ mock.module('../src/db', () => {
                   company: 'Ecosystem Corp',
                   description: 'Building regenerative ecosystem architectures',
                   startDate: '2020-01',
-                  endDate: null
-                }
+                  endDate: null,
+                },
               ],
               education: [
                 {
                   degree: 'PhD in Systemic Design',
                   school: 'University of Innovation',
                   startDate: '2010-01',
-                  endDate: '2014-01'
-                }
+                  endDate: '2014-01',
+                },
               ],
               languages: ['English', 'JavaScript', 'Python'],
               city: 'Innovation City',
@@ -40,8 +40,8 @@ mock.module('../src/db', () => {
               embedding: createMockEmbedding('John Doe profile'),
               tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
               createdAt: new Date(),
-              updatedAt: new Date()
-            }
+              updatedAt: new Date(),
+            },
           ]),
           limit: () => Promise.resolve([
             {
@@ -56,16 +56,16 @@ mock.module('../src/db', () => {
                   company: 'Ecosystem Corp',
                   description: 'Building regenerative ecosystem architectures',
                   startDate: '2020-01',
-                  endDate: null
-                }
+                  endDate: null,
+                },
               ],
               education: [
                 {
                   degree: 'PhD in Systemic Design',
                   school: 'University of Innovation',
                   startDate: '2010-01',
-                  endDate: '2014-01'
-                }
+                  endDate: '2014-01',
+                },
               ],
               languages: ['English', 'JavaScript', 'Python'],
               city: 'Innovation City',
@@ -74,20 +74,20 @@ mock.module('../src/db', () => {
               embedding: createMockEmbedding('John Doe profile'),
               tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
               createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ])
-        })
+              updatedAt: new Date(),
+            },
+          ]),
+        }),
       }),
       insert: () => ({
-        values: () => Promise.resolve({ insertId: 'mock-profile-id' })
+        values: () => Promise.resolve({ insertId: 'mock-profile-id' }),
       }),
       update: () => ({
         set: () => ({
-          where: () => Promise.resolve({ changes: 1 })
-        })
-      })
-    }
+          where: () => Promise.resolve({ changes: 1 }),
+        }),
+      }),
+    },
   };
 });
 
@@ -102,7 +102,7 @@ const mockNoteContext = {
         content: includeContent === false ? '' : 'Content about ecosystem architecture',
         tags: ['ecosystem-architecture', 'innovation'],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       {
         id: 'note-2',
@@ -110,8 +110,8 @@ const mockNoteContext = {
         content: includeContent === false ? '' : 'Content about community building',
         tags: ['community', 'collaboration'],
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
   },
   searchNotesWithEmbedding: async (embedding, limit) => {
@@ -123,8 +123,8 @@ const mockNoteContext = {
         tags: ['semantic', 'ecosystem-architecture'],
         similarity: 0.85,
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
   },
   getRecentNotes: async (limit) => {
@@ -135,10 +135,10 @@ const mockNoteContext = {
         content: 'Recently added content',
         tags: ['ecosystem-architecture', 'recent'],
         createdAt: new Date(),
-        updatedAt: new Date()
-      }
+        updatedAt: new Date(),
+      },
     ];
-  }
+  },
 };
 
 // Mock tag extraction
@@ -147,7 +147,7 @@ mock.module('../src/utils/tagExtractor', () => {
     extractTags: async (content, existingTags, maxTags) => {
       // Always return ecosystem architecture tags for our tests
       return ['ecosystem-architecture', 'innovation', 'collaboration', 'regenerative', 'decentralized'];
-    }
+    },
   };
 });
 
@@ -263,8 +263,8 @@ describe('ProfileContext', () => {
         tags: ['semantic'],
         similarity: 0.9,
         createdAt: new Date(),
-        updatedAt: new Date()
-      }]
+        updatedAt: new Date(),
+      }],
     };
     
     const relatedNotes = await profileContext.findRelatedNotes(customMockNoteContext, 3);

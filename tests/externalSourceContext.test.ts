@@ -14,7 +14,7 @@ function createMockSource(name: string, available: boolean = true): ExternalSour
         source: name,
         sourceType: 'test',
         timestamp: new Date(),
-        confidence: 0.9
+        confidence: 0.9,
       }];
     },
     async checkAvailability() {
@@ -32,9 +32,9 @@ function createMockSource(name: string, available: boolean = true): ExternalSour
         source: name,
         sourceType: 'test',
         timestamp: new Date(),
-        confidence: 0.95
+        confidence: 0.95,
       }];
-    }
+    },
   };
 }
 

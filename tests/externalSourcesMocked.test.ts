@@ -18,14 +18,14 @@ mock.module('../src/mcp/model/embeddings', () => {
       async getEmbedding() {
         return {
           embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
-          truncated: false
+          truncated: false,
         };
       }
       
       async getBatchEmbeddings(texts) {
         return texts.map(() => ({
           embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
-          truncated: false
+          truncated: false,
         }));
       }
       
@@ -36,7 +36,7 @@ mock.module('../src/mcp/model/embeddings', () => {
       chunkText(text, chunkSize, overlap) {
         return ['chunk1', 'chunk2'];
       }
-    }
+    },
   };
 });
 
@@ -47,8 +47,8 @@ mock.module('../src/utils/logger', () => {
       info: () => {},
       debug: () => {},
       error: () => {},
-      warn: () => {}
-    }
+      warn: () => {},
+    },
   };
 });
 
@@ -67,7 +67,7 @@ describe('External Sources (Fully Mocked)', () => {
       return Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ status: 'ok' })
+        json: () => Promise.resolve({ status: 'ok' }),
       }) as Response;
     });
     
@@ -111,11 +111,11 @@ describe('External Sources (Fully Mocked)', () => {
                   title: 'Quantum computing',
                   snippet: 'Test snippet about quantum computing',
                   size: 50000,
-                  wordcount: 5000
-                }
-              ]
-            }
-          })
+                  wordcount: 5000,
+                },
+              ],
+            },
+          }),
         }) as Response);
       
       // Mock article content response
@@ -129,11 +129,11 @@ describe('External Sources (Fully Mocked)', () => {
                 '123': {
                   pageid: 123,
                   title: 'Quantum computing',
-                  extract: 'A quantum computer is a computer that exploits quantum mechanical phenomena.'
-                }
-              }
-            }
-          })
+                  extract: 'A quantum computer is a computer that exploits quantum mechanical phenomena.',
+                },
+              },
+            },
+          }),
         }) as Response);
       
       const source = new WikipediaSource('test-api-key');
@@ -152,7 +152,7 @@ describe('External Sources (Fully Mocked)', () => {
         Promise.resolve({
           ok: false,
           status: 500,
-          statusText: 'Internal Server Error'
+          statusText: 'Internal Server Error',
         }) as Response);
       
       const source = new WikipediaSource('test-api-key');
@@ -173,10 +173,10 @@ describe('External Sources (Fully Mocked)', () => {
             query: {
               general: {
                 sitename: 'Wikipedia',
-                mainpage: 'Main Page'
-              }
-            }
-          })
+                mainpage: 'Main Page',
+              },
+            },
+          }),
         }) as Response);
       
       const source1 = new WikipediaSource('test-api-key');
@@ -194,8 +194,8 @@ describe('External Sources (Fully Mocked)', () => {
           status: 200,
           json: () => Promise.resolve({
             sitename: 'Wikipedia',
-            mainpage: 'Main Page'
-          })
+            mainpage: 'Main Page',
+          }),
         }) as Response);
       
       const source2 = new WikipediaSource('test-api-key');
@@ -212,8 +212,8 @@ describe('External Sources (Fully Mocked)', () => {
           ok: true,
           status: 200,
           json: () => Promise.resolve({
-            something: 'else'
-          })
+            something: 'else',
+          }),
         }) as Response);
       
       const source3 = new WikipediaSource('test-api-key');
@@ -245,12 +245,12 @@ describe('External Sources (Fully Mocked)', () => {
                 publishedAt: new Date().toISOString(),
                 url: 'https://example.com/news',
                 source: {
-                  name: 'Example News'
+                  name: 'Example News',
                 },
-                author: 'Test Author'
-              }
-            ]
-          })
+                author: 'Test Author',
+              },
+            ],
+          }),
         }) as Response);
       
       const source = new NewsApiSource('test-news-api-key');
@@ -269,7 +269,7 @@ describe('External Sources (Fully Mocked)', () => {
         Promise.resolve({
           ok: false,
           status: 401,
-          statusText: 'Unauthorized'
+          statusText: 'Unauthorized',
         }) as Response);
       
       const source = new NewsApiSource('test-news-api-key');
@@ -297,8 +297,8 @@ describe('External Sources (Fully Mocked)', () => {
           status: 200,
           json: () => Promise.resolve({
             sitename: 'Wikipedia',
-            status: 'ok'
-          })
+            status: 'ok',
+          }),
         }) as Response);
       
       const context = new ExternalSourceContext('test-api-key');

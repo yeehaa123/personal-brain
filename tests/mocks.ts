@@ -37,7 +37,7 @@ export function createMockNote(id: string, title: string, tags: string[] = []): 
     content: `This is the content of ${title}`,
     tags,
     createdAt: new Date('2025-01-01'),
-    updatedAt: new Date('2025-01-02')
+    updatedAt: new Date('2025-01-02'),
   };
 }
 
@@ -45,7 +45,7 @@ export function createMockNote(id: string, title: string, tags: string[] = []): 
 export function createMockNotes(): Note[] {
   return [
     createMockNote('note-1', 'Test Note 1', ['tag1', 'tag2']),
-    createMockNote('note-2', 'Test Note 2')
+    createMockNote('note-2', 'Test Note 2'),
   ];
 }
 
@@ -63,16 +63,16 @@ export function createMockProfile(id: string = 'mock-profile-id'): Profile {
         company: 'Ecosystem Corp',
         description: 'Building regenerative ecosystem architectures',
         startDate: '2020-01',
-        endDate: null
-      }
+        endDate: null,
+      },
     ],
     education: [
       {
         degree: 'PhD in Systemic Design',
         school: 'University of Innovation',
         startDate: '2010-01',
-        endDate: '2014-01'
-      }
+        endDate: '2014-01',
+      },
     ],
     languages: ['English', 'JavaScript', 'Python'],
     city: 'Innovation City',
@@ -81,7 +81,7 @@ export function createMockProfile(id: string = 'mock-profile-id'): Profile {
     embedding: createMockEmbedding('John Doe profile'),
     tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
   };
 }
 
@@ -97,7 +97,7 @@ export function createTrackers() {
     printCalls: [] as string[],
     displayListCalls: [] as any[],
     displayNotesCalls: [] as any[],
-    printLabelValueCalls: [] as any[]
+    printLabelValueCalls: [] as any[],
   };
 }
 
@@ -107,7 +107,7 @@ export function mockLogger(logger: any) {
     info: logger.info,
     debug: logger.debug,
     warn: logger.warn,
-    error: logger.error
+    error: logger.error,
   };
   
   logger.info = () => {};

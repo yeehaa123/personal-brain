@@ -6,6 +6,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint --ext .ts src/ tests/",
+    "lint:fix": "eslint --ext .ts src/ tests/ --fix",
+    "lint:strict": "eslint --ext .ts src/ tests/ --max-warnings=0",
+    "fmt": "eslint --ext .ts src/ tests/ --fix",
     "dev": "bun run src/index.ts",
     "import": "bun run src/import.ts",
     "delete": "bun run src/delete.ts",
@@ -23,11 +27,17 @@
     "stop": "pm2 stop personal-brain",
     "restart": "pm2 describe personal-brain > /dev/null 2>&1 && pm2 restart personal-brain || bun run start",
     "test": "bun test tests/**/*.test.ts",
-    "test:coverage": "bun test --coverage tests/**/*.test.ts"
+    "test:coverage": "bun test --coverage tests/**/*.test.ts",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/js": "^9.23.0",
     "@types/bun": "latest",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
     "drizzle-kit": "^0.30.5",
+    "eslint": "^9.23.0",
+    "husky": "^9.1.7",
     "pm2": "^5.3.1"
   },
   "peerDependencies": {

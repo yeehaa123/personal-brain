@@ -18,12 +18,12 @@ mock.module('matrix-js-sdk', () => {
       on: () => {},
       joinRoom: () => Promise.resolve(),
       sendMessage: (roomId: string, content: any) => Promise.resolve(),
-      sendHtmlMessage: (roomId: string, text: string, html: string) => Promise.resolve()
+      sendHtmlMessage: (roomId: string, text: string, html: string) => Promise.resolve(),
     }),
     ClientEvent: { Sync: 'sync' },
     RoomEvent: { Timeline: 'Room.timeline' },
     RoomMemberEvent: { Membership: 'RoomMember.membership' },
-    MsgType: { Text: 'm.text' }
+    MsgType: { Text: 'm.text' },
   };
 });
 
@@ -45,16 +45,16 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
                 company: 'Ecosystem Corp',
                 description: 'Building regenerative ecosystem architectures',
                 startDate: '2020-01',
-                endDate: null
-              }
+                endDate: null,
+              },
             ],
             education: [
               {
                 degree: 'PhD in Systemic Design',
                 school: 'University of Innovation',
                 startDate: '2010-01',
-                endDate: '2014-01'
-              }
+                endDate: '2014-01',
+              },
             ],
             languages: ['English', 'JavaScript', 'Python'],
             city: 'Innovation City',
@@ -63,7 +63,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
             embedding: createMockEmbedding('John Doe profile'),
             tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           }),
           extractProfileKeywords: (profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
           findRelatedNotes: async () => [
@@ -73,15 +73,15 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
               content: 'Content about ecosystem architecture',
               tags: ['ecosystem-architecture', 'innovation'],
               createdAt: new Date(),
-              updatedAt: new Date()
-            }
-          ]
+              updatedAt: new Date(),
+            },
+          ],
         };
       }
       
       getNoteContext() {
         return {
-          searchNotes: async () => []
+          searchNotes: async () => [],
         };
       }
       
@@ -89,10 +89,10 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
         return Promise.resolve({
           answer: 'Mock answer',
           citations: [],
-          relatedNotes: []
+          relatedNotes: [],
         });
       }
-    }
+    },
   };
 });
 
@@ -105,13 +105,13 @@ mock.module('../src/commands', () => {
           {
             command: 'help',
             description: 'Show available commands',
-            usage: 'help'
+            usage: 'help',
           },
           {
             command: 'profile',
             description: 'View your profile information',
-            usage: 'profile [related]'
-          }
+            usage: 'profile [related]',
+          },
         ];
       }
       
@@ -122,18 +122,18 @@ mock.module('../src/commands', () => {
               type: 'profile-related',
               profile: {
                 fullName: 'John Doe',
-                occupation: 'Ecosystem Architect'
+                occupation: 'Ecosystem Architect',
               },
               relatedNotes: [
                 {
                   id: 'note-1',
                   title: 'Ecosystem Architecture Principles',
                   content: 'Test content',
-                  tags: ['test']
-                }
+                  tags: ['test'],
+                },
               ],
               matchType: 'tags',
-              keywords: ['ecosystem', 'architect']
+              keywords: ['ecosystem', 'architect'],
             };
           }
           
@@ -141,18 +141,18 @@ mock.module('../src/commands', () => {
             type: 'profile',
             profile: {
               fullName: 'John Doe',
-              occupation: 'Ecosystem Architect'
+              occupation: 'Ecosystem Architect',
             },
-            keywords: ['ecosystem', 'architect']
+            keywords: ['ecosystem', 'architect'],
           };
         }
         
         return {
           type: 'error',
-          message: `Unknown command: ${command}`
+          message: `Unknown command: ${command}`,
         };
       }
-    }
+    },
   };
 });
 
@@ -171,14 +171,14 @@ mock.module('../src/commands/matrix-renderer', () => {
       
       render(roomId, result) {
         if (result.type === 'profile') {
-          this.sendMessageFn(roomId, `Mock profile: John Doe`);
+          this.sendMessageFn(roomId, 'Mock profile: John Doe');
         } else if (result.type === 'profile-related') {
-          this.sendMessageFn(roomId, `Mock profile with Notes related to your profile`);
+          this.sendMessageFn(roomId, 'Mock profile with Notes related to your profile');
         } else {
           this.sendMessageFn(roomId, `Mock result: ${result.type}`);
         }
       }
-    }
+    },
   };
 });
 
@@ -216,27 +216,27 @@ describe('MatrixBrainInterface', () => {
       renderHelp: (roomId, commands) => {
         sentMessages.push({ 
           roomId, 
-          message: 'Mock help: Personal Brain Commands, profile' 
+          message: 'Mock help: Personal Brain Commands, profile', 
         });
       },
       render: (roomId, result) => {
         if (result.type === 'profile') {
           sentMessages.push({ 
             roomId, 
-            message: 'Mock profile: John Doe' 
+            message: 'Mock profile: John Doe', 
           });
         } else if (result.type === 'profile-related') {
           sentMessages.push({ 
             roomId, 
-            message: 'Mock profile with Notes related to your profile' 
+            message: 'Mock profile with Notes related to your profile', 
           });
         } else {
           sentMessages.push({ 
             roomId, 
-            message: `Mock result: ${result.type}` 
+            message: `Mock result: ${result.type}`, 
           });
         }
-      }
+      },
     };
   });
   

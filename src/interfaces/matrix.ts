@@ -53,7 +53,7 @@ class MatrixBrainInterface {
     // Initialize renderer with message sending function
     this.renderer = new MatrixRenderer(
       COMMAND_PREFIX, 
-      this.sendMessage.bind(this)
+      this.sendMessage.bind(this),
     );
   }
 
@@ -108,7 +108,7 @@ class MatrixBrainInterface {
         // Send welcome message
         this.sendMessage(
           member.roomId,
-          `Hello! I'm your personal brain assistant. Type \`${COMMAND_PREFIX} help\` to see available commands.`
+          `Hello! I'm your personal brain assistant. Type \`${COMMAND_PREFIX} help\` to see available commands.`,
         );
       } catch (error: unknown) {
         console.error(`Failed to join room ${member.roomId}:`, error instanceof Error ? error.message : String(error));
@@ -144,12 +144,12 @@ class MatrixBrainInterface {
       try {
         await this.processCommand(commandText, room.roomId, event);
       } catch (error: unknown) {
-        console.error("Error processing command:", error instanceof Error ? error.message : String(error));
+        console.error('Error processing command:', error instanceof Error ? error.message : String(error));
         this.sendMessage(room.roomId, `Error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     
-    console.log("=================================================");
+    console.log('=================================================');
   }
   
   private async processCommand(commandText: string, roomId: string, event: any) {
@@ -194,7 +194,7 @@ class MatrixBrainInterface {
       // First try sendMessage without HTML
       this.client.sendMessage(roomId, {
         msgtype: MsgType.Text,
-        body: message
+        body: message,
       }).catch((error: unknown) => {
         console.error(`Error sending plain message to ${roomId}:`, error instanceof Error ? error.message : String(error));
         

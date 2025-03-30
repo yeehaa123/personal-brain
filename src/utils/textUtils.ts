@@ -63,12 +63,12 @@ export function extractKeywords(text: string, maxKeywords = 10): string[] {
   // Split into words and filter
   const words = cleanedText.split(/\s+/);
   const commonWords = new Set([
-    'the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but'
+    'the', 'and', 'that', 'have', 'for', 'not', 'with', 'you', 'this', 'but',
   ]);
   
   return [...new Set(
     words.filter(word => 
-      word.length > 4 && !commonWords.has(word)
-    )
+      word.length > 4 && !commonWords.has(word),
+    ),
   )].slice(0, maxKeywords);
 }

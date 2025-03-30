@@ -98,8 +98,8 @@ export class NewsApiSource implements ExternalSourceInterface {
     try {
       const response = await fetch(`${this.baseUrl}/top-headlines?country=us&pageSize=1`, {
         headers: {
-          'X-Api-Key': this.apiKey
-        }
+          'X-Api-Key': this.apiKey,
+        },
       });
       
       const data = await response.json();
@@ -122,7 +122,7 @@ export class NewsApiSource implements ExternalSourceInterface {
       hasApiKey: !!this.apiKey,
       supportsEmbeddings: !!this.embeddingService,
       maxArticleAge: `${this.maxAgeHours} hours`,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
   }
 
@@ -144,8 +144,8 @@ export class NewsApiSource implements ExternalSourceInterface {
     try {
       const response = await fetch(searchUrl, {
         headers: {
-          'X-Api-Key': this.apiKey
-        }
+          'X-Api-Key': this.apiKey,
+        },
       });
       
       if (!response.ok) {

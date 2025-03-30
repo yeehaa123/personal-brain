@@ -69,55 +69,55 @@ export class CommandHandler {
       {
         command: 'help',
         description: 'Show available commands',
-        usage: 'help'
+        usage: 'help',
       },
       {
         command: 'search',
         description: 'Search for notes',
         usage: 'search <query>',
-        examples: ['search ecosystem', 'search "personal knowledge"']
+        examples: ['search ecosystem', 'search "personal knowledge"'],
       },
       {
         command: 'tags',
         description: 'List all tags in the system',
-        usage: 'tags'
+        usage: 'tags',
       },
       {
         command: 'list',
         description: 'List all notes or notes with a specific tag',
         usage: 'list [tag]',
-        examples: ['list', 'list ecosystem']
+        examples: ['list', 'list ecosystem'],
       },
       {
         command: 'note',
         description: 'Show a specific note by ID',
         usage: 'note <id>',
-        examples: ['note abc123']
+        examples: ['note abc123'],
       },
       {
         command: 'profile',
         description: 'View your profile information',
         usage: 'profile [related]',
-        examples: ['profile', 'profile related']
+        examples: ['profile', 'profile related'],
       },
       {
         command: 'ask',
         description: 'Ask a question to your brain',
         usage: 'ask <question>',
-        examples: ['ask "What are the principles of ecosystem architecture?"']
+        examples: ['ask "What are the principles of ecosystem architecture?"'],
       },
       {
         command: 'external',
         description: 'Enable or disable external knowledge sources',
         usage: 'external <on|off>',
-        examples: ['external on', 'external off']
+        examples: ['external on', 'external off'],
       },
       {
         command: 'status',
         description: 'Check system status including external sources',
         usage: 'status',
-        examples: ['status']
-      }
+        examples: ['status'],
+      },
     ];
   }
 
@@ -127,29 +127,29 @@ export class CommandHandler {
   async processCommand(command: string, args: string): Promise<CommandResult> {
     try {
       switch (command) {
-        case 'search':
-          return await this.handleSearch(args);
-        case 'list':
-          return await this.handleList(args);
-        case 'tags':
-          return await this.handleTags();
-        case 'note':
-          return await this.handleNote(args);
-        case 'profile':
-          return await this.handleProfile(args);
-        case 'ask':
-          return await this.handleAsk(args);
-        case 'external':
-          return await this.handleExternal(args);
-        case 'status':
-          return await this.handleStatus();
-        default:
-          return { type: 'error', message: `Unknown command: ${command}` };
+      case 'search':
+        return await this.handleSearch(args);
+      case 'list':
+        return await this.handleList(args);
+      case 'tags':
+        return await this.handleTags();
+      case 'note':
+        return await this.handleNote(args);
+      case 'profile':
+        return await this.handleProfile(args);
+      case 'ask':
+        return await this.handleAsk(args);
+      case 'external':
+        return await this.handleExternal(args);
+      case 'status':
+        return await this.handleStatus();
+      default:
+        return { type: 'error', message: `Unknown command: ${command}` };
       }
     } catch (error: unknown) {
       return {
         type: 'error',
-        message: `Error executing command: ${error instanceof Error ? error.message : String(error)}`
+        message: `Error executing command: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -268,13 +268,13 @@ export class CommandHandler {
         type: 'profile-related',
         profile,
         relatedNotes,
-        matchType
+        matchType,
       };
     }
 
     return {
       type: 'profile',
-      profile
+      profile,
     };
   }
 
@@ -299,7 +299,7 @@ export class CommandHandler {
         citations: result.citations,
         relatedNotes: result.relatedNotes,
         profile: result.profile,
-        externalSources: result.externalSources
+        externalSources: result.externalSources,
       };
     } catch (error: unknown) {
       return { type: 'error', message: `Error processing question: ${error instanceof Error ? error.message : String(error)}` };
@@ -317,19 +317,19 @@ export class CommandHandler {
       return {
         type: 'external',
         enabled: true,
-        message: 'External knowledge sources have been enabled.'
+        message: 'External knowledge sources have been enabled.',
       };
     } else if (arg === 'off' || arg === 'disable') {
       this.brainProtocol.setUseExternalSources(false);
       return {
         type: 'external',
         enabled: false,
-        message: 'External knowledge sources have been disabled.'
+        message: 'External knowledge sources have been disabled.',
       };
     } else {
       return {
         type: 'error',
-        message: 'Usage: external <on|off> - Enable or disable external knowledge sources'
+        message: 'Usage: external <on|off> - Enable or disable external knowledge sources',
       };
     }
   }
@@ -382,8 +382,8 @@ export class CommandHandler {
         dbConnected,
         noteCount,
         externalSources,
-        externalSourcesEnabled
-      }
+        externalSourcesEnabled,
+      },
     };
   }
 }

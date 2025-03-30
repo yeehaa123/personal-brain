@@ -12,7 +12,7 @@ describe('Wikipedia Source Tests', () => {
       Promise.resolve({
         ok: true,
         status: 200,
-        json: () => Promise.resolve({ status: 'ok' })
+        json: () => Promise.resolve({ status: 'ok' }),
       }) as Response);
     
     // Replace global fetch with our mock
@@ -39,10 +39,10 @@ describe('Wikipedia Source Tests', () => {
           query: {
             general: {
               sitename: 'Wikipedia',
-              mainpage: 'Main Page'
-            }
-          }
-        })
+              mainpage: 'Main Page',
+            },
+          },
+        }),
       }) as Response);
     
     let isAvailable = await source.checkAvailability();
@@ -57,7 +57,7 @@ describe('Wikipedia Source Tests', () => {
           sitename: 'Wikipedia',
           mainpage: 'Main Page',
           // ... other general properties
-        })
+        }),
       }) as Response);
     
     isAvailable = await source.checkAvailability();
@@ -69,8 +69,8 @@ describe('Wikipedia Source Tests', () => {
         ok: true,
         status: 200,
         json: () => Promise.resolve({
-          someOtherProperty: 'value'
-        })
+          someOtherProperty: 'value',
+        }),
       }) as Response);
     
     isAvailable = await source.checkAvailability();
@@ -91,11 +91,11 @@ describe('Wikipedia Source Tests', () => {
               {
                 pageid: 123,
                 title: 'Quantum computing',
-                snippet: 'This is a test snippet about quantum computing'
-              }
-            ]
-          }
-        })
+                snippet: 'This is a test snippet about quantum computing',
+              },
+            ],
+          },
+        }),
       }) as Response);
     
     // Mock article content
@@ -109,17 +109,17 @@ describe('Wikipedia Source Tests', () => {
               '123': {
                 pageid: 123,
                 title: 'Quantum computing',
-                extract: 'A quantum computer is a computer that exploits quantum mechanical phenomena. On small scales, physical matter exhibits properties of both particles and waves, and quantum computing takes advantage of this behavior using specialized hardware.'
-              }
-            }
-          }
-        })
+                extract: 'A quantum computer is a computer that exploits quantum mechanical phenomena. On small scales, physical matter exhibits properties of both particles and waves, and quantum computing takes advantage of this behavior using specialized hardware.',
+              },
+            },
+          },
+        }),
       }) as Response);
     
     // Test the search
     const results = await source.search({ 
       query: 'What is quantum computing?',
-      limit: 2
+      limit: 2,
     });
     
     // Verify the results

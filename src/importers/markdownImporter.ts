@@ -12,7 +12,7 @@ interface MarkdownMetadata {
   title?: string;
   tags?: string[];
   date?: string;
-  [key: string]: any;
+  [key: string]: string | string[] | undefined;
 }
 
 interface ParsedMarkdown {
@@ -149,7 +149,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
         content: processedContent,
         tags,
         embedding,
-        updatedAt: now
+        updatedAt: now,
       })
       .where(sql`${notes.id} = ${id}`);
       
@@ -163,7 +163,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
       tags,
       embedding,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     };
     
     // Use the context's createNote method which handles chunking too

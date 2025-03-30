@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run typecheck
+bun run typecheck
+
+# Run linter
+bun run lint
+
+# Run tests (optional - uncomment if you want to run tests on commit)
+# bun test

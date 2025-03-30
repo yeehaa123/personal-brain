@@ -61,7 +61,7 @@ export class NoteContext {
       embedding: embedding,
       createdAt: note.createdAt || now,
       updatedAt: note.updatedAt || now,
-      tags: Array.isArray(note.tags) ? (note.tags as string[]) : undefined
+      tags: Array.isArray(note.tags) ? (note.tags as string[]) : undefined,
     });
 
     // If the note is long, also create chunks
@@ -94,7 +94,7 @@ export class NoteContext {
           content: chunks[i],
           embedding: embeddingResults[i].embedding,
           chunkIndex: i,
-          createdAt: now
+          createdAt: now,
         });
       }
     } catch (error) {
@@ -138,8 +138,8 @@ export class NoteContext {
           or(
             like(notes.title, `%${keyword}%`),
             like(notes.content, `%${keyword}%`),
-            like(notes.tags, `%${keyword}%`)
-          )
+            like(notes.tags, `%${keyword}%`),
+          ),
         );
 
         // Create a condition that matches any of the keywords
@@ -149,8 +149,8 @@ export class NoteContext {
         conditions.push(
           or(
             like(notes.title, `%${query}%`),
-            like(notes.content, `%${query}%`)
-          )
+            like(notes.content, `%${query}%`),
+          ),
         );
       }
     }
@@ -210,7 +210,7 @@ export class NoteContext {
         .map(note => {
           const score = this.embeddingService.cosineSimilarity(
             queryEmbedding.embedding,
-            note.embedding as number[]
+            note.embedding as number[],
           );
           return { ...note, score };
         });
@@ -245,8 +245,8 @@ export class NoteContext {
         .where(
           and(
             not(eq(notes.id, noteId)),
-            not(isNull(notes.embedding))
-          )
+            not(isNull(notes.embedding)),
+          ),
         );
 
       // Calculate similarity scores
@@ -255,7 +255,7 @@ export class NoteContext {
         .map(note => {
           const score = this.embeddingService.cosineSimilarity(
             sourceNote.embedding as number[],
-            note.embedding as number[]
+            note.embedding as number[],
           );
           return { ...note, score };
         });
@@ -289,7 +289,7 @@ export class NoteContext {
         .map(note => {
           const score = this.embeddingService.cosineSimilarity(
             embedding,
-            note.embedding as number[]
+            note.embedding as number[],
           );
           return { ...note, score };
         });
@@ -322,8 +322,8 @@ export class NoteContext {
       .where(
         and(
           not(eq(notes.id, noteId)),
-          or(...keywords.map(keyword => like(notes.content, `%${keyword}%`)))
-        )
+          or(...keywords.map(keyword => like(notes.content, `%${keyword}%`))),
+        ),
       )
       .limit(maxResults);
 

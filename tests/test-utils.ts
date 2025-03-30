@@ -23,7 +23,7 @@ export function mockCLIInterface(trackers: any) {
     printLabelValue: CLIInterface.printLabelValue,
     formatId: CLIInterface.formatId,
     formatDate: CLIInterface.formatDate,
-    formatTags: CLIInterface.formatTags
+    formatTags: CLIInterface.formatTags,
   };
   
   // Create spy methods
@@ -127,7 +127,7 @@ export function captureOutput() {
     getOutput: () => output,
     restore: () => {
       process.stdout.write = originalWrite;
-    }
+    },
   };
 }
 
@@ -155,7 +155,7 @@ export function mockDisplayNotes(displayNotes: any, trackers: any) {
  * @param mockImpl The mock implementation
  * @returns Original function for restoration
  */
-export function mockFunction(module: any, functionName: string, mockImpl: Function) {
+export function mockFunction(module: any, functionName: string, mockImpl: (...args: unknown[]) => unknown) {
   const originalFn = module[functionName];
   module[functionName] = mockImpl;
   return originalFn;

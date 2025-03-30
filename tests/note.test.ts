@@ -9,7 +9,7 @@ describe('Note model', () => {
       content: 'This is test content',
       tags: ['test', 'validation'],
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     };
     
     const result = validateNote(validNote);
@@ -25,7 +25,7 @@ describe('Note model', () => {
     const invalidNote = {
       // Missing required fields
       content: 'This is test content',
-      tags: ['test']
+      tags: ['test'],
     };
     
     expect(() => validateNote(invalidNote)).toThrow();
@@ -35,7 +35,7 @@ describe('Note model', () => {
     const validParams = {
       query: 'test search',
       limit: 20,
-      offset: 0
+      offset: 0,
     };
     
     const result = noteSearchSchema.parse(validParams);
@@ -45,7 +45,7 @@ describe('Note model', () => {
   
   test('should apply default values for search parameters', () => {
     const partialParams = {
-      query: 'test'
+      query: 'test',
     };
     
     const result = noteSearchSchema.parse(partialParams);
@@ -58,7 +58,7 @@ describe('Note model', () => {
   test('should throw an error for invalid search parameters', () => {
     const invalidParams = {
       limit: 200, // Over the max of 100
-      offset: -5  // Under the min of 0
+      offset: -5,  // Under the min of 0
     };
     
     expect(() => noteSearchSchema.parse(invalidParams)).toThrow();

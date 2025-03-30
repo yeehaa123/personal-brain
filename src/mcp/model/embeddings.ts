@@ -35,7 +35,7 @@ export class EmbeddingService {
         return this.getFallbackEmbedding(text);
       }
 
-      console.log(`Using OpenAI embedding API`);
+      console.log('Using OpenAI embedding API');
       
       try {
         const preparedText = this.prepareText(text);
@@ -46,14 +46,14 @@ export class EmbeddingService {
         
         const result = await client.embeddings.create({
           model: this.embeddingModel,
-          input: preparedText
+          input: preparedText,
         });
         
         console.log(`Generated embedding with model: ${this.embeddingModel}`);
         
         return {
           embedding: result.data[0].embedding,
-          truncated: false
+          truncated: false,
         };
       } catch (clientError) {
         console.error('Error using OpenAI API, using fallback embedding:', clientError);
@@ -98,7 +98,7 @@ export class EmbeddingService {
     
     return {
       embedding: normalizedEmbedding,
-      truncated: false
+      truncated: false,
     };
   }
 
@@ -127,7 +127,7 @@ export class EmbeddingService {
         // Use the batch endpoint
         const result = await client.embeddings.create({
           model: this.embeddingModel,
-          input: preparedTexts
+          input: preparedTexts,
         });
         
         console.log(`Generated ${result.data.length} embeddings`);
@@ -135,7 +135,7 @@ export class EmbeddingService {
         // Convert to our internal format
         return result.data.map((item) => ({
           embedding: item.embedding,
-          truncated: false
+          truncated: false,
         }));
       } catch (batchError) {
         console.error('Error using batch embedding API, falling back to individual processing:', batchError);
@@ -150,7 +150,7 @@ export class EmbeddingService {
           
           // Process each text in the batch in parallel
           const batchResults = await Promise.all(
-            batch.map(text => this.getEmbedding(text))
+            batch.map(text => this.getEmbedding(text)),
           );
           
           results.push(...batchResults);

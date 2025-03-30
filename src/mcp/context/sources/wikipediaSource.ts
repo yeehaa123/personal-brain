@@ -99,7 +99,7 @@ export class WikipediaSource implements ExternalSourceInterface {
       limitPerMinute: 200, // Wikipedia has a soft limit of 200 requests per minute
       requiresAuthentication: false,
       supportsEmbeddings: !!this.embeddingService,
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
   }
 
@@ -118,8 +118,8 @@ export class WikipediaSource implements ExternalSourceInterface {
     try {
       const response = await fetch(searchUrl, {
         headers: {
-          'User-Agent': this.userAgent
-        }
+          'User-Agent': this.userAgent,
+        },
       });
       
       if (!response.ok) {
@@ -150,8 +150,8 @@ export class WikipediaSource implements ExternalSourceInterface {
     try {
       const response = await fetch(contentUrl, {
         headers: {
-          'User-Agent': this.userAgent
-        }
+          'User-Agent': this.userAgent,
+        },
       });
       
       if (!response.ok) {

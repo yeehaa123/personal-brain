@@ -6,9 +6,9 @@ import type {
   ProfilePublication,
   ProfileProject,
   ProfileAward,
-  ProfileVolunteerWork
+  ProfileVolunteerWork,
 
-} from "../models/profile"
+} from '../models/profile';
 
 export const notes = sqliteTable('notes', {
   id: text('id').primaryKey(),
@@ -17,7 +17,7 @@ export const notes = sqliteTable('notes', {
   tags: text('tags', { mode: 'json' }).$type<string[]>(),
   embedding: text('embedding', { mode: 'json' }).$type<number[]>(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
 // Table for note chunks (for longer notes that need to be split)

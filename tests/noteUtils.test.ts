@@ -53,7 +53,7 @@ describe('noteUtils', () => {
       const tagsCall = trackers.printLabelValueCalls.find(call => 
         call[0] === 'Tags' && 
         Array.isArray(call[1]) && 
-        call[1].includes('tag1')
+        call[1].includes('tag1'),
       );
       expect(tagsCall).toBeDefined();
       
@@ -72,7 +72,7 @@ describe('noteUtils', () => {
       const emptyTagsCall = trackers.printLabelValueCalls.find(call => 
         call[0] === 'Tags' && 
         Array.isArray(call[1]) && 
-        call[1].length === 0
+        call[1].length === 0,
       );
       expect(emptyTagsCall).toBeDefined();
       
@@ -91,7 +91,7 @@ describe('noteUtils', () => {
       
       // Print shouldn't be called for note display
       const relevantPrintCalls = trackers.printCalls.filter(
-        call => call.includes('Test Note')
+        call => call.includes('Test Note'),
       );
       expect(relevantPrintCalls.length).toBe(0);
     });
@@ -115,7 +115,7 @@ describe('noteUtils', () => {
     test('should truncate long content', () => {
       const longContentNote = {
         ...mockNotes[0],
-        content: 'a'.repeat(200)
+        content: 'a'.repeat(200),
       };
       
       const result = formatNotePreview(longContentNote, 1);

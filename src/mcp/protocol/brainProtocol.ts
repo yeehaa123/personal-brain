@@ -158,7 +158,7 @@ export class BrainProtocol {
             title: result.title,
             source: result.source,
             url: result.url,
-            excerpt: this.getExcerpt(result.content, 150)
+            excerpt: this.getExcerpt(result.content, 150),
           }));
         }
       }
@@ -172,7 +172,7 @@ export class BrainProtocol {
       relevantNotes,
       externalResults,
       includeProfile,
-      profileRelevance
+      profileRelevance,
     );
 
     // 4. Get related notes to suggest to the user
@@ -191,7 +191,7 @@ export class BrainProtocol {
       citations,
       relatedNotes,
       profile: includeProfileInResponse ? this.profile : undefined,
-      externalSources: externalCitations.length > 0 ? externalCitations : undefined
+      externalSources: externalCitations.length > 0 ? externalCitations : undefined,
     };
   }
 
@@ -203,7 +203,7 @@ export class BrainProtocol {
       'profile', 'about me', 'who am i', 'my background', 'my experience',
       'my education', 'my skills', 'my work', 'my job', 'my history',
       'my information', 'tell me about myself', 'my professional', 'resume',
-      'cv', 'curriculum vitae', 'career', 'expertise', 'professional identity'
+      'cv', 'curriculum vitae', 'career', 'expertise', 'professional identity',
     ];
 
     const lowercaseQuery = query.toLowerCase();
@@ -237,7 +237,7 @@ export class BrainProtocol {
       // Calculate similarity score between query and profile
       const similarity = this.embeddingService.cosineSimilarity(
         queryEmbedding.embedding,
-        this.profile.embedding as any
+        this.profile.embedding as any,
       );
 
       // Scale the similarity to be more decisive
@@ -277,7 +277,7 @@ export class BrainProtocol {
       query: cleanQuery,
       tags: tags.length > 0 ? tags : undefined,
       limit: 5,
-      semanticSearch: true
+      semanticSearch: true,
     });
 
     // If no results and we have tags, try with just tags
@@ -286,7 +286,7 @@ export class BrainProtocol {
       results = await this.context.searchNotes({
         tags,
         limit: 5,
-        semanticSearch: false // Tags only doesn't benefit from semantic search
+        semanticSearch: false, // Tags only doesn't benefit from semantic search
       });
     }
 
@@ -297,7 +297,7 @@ export class BrainProtocol {
         query: cleanQuery,
         tags: tags.length > 0 ? tags : undefined,
         limit: 5,
-        semanticSearch: false
+        semanticSearch: false,
       });
     }
 
@@ -328,7 +328,7 @@ export class BrainProtocol {
     const externalKeywords = [
       'search', 'external', 'online', 'web', 'internet', 'look up',
       'wikipedia', 'reference', 'latest', 'recent', 'current',
-      'what is', 'who is', 'where is', 'when did', 'how to'
+      'what is', 'who is', 'where is', 'when did', 'how to',
     ];
 
     const lowercaseQuery = query.toLowerCase();
@@ -356,7 +356,7 @@ export class BrainProtocol {
       query.toLowerCase()
         .replace(/[.,?!;:()[\]{}'"]/g, '')
         .split(/\s+/)
-        .filter(word => word.length > 3)
+        .filter(word => word.length > 3),
     );
 
     const noteContent = note.content.toLowerCase();
@@ -393,7 +393,7 @@ export class BrainProtocol {
     notes: Note[],
     externalSources: ExternalSourceResult[] = [],
     includeProfile: boolean = false,
-    profileRelevance: number = 1.0
+    profileRelevance: number = 1.0,
   ): { formattedPrompt: string, citations: Citation[] } {
     const citations: Citation[] = [];
     let contextText = '';
@@ -409,7 +409,7 @@ export class BrainProtocol {
       const citation: Citation = {
         noteId: note.id,
         noteTitle: note.title,
-        excerpt: this.getExcerpt(note.content, 150)
+        excerpt: this.getExcerpt(note.content, 150),
       };
       citations.push(citation);
 
@@ -434,28 +434,28 @@ export class BrainProtocol {
 
     if (includeProfile && notes.length > 0 && externalSources.length > 0) {
       // We have profile, notes, and external sources
-      promptPrefix = "I have the following information from my personal knowledge base, my profile, and external sources:";
+      promptPrefix = 'I have the following information from my personal knowledge base, my profile, and external sources:';
     } else if (includeProfile && notes.length > 0) {
       // We have profile and notes
-      promptPrefix = "I have the following information in my personal knowledge base, including my profile and relevant notes:";
+      promptPrefix = 'I have the following information in my personal knowledge base, including my profile and relevant notes:';
     } else if (includeProfile && externalSources.length > 0) {
       // We have profile and external sources
-      promptPrefix = "I have the following information from my profile and external sources:";
+      promptPrefix = 'I have the following information from my profile and external sources:';
     } else if (notes.length > 0 && externalSources.length > 0) {
       // We have notes and external sources
-      promptPrefix = "I have the following information from my personal knowledge base and external sources:";
+      promptPrefix = 'I have the following information from my personal knowledge base and external sources:';
     } else if (includeProfile) {
       // We have only profile
-      promptPrefix = "I have the following information about my profile in my personal knowledge base:";
+      promptPrefix = 'I have the following information about my profile in my personal knowledge base:';
     } else if (notes.length > 0) {
       // We have only notes
-      promptPrefix = "I have the following information in my personal knowledge base:";
+      promptPrefix = 'I have the following information in my personal knowledge base:';
     } else if (externalSources.length > 0) {
       // We have only external sources
-      promptPrefix = "I have the following information from external sources:";
+      promptPrefix = 'I have the following information from external sources:';
     } else {
       // Fallback if no context (shouldn't happen)
-      promptPrefix = "I have limited information in my personal knowledge base:";
+      promptPrefix = 'I have limited information in my personal knowledge base:';
     }
 
     // Format the final prompt with context and query
@@ -676,8 +676,8 @@ Guidelines:
     // For queries with medium profile relevance, possibly with external sources
     if (profileRelevance > 0.4) {
       const externalSourcesGuideline = hasExternalSources
-        ? "\n8. When using external information, clearly indicate the source\n9. Integrate external knowledge with personal insights when appropriate"
-        : "";
+        ? '\n8. When using external information, clearly indicate the source\n9. Integrate external knowledge with personal insights when appropriate'
+        : '';
 
       return `You are a helpful assistant integrated with a personal knowledge base and profile information.
 Your task is to provide accurate, helpful responses based primarily on the user's notes, with background context from their profile.

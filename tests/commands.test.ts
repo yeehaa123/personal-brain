@@ -16,7 +16,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
         return {
           getProfile: async () => createMockProfile('mock-profile-id'),
           extractProfileKeywords: (profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
-          findRelatedNotes: async () => [mockEcosystemNote]
+          findRelatedNotes: async () => [mockEcosystemNote],
         };
       }
 
@@ -28,8 +28,8 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
               return [
                 {
                   ...mockEcosystemNote,
-                  tags: ['ecosystem', 'innovation']
-                }
+                  tags: ['ecosystem', 'innovation'],
+                },
               ];
             }
 
@@ -47,7 +47,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
             }
             return null;
           },
-          getNoteCount: async () => 10
+          getNoteCount: async () => 10,
         };
       }
 
@@ -55,8 +55,8 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
         return {
           checkSourcesAvailability: async () => ({
             'Wikipedia': true,
-            'NewsAPI': false
-          })
+            'NewsAPI': false,
+          }),
         };
       }
 
@@ -65,7 +65,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
           query, // Include the query in the response
           answer: 'Mock answer',
           citations: [],
-          relatedNotes: []
+          relatedNotes: [],
         });
       }
 
@@ -76,7 +76,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
       getUseExternalSources() {
         return this.useExternalSources;
       }
-    }
+    },
   };
 });
 

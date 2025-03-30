@@ -14,7 +14,7 @@ beforeEach(() => {
     Promise.resolve({
       ok: true,
       status: 200, 
-      json: () => Promise.resolve({ status: 'ok' })
+      json: () => Promise.resolve({ status: 'ok' }),
     }) as Response);
   
   globalThis.fetch = mockFetch;
@@ -46,7 +46,7 @@ class MockExternalSource implements ExternalSourceInterface {
   async getSourceMetadata() {
     return {
       name: this.name,
-      available: this.available
+      available: this.available,
     };
   }
 }
@@ -59,7 +59,7 @@ describe('ExternalSourceContext', () => {
   
   test('should register and use custom sources', async () => {
     const context = new ExternalSourceContext('test-api-key', undefined, {
-      enabledSources: ['MockSource']
+      enabledSources: ['MockSource'],
     });
     
     const mockSource = new MockExternalSource(true, [
@@ -70,8 +70,8 @@ describe('ExternalSourceContext', () => {
         source: 'MockSource',
         sourceType: 'test',
         timestamp: new Date(),
-        confidence: 0.9
-      }
+        confidence: 0.9,
+      },
     ]);
     
     context.registerSource(mockSource);
@@ -109,7 +109,7 @@ describe('ExternalSourceContext', () => {
     mockSource2.name = 'MockSource2' as any;
     
     const context = new ExternalSourceContext('test-api-key', undefined, {
-      enabledSources: ['MockSource1']
+      enabledSources: ['MockSource1'],
     });
     
     context.registerSource(mockSource1);
@@ -133,7 +133,7 @@ describe('ExternalSourceContext', () => {
     
     // Verify cache TTL option is used
     const customContext = new ExternalSourceContext('test-api-key', undefined, {
-      cacheTtl: 1000 * 60 // 1 minute
+      cacheTtl: 1000 * 60, // 1 minute
     });
     
     expect(customContext['options'].cacheTtl).toBe(1000 * 60);
@@ -158,11 +158,11 @@ describe('WikipediaSource', () => {
               { 
                 pageid: 123, 
                 title: 'Test Article',
-                snippet: 'This is a test article snippet'
-              }
-            ]
-          }
-        })
+                snippet: 'This is a test article snippet',
+              },
+            ],
+          },
+        }),
       }) as Response);
     
     // Mock wikipedia content API response
@@ -176,11 +176,11 @@ describe('WikipediaSource', () => {
               '123': {
                 pageid: 123,
                 title: 'Test Article',
-                extract: 'This is the full content of the test article.'
-              }
-            }
-          }
-        })
+                extract: 'This is the full content of the test article.',
+              },
+            },
+          },
+        }),
       }) as Response);
     
     const source = new WikipediaSource('test-api-key');
@@ -199,7 +199,7 @@ describe('WikipediaSource', () => {
       Promise.resolve({
         ok: false,
         status: 500,
-        statusText: 'Internal Server Error'
+        statusText: 'Internal Server Error',
       }) as Response);
     
     const source = new WikipediaSource('test-api-key');
@@ -240,12 +240,12 @@ describe('NewsApiSource', () => {
               publishedAt: new Date().toISOString(),
               url: 'https://example.com/news',
               source: {
-                name: 'Example News'
+                name: 'Example News',
               },
-              author: 'Test Author'
-            }
-          ]
-        })
+              author: 'Test Author',
+            },
+          ],
+        }),
       }) as Response);
     
     const source = new NewsApiSource('test-news-api-key');
@@ -264,7 +264,7 @@ describe('NewsApiSource', () => {
       Promise.resolve({
         ok: false,
         status: 401,
-        statusText: 'Unauthorized'
+        statusText: 'Unauthorized',
       }) as Response);
     
     const source = new NewsApiSource('test-news-api-key');
@@ -279,8 +279,8 @@ describe('NewsApiSource', () => {
         ok: true,
         status: 200,
         json: () => Promise.resolve({
-          status: 'ok'
-        })
+          status: 'ok',
+        }),
       }) as Response);
     
     const source = new NewsApiSource('test-news-api-key');

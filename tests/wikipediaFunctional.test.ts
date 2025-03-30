@@ -18,7 +18,7 @@ describe('Wikipedia Source Functional Tests', () => {
     // If available, search for quantum computing
     const results = await source.search({ 
       query: 'What is quantum computing?',
-      limit: 2
+      limit: 2,
     });
     
     // Should return at least one result
@@ -31,7 +31,7 @@ describe('Wikipedia Source Functional Tests', () => {
     expect(firstResult.url).toContain('wikipedia.org/wiki/');
     
     // Log the content for inspection
-    console.log(`Wikipedia result for "quantum computing":`);
+    console.log('Wikipedia result for "quantum computing":');
     console.log(`Title: ${firstResult.title}`);
     console.log(`Content excerpt: ${firstResult.content.substring(0, 300)}...`);
     console.log(`URL: ${firstResult.url}`);

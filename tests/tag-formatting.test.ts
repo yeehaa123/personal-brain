@@ -76,7 +76,7 @@ describe('Tag Formatting', () => {
     test('should show tags with # prefix in printLabelValue', () => {
       // Instead of capturing output, we'll directly examine the tracked calls
       const tagOptions = {
-        formatter: tag => CLIInterface.styles.tag(`#${tag}`)
+        formatter: tag => CLIInterface.styles.tag(`#${tag}`),
       };
       
       // Call the method directly
@@ -86,7 +86,7 @@ describe('Tag Formatting', () => {
       const tagCall = trackers.printLabelValueCalls.find(call => 
         call[0] === 'Tags' && 
         Array.isArray(call[1]) && 
-        call[1].includes('ecosystem')
+        call[1].includes('ecosystem'),
       );
       
       expect(tagCall).toBeDefined();

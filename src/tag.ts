@@ -86,7 +86,7 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
     if (!forceRegenerate) {
       // For SQLite with JSON columns, we check if the tags field is NULL or an empty array
       allNotes = await db.select().from(notes).where(
-        sql`${notes.tags} IS NULL OR ${notes.tags} = '[]'`
+        sql`${notes.tags} IS NULL OR ${notes.tags} = '[]'`,
       );
     } else {
       allNotes = await db.select().from(notes);

@@ -29,7 +29,7 @@ async function setupMatrixClient() {
     const loginResponse = await client.login('m.login.password', {
       user: username,
       password: password,
-      initial_device_display_name: 'Personal Brain'
+      initial_device_display_name: 'Personal Brain',
     });
 
     const userId = loginResponse.user_id;
@@ -53,7 +53,7 @@ MATRIX_ACCESS_TOKEN="${accessToken}"
 MATRIX_ROOM_IDS=""
 COMMAND_PREFIX="!brain"
 ANTHROPIC_API_KEY=""
-`
+`,
     );
 
     console.log('Template saved to .env.matrix');

@@ -38,7 +38,7 @@ async function main() {
     const { action } = await inquirer.prompt({
       type: 'input',
       name: 'action',
-      message: chalk.cyan('brain>')
+      message: chalk.cyan('brain>'),
     });
     
     const input = action.trim();

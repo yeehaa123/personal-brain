@@ -67,7 +67,7 @@ export class ProfileImporter {
       accomplishmentProjects: data.accomplishment_projects,
       volunteerWork: data.volunteer_work,
       embedding: data.embedding,
-      tags: data.tags
+      tags: data.tags,
     };
   }
 }
