@@ -1,11 +1,11 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+#!/bin/sh
+# Note: Removed husky.sh reference as it will fail in v10.0.0
 
 # Run typecheck
 bun run typecheck
 
-# Run linter
-bun run lint
+# Run linter with auto-fix
+bun run lint:fix
 
-# Run tests (optional - uncomment if you want to run tests on commit)
-# bun test
+# Run tests
+bun test
