@@ -13,7 +13,8 @@ const mockLogger = {
 };
 
 // Set the environment to test
-process.env.NODE_ENV = 'test';
+import { setTestEnv } from './utils/envUtils';
+setTestEnv('NODE_ENV', 'test');
 
 // Mock the logger module
 import { mock } from 'bun:test';

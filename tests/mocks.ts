@@ -172,12 +172,14 @@ export function restoreLogger(logger: Logger, original: Record<string, unknown>)
   logger.error = original.error as typeof logger.error;
 }
 
+import { setTestEnv, clearTestEnv } from './utils/envUtils';
+
 // Mock environment setup
 export function mockEnv() {
-  process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+  setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
 }
 
 // Mock reset
 export function resetMocks() {
-  delete process.env.ANTHROPIC_API_KEY;
+  clearTestEnv('ANTHROPIC_API_KEY');
 }

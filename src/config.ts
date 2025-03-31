@@ -8,7 +8,7 @@ import { getEnv, getEnvAsInt, getEnvAsFloat } from '@utils/configUtils';
 // Log configuration
 export const logConfig = {
   // Log levels
-  consoleLevel: getEnv('LOG_CONSOLE_LEVEL', process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  consoleLevel: getEnv('LOG_CONSOLE_LEVEL', getEnv('NODE_ENV') === 'production' ? 'info' : 'debug'),
   fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
   
   // Log file paths

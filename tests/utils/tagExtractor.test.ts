@@ -1,6 +1,7 @@
 import { test, expect, describe, mock, beforeAll, afterAll } from 'bun:test';
 import { extractTags } from '@utils/tagExtractor';
 import { mockEnv, resetMocks } from '@test/mocks';
+import { setTestEnv } from './envUtils';
 
 // Mock the ai package's generateObject function
 mock.module('ai', () => {
@@ -66,7 +67,7 @@ describe('Tag Extractor', () => {
     instead of competition and aims to create healthy relationships between participants.`;
     
     // Add API key to environment to ensure it uses our mock instead of fallback
-    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
     
     const tags = await extractTags(content, [], 5);
     
@@ -84,7 +85,7 @@ describe('Tag Extractor', () => {
     a rapidly changing world. Learning how to learn is more important than specific knowledge domains.`;
     
     // Add API key to environment to ensure it uses our mock instead of fallback
-    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
     
     const tags = await extractTags(content, [], 5);
     
@@ -102,7 +103,7 @@ describe('Tag Extractor', () => {
     const existingTags = ['innovation', 'future'];
     
     // Add API key to environment to ensure it uses our mock instead of fallback
-    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
     
     const tags = await extractTags(content, existingTags, 5);
     
