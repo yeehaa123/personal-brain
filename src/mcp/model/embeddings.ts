@@ -38,31 +38,31 @@ function validateEmbeddingResponse(response: unknown): OpenAIEmbeddingResponse {
   // Check required properties exist
   const typedResponse = response as Record<string, unknown>;
   
-  if (!Array.isArray(typedResponse.data)) {
+  if (!Array.isArray(typedResponse['data'])) {
     throw new Error('Invalid embedding response: data property missing or not an array');
   }
   
-  if (typeof typedResponse.model !== 'string') {
+  if (typeof typedResponse['model'] !== 'string') {
     throw new Error('Invalid embedding response: model property missing or not a string');
   }
   
-  if (typeof typedResponse.object !== 'string') {
+  if (typeof typedResponse['object'] !== 'string') {
     throw new Error('Invalid embedding response: object property missing or not a string');
   }
   
-  if (!typedResponse.usage || typeof typedResponse.usage !== 'object') {
+  if (!typedResponse['usage'] || typeof typedResponse['usage'] !== 'object') {
     throw new Error('Invalid embedding response: usage property missing or not an object');
   }
   
   // For each data item, validate it has an embedding that's an array of numbers
-  for (let i = 0; i < typedResponse.data.length; i++) {
-    const item = typedResponse.data[i] as Record<string, unknown>;
+  for (let i = 0; i < typedResponse['data'].length; i++) {
+    const item = typedResponse['data'][i] as Record<string, unknown>;
     
-    if (!Array.isArray(item.embedding)) {
+    if (!Array.isArray(item['embedding'])) {
       throw new Error(`Invalid embedding response: item ${i} missing embedding array`);
     }
     
-    if (item.embedding.some(val => typeof val !== 'number')) {
+    if (item['embedding'].some(val => typeof val !== 'number')) {
       throw new Error(`Invalid embedding response: item ${i} has non-numeric values in embedding`);
     }
   }

@@ -115,7 +115,7 @@ describe('Tag Formatting', () => {
       
       if (tagCall) {
         const options = tagCall[2] || {};
-        expect(options.formatter).toBeDefined();
+        expect(options['formatter']).toBeDefined();
       }
       
       // Check that print was called with the appropriate content

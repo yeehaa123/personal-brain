@@ -208,7 +208,7 @@ export class MatrixBrainInterface {
       return;
     }
 
-    const text = content.body.trim();
+    const text = content['body'].trim();
     
     // Check if the text starts with the command prefix
     if (text.startsWith(this.config.commandPrefix)) {

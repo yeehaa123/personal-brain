@@ -377,7 +377,7 @@ describe('External Sources (Fully Mocked)', () => {
       
       // Wikipedia should be available
       expect(typeof availability).toBe('object');
-      expect(availability.Wikipedia).toBe(true);
+      expect(availability['Wikipedia']).toBe(true);
     });
   });
 });

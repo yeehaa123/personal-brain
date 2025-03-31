@@ -58,7 +58,7 @@ describe('noteUtils', () => {
       
       if (tagsCall) {
         const options = tagsCall[2] || {};
-        const formatter = options.formatter as ((tag: string) => string) | undefined;
+        const formatter = options['formatter'] as ((tag: string) => string) | undefined;
         expect(formatter).toBeDefined();
         
         // Test the formatter by directly calling it
@@ -78,7 +78,7 @@ describe('noteUtils', () => {
       
       if (emptyTagsCall) {
         const options = emptyTagsCall[2] || {};
-        expect(options.emptyText).toBe('none');
+        expect(options['emptyText']).toBe('none');
       }
     });
     

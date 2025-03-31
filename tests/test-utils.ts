@@ -109,17 +109,17 @@ export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
     
     if (Array.isArray(value)) {
       if (value.length === 0) {
-        formattedValue = options.emptyText as string || 'None';
+        formattedValue = options['emptyText'] as string || 'None';
       } else {
-        const formatter = options.formatter as ((val: string) => string) || ((val: string) => `#${val}`);
+        const formatter = options['formatter'] as ((val: string) => string) || ((val: string) => `#${val}`);
         formattedValue = value.map(formatter).join(' ');
       }
     } else {
       if (value === null || value === undefined || value === '') {
-        formattedValue = options.emptyText as string || 'None';
+        formattedValue = options['emptyText'] as string || 'None';
       } else {
-        formattedValue = options.formatter 
-          ? (options.formatter as ((val: string) => string))(value.toString())
+        formattedValue = options['formatter'] 
+          ? (options['formatter'] as ((val: string) => string))(value.toString())
           : value.toString();
       }
     }
@@ -152,18 +152,18 @@ export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
  */
 export function restoreCLIInterface(original: Record<string, unknown>) {
   // Restore methods with the correct types
-  CLIInterface.displayTitle = original.displayTitle as typeof CLIInterface.displayTitle;
-  CLIInterface.displaySubtitle = original.displaySubtitle as typeof CLIInterface.displaySubtitle;
-  CLIInterface.error = original.error as typeof CLIInterface.error;
-  CLIInterface.warn = original.warn as typeof CLIInterface.warn;
-  CLIInterface.success = original.success as typeof CLIInterface.success;
-  CLIInterface.info = original.info as typeof CLIInterface.info;
-  CLIInterface.print = original.print as typeof CLIInterface.print;
-  CLIInterface.displayList = original.displayList as typeof CLIInterface.displayList;
-  CLIInterface.printLabelValue = original.printLabelValue as typeof CLIInterface.printLabelValue;
-  CLIInterface.formatId = original.formatId as typeof CLIInterface.formatId;
-  CLIInterface.formatDate = original.formatDate as typeof CLIInterface.formatDate;
-  CLIInterface.formatTags = original.formatTags as typeof CLIInterface.formatTags;
+  CLIInterface.displayTitle = original['displayTitle'] as typeof CLIInterface.displayTitle;
+  CLIInterface.displaySubtitle = original['displaySubtitle'] as typeof CLIInterface.displaySubtitle;
+  CLIInterface.error = original['error'] as typeof CLIInterface.error;
+  CLIInterface.warn = original['warn'] as typeof CLIInterface.warn;
+  CLIInterface.success = original['success'] as typeof CLIInterface.success;
+  CLIInterface.info = original['info'] as typeof CLIInterface.info;
+  CLIInterface.print = original['print'] as typeof CLIInterface.print;
+  CLIInterface.displayList = original['displayList'] as typeof CLIInterface.displayList;
+  CLIInterface.printLabelValue = original['printLabelValue'] as typeof CLIInterface.printLabelValue;
+  CLIInterface.formatId = original['formatId'] as typeof CLIInterface.formatId;
+  CLIInterface.formatDate = original['formatDate'] as typeof CLIInterface.formatDate;
+  CLIInterface.formatTags = original['formatTags'] as typeof CLIInterface.formatTags;
 }
 
 /**

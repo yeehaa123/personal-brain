@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { createMockEmbedding, mockEnv, resetMocks, createMockNote, createMockProfile } from '@test/mocks';
+import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 import type { CommandInfo, CommandResult } from '@commands/index';
 
 // Define the interfaces for our mocks
@@ -317,20 +318,20 @@ describe('MatrixBrainInterface', () => {
   beforeAll(() => {
     mockEnv();
     // Set required environment variables
-    process.env.MATRIX_HOMESERVER_URL = 'https://matrix.test.org';
-    process.env.MATRIX_USER_ID = '@test:test.org';
-    process.env.MATRIX_ACCESS_TOKEN = 'mock-token';
-    process.env.MATRIX_ROOM_IDS = '!room1:test.org';
-    process.env.COMMAND_PREFIX = '!brain';
+    setTestEnv('MATRIX_HOMESERVER_URL', 'https://matrix.test.org');
+    setTestEnv('MATRIX_USER_ID', '@test:test.org');
+    setTestEnv('MATRIX_ACCESS_TOKEN', 'mock-token');
+    setTestEnv('MATRIX_ROOM_IDS', '!room1:test.org');
+    setTestEnv('COMMAND_PREFIX', '!brain');
   });
   
   afterAll(() => {
     resetMocks();
-    delete process.env.MATRIX_HOMESERVER_URL;
-    delete process.env.MATRIX_USER_ID;
-    delete process.env.MATRIX_ACCESS_TOKEN;
-    delete process.env.MATRIX_ROOM_IDS;
-    delete process.env.COMMAND_PREFIX;
+    clearTestEnv('MATRIX_HOMESERVER_URL');
+    clearTestEnv('MATRIX_USER_ID');
+    clearTestEnv('MATRIX_ACCESS_TOKEN');
+    clearTestEnv('MATRIX_ROOM_IDS');
+    clearTestEnv('COMMAND_PREFIX');
   });
   
   beforeEach(() => {

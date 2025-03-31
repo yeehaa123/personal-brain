@@ -2,6 +2,7 @@ import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'b
 // Import only the type for type checking
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote, createMockProfile, mockEnv, resetMocks } from '@test/mocks';
+import { setTestEnv } from '@test/utils/envUtils';
 
 // Define the mock notes outside to reduce duplication
 const mockEcosystemNote = createMockNote('note-1', 'Ecosystem Architecture Principles', ['ecosystem-architecture', 'innovation']);
@@ -358,7 +359,7 @@ describe('CommandHandler', () => {
   describe('ask command', () => {
     test('should handle ask command', async () => {
       // Set ANTHROPIC_API_KEY for test
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      setTestEnv('ANTHROPIC_API_KEY', 'test-key');
 
       const result = await commandHandler.processCommand('ask', 'What is ecosystem architecture?');
 
@@ -379,7 +380,7 @@ describe('CommandHandler', () => {
   describe('status command', () => {
     test('should handle status command', async () => {
       // Set ANTHROPIC_API_KEY for test
-      process.env.ANTHROPIC_API_KEY = 'test-key';
+      setTestEnv('ANTHROPIC_API_KEY', 'test-key');
 
       const result = await commandHandler.processCommand('status', '');
 
@@ -393,8 +394,8 @@ describe('CommandHandler', () => {
         expect(result.status.noteCount).toBe(10);
         expect(result.status.externalSourcesEnabled).toBe(false);
         expect(result.status.externalSources).toBeDefined();
-        expect(result.status.externalSources.Wikipedia).toBe(true);
-        expect(result.status.externalSources.NewsAPI).toBe(false);
+        expect(result.status.externalSources['Wikipedia']).toBe(true);
+        expect(result.status.externalSources['NewsAPI']).toBe(false);
       }
     });
 

@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { EmbeddingService } from '@mcp/model/embeddings';
+import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 
 import { createMockEmbedding } from '@test/mocks';
 
@@ -137,12 +138,12 @@ describe('EmbeddingService', () => {
 
   beforeAll(() => {
     // Set up mock environment
-    process.env.OPENAI_API_KEY = 'mock-api-key';
+    setTestEnv('OPENAI_API_KEY', 'mock-api-key');
   });
   
   afterAll(() => {
     // Clean up mock environment
-    delete process.env.OPENAI_API_KEY;
+    clearTestEnv('OPENAI_API_KEY');
   });
   
   beforeEach(() => {

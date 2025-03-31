@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { NoteContext } from '@mcp/context/noteContext';
+import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 import { EmbeddingService } from '@mcp/model/embeddings';
 
 import { createMockEmbedding } from '@test/mocks';
@@ -99,12 +100,12 @@ describe('NoteContext', () => {
   
   beforeAll(() => {
     // Set up mock environment
-    process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
   });
   
   afterAll(() => {
     // Clean up mock environment
-    delete process.env.ANTHROPIC_API_KEY;
+    clearTestEnv('ANTHROPIC_API_KEY');
   });
   
   beforeEach(() => {
