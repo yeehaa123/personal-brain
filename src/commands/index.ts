@@ -3,9 +3,10 @@
  * This module defines the core command logic that can be reused across interfaces
  */
 
-import type { Note } from '../models/note';
-import type { Profile } from '../models/profile';
-import type { BrainProtocol } from '../mcp/protocol/brainProtocol';
+import type { Note } from '@/models/note';
+import type { Profile } from '@/models/profile';
+import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import logger from '@/utils/logger';
 
 /**
  * Interface for command descriptions
@@ -358,10 +359,10 @@ export class CommandHandler {
       } catch (countError) {
         // If count fails but we got notes, use the notes array length as fallback
         noteCount = notes.length;
-        console.error('Error getting note count, using fallback:', countError);
+        logger.error(`Error getting note count, using fallback: ${countError}`);
       }
     } catch (error) {
-      console.error('Error checking database connection:', error);
+      logger.error(`Error checking database connection: ${error}`);
       dbConnected = false;
     }
 
@@ -370,7 +371,7 @@ export class CommandHandler {
     try {
       externalSources = await this.externalContext.checkSourcesAvailability();
     } catch (error) {
-      console.error('Error checking external sources:', error);
+      logger.error(`Error checking external sources: ${error}`);
       // Failed to check external sources, continue with empty object
     }
 
