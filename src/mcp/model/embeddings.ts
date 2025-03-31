@@ -5,7 +5,7 @@
 import { cosineSimilarity, normalizeVector } from '@/utils/vectorUtils';
 import { prepareText, chunkText } from '@/utils/textUtils';
 import logger from '@/utils/logger';
-import { aiConfig } from '@/config';
+import { aiConfig, textConfig } from '@/config';
 import type { OpenAI } from 'openai';
 
 // Type definitions for OpenAI API responses
@@ -166,8 +166,8 @@ export class EmbeddingService {
    */
   chunkText(
     text: string, 
-    chunkSize = aiConfig.openAI.chunkSize || 512, 
-    overlap = aiConfig.openAI.chunkOverlap || 100,
+    chunkSize = textConfig.defaultChunkSize, 
+    overlap = textConfig.defaultChunkOverlap,
   ): string[] {
     return chunkText(text, chunkSize, overlap);
   }

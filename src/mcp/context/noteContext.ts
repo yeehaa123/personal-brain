@@ -6,6 +6,7 @@ import { EmbeddingService } from '@/mcp/model/embeddings';
 import { nanoid } from 'nanoid';
 import { extractKeywords } from '@/utils/textUtils';
 import logger from '@/utils/logger';
+import { textConfig } from '@/config';
 
 export interface SearchOptions {
   query?: string;
@@ -82,8 +83,12 @@ export class NoteContext {
    */
   private async createNoteChunks(noteId: string, content: string): Promise<void> {
     try {
-      // Chunk the content
-      const chunks = this.embeddingService.chunkText(content, 1000, 200);
+      // Chunk the content using configured chunking parameters
+      const chunks = this.embeddingService.chunkText(
+        content,
+        textConfig.defaultChunkSize,
+        textConfig.defaultChunkOverlap,
+      );
 
       // Generate embeddings for all chunks in batch
       const embeddingResults = await this.embeddingService.getBatchEmbeddings(chunks);
