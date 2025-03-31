@@ -266,10 +266,20 @@ export class CommandHandler {
         matchType = 'semantic';
       }
 
+      // Type assertion to resolve compatibility issue between NoteWithSimilarity and Note types
       return {
         type: 'profile-related',
         profile,
-        relatedNotes,
+        // Ensure type compatibility by using a properly typed mapping function
+        relatedNotes: relatedNotes.map(note => ({
+          id: note.id,
+          title: note.title, 
+          content: note.content,
+          embedding: note.embedding || null,
+          tags: note.tags || null,
+          createdAt: note.createdAt,
+          updatedAt: note.updatedAt,
+        })),
         matchType,
       };
     }

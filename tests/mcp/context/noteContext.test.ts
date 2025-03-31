@@ -1,5 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { NoteContext } from '@mcp/context/noteContext';
+import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 import { EmbeddingService } from '@mcp/model/embeddings';
 
@@ -94,6 +95,7 @@ EmbeddingService.prototype.cosineSimilarity = function(vec1: number[], vec2: num
 
 describe('NoteContext', () => {
   let context: NoteContext;
+  let searchService: NoteSearchService;
   
   // Use a simple mock of the embedding service without trying to mock DB
   // This creates a real NoteContext but avoids API calls
@@ -111,15 +113,18 @@ describe('NoteContext', () => {
   beforeEach(() => {
     // Create a new context with a mock API key for each test
     context = new NoteContext('mock-api-key');
+    // Also create a search service for direct testing
+    searchService = new NoteSearchService('mock-api-key');
   });
 
-  test('extractKeywords should extract meaningful keywords', () => {
+  test('NoteSearchService.extractKeywords should extract meaningful keywords', () => {
+    // Test the extractKeywords method directly from NoteSearchService
+    const sampleText = 'This is a test document with important keywords about artificial intelligence and machine learning';
+    
     // Access the private method using a type assertion to unknown first
-    const keywords = (context as unknown as { 
+    const keywords = (searchService as unknown as { 
       extractKeywords: (text: string) => string[] 
-    }).extractKeywords(
-      'This is a test document with important keywords about artificial intelligence and machine learning',
-    );
+    }).extractKeywords(sampleText);
     
     expect(Array.isArray(keywords)).toBe(true);
     expect(keywords.length).toBeGreaterThan(0);
@@ -132,7 +137,7 @@ describe('NoteContext', () => {
     expect(foundKeywords.length).toBeGreaterThan(0);
   });
 
-  test('chunkText properly segments text', () => {
+  test('EmbeddingService.chunkText properly segments text', () => {
     // Create an embedding service to test chunking
     const embeddingService = new EmbeddingService({ apiKey: 'fake-api-key' });
     
@@ -159,7 +164,7 @@ describe('NoteContext', () => {
     }
   });
   
-  test('cosineSimilarity calculates similarity correctly', () => {
+  test('EmbeddingService.cosineSimilarity calculates similarity correctly', () => {
     const embeddingService = new EmbeddingService({ apiKey: 'fake-api-key' });
     
     // Identical vectors should have similarity 1
@@ -179,5 +184,15 @@ describe('NoteContext', () => {
     const similarity = embeddingService.cosineSimilarity(vec1, vec4);
     expect(similarity).toBeGreaterThan(0);
     expect(similarity).toBeLessThan(1);
+  });
+  
+  test('NoteContext properly initializes all services', () => {
+    expect(context).toBeDefined();
+    
+    // Check that basic methods are available
+    expect(typeof context.getNoteById).toBe('function');
+    expect(typeof context.searchNotes).toBe('function');
+    expect(typeof context.getRelatedNotes).toBe('function');
+    expect(typeof context.getRecentNotes).toBe('function');
   });
 });
