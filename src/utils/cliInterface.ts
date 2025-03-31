@@ -156,7 +156,7 @@ export class CLIInterface {
     logger.info(`Displaying list of ${items.length} items`);
 
     items.forEach((item, index) => {
-      const display = formatter ? formatter(item, index) : item.toString();
+      const display = formatter ? formatter(item, index) : String(item);
       process.stdout.write(`${this.styles.number(index + 1)}. ${display}\n`);
     });
 

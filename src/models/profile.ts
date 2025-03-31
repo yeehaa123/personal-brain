@@ -2,10 +2,122 @@ import { z } from 'zod';
 import { createInsertSchema, createUpdateSchema, createSelectSchema } from 'drizzle-zod';
 import { profiles } from '../db/schema';
 
-// Create Zod schemas from Drizzle schema
-export const insertProfileSchema = createInsertSchema(profiles);
-export const updateProfileSchema = createUpdateSchema(profiles);
-export const selectProfileSchema = createSelectSchema(profiles);
+// Create base Zod schemas from Drizzle schema
+const baseInsertProfileSchema = createInsertSchema(profiles);
+const baseUpdateProfileSchema = createUpdateSchema(profiles);
+const baseSelectProfileSchema = createSelectSchema(profiles);
+
+// Define schemas for complex JSON types
+export const profileDateInfoSchema = z.object({
+  day: z.number().nullable(),
+  month: z.number().nullable(),
+  year: z.number().nullable(),
+});
+
+export const profileExperienceSchema = z.object({
+  starts_at: profileDateInfoSchema,
+  ends_at: profileDateInfoSchema.nullable(),
+  company: z.string(),
+  company_linkedin_profile_url: z.string().nullable(),
+  company_facebook_profile_url: z.string().nullable(),
+  title: z.string(),
+  description: z.string().nullable(),
+  location: z.string().nullable(),
+  logo_url: z.string().nullable(),
+});
+
+export const profileEducationSchema = z.object({
+  starts_at: profileDateInfoSchema,
+  ends_at: profileDateInfoSchema.nullable(),
+  field_of_study: z.string().nullable(),
+  degree_name: z.string().nullable(),
+  school: z.string(),
+  school_linkedin_profile_url: z.string().nullable(),
+  school_facebook_profile_url: z.string().nullable(),
+  description: z.string().nullable(),
+  logo_url: z.string().nullable(),
+  grade: z.string().nullable(),
+  activities_and_societies: z.string().nullable(),
+});
+
+export const profileLanguageProficiencySchema = z.object({
+  name: z.string(),
+  proficiency: z.string(),
+});
+
+export const profilePublicationSchema = z.object({
+  name: z.string(),
+  publisher: z.string(),
+  published_on: profileDateInfoSchema,
+  description: z.string().nullable(),
+  url: z.string().nullable(),
+});
+
+export const profileAwardSchema = z.object({
+  title: z.string(),
+  issuer: z.string(),
+  issued_on: profileDateInfoSchema,
+  description: z.string().nullable(),
+});
+
+export const profileProjectSchema = z.object({
+  starts_at: profileDateInfoSchema,
+  ends_at: profileDateInfoSchema.nullable(),
+  title: z.string(),
+  description: z.string().nullable(),
+  url: z.string().nullable(),
+});
+
+export const profileVolunteerWorkSchema = z.object({
+  starts_at: profileDateInfoSchema,
+  ends_at: profileDateInfoSchema.nullable(),
+  title: z.string(),
+  cause: z.string().nullable(),
+  company: z.string().nullable(),
+  company_linkedin_profile_url: z.string().nullable(),
+  description: z.string().nullable(),
+  logo_url: z.string().nullable(),
+});
+
+// Fix JSON field types by explicitly defining the correct types
+export const insertProfileSchema = baseInsertProfileSchema.extend({
+  experiences: z.array(profileExperienceSchema).nullable().optional(),
+  education: z.array(profileEducationSchema).nullable().optional(),
+  languages: z.array(z.string()).nullable().optional(),
+  languagesAndProficiencies: z.array(profileLanguageProficiencySchema).nullable().optional(),
+  accomplishmentPublications: z.array(profilePublicationSchema).nullable().optional(),
+  accomplishmentHonorsAwards: z.array(profileAwardSchema).nullable().optional(),
+  accomplishmentProjects: z.array(profileProjectSchema).nullable().optional(),
+  volunteerWork: z.array(profileVolunteerWorkSchema).nullable().optional(),
+  embedding: z.array(z.number()).nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+});
+
+export const updateProfileSchema = baseUpdateProfileSchema.extend({
+  experiences: z.array(profileExperienceSchema).nullable().optional(),
+  education: z.array(profileEducationSchema).nullable().optional(),
+  languages: z.array(z.string()).nullable().optional(),
+  languagesAndProficiencies: z.array(profileLanguageProficiencySchema).nullable().optional(),
+  accomplishmentPublications: z.array(profilePublicationSchema).nullable().optional(),
+  accomplishmentHonorsAwards: z.array(profileAwardSchema).nullable().optional(),
+  accomplishmentProjects: z.array(profileProjectSchema).nullable().optional(),
+  volunteerWork: z.array(profileVolunteerWorkSchema).nullable().optional(),
+  embedding: z.array(z.number()).nullable().optional(),
+  tags: z.array(z.string()).nullable().optional(),
+});
+
+export const selectProfileSchema = baseSelectProfileSchema.extend({
+  experiences: z.array(profileExperienceSchema).nullable(),
+  education: z.array(profileEducationSchema).nullable(),
+  languages: z.array(z.string()).nullable(),
+  languagesAndProficiencies: z.array(profileLanguageProficiencySchema).nullable(),
+  accomplishmentPublications: z.array(profilePublicationSchema).nullable(),
+  accomplishmentHonorsAwards: z.array(profileAwardSchema).nullable(),
+  accomplishmentProjects: z.array(profileProjectSchema).nullable(),
+  volunteerWork: z.array(profileVolunteerWorkSchema).nullable(),
+  embedding: z.array(z.number()).nullable(),
+  tags: z.array(z.string()).nullable(),
+});
 
 // Type definitions based on the schemas
 export type Profile = z.infer<typeof selectProfileSchema>;

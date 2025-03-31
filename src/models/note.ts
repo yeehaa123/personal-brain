@@ -3,8 +3,19 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { notes } from '../db/schema';
 
 // Create Zod schemas from Drizzle schema
-export const insertNoteSchema = createInsertSchema(notes);
-export const selectNoteSchema = createSelectSchema(notes);
+const baseInsertNoteSchema = createInsertSchema(notes);
+const baseSelectNoteSchema = createSelectSchema(notes);
+
+// Fix JSON field types by explicitly defining the correct types
+export const insertNoteSchema = baseInsertNoteSchema.extend({
+  tags: z.array(z.string()).nullable().optional(),
+  embedding: z.array(z.number()).nullable().optional(),
+});
+
+export const selectNoteSchema = baseSelectNoteSchema.extend({
+  tags: z.array(z.string()).nullable(),
+  embedding: z.array(z.number()).nullable(),
+});
 
 // Type definitions based on the schemas
 export type Note = z.infer<typeof selectNoteSchema>;

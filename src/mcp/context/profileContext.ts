@@ -46,7 +46,7 @@ export class ProfileContext {
    * Create or update the user profile with automatic tag and embedding generation
    */
   async saveProfile(
-    profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'>
+    profileData: Omit<Profile, 'id' | 'createdAt' | 'updatedAt' | 'embedding' | 'tags'>,
   ): Promise<string> {
     const now = new Date();
     const profileText = this.getProfileTextForEmbedding(profileData);
@@ -57,10 +57,10 @@ export class ProfileContext {
     // Check if a profile already exists
 
     if (!embedding || !tags) {
-      throw ("We need embeddings and tags");
+      throw ('We need embeddings and tags');
     }
     const existingProfile = await this.getProfile();
-    const experiences = JSON.stringify(profileData.experiences)
+    const experiences = JSON.stringify(profileData.experiences);
 
     if (existingProfile) {
       const { id, createdAt } = existingProfile;
@@ -71,8 +71,8 @@ export class ProfileContext {
         experiences,
         embedding,
         tags,
-        updatedAt: Date.now()
-      })
+        updatedAt: Date.now(),
+      });
       await db.update(profiles)
         .set(updateData)
         .where(eq(profiles.id, existingProfile.id));
@@ -240,13 +240,15 @@ export class ProfileContext {
 
     // Filter to notes that have tags and score them
     const scoredNotes = allNotes
-      .filter(note => note.tags?.length > 0)
+      .filter(note => note.tags && Array.isArray(note.tags) && note.tags.length > 0)
       .map(note => {
-        const matchCount = this.calculateTagMatchScore(note.tags, profileTags);
+        // We know tags is not null from the filter above
+        const noteTags = note.tags as string[]; 
+        const matchCount = this.calculateTagMatchScore(noteTags, profileTags);
         return {
           ...note,
           tagScore: matchCount,
-          matchRatio: matchCount / note.tags.length,
+          matchRatio: matchCount / noteTags.length,
         };
       })
       .filter(note => note.tagScore > 0);

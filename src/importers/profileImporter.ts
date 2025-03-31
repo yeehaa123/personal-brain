@@ -32,7 +32,6 @@ export class ProfileImporter {
   /**
    * Transform YAML data to profile format
    */
-  // @ts-ignore
   private transformYamlToProfile(data: Record<string, unknown>): Record<string, unknown> {
     // Convert snake_case from YAML to camelCase for database
     return {
