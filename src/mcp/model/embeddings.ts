@@ -8,7 +8,7 @@ import logger from '@/utils/logger';
 import { aiConfig, textConfig } from '@/config';
 import type { OpenAI } from 'openai';
 
-// Type definitions for OpenAI API responses
+// Type definitions for OpenAI API responses with safer runtime validation
 interface OpenAIEmbeddingData {
   embedding: number[];
   index: number;
@@ -23,6 +23,52 @@ interface OpenAIEmbeddingResponse {
     prompt_tokens: number;
     total_tokens: number;
   };
+}
+
+/**
+ * Validates that an API response has the expected structure of an embedding response
+ * @param response The response to validate
+ * @returns The validated response, or throws an error if invalid
+ */
+function validateEmbeddingResponse(response: unknown): OpenAIEmbeddingResponse {
+  if (!response || typeof response !== 'object') {
+    throw new Error('Invalid embedding response: response is not an object');
+  }
+  
+  // Check required properties exist
+  const typedResponse = response as Record<string, unknown>;
+  
+  if (!Array.isArray(typedResponse.data)) {
+    throw new Error('Invalid embedding response: data property missing or not an array');
+  }
+  
+  if (typeof typedResponse.model !== 'string') {
+    throw new Error('Invalid embedding response: model property missing or not a string');
+  }
+  
+  if (typeof typedResponse.object !== 'string') {
+    throw new Error('Invalid embedding response: object property missing or not a string');
+  }
+  
+  if (!typedResponse.usage || typeof typedResponse.usage !== 'object') {
+    throw new Error('Invalid embedding response: usage property missing or not an object');
+  }
+  
+  // For each data item, validate it has an embedding that's an array of numbers
+  for (let i = 0; i < typedResponse.data.length; i++) {
+    const item = typedResponse.data[i] as Record<string, unknown>;
+    
+    if (!Array.isArray(item.embedding)) {
+      throw new Error(`Invalid embedding response: item ${i} missing embedding array`);
+    }
+    
+    if (item.embedding.some(val => typeof val !== 'number')) {
+      throw new Error(`Invalid embedding response: item ${i} has non-numeric values in embedding`);
+    }
+  }
+  
+  // If we got here, basic validation passed
+  return response as OpenAIEmbeddingResponse;
 }
 
 /**
@@ -204,16 +250,24 @@ export class EmbeddingService {
     };
     
     try {
-      const result = await client.embeddings.create(params) as unknown as OpenAIEmbeddingResponse;
+      // Get the raw response and validate it
+      const rawResponse = await client.embeddings.create(params);
+      const validatedResponse = validateEmbeddingResponse(rawResponse);
       
       logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
       
       return {
-        embedding: result.data[0].embedding,
+        embedding: validatedResponse.data[0].embedding,
         truncated: false,
       };
     } catch (error) {
-      logger.error(`OpenAI embedding API error: ${error}`);
+      if (error instanceof Error && error.message.startsWith('Invalid embedding response:')) {
+        // For validation errors, add more context
+        logger.error(`OpenAI embedding response validation error: ${error.message}`);
+      } else {
+        // For API errors
+        logger.error(`OpenAI embedding API error: ${error}`);
+      }
       throw error; // Let the caller handle this
     }
   }
@@ -232,13 +286,21 @@ export class EmbeddingService {
     };
     
     try {
-      const result = await client.embeddings.create(params) as unknown as OpenAIEmbeddingResponse;
+      // Get the raw response and validate it
+      const rawResponse = await client.embeddings.create(params);
+      const validatedResponse = validateEmbeddingResponse(rawResponse);
       
-      logger.debug(`Generated ${result.data.length} embeddings in batch`);
+      logger.debug(`Generated ${validatedResponse.data.length} embeddings in batch`);
       
-      return this.convertOpenAIResponseToResults(result);
+      return this.convertOpenAIResponseToResults(validatedResponse);
     } catch (error) {
-      logger.error(`OpenAI batch embedding API error: ${error}`);
+      if (error instanceof Error && error.message.startsWith('Invalid embedding response:')) {
+        // For validation errors, add more context
+        logger.error(`OpenAI batch embedding response validation error: ${error.message}`);
+      } else {
+        // For API errors
+        logger.error(`OpenAI batch embedding API error: ${error}`);
+      }
       throw error; // Let the caller handle this
     }
   }
