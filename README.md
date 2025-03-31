@@ -207,13 +207,23 @@ personal-brain/
 │   │   │   ├── claude.ts       # Claude API integration
 │   │   │   └── embeddings.ts   # Embeddings service
 │   │   ├── context/         # Context management for data
-│   │   │   ├── noteContext.ts           # Note operations
-│   │   │   ├── profileContext.ts        # Profile operations
+│   │   │   ├── noteContext.ts           # Note operations facade
+│   │   │   ├── profileContext.ts        # Profile operations facade
 │   │   │   ├── externalSourceContext.ts # External knowledge sources
 │   │   │   └── sources/                 # External source implementations
 │   │   └── protocol/        # Interaction protocol
 │   │       └── brainProtocol.ts # Orchestrates model and context
 │   ├── models/           # Data models and validation
+│   ├── services/         # Service implementations
+│   │   ├── notes/        # Note-related services
+│   │   │   ├── noteRepository.ts        # Database operations for notes
+│   │   │   ├── noteEmbeddingService.ts  # Embedding operations for notes
+│   │   │   └── noteSearchService.ts     # Search functionality for notes
+│   │   └── profiles/     # Profile-related services 
+│   │       ├── profileRepository.ts     # Database operations for profiles
+│   │       ├── profileEmbeddingService.ts # Embedding operations for profiles
+│   │       ├── profileTagService.ts     # Tag generation for profiles
+│   │       └── profileSearchService.ts  # Search functionality for profiles
 │   ├── utils/            # Shared utility functions
 │   ├── cli.ts            # CLI interface
 │   ├── import.ts         # Import script
@@ -225,6 +235,23 @@ personal-brain/
 ├── drizzle.config.ts     # Drizzle ORM configuration
 └── package.json          # Project dependencies
 ```
+
+## Architecture
+
+The project uses a service-oriented architecture following the Single Responsibility Principle:
+
+1. **Facade Pattern**: The Context classes serve as facades over specialized services
+2. **Repository Pattern**: Data access is abstracted through repository classes
+3. **Service Layer**: Business logic is contained in focused service classes
+4. **MCP Architecture**: The overall system uses Model-Context-Protocol architecture
+
+### Recent Architectural Improvements
+
+The codebase has been refactored from monolithic context classes into a service-oriented architecture:
+
+- **NoteContext**: Previously 896 lines, now a lightweight facade over specialized services
+- **ProfileContext**: Converted to a facade over repository, embedding, tag, and search services
+- **Services**: Focused classes with single responsibilities for better maintainability and testing
 
 ## Development
 
@@ -247,6 +274,19 @@ bun test
 # Run tests with coverage
 bun test --coverage
 ```
+
+## Future Improvements
+
+The following improvements are planned for future development:
+
+1. **Additional Service Tests**: Create more unit tests for the new service classes
+2. **Service Interfaces**: Define interfaces for services to allow alternative implementations
+3. **Enhanced Documentation**: Document interactions between services with sequence diagrams
+4. **Performance Optimization**: Improve data access patterns and caching
+5. **Event System**: Implement an event system for better cross-service communication
+6. **Dependency Injection**: Add proper DI for better testability and flexibility
+7. **API Documentation**: Generate API documentation for service interfaces
+8. **Domain Events**: Implement domain events for better decoupling of services
 
 ### Testing
 
