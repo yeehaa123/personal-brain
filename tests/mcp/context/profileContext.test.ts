@@ -123,7 +123,7 @@ const mockNoteContext = {
     ];
   },
   
-  searchNotesWithEmbedding: async (embedding: number[], _limit: number = 5) => {
+  searchNotesWithEmbedding: async (_embedding: number[], _limit: number = 5) => {
     // Return notes with embeddings and similarity score
     return [
       {

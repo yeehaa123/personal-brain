@@ -19,10 +19,26 @@
     "skipLibCheck": true,
     "noFallthroughCasesInSwitch": true,
 
-    // Some stricter flags (disabled by default)
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    // Stricter type checking - core type safety
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "useUnknownInCatchVariables": true,
+    "alwaysStrict": true,
+    
+    // These are too strict for now, but good to add later
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
+
+    // These are helpful but not critical
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
     "noPropertyAccessFromIndexSignature": false,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     
     // Path aliases
     "baseUrl": ".",

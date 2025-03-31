@@ -9,7 +9,7 @@ import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceIn
 import type { Profile } from '@models/profile';
 import { EmbeddingService } from '@mcp/model/embeddings';
 import logger from '@utils/logger';
-import { relevanceConfig } from '@/config';
+import { relevanceConfig, aiConfig } from '@/config';
 
 // Import component classes
 import { PromptFormatter } from './components/promptFormatter';
@@ -102,6 +102,20 @@ export class BrainProtocol {
    */
   getUseExternalSources(): boolean {
     return this.useExternalSources;
+  }
+  
+  /**
+   * Check if Anthropic API key is available
+   */
+  hasAnthropicApiKey(): boolean {
+    return !!aiConfig.anthropic.apiKey;
+  }
+  
+  /**
+   * Check if OpenAI API key is available
+   */
+  hasOpenAIApiKey(): boolean {
+    return !!aiConfig.openAI.apiKey;
   }
 
   /**

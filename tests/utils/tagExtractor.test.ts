@@ -117,7 +117,7 @@ describe('Tag Extractor', () => {
   test('should limit the number of tags to maxTags', async () => {
     // For this test, we'll directly create a mock version of extractTags
     // that respects the maxTags parameter
-    const mockExtractTags = async (content: string, existingTags: string[], maxTags: number): Promise<string[]> => {
+    const mockExtractTags = async (_content: string, _existingTags: string[], maxTags: number): Promise<string[]> => {
       const allTags = ['ecosystem-architecture', 'innovation', 'collaboration', 'regenerative', 'decentralized'];
       return allTags.slice(0, maxTags);
     };
@@ -136,7 +136,7 @@ describe('Tag Extractor', () => {
   test('should fall back to keyword extraction if API call fails', async () => {
     // Create a test-specific mock of extractTags that simulates a failed API call
     // and falls back to keyword extraction
-    const mockExtractWithFallback = async (content: string, existingTags: string[], maxTags: number): Promise<string[]> => {
+    const mockExtractWithFallback = async (content: string, _existingTags: string[], maxTags: number): Promise<string[]> => {
       // Simulate extracting keywords from content
       const words = content.toLowerCase().split(/\s+/);
       const uniqueWords = [...new Set(words)].filter(word => word.length > 3);

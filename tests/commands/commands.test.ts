@@ -171,6 +171,8 @@ class MockCommandHandler {
         answer: 'Mock answer',
         citations: [],
         relatedNotes: [],
+        profile: undefined,
+        externalSources: undefined,
       };
     }
     

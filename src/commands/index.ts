@@ -35,7 +35,7 @@ export type CommandResult =
   | { type: 'note'; note: Note }
   | { type: 'tags'; tags: Array<{ tag: string; count: number }> }
   | { type: 'search'; query: string; notes: Note[] }
-  | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; profile?: Profile; externalSources?: ExternalCitation[] }
+  | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; profile: Profile | undefined; externalSources: ExternalCitation[] | undefined }
   | { type: 'external'; enabled: boolean; message: string }
   | {
     type: 'status'; status: {
@@ -288,7 +288,8 @@ export class CommandHandler {
       return { type: 'error', message: 'Please provide a question' };
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
+    // Use aiConfig to check for API key instead of direct process.env access
+    if (!this.brainProtocol.hasAnthropicApiKey()) {
       return { type: 'error', message: 'No Anthropic API key found. Set the ANTHROPIC_API_KEY environment variable to use this feature.' };
     }
 
@@ -340,8 +341,8 @@ export class CommandHandler {
    * Handle status command - check system status
    */
   private async handleStatus(): Promise<CommandResult> {
-    // Check API connection (simple test)
-    const apiConnected = !!process.env.ANTHROPIC_API_KEY || !!process.env.OPENAI_API_KEY;
+    // Check API connection using BrainProtocol methods
+    const apiConnected = this.brainProtocol.hasAnthropicApiKey() || this.brainProtocol.hasOpenAIApiKey();
 
     // Check database connection with a single operation
     let dbConnected = false;
