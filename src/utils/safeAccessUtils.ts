@@ -127,3 +127,13 @@ export function assertDefined<T>(
 export function isDefined<T>(value: T | undefined | null): value is T {
   return value !== undefined && value !== null;
 }
+
+/**
+ * Type guard for checking if a value is a non-empty string
+ * 
+ * @param value - The value to check
+ * @returns True if the value is a non-empty string
+ */
+export function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}

@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid';
 import { extractKeywords } from '@/utils/textUtils';
 import logger from '@/utils/logger';
 import { textConfig } from '@/config';
+import { isNonEmptyString, isDefined } from '@/utils/safeAccessUtils';
 
 export interface SearchOptions {
   query?: string;
@@ -42,14 +43,16 @@ export class NoteContext {
    */
   async createNote(note: Omit<Note, 'embedding'> & { embedding?: number[] }): Promise<string> {
     const now = new Date();
-    const id = note.id || nanoid();
+    const id = isDefined(note.id) ? note.id : nanoid();
+    const title = isNonEmptyString(note.title) ? note.title : 'Untitled Note';
+    const content = isNonEmptyString(note.content) ? note.content : '';
 
     let embedding = note.embedding;
 
     // Generate embedding if not provided
     if (!embedding) {
       try {
-        const combinedText = `${note.title} ${note.content}`;
+        const combinedText = `${title} ${content}`;
         const result = await this.embeddingService.getEmbedding(combinedText);
         embedding = result.embedding;
       } catch (error) {
@@ -60,17 +63,17 @@ export class NoteContext {
     // Insert the note with the embedding array directly
     await db.insert(notes).values({
       id,
-      title: note.title,
-      content: note.content,
-      embedding: embedding,
-      createdAt: note.createdAt || now,
-      updatedAt: note.updatedAt || now,
+      title,
+      content,
+      embedding,
+      createdAt: isDefined(note.createdAt) ? note.createdAt : now,
+      updatedAt: isDefined(note.updatedAt) ? note.updatedAt : now,
       tags: Array.isArray(note.tags) ? note.tags : undefined,
     });
 
     // If the note is long, also create chunks
-    if (note.content.length > 1000) {
-      await this.createNoteChunks(id, note.content);
+    if (content.length > 1000) {
+      await this.createNoteChunks(id, content);
     }
 
     return id;
@@ -97,15 +100,25 @@ export class NoteContext {
       const now = new Date();
 
       for (let i = 0; i < chunks.length; i++) {
-        // Use the embedding array directly
-        await db.insert(noteChunks).values({
-          id: nanoid(),
-          noteId,
-          content: chunks[i],
-          embedding: embeddingResults[i].embedding,
-          chunkIndex: i,
-          createdAt: now,
-        });
+        const chunkContent = chunks[i] || '';
+        
+        // Safety check for embedding results
+        if (i < embeddingResults.length && isDefined(embeddingResults[i])) {
+          const embedding = embeddingResults[i].embedding;
+          
+          // Use the embedding array directly
+          await db.insert(noteChunks).values({
+            id: nanoid(),
+            noteId,
+            content: chunkContent,
+            embedding,
+            chunkIndex: i,
+            createdAt: now,
+          });
+        } else {
+          // Handle missing embedding case
+          logger.warn(`Missing embedding for chunk ${i} of note ${noteId}, skipping`);
+        }
       }
     } catch (error) {
       logger.error(`Error creating note chunks: ${error}`);
@@ -116,7 +129,16 @@ export class NoteContext {
    * Search notes based on query text and/or tags with optional semantic search
    */
   async searchNotes(options: SearchOptions): Promise<Note[]> {
-    const { query, tags, limit = 10, offset = 0, semanticSearch = true } = options;
+    // Safely extract options with defaults
+    const limit = isDefined(options.limit) ? options.limit : 10;
+    const offset = isDefined(options.offset) ? options.offset : 0;
+    const semanticSearch = options.semanticSearch !== false; // Default to true
+    
+    // Handle query safely, ensuring it's a string
+    const query = isNonEmptyString(options.query) ? options.query : undefined;
+    
+    // Ensure tags is an array if present
+    const tags = Array.isArray(options.tags) ? options.tags : undefined;
 
     // If semantic search is enabled and there's a query, perform vector search
     if (semanticSearch && query) {
@@ -124,7 +146,13 @@ export class NoteContext {
     }
 
     // Otherwise, fall back to keyword search
-    return this.keywordSearch(options);
+    return this.keywordSearch({
+      query,
+      tags,
+      limit,
+      offset,
+      semanticSearch
+    });
   }
 
   /**

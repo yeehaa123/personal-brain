@@ -6,6 +6,7 @@ import logger from '../../../utils/logger';
 import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
 import { getEnv } from '../../../utils/configUtils';
+import { isDefined } from '../../../utils/safeAccessUtils';
 
 // Define interfaces for NewsAPI response structures
 interface NewsApiSourceInfo {
@@ -83,11 +84,15 @@ export class NewsApiSource implements ExternalSourceInterface {
       for (const article of searchResults) {
         const content = this.formatArticleContent(article);
         
+        const sourceName = isDefined(article.source) && article.source.name 
+          ? article.source.name
+          : 'Unknown Source';
+        
         const result: ExternalSourceResult = {
           content,
           title: article.title,
           url: article.url,
-          source: `${this.name} - ${article.source.name || 'Unknown Source'}`,
+          source: `${this.name} - ${sourceName}`,
           sourceType: 'news',
           timestamp: new Date(article.publishedAt),
           confidence: this.calculateConfidence(article, query),
@@ -128,7 +133,7 @@ export class NewsApiSource implements ExternalSourceInterface {
         },
       });
       
-      const data = await response.json();
+      const data = await response.json() as NewsApiResponse;
       return data.status === 'ok';
     } catch (error) {
       logger.error('NewsAPI not available:', error);
@@ -200,6 +205,7 @@ export class NewsApiSource implements ExternalSourceInterface {
     
     let content = '';
     
+    // Access optional fields with null-coalescing
     if (article.author) {
       content += `By ${article.author}\n`;
     }
@@ -231,7 +237,8 @@ export class NewsApiSource implements ExternalSourceInterface {
     confidence += Math.min(contentLength / 2000, 0.2); // Max 0.2 bonus for length
     
     // Recency factor (more recent articles get higher confidence)
-    const ageInHours = (Date.now() - new Date(article.publishedAt).getTime()) / (1000 * 60 * 60);
+    const publishDate = new Date(article.publishedAt);
+    const ageInHours = (Date.now() - publishDate.getTime()) / (1000 * 60 * 60);
     const recencyScore = Math.max(0, 0.2 * (1 - (ageInHours / this.maxAgeHours)));
     confidence += recencyScore; // Max 0.2 bonus for very recent articles
     
@@ -246,7 +253,8 @@ export class NewsApiSource implements ExternalSourceInterface {
       }
     });
     
-    confidence += Math.min(titleMatchCount / queryWords.length, 0.1); // Max 0.1 bonus
+    const queryWordCount = Math.max(1, queryWords.length); // Prevent division by zero
+    confidence += Math.min(titleMatchCount / queryWordCount, 0.1); // Max 0.1 bonus
     
     // Cap at 0.95 to leave room for semantic ranking
     return Math.min(confidence, 0.95);
