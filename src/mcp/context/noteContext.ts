@@ -1,10 +1,11 @@
-import { db } from '../../db';
-import { notes, noteChunks } from '../../db/schema';
+import { db } from '@/db';
+import { notes, noteChunks } from '@/db/schema';
 import { eq, like, and, or, desc, isNull, not } from 'drizzle-orm';
-import type { Note } from '../../models/note';
-import { EmbeddingService } from '../model/embeddings';
+import type { Note } from '@/models/note';
+import { EmbeddingService } from '@/mcp/model/embeddings';
 import { nanoid } from 'nanoid';
-import { extractKeywords } from '../../utils/textUtils';
+import { extractKeywords } from '@/utils/textUtils';
+import logger from '@/utils/logger';
 
 export interface SearchOptions {
   query?: string;
@@ -35,6 +36,8 @@ export class NoteContext {
 
   /**
    * Create a new note with embeddings
+   * @param note The note data to create
+   * @returns The ID of the created note
    */
   async createNote(note: Omit<Note, 'embedding'> & { embedding?: number[] }): Promise<string> {
     const now = new Date();
@@ -49,7 +52,7 @@ export class NoteContext {
         const result = await this.embeddingService.getEmbedding(combinedText);
         embedding = result.embedding;
       } catch (error) {
-        console.error('Error generating embedding:', error);
+        logger.error(`Error generating embedding: ${error}`);
       }
     }
 
@@ -61,7 +64,7 @@ export class NoteContext {
       embedding: embedding,
       createdAt: note.createdAt || now,
       updatedAt: note.updatedAt || now,
-      tags: Array.isArray(note.tags) ? (note.tags as string[]) : undefined,
+      tags: Array.isArray(note.tags) ? note.tags : undefined,
     });
 
     // If the note is long, also create chunks
@@ -74,6 +77,8 @@ export class NoteContext {
 
   /**
    * Create chunks for a note and generate embeddings for each chunk
+   * @param noteId The ID of the parent note
+   * @param content The content to chunk
    */
   private async createNoteChunks(noteId: string, content: string): Promise<void> {
     try {
@@ -98,7 +103,7 @@ export class NoteContext {
         });
       }
     } catch (error) {
-      console.error('Error creating note chunks:', error);
+      logger.error(`Error creating note chunks: ${error}`);
     }
   }
 
@@ -184,6 +189,11 @@ export class NoteContext {
 
   /**
    * Search using vector similarity
+   * @param query The search query
+   * @param tags Optional tags to filter by
+   * @param limit Maximum number of results
+   * @param offset Pagination offset
+   * @returns Array of matching notes
    */
   private async semanticSearch(query: string, tags?: string[], limit = 10, offset = 0): Promise<Note[]> {
     try {
@@ -191,37 +201,40 @@ export class NoteContext {
       const queryEmbedding = await this.embeddingService.getEmbedding(query);
 
       // Get all notes (with embeddings)
-      let notesWithEmbeddings = await db
+      const notesWithEmbeddings = await db
         .select()
         .from(notes)
         .where(not(isNull(notes.embedding)));
 
       // Filter by tags if provided
-      if (tags && tags.length > 0) {
-        notesWithEmbeddings = notesWithEmbeddings.filter(note => {
+      const filteredNotes = tags && tags.length > 0
+        ? notesWithEmbeddings.filter(note => {
           if (!note.tags) return false;
           return tags.some(tag => note.tags?.includes(tag));
-        });
-      }
+        })
+        : notesWithEmbeddings;
 
       // Calculate similarity scores
-      const scoredNotes: NoteWithScore[] = notesWithEmbeddings
+      const scoredNotes: NoteWithScore[] = filteredNotes
         .filter(note => note.embedding && note.embedding.length > 0)
         .map(note => {
+          if (!note.embedding) {
+            return { ...note, score: 0 }; // This shouldn't happen due to the filter above
+          }
           const score = this.embeddingService.cosineSimilarity(
             queryEmbedding.embedding,
-            note.embedding as number[],
+            note.embedding,
           );
           return { ...note, score };
         });
 
       // Sort by similarity score (highest first)
-      scoredNotes.sort((a, b) => (b.score || 0) - (a.score || 0));
+      scoredNotes.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
       // Apply pagination
       return scoredNotes.slice(offset, offset + limit);
     } catch (error) {
-      console.error('Error in semantic search:', error);
+      logger.error(`Error in semantic search: ${error}`);
       // Fall back to keyword search
       return this.keywordSearch({ query, tags, limit, offset });
     }
@@ -229,6 +242,9 @@ export class NoteContext {
 
   /**
    * Get related notes based on vector similarity
+   * @param noteId ID of the note to find related notes for
+   * @param maxResults Maximum number of results to return
+   * @returns Array of related notes
    */
   async getRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
     const sourceNote = await this.getNoteById(noteId);
@@ -253,20 +269,24 @@ export class NoteContext {
       const scoredNotes: NoteWithScore[] = otherNotes
         .filter(note => note.embedding && note.embedding.length > 0)
         .map(note => {
+          if (!note.embedding) {
+            return { ...note, score: 0 }; // This shouldn't happen due to the filter above
+          }
+          
           const score = this.embeddingService.cosineSimilarity(
-            sourceNote.embedding as number[],
-            note.embedding as number[],
+            sourceNote.embedding as number[], // We already checked this is not null above
+            note.embedding,
           );
           return { ...note, score };
         });
 
       // Sort by similarity score (highest first)
-      scoredNotes.sort((a, b) => (b.score || 0) - (a.score || 0));
+      scoredNotes.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
 
       // Return top matches
       return scoredNotes.slice(0, maxResults);
     } catch (error) {
-      console.error('Error finding related notes:', error);
+      logger.error(`Error finding related notes: ${error}`);
       return this.getKeywordRelatedNotes(noteId, maxResults);
     }
   }
@@ -274,6 +294,9 @@ export class NoteContext {
   /**
    * Search notes by embedding similarity (for profile integration)
    * Finds notes similar to a given embedding vector
+   * @param embedding The embedding vector to search with
+   * @param maxResults Maximum number of results to return
+   * @returns Array of similar notes
    */
   async searchNotesWithEmbedding(embedding: number[], maxResults = 5): Promise<Note[]> {
     try {
@@ -287,20 +310,24 @@ export class NoteContext {
       const scoredNotes: NoteWithScore[] = notesWithEmbeddings
         .filter(note => note.embedding && note.embedding.length > 0)
         .map(note => {
+          if (!note.embedding) {
+            return { ...note, score: 0 }; // This shouldn't happen due to the filter above
+          }
+          
           const score = this.embeddingService.cosineSimilarity(
             embedding,
-            note.embedding as number[],
+            note.embedding,
           );
           return { ...note, score };
         });
       
       // Sort by similarity score (highest first)
-      scoredNotes.sort((a, b) => (b.score || 0) - (a.score || 0));
+      scoredNotes.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
       
       // Return top matches
       return scoredNotes.slice(0, maxResults);
     } catch (error) {
-      console.error('Error searching notes with embedding:', error);
+      logger.error(`Error searching notes with embedding: ${error}`);
       return [];
     }
   }
@@ -350,6 +377,7 @@ export class NoteContext {
 
   /**
    * Generate or update embeddings for existing notes
+   * @returns Statistics on the update operation
    */
   async generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
     let updated = 0;
@@ -361,7 +389,7 @@ export class NoteContext {
       .from(notes)
       .where(isNull(notes.embedding));
 
-    console.log(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
+    logger.info(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
 
     for (const note of notesWithoutEmbeddings) {
       try {
@@ -380,10 +408,10 @@ export class NoteContext {
         }
 
         updated++;
-        console.log(`Updated embedding for note: ${note.id}`);
+        logger.info(`Updated embedding for note: ${note.id}`);
       } catch (error) {
         failed++;
-        console.error(`Failed to update embedding for note ${note.id}:`, error);
+        logger.error(`Failed to update embedding for note ${note.id}: ${error}`);
       }
     }
 
@@ -392,6 +420,7 @@ export class NoteContext {
   
   /**
    * Get the total count of notes in the database
+   * @returns The total number of notes
    */
   async getNoteCount(): Promise<number> {
     try {
@@ -399,7 +428,7 @@ export class NoteContext {
       const allNotes = await db.select({ id: notes.id }).from(notes);
       return allNotes.length;
     } catch (error) {
-      console.error('Error getting note count:', error);
+      logger.error(`Error getting note count: ${error}`);
       throw error;
     }
   }

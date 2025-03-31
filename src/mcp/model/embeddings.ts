@@ -1,28 +1,88 @@
+/**
+ * Embedding service for generating vector representations of text
+ * Provides both OpenAI API-based embeddings and fallback local embeddings
+ */
 import { cosineSimilarity, normalizeVector } from '@/utils/vectorUtils';
 import { prepareText, chunkText } from '@/utils/textUtils';
 import logger from '@/utils/logger';
 import { aiConfig } from '@/config';
+import type { OpenAI } from 'openai';
 
-export interface EmbeddingResult {
+// Type definitions for OpenAI API responses
+interface OpenAIEmbeddingData {
   embedding: number[];
+  index: number;
+  object: string;
+}
+
+interface OpenAIEmbeddingResponse {
+  data: OpenAIEmbeddingData[];
+  model: string;
+  object: string;
+  usage: {
+    prompt_tokens: number;
+    total_tokens: number;
+  };
+}
+
+/**
+ * Result of generating an embedding
+ */
+export interface EmbeddingResult {
+  /** The vector representation of the text */
+  embedding: number[];
+  /** Whether the input was truncated before embedding */
   truncated: boolean;
 }
 
+/**
+ * Configuration options for the embedding service
+ */
 export interface EmbeddingConfig {
+  /** OpenAI API key */
   apiKey?: string;
+  /** Model to use for embeddings (default: text-embedding-3-small) */
   embeddingModel?: string;
+  /** Dimension of the embedding vectors */
   embeddingDimension?: number;
 }
 
-export class EmbeddingService {
-  private apiKey: string;
-  private embeddingModel: string;
-  private embeddingDimension: number;
+/**
+ * Options for batch processing embeddings
+ */
+export interface BatchProcessingOptions {
+  /** Size of each batch when processing large requests */
+  batchSize?: number;
+  /** Whether to run requests in parallel */
+  parallel?: boolean;
+}
 
+/**
+ * OpenAI API embedding creation parameters
+ */
+interface OpenAIEmbeddingParams {
+  model: string;
+  input: string | string[];
+}
+
+/**
+ * Service for generating and working with text embeddings
+ */
+export class EmbeddingService {
+  private readonly apiKey: string;
+  private readonly embeddingModel: string;
+  private readonly embeddingDimension: number;
+  private readonly batchSize: number;
+
+  /**
+   * Create a new embedding service
+   * @param config Optional configuration to override defaults
+   */
   constructor(config?: EmbeddingConfig) {
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
     this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
     this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
+    this.batchSize = aiConfig.openAI.batchSize;
     
     logger.info(`Embedding service initialized (API key available: ${Boolean(this.apiKey)})`);
     
@@ -34,130 +94,162 @@ export class EmbeddingService {
   }
 
   /**
-   * Generate AI embeddings for text content using OpenAI's embedding API
-   * @param text The text to generate embeddings for
-   * @returns A vector representation of the text
+   * Generate an embedding for a single text
+   * @param text The text to embed
+   * @returns A promise resolving to the embedding result
    */
   async getEmbedding(text: string): Promise<EmbeddingResult> {
     if (!this.apiKey) {
       logger.debug('No API key available, using fallback embeddings');
-      return this.getFallbackEmbedding(text);
+      return this.generateFallbackEmbedding(text);
     }
 
-    const preparedText = this.prepareText(text);
+    const preparedText = prepareText(text);
     
     try {
       logger.debug('Generating embedding via OpenAI API');
-      const result = await this.callOpenAIEmbeddingAPI(preparedText);
-      return result;
+      return await this.callOpenAIEmbeddingAPI(preparedText);
     } catch (error) {
-      logger.error('Error using OpenAI API, using fallback embedding:', error);
-      return this.getFallbackEmbedding(text);
+      logger.error(`Error using OpenAI API, using fallback embedding: ${error}`);
+      return this.generateFallbackEmbedding(text);
     }
   }
   
-  /**
-   * Makes the actual API call to OpenAI for embeddings
-   * @param text Prepared text to embed
-   * @returns Embedding result
-   */
-  private async callOpenAIEmbeddingAPI(text: string): Promise<EmbeddingResult> {
-    // Use standard OpenAI library
-    const { OpenAI } = await import('openai');
-    const client = new OpenAI({ apiKey: this.apiKey });
-    
-    const result = await client.embeddings.create({
-      model: this.embeddingModel,
-      input: text,
-    });
-    
-    logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
-    
-    return {
-      embedding: result.data[0].embedding,
-      truncated: false,
-    };
-  }
-  
-  /**
-   * Create a simple hash from a string
-   */
-  private hashString(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash;
-  }
-
-  /**
-   * Generate a fallback embedding when no API key is available
-   * @param text The text to base the embedding on
-   * @returns A consistent embedding based on text content
-   */
-  private getFallbackEmbedding(text: string): EmbeddingResult {
-    logger.debug(`Generating fallback embedding for text (${text.length} chars)`);
-    
-    // Create a deterministic embedding based on text hash
-    const hash = this.hashString(text);
-    const embedding = Array(this.embeddingDimension).fill(0).map((_, i) => {
-      const x = Math.sin(hash + i * aiConfig.openAI.fallbackSeed) * aiConfig.openAI.fallbackMultiplier;
-      return (x - Math.floor(x)) * aiConfig.openAI.fallbackScaleFactor - aiConfig.openAI.fallbackOffset;
-    });
-    
-    // Normalize to unit length as OpenAI embeddings are normalized
-    const normalizedEmbedding = normalizeVector(embedding);
-    
-    return {
-      embedding: normalizedEmbedding,
-      truncated: false,
-    };
-  }
-
   /**
    * Generate embeddings for multiple texts in batch
    * @param texts An array of texts to generate embeddings for
-   * @returns An array of vector representations
+   * @param options Optional batch processing options
+   * @returns A promise resolving to an array of embedding results
    */
-  async getBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
+  async getBatchEmbeddings(
+    texts: string[],
+    options?: BatchProcessingOptions,
+  ): Promise<EmbeddingResult[]> {
+    // Handle empty input case
+    if (texts.length === 0) {
+      return [];
+    }
+    
     if (!this.apiKey) {
       logger.warn('No API key available, using fallback batch embeddings');
-      return Promise.all(texts.map(text => this.getFallbackEmbedding(text)));
+      return this.generateFallbackBatchEmbeddings(texts);
     }
 
     logger.info(`Generating embeddings for ${texts.length} texts using OpenAI API`);
     
     try {
       // Prepare the texts
-      const preparedTexts = texts.map(text => this.prepareText(text));
+      const preparedTexts = texts.map(prepareText);
       return await this.callOpenAIBatchEmbeddingAPI(preparedTexts);
     } catch (batchError) {
-      logger.error('Error using batch embedding API, falling back to individual processing:', batchError);
-      return this.processEmbeddingsInSmallBatches(texts);
+      logger.error(`Error using batch embedding API, falling back to individual processing: ${batchError}`);
+      return this.processEmbeddingsInSmallBatches(texts, options);
     }
   }
 
   /**
-   * Makes the actual API call to OpenAI for batch embeddings
+   * Calculate cosine similarity between two vectors
+   * @param vec1 First vector
+   * @param vec2 Second vector
+   * @returns Similarity score (-1 to 1)
+   */
+  cosineSimilarity(vec1: number[], vec2: number[]): number {
+    return cosineSimilarity(vec1, vec2);
+  }
+
+  /**
+   * Chunk a long text into smaller pieces for embedding
+   * @param text The text to chunk
+   * @param chunkSize The approximate size of each chunk
+   * @param overlap The number of characters to overlap between chunks
+   * @returns An array of text chunks
+   */
+  chunkText(
+    text: string, 
+    chunkSize = aiConfig.openAI.chunkSize || 512, 
+    overlap = aiConfig.openAI.chunkOverlap || 100,
+  ): string[] {
+    return chunkText(text, chunkSize, overlap);
+  }
+
+  /**
+   * Process a list of embeddings for text chunks and combine them
+   * @param textChunks Array of text chunks to embed
+   * @returns Promise resolving to array of embedding results
+   */
+  async getChunkedEmbeddings(textChunks: string[]): Promise<EmbeddingResult[]> {
+    return this.getBatchEmbeddings(textChunks);
+  }
+
+  /**
+   * Create an OpenAI client instance
+   * @returns Promise resolving to an OpenAI client
+   */
+  private async createOpenAIClient(): Promise<OpenAI> {
+    const { OpenAI } = await import('openai');
+    return new OpenAI({ apiKey: this.apiKey });
+  }
+
+  /**
+   * Makes the API call to OpenAI for a single embedding
+   * @param text Prepared text to embed
+   * @returns Promise resolving to the embedding result
+   */
+  private async callOpenAIEmbeddingAPI(text: string): Promise<EmbeddingResult> {
+    const client = await this.createOpenAIClient();
+    
+    const params: OpenAIEmbeddingParams = {
+      model: this.embeddingModel,
+      input: text,
+    };
+    
+    try {
+      const result = await client.embeddings.create(params) as unknown as OpenAIEmbeddingResponse;
+      
+      logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
+      
+      return {
+        embedding: result.data[0].embedding,
+        truncated: false,
+      };
+    } catch (error) {
+      logger.error(`OpenAI embedding API error: ${error}`);
+      throw error; // Let the caller handle this
+    }
+  }
+
+  /**
+   * Makes the API call to OpenAI for batch embeddings
    * @param texts Array of prepared texts to embed
-   * @returns Array of embedding results
+   * @returns Promise resolving to array of embedding results
    */
   private async callOpenAIBatchEmbeddingAPI(texts: string[]): Promise<EmbeddingResult[]> {
-    const { OpenAI } = await import('openai');
-    const client = new OpenAI({ apiKey: this.apiKey });
+    const client = await this.createOpenAIClient();
     
-    // Use the batch endpoint
-    const result = await client.embeddings.create({
+    const params: OpenAIEmbeddingParams = {
       model: this.embeddingModel,
       input: texts,
-    });
+    };
     
-    logger.debug(`Generated ${result.data.length} embeddings`);
-    
-    // Convert to our internal format
-    return result.data.map((item) => ({
+    try {
+      const result = await client.embeddings.create(params) as unknown as OpenAIEmbeddingResponse;
+      
+      logger.debug(`Generated ${result.data.length} embeddings in batch`);
+      
+      return this.convertOpenAIResponseToResults(result);
+    } catch (error) {
+      logger.error(`OpenAI batch embedding API error: ${error}`);
+      throw error; // Let the caller handle this
+    }
+  }
+
+  /**
+   * Convert OpenAI API response to our internal EmbeddingResult format
+   * @param response The response from OpenAI API
+   * @returns Array of embedding results
+   */
+  private convertOpenAIResponseToResults(response: OpenAIEmbeddingResponse): EmbeddingResult[] {
+    return response.data.map((item) => ({
       embedding: item.embedding,
       truncated: false,
     }));
@@ -166,10 +258,14 @@ export class EmbeddingService {
   /**
    * Process embeddings in smaller batches when the main batch API fails
    * @param texts The texts to process
-   * @returns Array of embedding results
+   * @param options Optional batch processing options
+   * @returns Promise resolving to array of embedding results
    */
-  private async processEmbeddingsInSmallBatches(texts: string[]): Promise<EmbeddingResult[]> {
-    const batchSize = aiConfig.openAI.batchSize;
+  private async processEmbeddingsInSmallBatches(
+    texts: string[],
+    options?: BatchProcessingOptions,
+  ): Promise<EmbeddingResult[]> {
+    const batchSize = options?.batchSize || this.batchSize;
     const results: EmbeddingResult[] = [];
     const totalBatches = Math.ceil(texts.length / batchSize);
     
@@ -189,32 +285,59 @@ export class EmbeddingService {
   }
 
   /**
-   * Prepare text for embedding by cleaning and normalizing
-   * @param text Text to prepare
-   * @returns Cleaned text
+   * Generate a single fallback embedding when API isn't available
+   * @param text The text to base the embedding on
+   * @returns A deterministic embedding based on text content
    */
-  private prepareText(text: string): string {
-    return prepareText(text);
+  private generateFallbackEmbedding(text: string): EmbeddingResult {
+    logger.debug(`Generating fallback embedding for text (${text.length} chars)`);
+    
+    // Create a deterministic embedding based on text hash
+    const hash = this.hashString(text);
+    const embedding = this.createDeterministicVector(hash);
+    
+    // Normalize to unit length as OpenAI embeddings are normalized
+    const normalizedEmbedding = normalizeVector(embedding);
+    
+    return {
+      embedding: normalizedEmbedding,
+      truncated: false,
+    };
   }
 
   /**
-   * Calculate cosine similarity between two vectors
-   * @param vec1 First vector
-   * @param vec2 Second vector
-   * @returns Similarity score (-1 to 1)
+   * Generate fallback embeddings for a batch of texts
+   * @param texts Array of texts to embed
+   * @returns Promise resolving to array of embedding results
    */
-  cosineSimilarity(vec1: number[], vec2: number[]): number {
-    return cosineSimilarity(vec1, vec2);
+  private async generateFallbackBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
+    return Promise.all(texts.map(text => this.generateFallbackEmbedding(text)));
   }
 
   /**
-   * Chunk a long text into smaller pieces
-   * @param text The text to chunk
-   * @param chunkSize The approximate size of each chunk
-   * @param overlap The number of characters to overlap between chunks
-   * @returns An array of text chunks
+   * Create a deterministic vector from a hash value
+   * @param hash The hash value to base the vector on
+   * @returns An array of numbers representing the vector
    */
-  chunkText(text: string, chunkSize = aiConfig.openAI.chunkSize || 512, overlap = aiConfig.openAI.chunkOverlap || 100): string[] {
-    return chunkText(text, chunkSize, overlap);
+  private createDeterministicVector(hash: number): number[] {
+    return Array(this.embeddingDimension).fill(0).map((_, i) => {
+      const x = Math.sin(hash + i * aiConfig.openAI.fallbackSeed) * aiConfig.openAI.fallbackMultiplier;
+      return (x - Math.floor(x)) * aiConfig.openAI.fallbackScaleFactor - aiConfig.openAI.fallbackOffset;
+    });
+  }
+
+  /**
+   * Create a simple hash from a string
+   * @param str The string to hash
+   * @returns A numeric hash value
+   */
+  private hashString(str: string): number {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
   }
 }
