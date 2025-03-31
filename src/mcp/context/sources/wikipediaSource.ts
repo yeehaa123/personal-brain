@@ -5,6 +5,55 @@ import logger from '../../../utils/logger';
 import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
 
+// Define interfaces for Wikipedia API response structures
+interface WikipediaSearchResult {
+  pageid: number;
+  title: string;
+  snippet: string;
+  size: number;
+  wordcount: number;
+  timestamp: string;
+}
+
+interface WikipediaSearchResponse {
+  query?: {
+    search?: WikipediaSearchResult[];
+  };
+  error?: {
+    code: string;
+    info: string;
+  };
+}
+
+interface WikipediaContentResponse {
+  query?: {
+    pages?: Record<number, {
+      pageid: number;
+      ns: number;
+      title: string;
+      extract?: string;
+    }>;
+  };
+  error?: {
+    code: string;
+    info: string;
+  };
+}
+
+interface WikipediaSiteInfoResponse {
+  query?: {
+    general?: {
+      sitename: string;
+      [key: string]: unknown;
+    };
+  };
+  sitename?: string;
+  error?: {
+    code: string;
+    info: string;
+  };
+}
+
 export class WikipediaSource implements ExternalSourceInterface {
   readonly name = 'Wikipedia';
   private embeddingService: EmbeddingService | null = null;
@@ -80,7 +129,7 @@ export class WikipediaSource implements ExternalSourceInterface {
   async checkAvailability(): Promise<boolean> {
     try {
       const response = await fetch(`${this.baseUrl}?action=query&meta=siteinfo&siprop=general&format=json`);
-      const data = await response.json();
+      const data = await response.json() as WikipediaSiteInfoResponse;
       // Handle both response formats: nested format with data.query.general or flat format with data.sitename
       return !!(data && (data.query?.general || data.sitename));
     } catch (error) {
@@ -92,7 +141,7 @@ export class WikipediaSource implements ExternalSourceInterface {
   /**
    * Get metadata about the Wikipedia source
    */
-  async getSourceMetadata(): Promise<Record<string, any>> {
+  async getSourceMetadata(): Promise<Record<string, unknown>> {
     return {
       name: this.name,
       type: 'encyclopedia',
@@ -106,7 +155,7 @@ export class WikipediaSource implements ExternalSourceInterface {
   /**
    * Search Wikipedia for articles matching the query
    */
-  private async searchWikipedia(query: string, limit: number): Promise<any[]> {
+  private async searchWikipedia(query: string, limit: number): Promise<WikipediaSearchResult[]> {
     const searchUrl = new URL(this.baseUrl);
     searchUrl.searchParams.append('action', 'query');
     searchUrl.searchParams.append('list', 'search');
@@ -126,7 +175,7 @@ export class WikipediaSource implements ExternalSourceInterface {
         throw new Error(`Wikipedia search API responded with ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data = await response.json() as WikipediaSearchResponse;
       return data.query?.search || [];
     } catch (error) {
       logger.error('Error in Wikipedia search:', error);
@@ -158,7 +207,7 @@ export class WikipediaSource implements ExternalSourceInterface {
         throw new Error(`Wikipedia content API responded with ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data = await response.json() as WikipediaContentResponse;
       const page = data.query?.pages?.[pageId];
       return page?.extract || 'No content available.';
     } catch (error) {
@@ -170,7 +219,7 @@ export class WikipediaSource implements ExternalSourceInterface {
   /**
    * Calculate a confidence score for the result
    */
-  private calculateConfidence(article: any): number {
+  private calculateConfidence(article: WikipediaSearchResult): number {
     // Simple confidence score based on word count and position in results
     const wordCount = article.wordcount || 0;
     // Higher word count generally indicates more detailed articles

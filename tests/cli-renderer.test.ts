@@ -11,9 +11,8 @@ describe('CLIRenderer', () => {
   let renderer: CLIRenderer;
   let mockNotes: Note[];
   let trackers: ReturnType<typeof createTrackers>;
-  let originalCLI: any;
-  let originalLogger: any;
-  let originalDisplayNotes: any;
+  let originalCLI: Record<string, unknown>;
+  let originalLogger: Record<string, unknown>;
 
   beforeEach(() => {
     renderer = new CLIRenderer();
@@ -25,7 +24,7 @@ describe('CLIRenderer', () => {
     originalLogger = mockLogger(logger);
 
     // Mock displayNotes function
-    originalDisplayNotes = mockDisplayNotes(displayNotes, trackers);
+    mockDisplayNotes(displayNotes, trackers);
   });
 
   afterEach(() => {

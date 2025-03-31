@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach, beforeAll, afterEach, mock, spyOn } from 'bun:test';
+import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { ExternalSourceContext } from '../src/mcp/context/externalSourceContext';
 import { WikipediaSource } from '../src/mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '../src/mcp/context/sources/newsApiSource';
@@ -31,7 +31,18 @@ class MockExternalSource implements ExternalSourceInterface {
   public searchCalled = false;
   public availabilityCalled = false;
   
-  constructor(private available: boolean = true, private results: any[] = []) {}
+  constructor(
+    private available: boolean = true, 
+    private results: Array<{
+      content: string;
+      title: string;
+      url: string;
+      source: string;
+      sourceType: string;
+      timestamp: Date;
+      confidence: number;
+    }> = [],
+  ) {}
   
   async search() {
     this.searchCalled = true;
@@ -103,10 +114,12 @@ describe('ExternalSourceContext', () => {
   test('should return enabled sources', () => {
     // Create a mock source with the right name
     const mockSource1 = new MockExternalSource(true);
-    mockSource1.name = 'MockSource1' as any;
+    // Use a temporary workaround to set readonly property for testing
+    Object.defineProperty(mockSource1, 'name', { value: 'MockSource1' });
     
     const mockSource2 = new MockExternalSource(true);
-    mockSource2.name = 'MockSource2' as any;
+    // Use a temporary workaround to set readonly property for testing
+    Object.defineProperty(mockSource2, 'name', { value: 'MockSource2' });
     
     const context = new ExternalSourceContext('test-api-key', undefined, {
       enabledSources: ['MockSource1'],

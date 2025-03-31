@@ -5,7 +5,7 @@ import { mockLogger, restoreLogger } from './mocks';
 import { captureOutput } from './test-utils';
 
 // Store the original logger methods
-let originalLogger: any;
+let originalLogger: Record<string, unknown>;
 
 describe('CLIInterface', () => {
   
@@ -83,7 +83,7 @@ describe('CLIInterface', () => {
     });
     
     test('should use formatter for values when provided', () => {
-      const formatter = (val) => `[${val}]`;
+      const formatter = (val: string): string => `[${val}]`;
       expect(formatter('value')).toBe('[value]');
     });
     

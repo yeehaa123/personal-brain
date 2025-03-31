@@ -1,6 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { CommandHandler } from '../src/commands';
-import { createMockEmbedding, createMockNote, createMockProfile, mockEnv, resetMocks } from './mocks';
+import { createMockNote, createMockProfile, mockEnv, resetMocks } from './mocks';
 
 // Define the mock notes outside to reduce duplication
 const mockEcosystemNote = createMockNote('note-1', 'Ecosystem Architecture Principles', ['ecosystem-architecture', 'innovation']);
@@ -15,14 +15,14 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
       getProfileContext() {
         return {
           getProfile: async () => createMockProfile('mock-profile-id'),
-          extractProfileKeywords: (profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
+          extractProfileKeywords: (_profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
           findRelatedNotes: async () => [mockEcosystemNote],
         };
       }
 
       getNoteContext() {
         return {
-          searchNotes: async ({ query, tags, limit }) => {
+          searchNotes: async ({ query, tags, limit: _limit }) => {
             // For list command with tag
             if (tags && tags.includes('ecosystem')) {
               return [
@@ -82,7 +82,6 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
 
 describe('CommandHandler', () => {
   let commandHandler;
-  let originalLogger;
 
   beforeAll(() => {
     mockEnv();

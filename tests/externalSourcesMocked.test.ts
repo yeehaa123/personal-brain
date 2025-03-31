@@ -1,11 +1,10 @@
 /**
  * Tests for external sources with all network calls properly mocked
  */
-import { describe, test, expect, mock, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
+import { describe, test, expect, mock, beforeEach, beforeAll, afterAll } from 'bun:test';
 import { WikipediaSource } from '../src/mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '../src/mcp/context/sources/newsApiSource';
 import { ExternalSourceContext } from '../src/mcp/context/externalSourceContext';
-import { EmbeddingService } from '../src/mcp/model/embeddings';
 
 // Mock the EmbeddingService to prevent any actual API calls
 mock.module('../src/mcp/model/embeddings', () => {
@@ -29,11 +28,11 @@ mock.module('../src/mcp/model/embeddings', () => {
         }));
       }
       
-      cosineSimilarity(vec1, vec2) {
+      cosineSimilarity(_vec1, _vec2) {
         return 0.5; // Mock similarity
       }
       
-      chunkText(text, chunkSize, overlap) {
+      chunkText(_text, _chunkSize, _overlap) {
         return ['chunk1', 'chunk2'];
       }
     },
@@ -60,7 +59,7 @@ describe('External Sources (Fully Mocked)', () => {
   // Set up the mock once for all tests
   beforeAll(() => {
     // Create and apply the mock fetch with detailed logging
-    mockFetch = mock((url, options) => {
+    mockFetch = mock((url, _options) => {
       console.log(`MOCK FETCH CALLED WITH: ${url}`);
       
       // Default response for unspecified URLs

@@ -2,14 +2,14 @@
  * Test utilities for the personal-brain project
  */
 import { CLIInterface } from '../src/utils/cliInterface';
-import logger from '../src/utils/logger';
+import { createTrackers } from './mocks';
 
 /**
  * Mock CLIInterface methods and track calls
  * @param trackers Object to store tracked function calls
  * @returns Original CLIInterface methods for restoration
  */
-export function mockCLIInterface(trackers: any) {
+export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
   // Store original methods
   const original = {
     displayTitle: CLIInterface.displayTitle,
@@ -94,7 +94,7 @@ export function mockCLIInterface(trackers: any) {
  * Restore original CLIInterface methods
  * @param original Original methods to restore
  */
-export function restoreCLIInterface(original: any) {
+export function restoreCLIInterface(original: Record<string, unknown>) {
   // Restore methods
   CLIInterface.displayTitle = original.displayTitle;
   CLIInterface.displaySubtitle = original.displaySubtitle;
@@ -137,12 +137,15 @@ export function captureOutput() {
  * @param trackers Object to store tracked function calls
  * @returns Original displayNotes function for restoration
  */
-export function mockDisplayNotes(displayNotes: any, trackers: any) {
+export function mockDisplayNotes(
+  displayNotes: (notes: unknown[], options?: Record<string, unknown>) => void, 
+  trackers: ReturnType<typeof createTrackers>,
+) {
   const originalDisplayNotes = displayNotes;
   
-  // Cast to any to allow property assignment
-  (global as any).displayNotes = function(notes: any) {
-    trackers.displayNotesCalls.push(notes);
+  // Cast to allow property assignment
+  (global as unknown).displayNotes = function(notes: unknown[], options?: Record<string, unknown>) {
+    trackers.displayNotesCalls.push({ notes, options });
   };
   
   return originalDisplayNotes;
@@ -155,7 +158,11 @@ export function mockDisplayNotes(displayNotes: any, trackers: any) {
  * @param mockImpl The mock implementation
  * @returns Original function for restoration
  */
-export function mockFunction(module: any, functionName: string, mockImpl: (...args: unknown[]) => unknown) {
+export function mockFunction(
+  module: Record<string, unknown>, 
+  functionName: string, 
+  mockImpl: (...args: unknown[]) => unknown,
+): unknown {
   const originalFn = module[functionName];
   module[functionName] = mockImpl;
   return originalFn;

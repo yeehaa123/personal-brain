@@ -1,7 +1,6 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { ProfileContext } from '../src/mcp/context/profileContext';
 import { createMockEmbedding, mockEnv, resetMocks } from './mocks';
-import { db } from '../src/db';
 
 // Mock database
 mock.module('../src/db', () => {
@@ -93,7 +92,7 @@ mock.module('../src/db', () => {
 
 // Mock NoteContext
 const mockNoteContext = {
-  searchNotes: async ({ query, tags, limit, includeContent }) => {
+  searchNotes: async ({ query: _query, tags: _tags, limit: _limit, includeContent }) => {
     // Always return notes with ecosystem tags for testing
     return [
       {
@@ -114,7 +113,7 @@ const mockNoteContext = {
       },
     ];
   },
-  searchNotesWithEmbedding: async (embedding, limit) => {
+  searchNotesWithEmbedding: async (_embedding: unknown, _limit: unknown) => {
     return [
       {
         id: 'note-4',
@@ -127,7 +126,7 @@ const mockNoteContext = {
       },
     ];
   },
-  getRecentNotes: async (limit) => {
+  getRecentNotes: async (_limit: unknown) => {
     return [
       {
         id: 'note-5',
@@ -144,7 +143,7 @@ const mockNoteContext = {
 // Mock tag extraction
 mock.module('../src/utils/tagExtractor', () => {
   return {
-    extractTags: async (content, existingTags, maxTags) => {
+    extractTags: async (_content: unknown, _existingTags: unknown, _maxTags: unknown) => {
       // Always return ecosystem architecture tags for our tests
       return ['ecosystem-architecture', 'innovation', 'collaboration', 'regenerative', 'decentralized'];
     },
@@ -215,8 +214,10 @@ describe('ProfileContext', () => {
     const profile = await profileContext.getProfile();
     
     if (profile) {
-      // Access the private method using type assertion
-      const profileText = (profileContext as any).getProfileTextForEmbedding(profile);
+      // Access the private method using a type assertion to unknown first
+      const profileText = (profileContext as unknown as { 
+        getProfileTextForEmbedding: (profile: typeof profile) => string 
+      }).getProfileTextForEmbedding(profile);
       
       expect(profileText).toBeDefined();
       expect(typeof profileText).toBe('string');
@@ -244,7 +245,13 @@ describe('ProfileContext', () => {
   
   test('should find similar tags between profile and notes', async () => {
     const profileTags = ['ecosystem-architecture', 'innovation', 'collaboration'];
-    const result = await (profileContext as any).findNotesWithSimilarTags(mockNoteContext, profileTags, 3);
+    const result = await (profileContext as unknown as { 
+      findNotesWithSimilarTags: (
+        noteContext: typeof mockNoteContext, 
+        tags: string[], 
+        limit: number
+      ) => Promise<Array<unknown>>
+    }).findNotesWithSimilarTags(mockNoteContext, profileTags, 3);
     
     expect(result).toBeDefined();
     expect(Array.isArray(result)).toBe(true);

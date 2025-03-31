@@ -237,7 +237,7 @@ export class BrainProtocol {
       // Calculate similarity score between query and profile
       const similarity = this.embeddingService.cosineSimilarity(
         queryEmbedding.embedding,
-        this.profile.embedding as any,
+        this.profile.embedding as number[],
       );
 
       // Scale the similarity to be more decisive

@@ -113,8 +113,10 @@ describe('NoteContext', () => {
   });
 
   test('extractKeywords should extract meaningful keywords', () => {
-    // Access the private method using any type assertion
-    const keywords = (context as any).extractKeywords(
+    // Access the private method using a type assertion to unknown first
+    const keywords = (context as unknown as { 
+      extractKeywords: (text: string) => string[] 
+    }).extractKeywords(
       'This is a test document with important keywords about artificial intelligence and machine learning',
     );
     

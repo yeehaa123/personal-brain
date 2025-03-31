@@ -1,6 +1,5 @@
 import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
 import { displayNotes, formatNotePreview, getExcerpt } from '../src/utils/noteUtils';
-import { CLIInterface } from '../src/utils/cliInterface';
 import type { Note } from '../src/models/note';
 import logger from '../src/utils/logger';
 import { createMockNotes, createTrackers, mockLogger, restoreLogger } from './mocks';
@@ -9,8 +8,8 @@ import { mockCLIInterface, restoreCLIInterface } from './test-utils';
 describe('noteUtils', () => {
   let mockNotes: Note[];
   let trackers: ReturnType<typeof createTrackers>;
-  let originalCLI: any;
-  let originalLogger: any;
+  let originalCLI: Record<string, unknown>;
+  let originalLogger: Record<string, unknown>;
   
   beforeEach(() => {
     // Create sample notes for testing

@@ -85,6 +85,23 @@ export function createMockProfile(id: string = 'mock-profile-id'): Profile {
   };
 }
 
+// Define tracker interfaces
+interface DisplayListCall {
+  items: unknown[];
+  formatter?: (item: unknown, index: number) => string;
+}
+
+interface DisplayNotesCall {
+  notes: unknown[];
+  options?: Record<string, unknown>;
+}
+
+interface PrintLabelValueCall {
+  label: string;
+  value: unknown;
+  options?: Record<string, unknown>;
+}
+
 // Create tracking objects for CLI interface call monitoring
 export function createTrackers() {
   return {
@@ -95,14 +112,22 @@ export function createTrackers() {
     successCalls: [] as string[],
     infoCalls: [] as string[],
     printCalls: [] as string[],
-    displayListCalls: [] as any[],
-    displayNotesCalls: [] as any[],
-    printLabelValueCalls: [] as any[],
+    displayListCalls: [] as DisplayListCall[],
+    displayNotesCalls: [] as DisplayNotesCall[],
+    printLabelValueCalls: [] as PrintLabelValueCall[],
   };
 }
 
+// Logger interface
+interface Logger {
+  info: (message: string, ...args: unknown[]) => void;
+  debug: (message: string, ...args: unknown[]) => void;
+  warn: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
+}
+
 // Mock logger functions
-export function mockLogger(logger: any) {
+export function mockLogger(logger: Logger): Record<string, unknown> {
   const original = {
     info: logger.info,
     debug: logger.debug,
@@ -119,11 +144,11 @@ export function mockLogger(logger: any) {
 }
 
 // Restore logger functions
-export function restoreLogger(logger: any, original: any) {
-  logger.info = original.info;
-  logger.debug = original.debug;
-  logger.warn = original.warn;
-  logger.error = original.error;
+export function restoreLogger(logger: Logger, original: Record<string, unknown>): void {
+  logger.info = original.info as typeof logger.info;
+  logger.debug = original.debug as typeof logger.debug;
+  logger.warn = original.warn as typeof logger.warn;
+  logger.error = original.error as typeof logger.error;
 }
 
 // Mock environment setup

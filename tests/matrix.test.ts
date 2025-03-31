@@ -1,7 +1,5 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { MatrixBrainInterface } from '../src/interfaces/matrix';
-import { CommandHandler } from '../src/commands';
-import { MatrixRenderer } from '../src/commands/matrix-renderer';
 import { createMockEmbedding, mockEnv, resetMocks } from './mocks';
 
 // Mock matrix-js-sdk
@@ -17,8 +15,8 @@ mock.module('matrix-js-sdk', () => {
       },
       on: () => {},
       joinRoom: () => Promise.resolve(),
-      sendMessage: (roomId: string, content: any) => Promise.resolve(),
-      sendHtmlMessage: (roomId: string, text: string, html: string) => Promise.resolve(),
+      sendMessage: (_roomId: string, _content: Record<string, unknown>) => Promise.resolve(),
+      sendHtmlMessage: (_roomId: string, _text: string, _html: string) => Promise.resolve(),
     }),
     ClientEvent: { Sync: 'sync' },
     RoomEvent: { Timeline: 'Room.timeline' },
@@ -65,7 +63,7 @@ mock.module('../src/mcp/protocol/brainProtocol', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
           }),
-          extractProfileKeywords: (profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
+          extractProfileKeywords: (_profile) => ['ecosystem', 'architect', 'innovation', 'collaboration'],
           findRelatedNotes: async () => [
             {
               id: 'note-1',
@@ -165,7 +163,7 @@ mock.module('../src/commands/matrix-renderer', () => {
         this.sendMessageFn = sendMessageFn;
       }
       
-      renderHelp(roomId, commands) {
+      renderHelp(roomId, _commands) {
         this.sendMessageFn(roomId, 'Mock help: Personal Brain Commands, profile');
       }
       
@@ -183,7 +181,7 @@ mock.module('../src/commands/matrix-renderer', () => {
 });
 
 describe('MatrixBrainInterface', () => {
-  let matrixInterface: any;
+  let matrixInterface: MatrixBrainInterface;
   let sentMessages: Array<{roomId: string, message: string}> = [];
   
   beforeAll(() => {
@@ -213,7 +211,7 @@ describe('MatrixBrainInterface', () => {
     
     // Override the renderer to use our mocked sendMessage
     matrixInterface.renderer = {
-      renderHelp: (roomId, commands) => {
+      renderHelp: (roomId, _commands) => {
         sentMessages.push({ 
           roomId, 
           message: 'Mock help: Personal Brain Commands, profile', 

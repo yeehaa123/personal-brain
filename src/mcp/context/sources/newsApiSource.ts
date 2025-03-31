@@ -6,6 +6,31 @@ import logger from '../../../utils/logger';
 import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
 
+// Define interfaces for NewsAPI response structures
+interface NewsApiSourceInfo {
+  id: string | null;
+  name: string | null;
+}
+
+interface NewsApiArticle {
+  source: NewsApiSourceInfo;
+  author: string | null;
+  title: string;
+  description: string | null;
+  url: string;
+  urlToImage: string | null;
+  publishedAt: string;
+  content: string | null;
+}
+
+interface NewsApiResponse {
+  status: string;
+  totalResults?: number;
+  articles?: NewsApiArticle[];
+  message?: string;
+  code?: string;
+}
+
 export class NewsApiSource implements ExternalSourceInterface {
   readonly name = 'NewsAPI';
   private embeddingService: EmbeddingService | null = null;
@@ -113,7 +138,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Get metadata about the NewsAPI source
    */
-  async getSourceMetadata(): Promise<Record<string, any>> {
+  async getSourceMetadata(): Promise<Record<string, unknown>> {
     return {
       name: this.name,
       type: 'news',
@@ -129,7 +154,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Search NewsAPI "everything" endpoint
    */
-  private async searchEverything(query: string, limit: number): Promise<any[]> {
+  private async searchEverything(query: string, limit: number): Promise<NewsApiArticle[]> {
     // Calculate date range (last maxAgeHours)
     const fromDate = new Date();
     fromDate.setHours(fromDate.getHours() - this.maxAgeHours);
@@ -152,7 +177,7 @@ export class NewsApiSource implements ExternalSourceInterface {
         throw new Error(`NewsAPI responded with ${response.status}: ${response.statusText}`);
       }
       
-      const data = await response.json();
+      const data = await response.json() as NewsApiResponse;
       
       if (data.status !== 'ok') {
         logger.error(`NewsAPI error: ${data.message || 'Unknown error'}`);
@@ -169,7 +194,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Format article content for consistent presentation
    */
-  private formatArticleContent(article: any): string {
+  private formatArticleContent(article: NewsApiArticle): string {
     const publishedDate = new Date(article.publishedAt).toLocaleString();
     
     let content = '';
@@ -196,7 +221,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Calculate a confidence score for the result
    */
-  private calculateConfidence(article: any, query: string): number {
+  private calculateConfidence(article: NewsApiArticle, query: string): number {
     // Base confidence starts at 0.5
     let confidence = 0.5;
     

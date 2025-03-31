@@ -1,6 +1,5 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
+import { test, expect, describe, mock, beforeAll, afterAll } from 'bun:test';
 import { extractTags } from '../src/utils/tagExtractor';
-import { extractKeywords } from '../src/utils/textUtils';
 import { mockEnv, resetMocks } from './mocks';
 
 // Mock Anthropic
