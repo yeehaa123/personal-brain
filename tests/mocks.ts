@@ -1,8 +1,8 @@
 /**
  * Common test mocks for the personal-brain project
  */
-import type { Note } from '../src/models/note';
-import type { Profile } from '../src/models/profile';
+import type { Note } from '@models/note';
+import type { Profile } from '@models/profile';
 
 // Mock deterministic embeddings for tests
 export function createMockEmbedding(input: string, dimensions: number = 1536): number[] {
@@ -36,6 +36,7 @@ export function createMockNote(id: string, title: string, tags: string[] = []): 
     title,
     content: `This is the content of ${title}`,
     tags,
+    embedding: null,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-02'),
   };
@@ -53,31 +54,54 @@ export function createMockNotes(): Note[] {
 export function createMockProfile(id: string = 'mock-profile-id'): Profile {
   return {
     id,
+    publicIdentifier: null,
+    profilePicUrl: null,
+    backgroundCoverImageUrl: null,
+    firstName: 'John',
+    lastName: 'Doe',
     fullName: 'John Doe',
-    occupation: 'Ecosystem Architect',
+    followerCount: null,
     headline: 'Innovator | Thinker | Community Builder',
     summary: 'I build ecosystems that foster innovation and collaboration.',
+    occupation: 'Ecosystem Architect',
+    country: null,
+    countryFullName: 'Futureland',
+    city: 'Innovation City',
+    state: 'Creative State',
     experiences: [
       {
         title: 'Ecosystem Architect',
         company: 'Ecosystem Corp',
         description: 'Building regenerative ecosystem architectures',
-        startDate: '2020-01',
-        endDate: null,
+        starts_at: { day: 1, month: 1, year: 2020 },
+        ends_at: null,
+        company_linkedin_profile_url: null,
+        company_facebook_profile_url: null,
+        location: null,
+        logo_url: null,
       },
     ],
     education: [
       {
-        degree: 'PhD in Systemic Design',
+        degree_name: 'PhD in Systemic Design',
         school: 'University of Innovation',
-        startDate: '2010-01',
-        endDate: '2014-01',
+        starts_at: { day: 1, month: 1, year: 2010 },
+        ends_at: { day: 1, month: 1, year: 2014 },
+        field_of_study: null,
+        school_linkedin_profile_url: null,
+        school_facebook_profile_url: null,
+        description: null,
+        logo_url: null,
+        grade: null,
+        activities_and_societies: null,
       },
     ],
     languages: ['English', 'JavaScript', 'Python'],
-    city: 'Innovation City',
-    state: 'Creative State',
-    countryFullName: 'Futureland',
+    languagesAndProficiencies: null,
+    accomplishmentPublications: null,
+    accomplishmentHonorsAwards: null,
+    accomplishmentProjects: null,
+    volunteerWork: null,
     embedding: createMockEmbedding('John Doe profile'),
     tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
     createdAt: new Date(),
@@ -96,11 +120,8 @@ interface DisplayNotesCall {
   options?: Record<string, unknown>;
 }
 
-interface PrintLabelValueCall {
-  label: string;
-  value: unknown;
-  options?: Record<string, unknown>;
-}
+// Using array for backward compatibility with existing tests
+export type PrintLabelValueCall = [string, unknown, Record<string, unknown>?];
 
 // Create tracking objects for CLI interface call monitoring
 export function createTrackers() {

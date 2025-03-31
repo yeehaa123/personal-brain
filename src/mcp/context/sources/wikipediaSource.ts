@@ -62,7 +62,7 @@ export class WikipediaSource implements ExternalSourceInterface {
 
   constructor(apiKey?: string) {
     if (apiKey) {
-      this.embeddingService = new EmbeddingService(apiKey);
+      this.embeddingService = new EmbeddingService({ apiKey });
       logger.debug('Wikipedia source initialized with embedding service');
     } else {
       logger.debug('Wikipedia source initialized without embedding service');

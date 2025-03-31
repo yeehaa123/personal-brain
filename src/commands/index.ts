@@ -27,6 +27,7 @@ import type { ExternalSourceContext } from '../mcp/context/externalSourceContext
 
 export type CommandResult =
   | { type: 'error'; message: string }
+  | { type: 'help'; commands: CommandInfo[] }
   | { type: 'profile'; profile: Profile }
   | { type: 'profile-related'; profile: Profile; relatedNotes: Note[]; matchType: 'tags' | 'semantic' | 'keyword' }
   | { type: 'notes'; notes: Note[]; title?: string }

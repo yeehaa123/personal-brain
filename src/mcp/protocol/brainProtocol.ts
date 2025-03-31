@@ -47,7 +47,7 @@ export class BrainProtocol {
     this.context = new NoteContext(apiKey);
     this.profileContext = new ProfileContext(apiKey);
     this.externalContext = new ExternalSourceContext(apiKey, newsApiKey);
-    this.embeddingService = new EmbeddingService(apiKey);
+    this.embeddingService = new EmbeddingService(apiKey ? { apiKey } : undefined);
     this.useExternalSources = useExternalSources;
 
     // Load profile asynchronously

@@ -2,9 +2,9 @@
  * Common type definitions for tests
  */
 
-import { Note } from '../src/models/note';
-import { Profile } from '../src/models/profile';
-import { ExternalSourceResult } from '../src/mcp/context/sources/externalSourceInterface';
+import type { Note } from '@models/note';
+import type { Profile } from '@models/profile';
+import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
 
 // Mock function types
 export type MockFunction<T extends (...args: unknown[]) => unknown> = {

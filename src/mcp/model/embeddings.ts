@@ -1,25 +1,34 @@
 import { cosineSimilarity, normalizeVector } from '../../utils/vectorUtils';
 import { prepareText, chunkText } from '../../utils/textUtils';
+import logger from '../../utils/logger';
 
 export interface EmbeddingResult {
   embedding: number[];
   truncated: boolean;
 }
 
+export interface EmbeddingConfig {
+  apiKey?: string;
+  embeddingModel?: string;
+  embeddingDimension?: number;
+}
+
 export class EmbeddingService {
   private apiKey: string;
-  private embeddingModel: string = 'text-embedding-3-small';
-  private embeddingDimension: number = 1536; // OpenAI embedding dimensions
+  private embeddingModel: string;
+  private embeddingDimension: number;
 
-  constructor(apiKey?: string) {
-    this.apiKey = apiKey || process.env.OPENAI_API_KEY || '';
-    console.log(`API Key available: ${Boolean(this.apiKey)}`);
+  constructor(config?: EmbeddingConfig) {
+    this.apiKey = config?.apiKey || process.env.OPENAI_API_KEY || '';
+    this.embeddingModel = config?.embeddingModel || 'text-embedding-3-small';
+    this.embeddingDimension = config?.embeddingDimension || 1536;
     
-    try {
-      console.log('Using OpenAI for embeddings');
-    } catch (error) {
-      console.error('Error initializing embeddings:', error);
-      throw error;
+    logger.info(`Embedding service initialized (API key available: ${Boolean(this.apiKey)})`);
+    
+    if (this.apiKey) {
+      logger.info(`Using OpenAI model: ${this.embeddingModel}`);
+    } else {
+      logger.warn('No API key available, will use fallback embeddings');
     }
   }
 
@@ -29,40 +38,44 @@ export class EmbeddingService {
    * @returns A vector representation of the text
    */
   async getEmbedding(text: string): Promise<EmbeddingResult> {
-    try {
-      if (!this.apiKey) {
-        console.warn('No API key available, using fallback embeddings');
-        return this.getFallbackEmbedding(text);
-      }
-
-      console.log('Using OpenAI embedding API');
-      
-      try {
-        const preparedText = this.prepareText(text);
-        
-        // Use standard OpenAI library directly
-        const { OpenAI } = await import('openai');
-        const client = new OpenAI({ apiKey: this.apiKey });
-        
-        const result = await client.embeddings.create({
-          model: this.embeddingModel,
-          input: preparedText,
-        });
-        
-        console.log(`Generated embedding with model: ${this.embeddingModel}`);
-        
-        return {
-          embedding: result.data[0].embedding,
-          truncated: false,
-        };
-      } catch (clientError) {
-        console.error('Error using OpenAI API, using fallback embedding:', clientError);
-        return this.getFallbackEmbedding(text);
-      }
-    } catch (error) {
-      console.error('Error generating embedding, using fallback embedding:', error);
+    if (!this.apiKey) {
+      logger.debug('No API key available, using fallback embeddings');
       return this.getFallbackEmbedding(text);
     }
+
+    const preparedText = this.prepareText(text);
+    
+    try {
+      logger.debug('Generating embedding via OpenAI API');
+      const result = await this.callOpenAIEmbeddingAPI(preparedText);
+      return result;
+    } catch (error) {
+      logger.error('Error using OpenAI API, using fallback embedding:', error);
+      return this.getFallbackEmbedding(text);
+    }
+  }
+  
+  /**
+   * Makes the actual API call to OpenAI for embeddings
+   * @param text Prepared text to embed
+   * @returns Embedding result
+   */
+  private async callOpenAIEmbeddingAPI(text: string): Promise<EmbeddingResult> {
+    // Use standard OpenAI library
+    const { OpenAI } = await import('openai');
+    const client = new OpenAI({ apiKey: this.apiKey });
+    
+    const result = await client.embeddings.create({
+      model: this.embeddingModel,
+      input: text,
+    });
+    
+    logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
+    
+    return {
+      embedding: result.data[0].embedding,
+      truncated: false,
+    };
   }
   
   /**
@@ -84,7 +97,7 @@ export class EmbeddingService {
    * @returns A consistent embedding based on text content
    */
   private getFallbackEmbedding(text: string): EmbeddingResult {
-    console.log(`Generating fallback embedding for text (${text.length} chars)`);
+    logger.debug(`Generating fallback embedding for text (${text.length} chars)`);
     
     // Create a deterministic embedding based on text hash
     const hash = this.hashString(text);
@@ -108,60 +121,70 @@ export class EmbeddingService {
    * @returns An array of vector representations
    */
   async getBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
-    try {
-      if (!this.apiKey) {
-        console.warn('No API key available, using fallback batch embeddings');
-        return Promise.all(texts.map(text => this.getFallbackEmbedding(text)));
-      }
-
-      console.log(`Generating embeddings for ${texts.length} texts using OpenAI API`);
-      
-      try {
-        // Prepare the texts
-        const preparedTexts = texts.map(text => this.prepareText(text));
-        
-        // Use standard OpenAI library directly
-        const { OpenAI } = await import('openai');
-        const client = new OpenAI({ apiKey: this.apiKey });
-        
-        // Use the batch endpoint
-        const result = await client.embeddings.create({
-          model: this.embeddingModel,
-          input: preparedTexts,
-        });
-        
-        console.log(`Generated ${result.data.length} embeddings`);
-        
-        // Convert to our internal format
-        return result.data.map((item) => ({
-          embedding: item.embedding,
-          truncated: false,
-        }));
-      } catch (batchError) {
-        console.error('Error using batch embedding API, falling back to individual processing:', batchError);
-        
-        // Fallback to processing in smaller batches
-        const batchSize = 10;
-        const results: EmbeddingResult[] = [];
-        
-        for (let i = 0; i < texts.length; i += batchSize) {
-          console.log(`Processing batch ${i/batchSize + 1} of ${Math.ceil(texts.length/batchSize)}`);
-          const batch = texts.slice(i, i + batchSize);
-          
-          // Process each text in the batch in parallel
-          const batchResults = await Promise.all(
-            batch.map(text => this.getEmbedding(text)),
-          );
-          
-          results.push(...batchResults);
-        }
-        
-        return results;
-      }
-    } catch (error) {
-      console.error('Error generating batch embeddings, using fallback embeddings:', error);
+    if (!this.apiKey) {
+      logger.warn('No API key available, using fallback batch embeddings');
       return Promise.all(texts.map(text => this.getFallbackEmbedding(text)));
     }
+
+    logger.info(`Generating embeddings for ${texts.length} texts using OpenAI API`);
+    
+    try {
+      // Prepare the texts
+      const preparedTexts = texts.map(text => this.prepareText(text));
+      return await this.callOpenAIBatchEmbeddingAPI(preparedTexts);
+    } catch (batchError) {
+      logger.error('Error using batch embedding API, falling back to individual processing:', batchError);
+      return this.processEmbeddingsInSmallBatches(texts);
+    }
+  }
+
+  /**
+   * Makes the actual API call to OpenAI for batch embeddings
+   * @param texts Array of prepared texts to embed
+   * @returns Array of embedding results
+   */
+  private async callOpenAIBatchEmbeddingAPI(texts: string[]): Promise<EmbeddingResult[]> {
+    const { OpenAI } = await import('openai');
+    const client = new OpenAI({ apiKey: this.apiKey });
+    
+    // Use the batch endpoint
+    const result = await client.embeddings.create({
+      model: this.embeddingModel,
+      input: texts,
+    });
+    
+    logger.debug(`Generated ${result.data.length} embeddings`);
+    
+    // Convert to our internal format
+    return result.data.map((item) => ({
+      embedding: item.embedding,
+      truncated: false,
+    }));
+  }
+
+  /**
+   * Process embeddings in smaller batches when the main batch API fails
+   * @param texts The texts to process
+   * @returns Array of embedding results
+   */
+  private async processEmbeddingsInSmallBatches(texts: string[]): Promise<EmbeddingResult[]> {
+    const batchSize = 10;
+    const results: EmbeddingResult[] = [];
+    const totalBatches = Math.ceil(texts.length / batchSize);
+    
+    for (let i = 0; i < texts.length; i += batchSize) {
+      logger.debug(`Processing batch ${Math.floor(i/batchSize) + 1} of ${totalBatches}`);
+      const batch = texts.slice(i, i + batchSize);
+      
+      // Process each text in the batch in parallel
+      const batchResults = await Promise.all(
+        batch.map(text => this.getEmbedding(text)),
+      );
+      
+      results.push(...batchResults);
+    }
+    
+    return results;
   }
 
   /**

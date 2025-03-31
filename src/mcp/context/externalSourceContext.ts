@@ -31,7 +31,7 @@ export class ExternalSourceContext {
     };
     
     // Initialize embedding service
-    this.embeddingService = new EmbeddingService(apiKey);
+    this.embeddingService = new EmbeddingService(apiKey ? { apiKey } : undefined);
     
     // Register available sources
     this.registerSource(new WikipediaSource(apiKey));

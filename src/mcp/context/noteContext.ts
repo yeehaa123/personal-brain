@@ -22,7 +22,7 @@ export class NoteContext {
   private embeddingService: EmbeddingService;
 
   constructor(apiKey?: string) {
-    this.embeddingService = new EmbeddingService(apiKey);
+    this.embeddingService = new EmbeddingService(apiKey ? { apiKey } : undefined);
   }
 
   /**

@@ -47,7 +47,7 @@ export class NewsApiSource implements ExternalSourceInterface {
     }
     
     if (openAiKey) {
-      this.embeddingService = new EmbeddingService(openAiKey);
+      this.embeddingService = new EmbeddingService({ apiKey: openAiKey });
       logger.debug('NewsAPI source initialized with embedding service');
     } else {
       logger.debug('NewsAPI source initialized without embedding service');

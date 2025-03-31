@@ -22,7 +22,21 @@
     // Some stricter flags (disabled by default)
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+    
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@test/*": ["tests/*"],
+      "@models/*": ["src/models/*"],
+      "@utils/*": ["src/utils/*"],
+      "@commands/*": ["src/commands/*"],
+      "@mcp/*": ["src/mcp/*"],
+      "@interfaces/*": ["src/interfaces/*"],
+      "@db/*": ["src/db/*"],
+      "@importers/*": ["src/importers/*"]
+    }
   },
-  "exclude": ["tests/**/*", "node_modules"]
+  "exclude": ["node_modules"]
 }

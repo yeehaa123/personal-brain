@@ -8,117 +8,183 @@ import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { BrainProtocol } from '../mcp/protocol/brainProtocol';
 import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
+import logger from '../utils/logger';
+import { marked } from 'marked';
+import { sanitizeHtml } from '../utils/textUtils';
 
-// Configuration
-const HOMESERVER_URL = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
-const ACCESS_TOKEN = process.env.MATRIX_ACCESS_TOKEN;
-const USER_ID = process.env.MATRIX_USER_ID;
-const ROOM_IDS = (process.env.MATRIX_ROOM_IDS || '').split(',').filter(Boolean);
-const COMMAND_PREFIX = process.env.COMMAND_PREFIX || '!brain';
-
-// Matrix environment variables check
-if (process.env.NODE_ENV !== 'production') {
-  console.debug(`MATRIX_HOMESERVER_URL: ${HOMESERVER_URL}`);
-  console.debug(`MATRIX_USER_ID: ${USER_ID}`);
-  console.debug(`MATRIX_ACCESS_TOKEN: ${ACCESS_TOKEN ? 'Set (hidden)' : 'Not set'}`);
-  console.debug(`MATRIX_ROOM_IDS: ${ROOM_IDS.join(', ')}`);
-  console.debug(`COMMAND_PREFIX: ${COMMAND_PREFIX}`);
+// Configuration constants - load from environment
+interface MatrixConfig {
+  homeserverUrl: string;
+  accessToken: string;
+  userId: string;
+  roomIds: string[];
+  commandPrefix: string;
 }
 
-if (!ACCESS_TOKEN || !USER_ID) {
-  console.error('Error: MATRIX_ACCESS_TOKEN and MATRIX_USER_ID environment variables are required');
-  process.exit(1);
-}
-
-if (ROOM_IDS.length === 0) {
-  console.error('Warning: No MATRIX_ROOM_IDS provided, the bot will not automatically join any rooms');
-}
-
-class MatrixBrainInterface {
+export class MatrixBrainInterface {
   private client: sdk.MatrixClient;
   private brainProtocol: BrainProtocol;
   private commandHandler: CommandHandler;
   private renderer: MatrixRenderer;
   private isReady = false;
+  private config: MatrixConfig;
 
   constructor() {
+    // Load and validate configuration
+    this.config = this.loadConfig();
+    
+    // Initialize Matrix client
     this.client = sdk.createClient({
-      baseUrl: HOMESERVER_URL,
-      accessToken: ACCESS_TOKEN,
-      userId: USER_ID,
+      baseUrl: this.config.homeserverUrl,
+      accessToken: this.config.accessToken,
+      userId: this.config.userId,
     });
 
+    // Initialize brain protocol and command handler
     this.brainProtocol = new BrainProtocol();
     this.commandHandler = new CommandHandler(this.brainProtocol);
 
     // Initialize renderer with message sending function
     this.renderer = new MatrixRenderer(
-      COMMAND_PREFIX,
+      this.config.commandPrefix,
       this.sendMessage.bind(this),
     );
   }
 
-  async start() {
-    console.log(`Starting Matrix brain interface as ${USER_ID}`);
+  /**
+   * Load config from environment with validation
+   */
+  private loadConfig(): MatrixConfig {
+    const homeserverUrl = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
+    const accessToken = process.env.MATRIX_ACCESS_TOKEN;
+    const userId = process.env.MATRIX_USER_ID;
+    const roomIds = (process.env.MATRIX_ROOM_IDS || '').split(',').filter(Boolean);
+    const commandPrefix = process.env.COMMAND_PREFIX || '!brain';
+
+    // Log configuration in non-production environments
+    if (process.env.NODE_ENV !== 'production') {
+      logger.debug(`MATRIX_HOMESERVER_URL: ${homeserverUrl}`);
+      logger.debug(`MATRIX_USER_ID: ${userId}`);
+      logger.debug(`MATRIX_ACCESS_TOKEN: ${accessToken ? 'Set (hidden)' : 'Not set'}`);
+      logger.debug(`MATRIX_ROOM_IDS: ${roomIds.join(', ')}`);
+      logger.debug(`COMMAND_PREFIX: ${commandPrefix}`);
+    }
+
+    // Validate required fields
+    if (!accessToken || !userId) {
+      logger.error('MATRIX_ACCESS_TOKEN and MATRIX_USER_ID environment variables are required');
+      process.exit(1);
+    }
+
+    if (roomIds.length === 0) {
+      logger.warn('No MATRIX_ROOM_IDS provided, the bot will not automatically join any rooms');
+    }
+
+    return {
+      homeserverUrl,
+      accessToken,
+      userId,
+      roomIds,
+      commandPrefix,
+    };
+  }
+
+  /**
+   * Start the Matrix client and register event handlers
+   */
+  async start(): Promise<void> {
+    logger.info(`Starting Matrix brain interface as ${this.config.userId}`);
 
     // Register event handlers
     this.client.on(RoomEvent.Timeline, this.handleRoomMessage.bind(this));
     this.client.on(RoomMemberEvent.Membership, this.handleMembership.bind(this));
 
-    // Start the client
-    await this.client.startClient({ initialSyncLimit: 10 });
-    console.log('Matrix client started, waiting for sync');
+    try {
+      // Start the client
+      await this.client.startClient({ initialSyncLimit: 10 });
+      logger.info('Matrix client started, waiting for sync');
 
-    // Wait for the client to sync
-    this.client.once(ClientEvent.Sync, (state: string) => {
-      if (state === 'PREPARED') {
-        console.log('Client sync complete');
-        this.isReady = true;
+      // Wait for the client to sync
+      return new Promise((resolve, reject) => {
+        this.client.once(ClientEvent.Sync, (state: string) => {
+          if (state === 'PREPARED') {
+            logger.info('Client sync complete');
+            this.isReady = true;
 
-        // Auto-join configured rooms
-        this.joinConfiguredRooms();
-      } else {
-        console.error(`Sync failed with state: ${state}`);
-        process.exit(1);
-      }
-    });
+            // Auto-join configured rooms
+            this.joinConfiguredRooms().then(() => {
+              resolve();
+            }).catch(reject);
+          } else {
+            const error = new Error(`Sync failed with state: ${state}`);
+            logger.error(error.message);
+            reject(error);
+          }
+        });
+      });
+    } catch (error) {
+      logger.error('Failed to start Matrix client:', error);
+      throw error;
+    }
   }
 
-  private async joinConfiguredRooms() {
-    if (ROOM_IDS.length === 0) return;
+  /**
+   * Join all configured rooms
+   */
+  private async joinConfiguredRooms(): Promise<void> {
+    if (this.config.roomIds.length === 0) return;
 
-    console.log(`Joining ${ROOM_IDS.length} configured rooms...`);
+    logger.info(`Joining ${this.config.roomIds.length} configured rooms...`);
 
-    for (const roomId of ROOM_IDS) {
+    // Join each room, collecting errors but not failing if some rooms can't be joined
+    const errors: Error[] = [];
+    
+    for (const roomId of this.config.roomIds) {
       try {
         await this.client.joinRoom(roomId);
-        console.log(`Joined room ${roomId}`);
-      } catch (error: unknown) {
-        console.error(`Failed to join room ${roomId}:`, error instanceof Error ? error.message : String(error));
+        logger.info(`Joined room ${roomId}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to join room ${roomId}: ${errorMessage}`);
+        errors.push(new Error(`Failed to join room ${roomId}: ${errorMessage}`));
       }
+    }
+
+    // If we couldn't join any rooms, that's potentially a problem
+    if (errors.length === this.config.roomIds.length && this.config.roomIds.length > 0) {
+      logger.error('Failed to join any of the configured rooms');
     }
   }
 
-  private async handleMembership(_event: MatrixEvent, member: RoomMember) {
+  /**
+   * Handle membership changes in rooms
+   */
+  private async handleMembership(_event: MatrixEvent, member: RoomMember): Promise<void> {
     // Auto-accept invites for the bot
-    if (member.userId === USER_ID && member.membership === 'invite') {
-      console.log(`Received invite to room ${member.roomId}, auto-joining`);
+    if (member.userId === this.config.userId && member.membership === 'invite') {
+      logger.info(`Received invite to room ${member.roomId}, auto-joining`);
+      
       try {
+        // Join the room
         await this.client.joinRoom(member.roomId);
+        logger.info(`Successfully joined room ${member.roomId}`);
 
         // Send welcome message
-        this.sendMessage(
+        await this.sendMessage(
           member.roomId,
-          `Hello! I'm your personal brain assistant. Type \`${COMMAND_PREFIX} help\` to see available commands.`,
+          `Hello! I'm your personal brain assistant. Type \`${this.config.commandPrefix} help\` to see available commands.`,
         );
-      } catch (error: unknown) {
-        console.error(`Failed to join room ${member.roomId}:`, error instanceof Error ? error.message : String(error));
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Failed to join room ${member.roomId}: ${errorMessage}`);
       }
     }
   }
 
-  private async handleRoomMessage(event: MatrixEvent, room: Room | undefined) {
-
+  /**
+   * Handle incoming room messages
+   */
+  private async handleRoomMessage(event: MatrixEvent, room: Room | undefined): Promise<void> {
     // Only process messages if the client is ready
     if (!this.isReady) {
       return;
@@ -130,49 +196,50 @@ class MatrixBrainInterface {
     }
 
     if (!room) {
-      console.error('ROOM UNDEFINED');
+      logger.error('Room undefined for message event');
       return;
     }
-
 
     const content = event.getContent();
 
     // Only process text messages
-    if (content.msgtype !== 'm.text') {
+    if (content.msgtype !== MsgType.Text) {
       return;
     }
 
     const text = content.body.trim();
+    
     // Check if the text starts with the command prefix
-    if (text.startsWith(COMMAND_PREFIX)) {
-
-      const commandText = text.substring(COMMAND_PREFIX.length).trim();
+    if (text.startsWith(this.config.commandPrefix)) {
+      // Extract command text after the prefix
+      const commandText = text.substring(this.config.commandPrefix.length).trim();
+      
       try {
         await this.processCommand(commandText, room.roomId, event);
-      } catch (error: unknown) {
-        console.error('Error processing command:', error instanceof Error ? error.message : String(error));
-        this.sendMessage(room.roomId, `Error: ${error instanceof Error ? error.message : String(error)}`);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error(`Error processing command: ${errorMessage}`);
+        await this.sendMessage(room.roomId, `Error: ${errorMessage}`);
       }
     }
-
-    console.log('=================================================');
   }
 
-  private async processCommand(commandText: string, roomId: string, _event: unknown) {
+  /**
+   * Process a command and generate a response
+   */
+  private async processCommand(commandText: string, roomId: string, _event: unknown): Promise<void> {
     // Handle empty command (just the prefix) as help
     if (!commandText) {
-      this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
+      await this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
 
-    // Split into command and arguments
-    const parts = commandText.split(' ');
-    const command = parts[0].toLowerCase();
-    const args = parts.slice(1).join(' ');
+    // Parse command and arguments
+    const { command, args } = this.parseCommand(commandText);
 
     // Handle help command specially
     if (command === 'help') {
-      this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
+      await this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
 
@@ -180,73 +247,107 @@ class MatrixBrainInterface {
     try {
       // Special case for "ask" command to show "thinking" message
       if (command === 'ask' && args) {
-        this.sendMessage(roomId, `🤔 Thinking about: "${args}"...`);
+        await this.sendMessage(roomId, `🤔 Thinking about: "${args}"...`);
       }
 
       const result = await this.commandHandler.processCommand(command, args);
 
       // Render the result using our Matrix renderer
-      this.renderer.render(roomId, result);
+      await this.renderer.render(roomId, result);
     } catch (error) {
-      console.error(`Error executing command ${command}:`, error);
-      this.sendMessage(roomId, `❌ Error executing command: ${error instanceof Error ? error.message : String(error)}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error executing command ${command}: ${errorMessage}`);
+      await this.sendMessage(roomId, `❌ Error executing command: ${errorMessage}`);
     }
   }
 
-  // Helper methods
+  /**
+   * Parse a command into command name and arguments
+   */
+  private parseCommand(commandText: string): { command: string, args: string } {
+    const parts = commandText.split(' ');
+    const command = parts[0].toLowerCase();
+    const args = parts.slice(1).join(' ');
+    
+    return { command, args };
+  }
 
-  private sendMessage(roomId: string, message: string) {
+  /**
+   * Send a message to a Matrix room with error handling
+   */
+  private async sendMessage(roomId: string, message: string): Promise<void> {
     try {
-      // First try sendMessage without HTML
-      this.client.sendMessage(roomId, {
+      // First try to send as plain text
+      await this.client.sendMessage(roomId, {
         msgtype: MsgType.Text,
         body: message,
-      }).catch((error: unknown) => {
-        console.error(`Error sending plain message to ${roomId}:`, error instanceof Error ? error.message : String(error));
-
-        // Fallback to HTML message
-        this.client.sendHtmlMessage(roomId, message, this.markdownToHtml(message))
-          .catch((htmlError: unknown) => console.error(`Error sending HTML message to ${roomId}:`, htmlError instanceof Error ? htmlError.message : String(htmlError)));
       });
-    } catch (error: unknown) {
-      console.error(`Exception in sendMessage to ${roomId}:`, error instanceof Error ? error.message : String(error));
+      
+      logger.debug(`Sent plain text message to ${roomId}`);
+    } catch (error) {
+      logger.warn(`Error sending plain message to ${roomId}, trying HTML fallback:`, error);
+      
+      try {
+        // Fallback to HTML message
+        const htmlContent = await this.markdownToHtml(message);
+        await this.client.sendHtmlMessage(roomId, message, htmlContent);
+        logger.debug(`Sent HTML message to ${roomId}`);
+      } catch (htmlError) {
+        logger.error(`Failed to send message to ${roomId}:`, htmlError);
+        throw htmlError;
+      }
     }
   }
 
-  private markdownToHtml(markdown: string): string {
-    // This is a very basic markdown to HTML conversion
-    // In a production app, you would use a proper markdown parser
-    return markdown
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-      .replace(/^- (.*?)$/gm, '<li>$1</li>')
-      .replace(/\n\n/g, '<br/><br/>');
+  /**
+   * Convert markdown to HTML for Matrix messages
+   */
+  private async markdownToHtml(markdown: string): Promise<string> {
+    try {
+      // Use the marked library to convert markdown to HTML
+      const html = marked.parse(markdown);
+      // Sanitize the HTML to prevent XSS
+      return sanitizeHtml(html as string);
+    } catch (error) {
+      logger.error('Error converting markdown to HTML:', error);
+      
+      // Fallback to basic conversion if marked fails
+      return markdown
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code>$1</code>')
+        .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+        .replace(/^- (.*?)$/gm, '<li>$1</li>')
+        .replace(/\n\n/g, '<br/><br/>');
+    }
   }
 }
 
 async function main() {
-  const matrixInterface = new MatrixBrainInterface();
-  await matrixInterface.start();
+  try {
+    const matrixInterface = new MatrixBrainInterface();
+    await matrixInterface.start();
 
-  console.log('Matrix brain interface is running');
+    logger.info('Matrix brain interface is running');
 
-  // Keep the process alive
-  process.on('SIGINT', () => {
-    console.log('Shutting down...');
-    process.exit(0);
-  });
+    // Keep the process alive
+    process.on('SIGINT', () => {
+      logger.info('Shutting down...');
+      process.exit(0);
+    });
+  } catch (error) {
+    logger.error('Fatal error starting Matrix interface:', error);
+    process.exit(1);
+  }
 }
 
 // Only run the main function if this is the main module
 if (require.main === module) {
   main().catch(error => {
-    console.error('Fatal error:', error);
+    logger.error('Fatal error:', error);
     process.exit(1);
   });
 }
 
-export { MatrixBrainInterface };

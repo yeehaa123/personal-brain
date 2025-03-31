@@ -1,8 +1,8 @@
 /**
  * Test utilities for the personal-brain project
  */
-import { CLIInterface } from '../src/utils/cliInterface';
-import { createTrackers } from './mocks';
+import { CLIInterface } from '@utils/cliInterface';
+import { createTrackers } from '@test/mocks';
 
 /**
  * Mock CLIInterface methods and track calls
@@ -55,11 +55,19 @@ export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
     trackers.printCalls.push(msg);
   };
   
-  CLIInterface.displayList = function(items, formatter) {
-    trackers.displayListCalls.push({ items, formatter });
+  CLIInterface.displayList = function<T>(items: T[], formatter?: (item: T, index: number) => string) {
+    // Cast to maintain backward compatibility while fixing type
+    trackers.displayListCalls.push({ 
+      items: items as unknown[], 
+      formatter: formatter as unknown as ((item: unknown, index: number) => string) | undefined,
+    });
   };
   
-  CLIInterface.printLabelValue = function(label, value, options = {}) {
+  CLIInterface.printLabelValue = function(
+    label: string, 
+    value: string | number | string[] | null, 
+    options: Record<string, unknown> = {},
+  ) {
     trackers.printLabelValueCalls.push([label, value, options]);
     // Perform simplified version of actual function for output capture
     const formattedValue = Array.isArray(value) ? value.join(', ') : value?.toString() || '';
@@ -95,19 +103,19 @@ export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
  * @param original Original methods to restore
  */
 export function restoreCLIInterface(original: Record<string, unknown>) {
-  // Restore methods
-  CLIInterface.displayTitle = original.displayTitle;
-  CLIInterface.displaySubtitle = original.displaySubtitle;
-  CLIInterface.error = original.error;
-  CLIInterface.warn = original.warn;
-  CLIInterface.success = original.success;
-  CLIInterface.info = original.info;
-  CLIInterface.print = original.print;
-  CLIInterface.displayList = original.displayList;
-  CLIInterface.printLabelValue = original.printLabelValue;
-  CLIInterface.formatId = original.formatId;
-  CLIInterface.formatDate = original.formatDate;
-  CLIInterface.formatTags = original.formatTags;
+  // Restore methods with the correct types
+  CLIInterface.displayTitle = original.displayTitle as typeof CLIInterface.displayTitle;
+  CLIInterface.displaySubtitle = original.displaySubtitle as typeof CLIInterface.displaySubtitle;
+  CLIInterface.error = original.error as typeof CLIInterface.error;
+  CLIInterface.warn = original.warn as typeof CLIInterface.warn;
+  CLIInterface.success = original.success as typeof CLIInterface.success;
+  CLIInterface.info = original.info as typeof CLIInterface.info;
+  CLIInterface.print = original.print as typeof CLIInterface.print;
+  CLIInterface.displayList = original.displayList as typeof CLIInterface.displayList;
+  CLIInterface.printLabelValue = original.printLabelValue as typeof CLIInterface.printLabelValue;
+  CLIInterface.formatId = original.formatId as typeof CLIInterface.formatId;
+  CLIInterface.formatDate = original.formatDate as typeof CLIInterface.formatDate;
+  CLIInterface.formatTags = original.formatTags as typeof CLIInterface.formatTags;
 }
 
 /**
@@ -138,13 +146,13 @@ export function captureOutput() {
  * @returns Original displayNotes function for restoration
  */
 export function mockDisplayNotes(
-  displayNotes: (notes: unknown[], options?: Record<string, unknown>) => void, 
+  displayNotes: unknown, 
   trackers: ReturnType<typeof createTrackers>,
 ) {
   const originalDisplayNotes = displayNotes;
   
-  // Cast to allow property assignment
-  (global as unknown).displayNotes = function(notes: unknown[], options?: Record<string, unknown>) {
+  // Mock global displayNotes
+  (global as { displayNotes?: (notes: unknown[], options?: Record<string, unknown>) => void }).displayNotes = function(notes: unknown[], options?: Record<string, unknown>) {
     trackers.displayNotesCalls.push({ notes, options });
   };
   

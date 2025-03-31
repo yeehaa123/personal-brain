@@ -1,6 +1,7 @@
 /**
  * Text processing utilities
  */
+import sanitizeHtmlLib from 'sanitize-html';
 
 /**
  * Clean and normalize text for embedding
@@ -71,4 +72,76 @@ export function extractKeywords(text: string, maxKeywords = 10): string[] {
       word.length > 4 && !commonWords.has(word),
     ),
   )].slice(0, maxKeywords);
+}
+
+/**
+ * Sanitize HTML to prevent XSS attacks
+ * @param html HTML string to sanitize
+ * @returns Sanitized HTML string
+ */
+export function sanitizeHtml(html: string): string {
+  try {
+    // Configure allowed tags and attributes
+    const allowedTags = [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'blockquote', 'p', 'a', 'ul', 'ol', 'nl', 'li',
+      'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+      'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre',
+      'span', 'img',
+    ];
+    
+    const allowedAttributes = {
+      a: ['href', 'title', 'target'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
+      div: ['class'],
+      span: ['class'],
+      table: ['border', 'cellpadding', 'cellspacing'],
+      // Allow class on all elements
+      '*': ['class'],
+    };
+    
+    // Sanitize the HTML with our configuration
+    return sanitizeHtmlLib(html, {
+      allowedTags,
+      allowedAttributes,
+      allowedSchemes: ['http', 'https', 'mailto'],
+    });
+  } catch {
+    // Fallback to basic sanitization if the library isn't available
+    
+    // Remove script tags and their content
+    let sanitized = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    
+    // Remove event handlers
+    sanitized = sanitized.replace(/\s+on\w+=['"][^'"]*['"]/gi, '');
+    
+    // Remove iframe, object, embed
+    const dangerousTags = [
+      'iframe', 'object', 'embed', 'base', 'form', 
+      'input', 'button', 'textarea', 'select', 'option',
+    ];
+    
+    for (const tag of dangerousTags) {
+      const regex = new RegExp(`<${tag}\\b[^<]*(?:(?!<\\/${tag}>)<[^<]*)*<\\/${tag}>`, 'gi');
+      sanitized = sanitized.replace(regex, '');
+      sanitized = sanitized.replace(new RegExp(`<${tag}\\b[^>]*\\/>`, 'gi'), '');
+    }
+    
+    // Remove data: and javascript: URLs
+    sanitized = sanitized.replace(/\bsrc\s*=\s*["'](?:data|javascript):[^"']*["']/gi, '');
+    sanitized = sanitized.replace(/\bhref\s*=\s*["'](?:data|javascript):[^"']*["']/gi, '');
+    
+    return sanitized;
+  }
+}
+
+/**
+ * Calculate the approximate reading time for a text
+ * @param text The text to analyze
+ * @param wordsPerMinute Average reading speed (default: 200 words per minute)
+ * @returns Estimated reading time in minutes
+ */
+export function calculateReadingTime(text: string, wordsPerMinute = 200): number {
+  const wordCount = text.split(/\s+/).length;
+  return Math.ceil(wordCount / wordsPerMinute);
 }
