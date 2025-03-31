@@ -28,10 +28,14 @@
     "noImplicitThis": true,
     "useUnknownInCatchVariables": true,
     "alwaysStrict": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
     
     // These are too strict for now, but good to add later
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false,
+    "isolatedModules": true,
 
     // These are helpful but not critical
     "noUnusedLocals": true,
