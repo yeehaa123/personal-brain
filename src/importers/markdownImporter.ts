@@ -6,7 +6,7 @@ import { notes } from '@/db/schema';
 import { sql } from 'drizzle-orm';
 import { NoteContext } from '@/mcp/context/noteContext';
 import { EmbeddingService } from '@/mcp/model/embeddings';
-import { extractTags } from '@/utils/tagExtractor';
+import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
 import logger from '@/utils/logger';
 
 interface MarkdownMetadata {
@@ -92,21 +92,8 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   
   // Generate tags with AI if none were provided in the frontmatter
   if (tags.length === 0) {
-    try {
-      logger.info(`Generating tags for: ${title}`);
-      // Use the combined title and content for better tag context
-      const tagContent = `${title}\n\n${content}`;
-      
-      // Use the same tag extractor we use for profiles
-      const generatedTags = await extractTags(tagContent, [], 7);
-      if (generatedTags && generatedTags.length > 0) {
-        tags = generatedTags;
-        logger.info(`Generated tags: ${tags.join(', ')}`);
-      }
-    } catch (error) {
-      logger.error(`Error generating tags for ${filePath}: ${error}`);
-      // Continue with no tags if there's an error
-    }
+    // We'll handle tag generation after creating the note to avoid duplication
+    logger.info(`No tags in frontmatter for: ${title}. Will generate after creating note.`);
   }
   
   // Create a stable ID based on the file basename
@@ -157,8 +144,9 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     logger.info(`Updated existing note: ${id}`);
   } else {
     // Create new note using the improved NoteContext API
+    const noteId = nanoid();
     const noteData = {
-      id: nanoid(),
+      id: noteId,
       title,
       content: processedContent,
       tags,
@@ -171,6 +159,20 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     id = await context.createNote(noteData);
     
     logger.info(`Created new note: ${id}`);
+    
+    // Generate tags if none were provided in the frontmatter
+    if (tags.length === 0) {
+      // Use our shared utility function for tag generation
+      const tagResult = await generateAndSaveTagsForNote({
+        id: noteId,
+        title,
+        content: processedContent,
+        tags: [],
+      }, true); // Force tag generation
+      
+      // Update tags in memory for the return value
+      tags = tagResult.tags;
+    }
   }
   
   return id;

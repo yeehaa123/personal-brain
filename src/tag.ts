@@ -1,8 +1,5 @@
 #!/usr/bin/env bun
-import { db } from '@/db';
-import { notes } from '@/db/schema';
-import { sql } from 'drizzle-orm';
-import { extractTags } from '@/utils/tagExtractor';
+import { batchProcessNoteTags } from '@/utils/tagExtractor';
 import { ProfileContext } from '@/mcp/context/profileContext';
 import logger from '@/utils/logger';
 
@@ -78,73 +75,11 @@ async function generateProfileTags(profileContext: ProfileContext, forceRegenera
 }
 
 async function generateNoteTags(forceRegenerate: boolean = false) {
-  logger.info('\n=== Processing Note Tags ===');
-
-  try {
-    // Get all notes from the database
-    // If not forced, only process notes without tags
-    let allNotes;
-    if (!forceRegenerate) {
-      // For SQLite with JSON columns, we check if the tags field is NULL or an empty array
-      allNotes = await db.select().from(notes).where(
-        sql`${notes.tags} IS NULL OR ${notes.tags} = '[]'`,
-      );
-    } else {
-      allNotes = await db.select().from(notes);
-    }
-
-    if (allNotes.length === 0) {
-      logger.info('No notes found that need tag generation');
-      return;
-    }
-
-    logger.info(`Found ${allNotes.length} notes to process`);
-    let updated = 0;
-    let failed = 0;
-
-    for (const note of allNotes) {
-      try {
-        // Skip notes that already have tags unless force regeneration is enabled
-        if (!forceRegenerate && note.tags && note.tags.length > 0) {
-          logger.info(`Skipping note "${note.title}" (already has tags)`);
-          continue;
-        }
-
-        logger.info(`Generating tags for note: "${note.title}"`);
-
-        // Use title + content for better tagging context
-        const tagContent = `${note.title}\n\n${note.content}`;
-
-        // Get existing tags to consider (if any)
-        const existingTags = note.tags || [];
-
-        // Generate tags
-        const generatedTags = await extractTags(tagContent, existingTags, 7);
-
-        if (generatedTags && generatedTags.length > 0) {
-          // Update the note with the new tags
-          await db.update(notes)
-            .set({ tags: generatedTags })
-            .where(sql`${notes.id} = ${note.id}`);
-
-          logger.info(`Updated tags for "${note.title}": ${generatedTags.join(', ')}`);
-          updated++;
-        } else {
-          logger.info(`No tags generated for "${note.title}"`);
-          failed++;
-        }
-      } catch (error) {
-        logger.error(`Error generating tags for note "${note.title}": ${error}`);
-        failed++;
-      }
-    }
-
-    logger.info(`\nNotes processed: ${updated + failed}`);
-    logger.info(`Notes updated: ${updated}`);
-    logger.info(`Notes failed: ${failed}`);
-  } catch (error) {
-    logger.error(`Error generating note tags: ${error}`);
-  }
+  // Use the centralized batch processing function from tagExtractor.ts
+  const result = await batchProcessNoteTags(forceRegenerate);
+  
+  // No need for additional logging as it's handled in the utility function
+  return result;
 }
 
 // Show usage if no arguments provided
