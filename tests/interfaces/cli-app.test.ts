@@ -36,7 +36,6 @@ mock.module('inquirer', () => ({
 import { CLIApp } from '@/interfaces/cli-app';
 import type { CommandHandler } from '@/commands';
 import type { CLIRenderer } from '@/commands/cli-renderer';
-import type { CommandInfo, CommandResult } from '@/commands';
 
 // Save original process properties
 const originalArgv = process.argv;
@@ -140,12 +139,15 @@ describe('CLIApp', () => {
       const error = new Error('Command failed');
       mockProcessCommand.mockRejectedValue(error);
       
+      // Import CLIInterface dynamically
+      const { CLIInterface } = await import('@/utils/cliInterface');
+      
       // Save original CLIInterface.error
-      const originalErrorFn = require('@/utils/cliInterface').CLIInterface.error;
+      const originalErrorFn = CLIInterface.error;
       
       // Create our own mock
       const errorMock = mock(() => {});
-      require('@/utils/cliInterface').CLIInterface.error = errorMock;
+      CLIInterface.error = errorMock;
       
       await cliApp.start();
       
@@ -154,18 +156,21 @@ describe('CLIApp', () => {
       expect(errorMock).toHaveBeenCalled();
       
       // Restore original
-      require('@/utils/cliInterface').CLIInterface.error = originalErrorFn;
+      CLIInterface.error = originalErrorFn;
     });
     
     test('should handle non-Error object exceptions', async () => {
       mockProcessCommand.mockRejectedValue('String error');
       
+      // Import CLIInterface dynamically
+      const { CLIInterface } = await import('@/utils/cliInterface');
+      
       // Save original CLIInterface.error
-      const originalErrorFn = require('@/utils/cliInterface').CLIInterface.error;
+      const originalErrorFn = CLIInterface.error;
       
       // Create our own mock
       const errorMock = mock(() => {});
-      require('@/utils/cliInterface').CLIInterface.error = errorMock;
+      CLIInterface.error = errorMock;
       
       await cliApp.start();
       
@@ -174,7 +179,7 @@ describe('CLIApp', () => {
       expect(errorMock).toHaveBeenCalledWith('Error executing command: String error');
       
       // Restore original
-      require('@/utils/cliInterface').CLIInterface.error = originalErrorFn;
+      CLIInterface.error = originalErrorFn;
     });
   });
 });
