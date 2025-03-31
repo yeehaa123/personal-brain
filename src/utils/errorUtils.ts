@@ -99,7 +99,7 @@ export function handleError(error: unknown, errorMessage?: string): AppError {
     const appError = new AppError(
       errorMessage || error.message,
       'WRAPPED_ERROR',
-      { originalError: error.name, stack: error.stack }
+      { originalError: error.name, stack: error.stack },
     );
     logger.error(appError.toLogString());
     return appError;
@@ -122,7 +122,7 @@ export function handleError(error: unknown, errorMessage?: string): AppError {
  */
 export async function tryExec<T>(
   fn: () => Promise<T>, 
-  errorMessage?: string
+  errorMessage?: string,
 ): Promise<T> {
   try {
     return await fn();
@@ -141,7 +141,7 @@ export async function tryExec<T>(
 export async function safeExec<T>(
   fn: () => Promise<T>,
   defaultValue: T,
-  logLevel: 'error' | 'warn' | 'debug' = 'error'
+  logLevel: 'error' | 'warn' | 'debug' = 'error',
 ): Promise<T> {
   try {
     return await fn();

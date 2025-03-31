@@ -211,7 +211,7 @@ export class BrainProtocol {
             url: isNonEmptyString(result.url) ? result.url : '#',
             excerpt: this.promptFormatter.getExcerpt(
               isNonEmptyString(result.content) ? result.content : 'No content available', 
-              150
+              150,
             ),
           }));
         }

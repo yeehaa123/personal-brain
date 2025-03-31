@@ -5,7 +5,7 @@ import {
   hasProperty,
   hasStringProperty,
   isNonEmptyString,
-  isISODateString
+  isISODateString,
 } from '@/utils/typeGuards';
 
 describe('typeGuards', () => {
@@ -18,7 +18,7 @@ describe('typeGuards', () => {
         tags: ['test', 'typescript'],
         embedding: null,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
       
       expect(isNote(validNote)).toBe(true);
@@ -31,7 +31,7 @@ describe('typeGuards', () => {
         // Missing title
         tags: ['test'],
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
       
       expect(isNote(invalidNote)).toBe(false);
@@ -44,7 +44,7 @@ describe('typeGuards', () => {
         title: 'Test Note',
         tags: 'test, typescript', // Should be an array
         createdAt: '2023-01-01', // Should be a Date
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
       
       expect(isNote(invalidNote)).toBe(false);
@@ -66,7 +66,7 @@ describe('typeGuards', () => {
           tags: ['test'],
           embedding: null,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         {
           id: 'note-2',
@@ -75,8 +75,8 @@ describe('typeGuards', () => {
           tags: null,
           embedding: null,
           createdAt: new Date(),
-          updatedAt: new Date()
-        }
+          updatedAt: new Date(),
+        },
       ];
       
       expect(isNoteArray(notes)).toBe(true);
@@ -90,9 +90,9 @@ describe('typeGuards', () => {
           title: 'Note 1',
           tags: ['test'],
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
-        'not a note'
+        'not a note',
       ];
       
       expect(isNoteArray(mixedArray)).toBe(false);

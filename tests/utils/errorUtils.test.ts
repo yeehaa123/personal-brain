@@ -7,7 +7,7 @@ import {
   ConfigError,
   handleError,
   tryExec,
-  safeExec
+  safeExec,
 } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
 import { mockLogger, restoreLogger } from '@test/mocks';

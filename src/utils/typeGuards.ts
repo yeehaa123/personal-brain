@@ -58,7 +58,7 @@ export function isNoteArray(arr: unknown): arr is Note[] {
  */
 export function hasProperty<K extends string>(
   obj: unknown, 
-  prop: K
+  prop: K,
 ): obj is Record<K, unknown> {
   return obj !== null && typeof obj === 'object' && prop in obj;
 }
@@ -72,7 +72,7 @@ export function hasProperty<K extends string>(
  */
 export function hasStringProperty<K extends string>(
   obj: unknown,
-  prop: K
+  prop: K,
 ): obj is Record<K, string> {
   return hasProperty(obj, prop) && typeof obj[prop] === 'string';
 }

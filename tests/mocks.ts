@@ -166,10 +166,10 @@ export function mockLogger(logger: Logger): Record<string, unknown> {
 
 // Restore logger functions
 export function restoreLogger(logger: Logger, original: Record<string, unknown>): void {
-  logger.info = original.info as typeof logger.info;
-  logger.debug = original.debug as typeof logger.debug;
-  logger.warn = original.warn as typeof logger.warn;
-  logger.error = original.error as typeof logger.error;
+  logger.info = original['info'] as typeof logger.info;
+  logger.debug = original['debug'] as typeof logger.debug;
+  logger.warn = original['warn'] as typeof logger.warn;
+  logger.error = original['error'] as typeof logger.error;
 }
 
 import { setTestEnv, clearTestEnv } from './utils/envUtils';

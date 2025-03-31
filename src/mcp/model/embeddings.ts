@@ -7,6 +7,8 @@ import { prepareText, chunkText } from '@/utils/textUtils';
 import logger from '@/utils/logger';
 import { aiConfig, textConfig } from '@/config';
 import type { OpenAI } from 'openai';
+import { isDefined, safeArrayAccess } from '@/utils/safeAccessUtils';
+import { ApiError, ValidationError } from '@/utils/errorUtils';
 
 // Type definitions for OpenAI API responses with safer runtime validation
 interface OpenAIEmbeddingData {
@@ -25,45 +27,80 @@ interface OpenAIEmbeddingResponse {
   };
 }
 
+// We'll keep this comment for documentation but remove the unused function
+// /**
+//  * Type guard to check if a value is an OpenAI embedding data object
+//  * @param value The value to check
+//  * @returns True if the value is a valid OpenAIEmbeddingData
+//  */
+// function isOpenAIEmbeddingData(value: unknown): value is OpenAIEmbeddingData {
+//   if (!value || typeof value !== 'object') {
+//     return false;
+//   }
+//   
+//   // Check for required properties and their types
+//   return (
+//     hasProperty(value, 'embedding') && 
+//     Array.isArray(value.embedding) && 
+//     value.embedding.every(val => typeof val === 'number') &&
+//     hasProperty(value, 'index') && 
+//     typeof value.index === 'number' &&
+//     hasStringProperty(value, 'object')
+//   );
+// }
+
 /**
  * Validates that an API response has the expected structure of an embedding response
  * @param response The response to validate
- * @returns The validated response, or throws an error if invalid
+ * @returns The validated response, or throws an ApiError if invalid
  */
 function validateEmbeddingResponse(response: unknown): OpenAIEmbeddingResponse {
   if (!response || typeof response !== 'object') {
-    throw new Error('Invalid embedding response: response is not an object');
+    throw new ValidationError('Invalid embedding response: response is not an object', 
+      { responseType: typeof response });
   }
   
   // Check required properties exist
   const typedResponse = response as Record<string, unknown>;
   
+  // Validate data array
   if (!Array.isArray(typedResponse['data'])) {
-    throw new Error('Invalid embedding response: data property missing or not an array');
+    throw new ValidationError('Invalid embedding response: data property missing or not an array', 
+      { foundType: typeof typedResponse['data'] });
   }
   
+  // Validate model field
   if (typeof typedResponse['model'] !== 'string') {
-    throw new Error('Invalid embedding response: model property missing or not a string');
+    throw new ValidationError('Invalid embedding response: model property missing or not a string', 
+      { foundType: typeof typedResponse['model'] });
   }
   
+  // Validate object field
   if (typeof typedResponse['object'] !== 'string') {
-    throw new Error('Invalid embedding response: object property missing or not a string');
+    throw new ValidationError('Invalid embedding response: object property missing or not a string', 
+      { foundType: typeof typedResponse['object'] });
   }
   
+  // Validate usage object
   if (!typedResponse['usage'] || typeof typedResponse['usage'] !== 'object') {
-    throw new Error('Invalid embedding response: usage property missing or not an object');
+    throw new ValidationError('Invalid embedding response: usage property missing or not an object', 
+      { foundType: typeof typedResponse['usage'] });
   }
   
   // For each data item, validate it has an embedding that's an array of numbers
   for (let i = 0; i < typedResponse['data'].length; i++) {
-    const item = typedResponse['data'][i] as Record<string, unknown>;
+    // Directly access the array element since we've already validated data is an array
+    const dataArray = typedResponse['data'] as Array<Record<string, unknown>>;
+    const item = dataArray[i] || {};
     
     if (!Array.isArray(item['embedding'])) {
-      throw new Error(`Invalid embedding response: item ${i} missing embedding array`);
+      throw new ValidationError(`Invalid embedding response: item ${i} missing embedding array`, 
+        { itemIndex: i, foundType: typeof item['embedding'] });
     }
     
-    if (item['embedding'].some(val => typeof val !== 'number')) {
-      throw new Error(`Invalid embedding response: item ${i} has non-numeric values in embedding`);
+    if ((item['embedding'] as unknown[]).some(val => typeof val !== 'number')) {
+      throw new ValidationError(`Invalid embedding response: item ${i} has non-numeric values in embedding`, 
+        { itemIndex: i });
     }
   }
   
@@ -145,18 +182,40 @@ export class EmbeddingService {
    * @returns A promise resolving to the embedding result
    */
   async getEmbedding(text: string): Promise<EmbeddingResult> {
-    if (!this.apiKey) {
+    // Handle invalid input
+    if (!isDefined(text)) {
+      logger.warn('Received undefined or null text in getEmbedding');
+      return {
+        embedding: Array(this.embeddingDimension).fill(0),
+        truncated: false,
+      };
+    }
+    
+    // Check for API key
+    if (!isDefined(this.apiKey)) {
       logger.debug('No API key available, using fallback embeddings');
       return this.generateFallbackEmbedding(text);
     }
 
+    // Prepare the text for embedding
     const preparedText = prepareText(text);
     
     try {
       logger.debug('Generating embedding via OpenAI API');
       return await this.callOpenAIEmbeddingAPI(preparedText);
     } catch (error) {
-      logger.error(`Error using OpenAI API, using fallback embedding: ${error}`);
+      // Log detailed error information
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : String(error);
+        
+      logger.error(`Error using OpenAI API, using fallback embedding: ${errorMessage}`);
+      
+      // Provide additional context if it's an API error
+      if (error instanceof ApiError) {
+        logger.debug(`API Error details: ${error.toLogString()}`);
+      }
+      
       return this.generateFallbackEmbedding(text);
     }
   }
@@ -171,12 +230,19 @@ export class EmbeddingService {
     texts: string[],
     options?: BatchProcessingOptions,
   ): Promise<EmbeddingResult[]> {
-    // Handle empty input case
-    if (texts.length === 0) {
+    // Handle invalid or empty input cases
+    if (!isDefined(texts)) {
+      logger.warn('Received undefined or null texts array in getBatchEmbeddings');
       return [];
     }
     
-    if (!this.apiKey) {
+    if (texts.length === 0) {
+      logger.debug('Received empty texts array in getBatchEmbeddings');
+      return [];
+    }
+    
+    // Check for API key availability
+    if (!isDefined(this.apiKey)) {
       logger.warn('No API key available, using fallback batch embeddings');
       return this.generateFallbackBatchEmbeddings(texts);
     }
@@ -184,12 +250,35 @@ export class EmbeddingService {
     logger.info(`Generating embeddings for ${texts.length} texts using OpenAI API`);
     
     try {
-      // Prepare the texts
-      const preparedTexts = texts.map(prepareText);
+      // Prepare the texts and filter out any null/undefined/empty values
+      const preparedTexts = texts
+        .filter(isDefined)
+        .map(text => prepareText(text));
+      
+      // If all texts were invalid and we have no prepared texts, return empty result
+      if (preparedTexts.length === 0) {
+        logger.warn('No valid texts remained after filtering in getBatchEmbeddings');
+        return [];
+      }
+      
+      // Try batch API first
       return await this.callOpenAIBatchEmbeddingAPI(preparedTexts);
     } catch (batchError) {
-      logger.error(`Error using batch embedding API, falling back to individual processing: ${batchError}`);
-      return this.processEmbeddingsInSmallBatches(texts, options);
+      // Log detailed error information
+      const errorMessage = batchError instanceof Error 
+        ? batchError.message 
+        : String(batchError);
+        
+      logger.error(`Error using batch embedding API, falling back to individual processing: ${errorMessage}`);
+      
+      // Try processing in smaller batches
+      try {
+        return await this.processEmbeddingsInSmallBatches(texts, options);
+      } catch (smallBatchError) {
+        // If even small batches fail, log and use fallback
+        logger.error(`Small batch processing also failed, using fallback embeddings: ${smallBatchError instanceof Error ? smallBatchError.message : String(smallBatchError)}`);
+        return this.generateFallbackBatchEmbeddings(texts);
+      }
     }
   }
 
@@ -200,7 +289,19 @@ export class EmbeddingService {
    * @returns Similarity score (-1 to 1)
    */
   cosineSimilarity(vec1: number[], vec2: number[]): number {
-    return cosineSimilarity(vec1, vec2);
+    // Handle null/undefined vectors
+    if (!isDefined(vec1) || !isDefined(vec2)) {
+      logger.warn('Received undefined or null vector in cosineSimilarity');
+      return 0;
+    }
+    
+    try {
+      return cosineSimilarity(vec1, vec2);
+    } catch (error) {
+      // Handle errors gracefully (e.g., different vector dimensions)
+      logger.error(`Error calculating cosine similarity: ${error instanceof Error ? error.message : String(error)}`);
+      return 0;
+    }
   }
 
   /**
@@ -240,38 +341,68 @@ export class EmbeddingService {
    * Makes the API call to OpenAI for a single embedding
    * @param text Prepared text to embed
    * @returns Promise resolving to the embedding result
+   * @throws ApiError When API call fails
+   * @throws ValidationError When response validation fails
    */
   private async callOpenAIEmbeddingAPI(text: string): Promise<EmbeddingResult> {
-    const client = await this.createOpenAIClient();
-    
-    const params: OpenAIEmbeddingParams = {
-      model: this.embeddingModel,
-      input: text,
-    };
-    
     try {
-      // Get the raw response and validate it
-      const rawResponse = await client.embeddings.create(params);
+      const client = await this.createOpenAIClient();
+      
+      const params: OpenAIEmbeddingParams = {
+        model: this.embeddingModel,
+        input: text,
+      };
+      
+      // Get the raw response
+      const rawResponse = await client.embeddings.create(params)
+        .catch(err => {
+          throw new ApiError(
+            `OpenAI embedding API request failed: ${err.message}`, 
+            err.status || 500, 
+            { model: this.embeddingModel, textLength: text.length },
+          );
+        });
+      
+      // Validate the response
       const validatedResponse = validateEmbeddingResponse(rawResponse);
       
       logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
       
       // Ensure safe array access with a fallback
-      const firstData = validatedResponse.data[0] ?? { embedding: [] };
+      // Create a proper fallback with all required properties
+      const fallbackData: OpenAIEmbeddingData = { 
+        embedding: [], 
+        index: 0, 
+        object: 'embedding', 
+      };
+      
+      const firstData = safeArrayAccess(validatedResponse.data, 0, fallbackData);
       
       return {
         embedding: firstData.embedding,
         truncated: false,
       };
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('Invalid embedding response:')) {
-        // For validation errors, add more context
-        logger.error(`OpenAI embedding response validation error: ${error.message}`);
-      } else {
-        // For API errors
-        logger.error(`OpenAI embedding API error: ${error}`);
+      // Rethrow ValidationErrors (already formatted properly)
+      if (error instanceof ValidationError) {
+        logger.error(`OpenAI embedding response validation error: ${error.toLogString()}`);
+        throw error;
       }
-      throw error; // Let the caller handle this
+      
+      // Rethrow ApiErrors (already formatted properly)
+      if (error instanceof ApiError) {
+        logger.error(`OpenAI API error: ${error.toLogString()}`);
+        throw error;
+      }
+      
+      // For other errors, wrap in ApiError
+      const apiError = new ApiError(
+        `Unexpected error during embedding generation: ${error instanceof Error ? error.message : String(error)}`,
+        500,
+        { model: this.embeddingModel },
+      );
+      logger.error(apiError.toLogString());
+      throw apiError;
     }
   }
 
@@ -279,32 +410,62 @@ export class EmbeddingService {
    * Makes the API call to OpenAI for batch embeddings
    * @param texts Array of prepared texts to embed
    * @returns Promise resolving to array of embedding results
+   * @throws ApiError When API call fails
+   * @throws ValidationError When response validation fails
    */
   private async callOpenAIBatchEmbeddingAPI(texts: string[]): Promise<EmbeddingResult[]> {
-    const client = await this.createOpenAIClient();
-    
-    const params: OpenAIEmbeddingParams = {
-      model: this.embeddingModel,
-      input: texts,
-    };
-    
     try {
-      // Get the raw response and validate it
-      const rawResponse = await client.embeddings.create(params);
+      const client = await this.createOpenAIClient();
+      
+      const params: OpenAIEmbeddingParams = {
+        model: this.embeddingModel,
+        input: texts,
+      };
+      
+      // Get the raw response
+      const rawResponse = await client.embeddings.create(params)
+        .catch(err => {
+          throw new ApiError(
+            `OpenAI batch embedding API request failed: ${err.message}`, 
+            err.status || 500, 
+            { 
+              model: this.embeddingModel, 
+              batchSize: texts.length,
+              totalTextLength: texts.reduce((sum, text) => sum + text.length, 0),
+            },
+          );
+        });
+      
+      // Validate the response
       const validatedResponse = validateEmbeddingResponse(rawResponse);
       
       logger.debug(`Generated ${validatedResponse.data.length} embeddings in batch`);
       
       return this.convertOpenAIResponseToResults(validatedResponse);
     } catch (error) {
-      if (error instanceof Error && error.message.startsWith('Invalid embedding response:')) {
-        // For validation errors, add more context
-        logger.error(`OpenAI batch embedding response validation error: ${error.message}`);
-      } else {
-        // For API errors
-        logger.error(`OpenAI batch embedding API error: ${error}`);
+      // Rethrow ValidationErrors (already formatted properly)
+      if (error instanceof ValidationError) {
+        logger.error(`OpenAI batch embedding response validation error: ${error.toLogString()}`);
+        throw error;
       }
-      throw error; // Let the caller handle this
+      
+      // Rethrow ApiErrors (already formatted properly)
+      if (error instanceof ApiError) {
+        logger.error(`OpenAI batch embedding API error: ${error.toLogString()}`);
+        throw error;
+      }
+      
+      // For other errors, wrap in ApiError
+      const apiError = new ApiError(
+        `Unexpected error during batch embedding generation: ${error instanceof Error ? error.message : String(error)}`,
+        500,
+        { 
+          model: this.embeddingModel,
+          batchSize: texts.length,
+        },
+      );
+      logger.error(apiError.toLogString());
+      throw apiError;
     }
   }
 
@@ -314,10 +475,20 @@ export class EmbeddingService {
    * @returns Array of embedding results
    */
   private convertOpenAIResponseToResults(response: OpenAIEmbeddingResponse): EmbeddingResult[] {
-    return response.data.map((item) => ({
-      embedding: item.embedding,
-      truncated: false,
-    }));
+    if (!isDefined(response) || !isDefined(response.data)) {
+      logger.warn('Empty or undefined response in convertOpenAIResponseToResults');
+      return [];
+    }
+    
+    return response.data.map((item) => {
+      // Ensure embedding is always defined
+      const embedding = isDefined(item) && isDefined(item.embedding) ? item.embedding : [];
+      
+      return {
+        embedding,
+        truncated: false,
+      };
+    });
   }
 
   /**
@@ -330,20 +501,52 @@ export class EmbeddingService {
     texts: string[],
     options?: BatchProcessingOptions,
   ): Promise<EmbeddingResult[]> {
-    const batchSize = options?.batchSize || this.batchSize;
-    const results: EmbeddingResult[] = [];
-    const totalBatches = Math.ceil(texts.length / batchSize);
+    // Handle empty input
+    if (!isDefined(texts) || texts.length === 0) {
+      return [];
+    }
     
-    for (let i = 0; i < texts.length; i += batchSize) {
-      logger.debug(`Processing batch ${Math.floor(i/batchSize) + 1} of ${totalBatches}`);
-      const batch = texts.slice(i, i + batchSize);
+    // Set batch size with safe defaults
+    const batchSize = isDefined(options?.batchSize) ? options.batchSize : this.batchSize;
+    const safeBatchSize = Math.max(1, batchSize); // Ensure batch size is at least 1
+    
+    const results: EmbeddingResult[] = [];
+    const totalBatches = Math.ceil(texts.length / safeBatchSize);
+    
+    for (let i = 0; i < texts.length; i += safeBatchSize) {
+      const batchNumber = Math.floor(i/safeBatchSize) + 1;
+      logger.debug(`Processing batch ${batchNumber} of ${totalBatches}`);
       
-      // Process each text in the batch in parallel
-      const batchResults = await Promise.all(
-        batch.map(text => this.getEmbedding(text)),
-      );
+      // Safely slice the array to get current batch
+      const batch = texts.slice(i, i + safeBatchSize);
       
-      results.push(...batchResults);
+      try {
+        // Process each text in the batch in parallel
+        const batchResults = await Promise.all(
+          batch.map(text => this.getEmbedding(text)),
+        );
+        
+        results.push(...batchResults);
+      } catch (error) {
+        // If parallel processing fails, try sequential as a last resort
+        logger.warn(`Parallel batch processing failed, falling back to sequential processing: ${error instanceof Error ? error.message : String(error)}`);
+        
+        for (const text of batch) {
+          try {
+            const result = await this.getEmbedding(text);
+            results.push(result);
+          } catch (singleError) {
+            // If even sequential processing fails for this item, log and add a placeholder
+            logger.error(`Failed to generate embedding: ${singleError instanceof Error ? singleError.message : String(singleError)}`);
+            
+            // Add a placeholder embedding to maintain position in results array
+            results.push({
+              embedding: Array(this.embeddingDimension).fill(0),
+              truncated: false,
+            });
+          }
+        }
+      }
     }
     
     return results;
@@ -355,19 +558,33 @@ export class EmbeddingService {
    * @returns A deterministic embedding based on text content
    */
   private generateFallbackEmbedding(text: string): EmbeddingResult {
-    logger.debug(`Generating fallback embedding for text (${text.length} chars)`);
+    // Handle null/undefined text
+    const safeText = isDefined(text) ? text : '';
     
-    // Create a deterministic embedding based on text hash
-    const hash = this.hashString(text);
-    const embedding = this.createDeterministicVector(hash);
+    logger.debug(`Generating fallback embedding for text (${safeText.length} chars)`);
     
-    // Normalize to unit length as OpenAI embeddings are normalized
-    const normalizedEmbedding = normalizeVector(embedding);
-    
-    return {
-      embedding: normalizedEmbedding,
-      truncated: false,
-    };
+    try {
+      // Create a deterministic embedding based on text hash
+      const hash = this.hashString(safeText);
+      const embedding = this.createDeterministicVector(hash);
+      
+      // Normalize to unit length as OpenAI embeddings are normalized
+      const normalizedEmbedding = normalizeVector(embedding);
+      
+      return {
+        embedding: normalizedEmbedding,
+        truncated: false,
+      };
+    } catch (error) {
+      // Handle any errors in the fallback process
+      logger.error(`Error generating fallback embedding: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // Return a zero vector as a last resort
+      return {
+        embedding: Array(this.embeddingDimension).fill(0),
+        truncated: false,
+      };
+    }
   }
 
   /**
@@ -376,7 +593,40 @@ export class EmbeddingService {
    * @returns Promise resolving to array of embedding results
    */
   private async generateFallbackBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
-    return Promise.all(texts.map(text => this.generateFallbackEmbedding(text)));
+    // Handle null/undefined texts array
+    if (!isDefined(texts)) {
+      logger.warn('Received undefined or null texts array in generateFallbackBatchEmbeddings');
+      return [];
+    }
+    
+    // Filter out any null/undefined array items
+    const safeTexts = texts.filter(isDefined);
+    
+    try {
+      // Generate embeddings in parallel
+      return await Promise.all(safeTexts.map(text => this.generateFallbackEmbedding(text)));
+    } catch (error) {
+      // Handle any errors in parallel processing
+      logger.error(`Error in fallback batch processing: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // Fall back to sequential processing
+      const results: EmbeddingResult[] = [];
+      
+      for (const text of safeTexts) {
+        try {
+          results.push(this.generateFallbackEmbedding(text));
+        } catch (singleError) {
+          // Add a zero vector for failed items
+          logger.debug(`Failed to generate fallback embedding for text: ${singleError instanceof Error ? singleError.message : String(singleError)}`);
+          results.push({
+            embedding: Array(this.embeddingDimension).fill(0),
+            truncated: false,
+          });
+        }
+      }
+      
+      return results;
+    }
   }
 
   /**
@@ -385,9 +635,17 @@ export class EmbeddingService {
    * @returns An array of numbers representing the vector
    */
   private createDeterministicVector(hash: number): number[] {
+    // Ensure we have valid configuration values with safe defaults
+    const fallbackSeed = isDefined(aiConfig.openAI.fallbackSeed) ? aiConfig.openAI.fallbackSeed : 42;
+    const fallbackMultiplier = isDefined(aiConfig.openAI.fallbackMultiplier) ? aiConfig.openAI.fallbackMultiplier : 10000;
+    const fallbackScaleFactor = isDefined(aiConfig.openAI.fallbackScaleFactor) ? aiConfig.openAI.fallbackScaleFactor : 2;
+    const fallbackOffset = isDefined(aiConfig.openAI.fallbackOffset) ? aiConfig.openAI.fallbackOffset : 1;
+    
+    // Create an array of the correct dimension
     return Array(this.embeddingDimension).fill(0).map((_, i) => {
-      const x = Math.sin(hash + i * aiConfig.openAI.fallbackSeed) * aiConfig.openAI.fallbackMultiplier;
-      return (x - Math.floor(x)) * aiConfig.openAI.fallbackScaleFactor - aiConfig.openAI.fallbackOffset;
+      // Deterministically generate vector components
+      const x = Math.sin(hash + i * fallbackSeed) * fallbackMultiplier;
+      return (x - Math.floor(x)) * fallbackScaleFactor - fallbackOffset;
     });
   }
 
@@ -397,9 +655,14 @@ export class EmbeddingService {
    * @returns A numeric hash value
    */
   private hashString(str: string): number {
+    // Handle null/undefined case
+    const safeStr = isDefined(str) ? str : '';
+    
     let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
+    // Implement a simple, deterministic hash function
+    for (let i = 0; i < safeStr.length; i++) {
+      // Safely access characters
+      const char = safeStr.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
       hash = hash & hash; // Convert to 32bit integer
     }

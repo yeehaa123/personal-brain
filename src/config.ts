@@ -49,6 +49,7 @@ export const textConfig = {
   // Chunking parameters
   defaultChunkSize: getEnvAsInt('DEFAULT_CHUNK_SIZE', 512),
   defaultChunkOverlap: getEnvAsInt('DEFAULT_CHUNK_OVERLAP', 100),
+  defaultChunkThreshold: getEnvAsInt('DEFAULT_CHUNK_THRESHOLD', 1000),
   
   // Truncation thresholds
   tagContentMaxLength: getEnvAsInt('TAG_CONTENT_MAX_LENGTH', 10000),
