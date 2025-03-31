@@ -26,8 +26,8 @@
     "start": "pm2 start src/interfaces/matrix.ts --interpreter $(which bun) --name personal-brain",
     "stop": "pm2 stop personal-brain",
     "restart": "pm2 describe personal-brain > /dev/null 2>&1 && pm2 restart personal-brain || bun run start",
-    "test": "bun test tests/**/*.test.ts",
-    "test:coverage": "bun test --coverage tests/**/*.test.ts",
+    "test": "bun test --preload tests/setup.ts tests/**/*.test.ts",
+    "test:coverage": "bun test --preload tests/setup.ts --coverage tests/**/*.test.ts",
     "prepare": "husky"
   },
   "devDependencies": {
