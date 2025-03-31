@@ -256,8 +256,11 @@ export class EmbeddingService {
       
       logger.debug(`Generated embedding with model: ${this.embeddingModel}`);
       
+      // Ensure safe array access with a fallback
+      const firstData = validatedResponse.data[0] ?? { embedding: [] };
+      
       return {
-        embedding: validatedResponse.data[0].embedding,
+        embedding: firstData.embedding,
         truncated: false,
       };
     } catch (error) {

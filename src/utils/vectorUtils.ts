@@ -18,9 +18,13 @@ export function cosineSimilarity(vec1: number[], vec2: number[]): number {
   let mag2 = 0;
 
   for (let i = 0; i < vec1.length; i++) {
-    dotProduct += vec1[i] * vec2[i];
-    mag1 += vec1[i] * vec1[i];
-    mag2 += vec2[i] * vec2[i];
+    // Type-safe access to array elements
+    const v1 = vec1[i] ?? 0;
+    const v2 = vec2[i] ?? 0;
+    
+    dotProduct += v1 * v2;
+    mag1 += v1 * v1;
+    mag2 += v2 * v2;
   }
 
   mag1 = Math.sqrt(mag1);

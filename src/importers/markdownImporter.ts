@@ -71,7 +71,7 @@ export function parseMarkdown(markdownContent: string): ParsedMarkdown {
   // If no title in frontmatter, try to extract from the first heading
   if (!metadata.title) {
     const headingMatch = content.match(/^#\s+(.+)$/m);
-    if (headingMatch) {
+    if (headingMatch && headingMatch[1]) {
       metadata.title = headingMatch[1].trim();
     }
   }
@@ -126,9 +126,10 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   
   let id: string;
   
-  if (existingNotes.length > 0) {
+  if (existingNotes.length > 0 && existingNotes[0]) {
     // Update existing note
-    id = existingNotes[0].id;
+    const existingNote = existingNotes[0];
+    id = existingNote.id;
     
     await db
       .update(notes)

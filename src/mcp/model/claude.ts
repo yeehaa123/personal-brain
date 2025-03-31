@@ -36,17 +36,20 @@ export class ClaudeModel {
       });
 
       let responseText = '';
-      if (response.content[0].type === 'text') {
-        responseText = response.content[0].text;
-      } else {
-        responseText = JSON.stringify(response.content[0]);
+      if (response.content.length > 0) {
+        const firstContent = response.content[0];
+        if (firstContent.type === 'text') {
+          responseText = firstContent.text ?? '';
+        } else {
+          responseText = JSON.stringify(firstContent);
+        }
       }
       
       return {
         response: responseText,
         usage: {
-          inputTokens: response.usage.input_tokens,
-          outputTokens: response.usage.output_tokens,
+          inputTokens: response.usage?.input_tokens ?? 0,
+          outputTokens: response.usage?.output_tokens ?? 0,
         },
       };
     } catch (error) {
