@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as yaml from 'js-yaml';
 import { ProfileContext } from '../mcp/context/profileContext';
 import { selectProfileSchema } from '../models/profile';
+import logger from '../utils/logger';
 
 export class ProfileImporter {
   private profileContext: ProfileContext;
@@ -15,16 +16,16 @@ export class ProfileImporter {
    */
   async importProfileFromYaml(filePath: string): Promise<string> {
     try {
-      console.log(`Importing profile from ${filePath}`);
+      logger.info(`Importing profile from ${filePath}`, { context: 'ProfileImporter' });
       const fileContent = fs.readFileSync(filePath, 'utf8');
       const profileData = yaml.load(fileContent) as Record<string, unknown>;
       const profileToSave = this.transformYamlToProfile(profileData);
       const profile = selectProfileSchema.parse(profileToSave);
       const profileId = await this.profileContext.saveProfile(profile);
-      console.log(`Successfully imported profile with ID: ${profileId}`);
+      logger.info(`Successfully imported profile with ID: ${profileId}`, { context: 'ProfileImporter' });
       return profileId;
     } catch (error) {
-      console.error('Error importing profile from YAML:', error);
+      logger.error('Error importing profile from YAML:', { error, context: 'ProfileImporter' });
       throw error;
     }
   }

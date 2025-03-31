@@ -4,9 +4,10 @@ import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { join } from 'path';
 import { NoteContext } from '../mcp/context/noteContext';
+import logger from '../utils/logger';
 
 async function runMigration() {
-  console.log('Running Drizzle migrations...');
+  logger.info('Running Drizzle migrations...', { context: 'DBMigration' });
   
   try {
     const sqlite = new Database('brain.db');
@@ -15,16 +16,20 @@ async function runMigration() {
     // Run migrations from the drizzle directory
     await migrate(db, { migrationsFolder: join(import.meta.dir, '../../drizzle') });
     
-    console.log('Database migration completed successfully');
+    logger.info('Database migration completed successfully', { context: 'DBMigration' });
     
     // Generate embeddings for existing notes
-    console.log('Generating embeddings for existing notes...');
+    logger.info('Generating embeddings for existing notes...', { context: 'DBMigration' });
     const context = new NoteContext();
     const result = await context.generateEmbeddingsForAllNotes();
     
-    console.log(`Embedding generation complete. Updated: ${result.updated}, Failed: ${result.failed}`);
+    logger.info('Embedding generation complete', { 
+      context: 'DBMigration',
+      updated: result.updated,
+      failed: result.failed,
+    });
   } catch (error) {
-    console.error('Error running database migration:', error);
+    logger.error('Error running database migration:', { error, context: 'DBMigration' });
     process.exit(1);
   }
 }

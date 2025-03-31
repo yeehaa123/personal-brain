@@ -18,8 +18,10 @@ const logLevels = {
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.colorize({ all: true }),
-  winston.format.printf(({ level, message, timestamp }) => {
-    return `[${timestamp}] ${level}: ${message}`;
+  winston.format.printf(({ level, message, timestamp, context, ...meta }) => {
+    const contextStr = context ? `[${context}] ` : '';
+    const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+    return `[${timestamp}] ${level}: ${contextStr}${message}${metaStr}`;
   }),
 );
 
@@ -73,5 +75,67 @@ const logger = winston.createLogger({
 // Set log level based on configuration
 logger.level = logConfig.consoleLevel;
 
-// Export the logger instance
+// Helper functions for consistent logging patterns
+interface LogContext {
+  context?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Log an error with operation context and error details
+ */
+function logError(message: string, error: unknown, context?: string | LogContext) {
+  const meta = typeof context === 'string' ? { context } : context || {};
+  const errorObj = error instanceof Error 
+    ? { message: error.message, stack: error.stack } 
+    : { message: String(error) };
+  
+  logger.error(message, { ...meta, error: errorObj });
+}
+
+/**
+ * Log a warning with operation context
+ */
+function logWarn(message: string, context?: string | LogContext) {
+  const meta = typeof context === 'string' ? { context } : context || {};
+  logger.warn(message, meta);
+}
+
+/**
+ * Log info with operation context
+ */
+function logInfo(message: string, context?: string | LogContext) {
+  const meta = typeof context === 'string' ? { context } : context || {};
+  logger.info(message, meta);
+}
+
+/**
+ * Log debug info with operation context
+ */
+function logDebug(message: string, context?: string | LogContext) {
+  const meta = typeof context === 'string' ? { context } : context || {};
+  logger.debug(message, meta);
+}
+
+/**
+ * Log a message intended for the console output
+ * Use this for user-facing messages instead of console.log
+ */
+function logOutput(message: string) {
+  // This bypasses the structured logging for cleaner user output
+  console.log(message);
+}
+
+/**
+ * Standard error handler that logs and optionally throws
+ */
+function handleError(message: string, error: unknown, context?: string | LogContext, shouldThrow = true): never | void {
+  logError(message, error, context);
+  if (shouldThrow) {
+    throw error instanceof Error ? error : new Error(String(error));
+  }
+}
+
+// Export the logger instance and helper functions
 export default logger;
+export { logError, logWarn, logInfo, logDebug, logOutput, handleError };

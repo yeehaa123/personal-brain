@@ -14,6 +14,7 @@ import type { Note } from '../../models/note';
 import { nanoid } from 'nanoid';
 import { EmbeddingService } from '../model/embeddings';
 import { extractTags } from '../../utils/tagExtractor';
+import logger from '../../utils/logger';
 
 interface NoteWithSimilarity extends Note {
   similarity?: number;
@@ -142,7 +143,7 @@ export class ProfileContext {
 
       return { updated: true };
     } catch (error) {
-      console.error(`Failed to update embedding for profile ${profile.id}:`, error);
+      logger.error(`Failed to update embedding for profile ${profile.id}`, { error, context: 'ProfileContext' });
       return { updated: false };
     }
   }
@@ -172,7 +173,7 @@ export class ProfileContext {
 
       return tags;
     } catch (error) {
-      console.error('Error updating profile tags:', error);
+      logger.error('Error updating profile tags', { error, context: 'ProfileContext' });
       return null;
     }
   }
@@ -194,7 +195,7 @@ export class ProfileContext {
           return tagResults;
         }
       } catch (error) {
-        console.error('Error finding notes with similar tags:', error);
+        logger.error('Error finding notes with similar tags', { error, context: 'ProfileContext' });
       }
     }
 
@@ -215,7 +216,7 @@ export class ProfileContext {
         limit,
       });
     } catch (error) {
-      console.error('Error finding notes related to profile:', error);
+      logger.error('Error finding notes related to profile:', { error, context: 'ProfileContext' });
       return [];
     }
   }
@@ -295,7 +296,7 @@ export class ProfileContext {
       const result = await this.embeddingService.getEmbedding(text);
       return result.embedding;
     } catch (error) {
-      console.error('Error generating profile embedding:', error);
+      logger.error('Error generating profile embedding:', { error, context: 'ProfileContext' });
       return [];
     }
   }
@@ -314,7 +315,7 @@ export class ProfileContext {
 
       return tags;
     } catch (error) {
-      console.error('Error generating profile tags:', error);
+      logger.error('Error generating profile tags:', { error, context: 'ProfileContext' });
       const profile = await this.getProfile();
       return this.extractProfileKeywords(profile || {});
     }

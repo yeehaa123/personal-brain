@@ -1,16 +1,18 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
+import logger from '../utils/logger';
 
 async function setupMatrixClient() {
   // Hard-coded test values - in a real app you would get these interactively
   // but we're skipping that due to readline issues
   const baseUrl = 'https://matrix.rizom.ai';
-  console.log(`Using Matrix server: ${baseUrl}`);
+  logger.info(`Using Matrix server: ${baseUrl}`, { context: 'MatrixSetup' });
 
   // Get Matrix username and password from command line arguments
   const args = process.argv.slice(2);
   if (args.length < 2) {
-    console.error('Usage: bun run matrix:setup <username> <password>');
+    logger.error('Missing required arguments', { context: 'MatrixSetup' });
+    logger.error('Usage: bun run matrix:setup <username> <password>', { context: 'MatrixSetup' });
     process.exit(1);
   }
 
@@ -18,14 +20,14 @@ async function setupMatrixClient() {
   const password = args[1];
 
   try {
-    console.log(`Setting up Matrix for user: ${username}`);
-    console.log(`Connecting to ${baseUrl}...`);
+    logger.info(`Setting up Matrix for user: ${username}`, { context: 'MatrixSetup' });
+    logger.info(`Connecting to ${baseUrl}...`, { context: 'MatrixSetup' });
 
     // Create a temporary client for login
     const client = sdk.createClient({ baseUrl });
 
     // Login to get an access token
-    console.log('Logging in...');
+    logger.info('Logging in...', { context: 'MatrixSetup' });
     const loginResponse = await client.login('m.login.password', {
       user: username,
       password: password,
@@ -35,16 +37,17 @@ async function setupMatrixClient() {
     const userId = loginResponse.user_id;
     const accessToken = loginResponse.access_token;
 
-    console.log(`\nLogin successful for user ${userId}`);
-    console.log('\nAdd the following to your .env file:');
-    console.log(`MATRIX_HOMESERVER_URL="${baseUrl}"`);
-    console.log(`MATRIX_USER_ID="${userId}"`);
-    console.log(`MATRIX_ACCESS_TOKEN="${accessToken}"`);
-    console.log('MATRIX_ROOM_IDS=""  # Add room IDs separated by commas');
-    console.log('COMMAND_PREFIX="!brain"  # Customize if desired');
+    logger.info(`Login successful for user ${userId}`, { context: 'MatrixSetup' });
+    logger.info('Add the following to your .env file:', { context: 'MatrixSetup' });
+    // Config values as formatted strings for .env file
+    logger.info(`MATRIX_HOMESERVER_URL="${baseUrl}"`, { context: 'MatrixSetup' });
+    logger.info(`MATRIX_USER_ID="${userId}"`, { context: 'MatrixSetup' });
+    logger.info(`MATRIX_ACCESS_TOKEN="${accessToken}"`, { context: 'MatrixSetup' });
+    logger.info('MATRIX_ROOM_IDS=""  # Add room IDs separated by commas', { context: 'MatrixSetup' });
+    logger.info('COMMAND_PREFIX="!brain"  # Customize if desired', { context: 'MatrixSetup' });
 
     // Create .env file template
-    console.log('\nCreating .env.matrix template file...');
+    logger.info('Creating .env.matrix template file...', { context: 'MatrixSetup' });
     await Bun.write(
       '.env.matrix',
       `MATRIX_HOMESERVER_URL="${baseUrl}"
@@ -56,12 +59,15 @@ ANTHROPIC_API_KEY=""
 `,
     );
 
-    console.log('Template saved to .env.matrix');
-    console.log('Copy this file to .env and fill in any missing information.');
+    logger.info('Template saved to .env.matrix', { context: 'MatrixSetup' });
+    logger.info('Copy this file to .env and fill in any missing information.', { context: 'MatrixSetup' });
 
   } catch (error: unknown) {
-    console.error('Error during setup:', error instanceof Error ? error.message : String(error));
+    logger.error('Error during setup:', { error, context: 'MatrixSetup' });
   }
 }
 
-setupMatrixClient().catch(console.error);
+setupMatrixClient().catch((error) => {
+  logger.error('Unhandled error in Matrix setup:', { error, context: 'MatrixSetup' });
+  process.exit(1);
+});

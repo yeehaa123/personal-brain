@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
+import logger from '../utils/logger';
 
 async function logoutMatrixClient() {
   // Get values from environment variables
@@ -8,13 +9,17 @@ async function logoutMatrixClient() {
   const userId = process.env.MATRIX_USER_ID;
 
   if (!accessToken || !userId) {
-    console.error('Error: MATRIX_ACCESS_TOKEN and MATRIX_USER_ID environment variables are required');
+    logger.error('Missing required environment variables', { 
+      context: 'MatrixLogout',
+      missing: !accessToken ? 'MATRIX_ACCESS_TOKEN' : 'MATRIX_USER_ID',
+    });
+    logger.error('Error: MATRIX_ACCESS_TOKEN and MATRIX_USER_ID environment variables are required', { context: 'MatrixLogout' });
     process.exit(1);
   }
 
   try {
-    console.log(`Logging out Matrix user: ${userId}`);
-    console.log(`From homeserver: ${baseUrl}`);
+    logger.info(`Logging out Matrix user: ${userId}`, { context: 'MatrixLogout' });
+    logger.info(`From homeserver: ${baseUrl}`, { context: 'MatrixLogout' });
 
     // Create a client with the access token
     const client = sdk.createClient({
@@ -24,16 +29,19 @@ async function logoutMatrixClient() {
     });
 
     // Logout to invalidate the token
-    console.log('Sending logout request...');
+    logger.info('Sending logout request...', { context: 'MatrixLogout' });
     await client.logout();
 
-    console.log('\nLogout successful!');
-    console.log('The access token has been invalidated.');
-    console.log('You will need to generate a new token to reconnect.');
+    logger.info('Logout successful!', { context: 'MatrixLogout' });
+    logger.info('The access token has been invalidated.', { context: 'MatrixLogout' });
+    logger.info('You will need to generate a new token to reconnect.', { context: 'MatrixLogout' });
 
   } catch (error: unknown) {
-    console.error('Error during logout:', error instanceof Error ? error.message : String(error));
+    logger.error('Error during logout:', { error, context: 'MatrixLogout' });
   }
 }
 
-logoutMatrixClient().catch(console.error);
+logoutMatrixClient().catch((error) => {
+  logger.error('Unhandled error in Matrix logout:', { error, context: 'MatrixLogout' });
+  process.exit(1);
+});
