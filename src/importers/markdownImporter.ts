@@ -1,12 +1,13 @@
 import { readdir, readFile } from 'fs/promises';
 import { join, basename, extname } from 'path';
 import { nanoid } from 'nanoid';
-import { db } from '../db';
-import { notes } from '../db/schema';
+import { db } from '@/db';
+import { notes } from '@/db/schema';
 import { sql } from 'drizzle-orm';
-import { NoteContext } from '../mcp/context/noteContext';
-import { EmbeddingService } from '../mcp/model/embeddings';
-import { extractTags } from '../utils/tagExtractor';
+import { NoteContext } from '@/mcp/context/noteContext';
+import { EmbeddingService } from '@/mcp/model/embeddings';
+import { extractTags } from '@/utils/tagExtractor';
+import logger from '@/utils/logger';
 
 interface MarkdownMetadata {
   title?: string;
@@ -92,7 +93,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   // Generate tags with AI if none were provided in the frontmatter
   if (tags.length === 0) {
     try {
-      console.log(`Generating tags for: ${title}`);
+      logger.info(`Generating tags for: ${title}`);
       // Use the combined title and content for better tag context
       const tagContent = `${title}\n\n${content}`;
       
@@ -100,10 +101,10 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
       const generatedTags = await extractTags(tagContent, [], 7);
       if (generatedTags && generatedTags.length > 0) {
         tags = generatedTags;
-        console.log(`Generated tags: ${tags.join(', ')}`);
+        logger.info(`Generated tags: ${tags.join(', ')}`);
       }
     } catch (error) {
-      console.error(`Error generating tags for ${filePath}:`, error);
+      logger.error(`Error generating tags for ${filePath}: ${error}`);
       // Continue with no tags if there's an error
     }
   }
@@ -113,7 +114,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   const fileName = basename(filePath);
   const sourceId = `source:${fileName}`;
   
-  console.log(`Source ID for ${filePath}: ${sourceId}`);
+  logger.debug(`Source ID for ${filePath}: ${sourceId}`);
   
   // Check if this file was already imported
   const existingNotes = await db
@@ -132,7 +133,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     const embeddingResult = await embeddingService.getEmbedding(combinedText);
     embedding = embeddingResult.embedding;
   } catch (error) {
-    console.error(`Couldn't generate embedding for ${filePath}:`, error);
+    logger.error(`Couldn't generate embedding for ${filePath}: ${error}`);
     // Continue without embedding if there's an error
   }
   
@@ -153,7 +154,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
       })
       .where(sql`${notes.id} = ${id}`);
       
-    console.log(`Updated existing note: ${id}`);
+    logger.info(`Updated existing note: ${id}`);
   } else {
     // Create new note using the improved NoteContext API
     const noteData = {
@@ -169,7 +170,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     // Use the context's createNote method which handles chunking too
     id = await context.createNote(noteData);
     
-    console.log(`Created new note: ${id}`);
+    logger.info(`Created new note: ${id}`);
   }
   
   return id;
@@ -194,10 +195,10 @@ export async function importMarkdownDirectory(dirPath: string): Promise<{ import
         try {
           await importMarkdownFile(fullPath);
           imported++;
-          console.log(`Imported: ${fullPath}`);
+          logger.info(`Imported: ${fullPath}`);
         } catch (error) {
           failed++;
-          console.error(`Failed to import ${fullPath}:`, error);
+          logger.error(`Failed to import ${fullPath}: ${error}`);
         }
       }
     }

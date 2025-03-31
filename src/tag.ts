@@ -1,9 +1,10 @@
 #!/usr/bin/env bun
-import { db } from './db';
-import { notes } from './db/schema';
+import { db } from '@/db';
+import { notes } from '@/db/schema';
 import { sql } from 'drizzle-orm';
-import { extractTags } from './utils/tagExtractor';
-import { ProfileContext } from './mcp/context/profileContext';
+import { extractTags } from '@/utils/tagExtractor';
+import { ProfileContext } from '@/mcp/context/profileContext';
+import logger from '@/utils/logger';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;
 type EntityType = typeof ENTITY_TYPES[number];
@@ -25,7 +26,7 @@ async function generateTags() {
   // Initialize services
   const profileContext = new ProfileContext();
 
-  console.log(`Generating tags${entityType !== 'all' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
+  logger.info(`Generating tags${entityType !== 'all' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
 
   try {
     // Process based on entity type
@@ -37,29 +38,29 @@ async function generateTags() {
       await generateNoteTags(forceRegenerate);
     }
 
-    console.log('\nTag generation complete!');
+    logger.info('\nTag generation complete!');
   } catch (error) {
-    console.error('Error generating tags:', error);
+    logger.error(`Error generating tags: ${error}`);
     process.exit(1);
   }
 }
 
 async function generateProfileTags(profileContext: ProfileContext, forceRegenerate: boolean = false) {
-  console.log('\n=== Processing Profile Tags ===');
+  logger.info('\n=== Processing Profile Tags ===');
 
   try {
     // Check if profile exists
     const profile = await profileContext.getProfile();
 
     if (!profile) {
-      console.log('No profile found. Import a profile first.');
+      logger.info('No profile found. Import a profile first.');
       return;
     }
 
     // Check if we need to generate tags
     if (!forceRegenerate && profile.tags && profile.tags.length > 0) {
-      console.log('Profile already has tags:', profile.tags.join(', '));
-      console.log('Use --force to regenerate tags.');
+      logger.info(`Profile already has tags: ${profile.tags.join(', ')}`);
+      logger.info('Use --force to regenerate tags.');
       return;
     }
 
@@ -67,17 +68,17 @@ async function generateProfileTags(profileContext: ProfileContext, forceRegenera
     const tags = await profileContext.updateProfileTags(forceRegenerate);
 
     if (tags) {
-      console.log(`Generated tags for profile: ${tags.join(', ')}`);
+      logger.info(`Generated tags for profile: ${tags.join(', ')}`);
     } else {
-      console.log('No tags were generated for profile. Check logs for details.');
+      logger.info('No tags were generated for profile. Check logs for details.');
     }
   } catch (error) {
-    console.error('Error generating profile tags:', error);
+    logger.error(`Error generating profile tags: ${error}`);
   }
 }
 
 async function generateNoteTags(forceRegenerate: boolean = false) {
-  console.log('\n=== Processing Note Tags ===');
+  logger.info('\n=== Processing Note Tags ===');
 
   try {
     // Get all notes from the database
@@ -93,11 +94,11 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
     }
 
     if (allNotes.length === 0) {
-      console.log('No notes found that need tag generation');
+      logger.info('No notes found that need tag generation');
       return;
     }
 
-    console.log(`Found ${allNotes.length} notes to process`);
+    logger.info(`Found ${allNotes.length} notes to process`);
     let updated = 0;
     let failed = 0;
 
@@ -105,11 +106,11 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
       try {
         // Skip notes that already have tags unless force regeneration is enabled
         if (!forceRegenerate && note.tags && note.tags.length > 0) {
-          console.log(`Skipping note "${note.title}" (already has tags)`);
+          logger.info(`Skipping note "${note.title}" (already has tags)`);
           continue;
         }
 
-        console.log(`Generating tags for note: "${note.title}"`);
+        logger.info(`Generating tags for note: "${note.title}"`);
 
         // Use title + content for better tagging context
         const tagContent = `${note.title}\n\n${note.content}`;
@@ -126,29 +127,29 @@ async function generateNoteTags(forceRegenerate: boolean = false) {
             .set({ tags: generatedTags })
             .where(sql`${notes.id} = ${note.id}`);
 
-          console.log(`Updated tags for "${note.title}": ${generatedTags.join(', ')}`);
+          logger.info(`Updated tags for "${note.title}": ${generatedTags.join(', ')}`);
           updated++;
         } else {
-          console.log(`No tags generated for "${note.title}"`);
+          logger.info(`No tags generated for "${note.title}"`);
           failed++;
         }
       } catch (error) {
-        console.error(`Error generating tags for note "${note.title}":`, error);
+        logger.error(`Error generating tags for note "${note.title}": ${error}`);
         failed++;
       }
     }
 
-    console.log(`\nNotes processed: ${updated + failed}`);
-    console.log(`Notes updated: ${updated}`);
-    console.log(`Notes failed: ${failed}`);
+    logger.info(`\nNotes processed: ${updated + failed}`);
+    logger.info(`Notes updated: ${updated}`);
+    logger.info(`Notes failed: ${failed}`);
   } catch (error) {
-    console.error('Error generating note tags:', error);
+    logger.error(`Error generating note tags: ${error}`);
   }
 }
 
 // Show usage if no arguments provided
 if (process.argv.length === 2) {
-  console.log(`
+  logger.info(`
 Usage:
   bun run src/tag.ts [entity-type] [options]
 

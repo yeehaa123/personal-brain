@@ -1,4 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { aiConfig } from '@/config';
+import logger from '@/utils/logger';
 
 export interface ModelResponse {
   response: string;
@@ -12,17 +14,18 @@ export class ClaudeModel {
   private client: Anthropic;
   private model: string;
 
-  constructor(apiKey?: string, model = 'claude-3-opus-20240229') {
+  constructor(apiKey?: string, model = aiConfig.anthropic.defaultModel) {
     this.client = new Anthropic({
-      apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
+      apiKey: apiKey || aiConfig.anthropic.apiKey,
     });
     this.model = model;
+    logger.debug(`Claude model initialized with model: ${this.model}`);
   }
 
   async complete(
     systemPrompt: string,
     userPrompt: string,
-    maxTokens = 1000,
+    maxTokens = aiConfig.anthropic.defaultMaxTokens,
   ): Promise<ModelResponse> {
     try {
       const response = await this.client.messages.create({
@@ -47,7 +50,7 @@ export class ClaudeModel {
         },
       };
     } catch (error) {
-      console.error('Error calling Claude API:', error);
+      logger.error(`Error calling Claude API: ${error}`);
       throw error;
     }
   }

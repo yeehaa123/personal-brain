@@ -2,6 +2,7 @@
  * Text processing utilities
  */
 import sanitizeHtmlLib from 'sanitize-html';
+import { textConfig } from '@/config';
 
 /**
  * Clean and normalize text for embedding
@@ -22,7 +23,11 @@ export function prepareText(text: string): string {
  * @param overlap The number of characters to overlap between chunks
  * @returns An array of text chunks
  */
-export function chunkText(text: string, chunkSize = 512, overlap = 100): string[] {
+export function chunkText(
+  text: string, 
+  chunkSize = textConfig.defaultChunkSize, 
+  overlap = textConfig.defaultChunkOverlap,
+): string[] {
   const chunks: string[] = [];
   const sentences = text.split(/(?<=[.!?])\s+/);
   
@@ -55,7 +60,7 @@ export function chunkText(text: string, chunkSize = 512, overlap = 100): string[
  * @param maxKeywords Maximum number of keywords to return
  * @returns Array of extracted keywords
  */
-export function extractKeywords(text: string, maxKeywords = 10): string[] {
+export function extractKeywords(text: string, maxKeywords = textConfig.defaultMaxKeywords): string[] {
   // Remove markdown syntax, common words, keep only words > 4 chars
   const cleanedText = text
     .replace(/[#*_`>\\+\\=\\[\\]\\(\\)\\{\\}\\|]/g, ' ')
@@ -141,7 +146,7 @@ export function sanitizeHtml(html: string): string {
  * @param wordsPerMinute Average reading speed (default: 200 words per minute)
  * @returns Estimated reading time in minutes
  */
-export function calculateReadingTime(text: string, wordsPerMinute = 200): number {
+export function calculateReadingTime(text: string, wordsPerMinute = textConfig.defaultWordsPerMinute): number {
   const wordCount = text.split(/\s+/).length;
   return Math.ceil(wordCount / wordsPerMinute);
 }

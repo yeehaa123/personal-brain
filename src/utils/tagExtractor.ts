@@ -2,6 +2,8 @@ import { extractKeywords } from './textUtils';
 import { anthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { aiConfig, textConfig } from '@/config';
+import logger from '@/utils/logger';
 
 
 /**
@@ -14,19 +16,18 @@ import { z } from 'zod';
 export async function extractTags(
   content: string,
   existingTags: string[] = [],
-  maxTags: number = 7,
+  maxTags: number = textConfig.defaultMaxTags,
 ): Promise<string[]> {
   try {
     // Check for API key
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      console.warn('No Anthropic API key available, falling back to keyword extraction');
+    if (!aiConfig.anthropic.apiKey) {
+      logger.warn('No Anthropic API key available, falling back to keyword extraction');
       return extractKeywords(content, maxTags);
     }
 
     // Truncate content if it's too long
-    const truncatedContent = content.length > 10000
-      ? content.substring(0, 10000) + '... [content truncated]'
+    const truncatedContent = content.length > textConfig.tagContentMaxLength
+      ? content.substring(0, textConfig.tagContentMaxLength) + '... [content truncated]'
       : content;
 
     // Build the prompt
@@ -49,9 +50,9 @@ Extract up to ${maxTags} tags that best represent this content.
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
     const { object } = await generateObject({
-      model: anthropic('claude-3-7-sonnet-20250219'),
+      model: anthropic(aiConfig.anthropic.defaultModel),
       prompt,
-      temperature: 0.0,
+      temperature: aiConfig.anthropic.temperature,
       system: 'You extract tags from content. Only respond with the tags, nothing else.',
       schema: z.object({
         tags: z.array(z.string()).max(maxTags),
@@ -59,7 +60,7 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
     });
     return object.tags;
   } catch (error) {
-    console.error('Error extracting tags with Claude:', error);
+    logger.error(`Error extracting tags with Claude: ${error}`);
     // Fallback to simple keyword extraction
     return extractKeywords(content, maxTags);
   }

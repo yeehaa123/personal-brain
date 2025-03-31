@@ -46,15 +46,42 @@ bun run db:migrate
 
 ### Configuration
 
-For AI features, you'll need to set up your API keys:
+Personal Brain uses a centralized configuration system in `src/config.ts` that loads values from environment variables with sensible defaults:
 
 ```bash
-# Set your Anthropic API key
+# AI Model APIs
 export ANTHROPIC_API_KEY=your_api_key
+export OPENAI_API_KEY=your_api_key
+export ANTHROPIC_MODEL=claude-3-7-sonnet-20250219
+export OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 
-# Optional: Set News API key for external knowledge
+# External API keys
 export NEWS_API_KEY=your_news_api_key
+
+# Logging configuration
+export LOG_CONSOLE_LEVEL=info  # 'error', 'warn', 'info', 'debug'
+export LOG_FILE_LEVEL=debug
+export ERROR_LOG_PATH=error.log
+export COMBINED_LOG_PATH=combined.log
+
+# Text processing settings
+export DEFAULT_CHUNK_SIZE=512
+export DEFAULT_CHUNK_OVERLAP=100
+export DEFAULT_MAX_TAGS=7
 ```
+
+#### Configuration Categories
+
+The configuration is organized into the following categories:
+
+- **Log Configuration**: Log levels, file paths for log outputs
+- **AI Model Configuration**: API keys, model names, embedding dimensions
+- **Text Processing**: Chunk sizes, tag limits, reading time calculations
+- **External APIs**: Base URLs, API keys for external services
+- **Application Paths**: Standard file locations for imports/profiles
+- **Database Configuration**: Database connection settings
+
+All configuration values have sensible defaults, but can be overridden with environment variables.
 
 ## Usage
 

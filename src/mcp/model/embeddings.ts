@@ -1,6 +1,7 @@
-import { cosineSimilarity, normalizeVector } from '../../utils/vectorUtils';
-import { prepareText, chunkText } from '../../utils/textUtils';
-import logger from '../../utils/logger';
+import { cosineSimilarity, normalizeVector } from '@/utils/vectorUtils';
+import { prepareText, chunkText } from '@/utils/textUtils';
+import logger from '@/utils/logger';
+import { aiConfig } from '@/config';
 
 export interface EmbeddingResult {
   embedding: number[];
@@ -19,9 +20,9 @@ export class EmbeddingService {
   private embeddingDimension: number;
 
   constructor(config?: EmbeddingConfig) {
-    this.apiKey = config?.apiKey || process.env.OPENAI_API_KEY || '';
-    this.embeddingModel = config?.embeddingModel || 'text-embedding-3-small';
-    this.embeddingDimension = config?.embeddingDimension || 1536;
+    this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
+    this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
+    this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
     
     logger.info(`Embedding service initialized (API key available: ${Boolean(this.apiKey)})`);
     
@@ -102,8 +103,8 @@ export class EmbeddingService {
     // Create a deterministic embedding based on text hash
     const hash = this.hashString(text);
     const embedding = Array(this.embeddingDimension).fill(0).map((_, i) => {
-      const x = Math.sin(hash + i * 0.1) * 10000;
-      return (x - Math.floor(x)) * 0.8 - 0.4; // Values between -0.4 and 0.4
+      const x = Math.sin(hash + i * aiConfig.openAI.fallbackSeed) * aiConfig.openAI.fallbackMultiplier;
+      return (x - Math.floor(x)) * aiConfig.openAI.fallbackScaleFactor - aiConfig.openAI.fallbackOffset;
     });
     
     // Normalize to unit length as OpenAI embeddings are normalized
@@ -168,7 +169,7 @@ export class EmbeddingService {
    * @returns Array of embedding results
    */
   private async processEmbeddingsInSmallBatches(texts: string[]): Promise<EmbeddingResult[]> {
-    const batchSize = 10;
+    const batchSize = aiConfig.openAI.batchSize;
     const results: EmbeddingResult[] = [];
     const totalBatches = Math.ceil(texts.length / batchSize);
     
@@ -213,7 +214,7 @@ export class EmbeddingService {
    * @param overlap The number of characters to overlap between chunks
    * @returns An array of text chunks
    */
-  chunkText(text: string, chunkSize = 512, overlap = 100): string[] {
+  chunkText(text: string, chunkSize = aiConfig.openAI.chunkSize || 512, overlap = aiConfig.openAI.chunkOverlap || 100): string[] {
     return chunkText(text, chunkSize, overlap);
   }
 }

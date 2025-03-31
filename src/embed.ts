@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
-import { NoteContext } from './mcp/context/noteContext';
-import { ProfileContext } from './mcp/context/profileContext';
-import { db } from './db';
-import { notes, profiles } from './db/schema';
+import { NoteContext } from '@/mcp/context/noteContext';
+import { ProfileContext } from '@/mcp/context/profileContext';
+import { db } from '@/db';
+import { notes, profiles } from '@/db/schema';
+import logger from '@/utils/logger';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;
 type EntityType = typeof ENTITY_TYPES[number];
@@ -21,7 +22,7 @@ async function generateEmbeddings() {
     }
   }
 
-  console.log(`Generating embeddings${entityType !== 'notes' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
+  logger.info(`Generating embeddings${entityType !== 'notes' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
 
   try {
     // Process based on entity type
@@ -33,67 +34,67 @@ async function generateEmbeddings() {
       await generateNoteEmbeddings(forceRegenerate);
     }
     
-    console.log('\nEmbedding generation complete!');
+    logger.info('\nEmbedding generation complete!');
   } catch (error) {
-    console.error('Error generating embeddings:', error);
+    logger.error(`Error generating embeddings: ${error}`);
     process.exit(1);
   }
 }
 
 async function generateNoteEmbeddings(forceRegenerate: boolean) {
-  console.log('\n=== Processing Note Embeddings ===');
+  logger.info('\n=== Processing Note Embeddings ===');
   
   if (forceRegenerate) {
-    console.log('Force regenerating embeddings for ALL notes...');
+    logger.info('Force regenerating embeddings for ALL notes...');
     await db.update(notes).set({ embedding: null });
   } else {
-    console.log('Generating embeddings for notes without embeddings...');
-    console.log('Use --force flag to regenerate all embeddings');
+    logger.info('Generating embeddings for notes without embeddings...');
+    logger.info('Use --force flag to regenerate all embeddings');
   }
 
   try {
     const context = new NoteContext();
     const result = await context.generateEmbeddingsForAllNotes();
 
-    console.log(`Notes updated: ${result.updated}`);
-    console.log(`Notes failed: ${result.failed}`);
+    logger.info(`Notes updated: ${result.updated}`);
+    logger.info(`Notes failed: ${result.failed}`);
 
     if (result.failed > 0) {
-      console.log('Some notes failed to generate embeddings. Check the logs for details.');
+      logger.info('Some notes failed to generate embeddings. Check the logs for details.');
     }
   } catch (error) {
-    console.error('Error generating note embeddings:', error);
+    logger.error(`Error generating note embeddings: ${error}`);
   }
 }
 
 async function generateProfileEmbeddings(forceRegenerate: boolean) {
-  console.log('\n=== Processing Profile Embedding ===');
+  logger.info('\n=== Processing Profile Embedding ===');
   
   if (forceRegenerate) {
-    console.log('Force regenerating embedding for profile...');
+    logger.info('Force regenerating embedding for profile...');
     await db.update(profiles).set({ embedding: null });
   } else {
-    console.log('Generating embedding for profile if not present...');
-    console.log('Use --force flag to regenerate profile embedding');
+    logger.info('Generating embedding for profile if not present...');
+    logger.info('Use --force flag to regenerate profile embedding');
   }
 
   try {
     const context = new ProfileContext();
     const result = await context.generateEmbeddingForProfile();
 
-    console.log(`Profile updated: ${result.updated ? 'Yes' : 'No'}`);
+    logger.info(`Profile updated: ${result.updated ? 'Yes' : 'No'}`);
 
     if (!result.updated) {
-      console.log('Profile embedding was not updated. Check the logs for details.');
+      logger.info('Profile embedding was not updated. Check the logs for details.');
     }
   } catch (error) {
-    console.error('Error generating profile embedding:', error);
+    logger.error(`Error generating profile embedding: ${error}`);
   }
 }
 
 // Show usage if help flag is provided
 if (process.argv.includes('--help') || process.argv.length === 2) {
-  console.log(`
+  logger.info(`
 Usage:
   bun run src/embed.ts [entity-type] [options]
 

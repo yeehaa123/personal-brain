@@ -1,13 +1,14 @@
 #!/usr/bin/env bun
 import { resolve } from 'path';
-import { importMarkdownDirectory, importMarkdownFile } from './importers/markdownImporter';
-import { ProfileImporter } from './importers/profileImporter';
+import { importMarkdownDirectory, importMarkdownFile } from '@/importers/markdownImporter';
+import { ProfileImporter } from '@/importers/profileImporter';
+import logger from '@/utils/logger';
 
 async function main() {
   const args = process.argv.slice(2);
   
   if (args.length === 0) {
-    console.log(`
+    logger.info(`
 Usage:
   bun run src/import.ts <path-to-markdown-or-directory>
   bun run src/import.ts profile <path-to-profile-yaml>
@@ -23,19 +24,19 @@ Examples:
   // Check if this is a profile import
   if (args[0] === 'profile') {
     if (args.length < 2) {
-      console.error('Profile import requires a YAML file path');
+      logger.error('Profile import requires a YAML file path');
       process.exit(1);
     }
     
     const profilePath = resolve(args[1]);
     try {
-      console.log(`Importing profile from: ${profilePath}`);
+      logger.info(`Importing profile from: ${profilePath}`);
       const importer = new ProfileImporter();
       const profileId = await importer.importProfileFromYaml(profilePath);
-      console.log(`Successfully imported profile with ID: ${profileId}`);
+      logger.info(`Successfully imported profile with ID: ${profileId}`);
       return;
     } catch (error) {
-      console.error('Error importing profile:', error);
+      logger.error(`Error importing profile: ${error}`);
       process.exit(1);
     }
   }
@@ -47,19 +48,19 @@ Examples:
     const stats = await Bun.file(path).stat();
     
     if (stats.isDirectory()) {
-      console.log(`Importing markdown files from directory: ${path}`);
+      logger.info(`Importing markdown files from directory: ${path}`);
       const result = await importMarkdownDirectory(path);
-      console.log(`Import complete. Imported: ${result.imported}, Failed: ${result.failed}`);
+      logger.info(`Import complete. Imported: ${result.imported}, Failed: ${result.failed}`);
     } else if (stats.isFile()) {
-      console.log(`Importing markdown file: ${path}`);
+      logger.info(`Importing markdown file: ${path}`);
       const id = await importMarkdownFile(path);
-      console.log(`Successfully imported file with ID: ${id}`);
+      logger.info(`Successfully imported file with ID: ${id}`);
     } else {
-      console.error(`Path is neither a file nor directory: ${path}`);
+      logger.error(`Path is neither a file nor directory: ${path}`);
       process.exit(1);
     }
   } catch (error) {
-    console.error('Error during import:', error);
+    logger.error(`Error during import: ${error}`);
     process.exit(1);
   }
 }

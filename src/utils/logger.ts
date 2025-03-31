@@ -2,6 +2,7 @@
  * Logging utility using Winston for consistent logging across the application
  */
 import winston from 'winston';
+import { logConfig } from '@/config';
 
 // Define log levels
 const logLevels = {
@@ -39,7 +40,7 @@ const excludeDebug = winston.format((info) => {
 // Create the Winston logger
 const logger = winston.createLogger({
   levels: logLevels,
-  level: process.env.LOG_LEVEL || 'debug', // Setting default to debug to capture all logs
+  level: logConfig.fileLevel, // Setting default to debug to capture all logs
   format: winston.format.json(),
   transports: [
     // Console transport (excluding debug messages)
@@ -51,30 +52,26 @@ const logger = winston.createLogger({
     }),
     // File transport for errors
     new winston.transports.File({ 
-      filename: 'error.log', 
+      filename: logConfig.errorLogPath, 
       level: 'error',
       format: fileFormat,
     }),
     // File transport for combined logs
     new winston.transports.File({ 
-      filename: 'combined.log',
+      filename: logConfig.combinedLogPath,
       format: fileFormat,
     }),
     // File transport specifically for debug logs
     new winston.transports.File({ 
-      filename: 'debug.log',
+      filename: logConfig.debugLogPath,
       level: 'debug',
       format: fileFormat,
     }),
   ],
 });
 
-// Set log level based on environment
-if (process.env.NODE_ENV === 'production') {
-  logger.level = 'info';
-} else {
-  logger.level = 'debug';
-}
+// Set log level based on configuration
+logger.level = logConfig.consoleLevel;
 
 // Export the logger instance
 export default logger;
