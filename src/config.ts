@@ -89,6 +89,42 @@ export const dbConfig = {
   dbPath: process.env.DB_PATH || './brain.db',
 };
 
+// Semantic relevance thresholds for query processing
+export const relevanceConfig = {
+  // When profile relevance exceeds this threshold, consider it a profile-related query
+  profileQueryThreshold: 0.6,
+  
+  // Minimum relevance to include profile information in context
+  profileInclusionThreshold: 0.4,
+  
+  // Threshold to include profile information in response
+  profileResponseThreshold: 0.5,
+  
+  // Coverage threshold to determine if external sources are needed
+  externalSourcesThreshold: 0.6,
+  
+  // Threshold for high profile relevance in system prompt
+  highProfileRelevanceThreshold: 0.7,
+  
+  // Threshold for medium profile relevance in system prompt
+  mediumProfileRelevanceThreshold: 0.4,
+  
+  // Threshold for detailed profile information in the prompt
+  detailedProfileThreshold: 0.5,
+  
+  // Fallback values when we can't calculate semantic relevance
+  fallback: {
+    // High relevance fallback for profile queries
+    highRelevance: 0.9,
+    
+    // Low relevance fallback for non-profile queries
+    lowRelevance: 0.2,
+    
+    // Similarity adjustment factor
+    similarityScaleFactor: 0.5,
+  },
+};
+
 // Export the combined configuration
 export default {
   log: logConfig,
@@ -97,4 +133,5 @@ export default {
   api: apiConfig,
   path: pathConfig,
   db: dbConfig,
+  relevance: relevanceConfig,
 };

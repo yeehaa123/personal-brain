@@ -11,6 +11,7 @@ import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } fro
 import { getExcerpt } from '../../utils/noteUtils';
 import { EmbeddingService } from '../model/embeddings';
 import logger from '../../utils/logger';
+import { relevanceConfig } from '../../config';
 
 export interface ProtocolResponse {
   answer: string;
@@ -125,7 +126,7 @@ export class BrainProtocol {
       logger.debug(`Profile semantic relevance: ${profileRelevance.toFixed(2)}`);
 
       // If relevance is high enough, consider it a profile query
-      if (profileRelevance > 0.6 && !isProfileQuery) {
+      if (profileRelevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
         logger.info('Query is semantically relevant to profile');
         isProfileQuery = true;
       }
@@ -166,7 +167,7 @@ export class BrainProtocol {
 
     // 3. Format the context and query for the model
     // For highly relevant profile queries, always include profile context
-    const includeProfile = isProfileQuery || profileRelevance > 0.4;
+    const includeProfile = isProfileQuery || profileRelevance > relevanceConfig.profileInclusionThreshold;
     const { formattedPrompt, citations } = this.formatPromptWithContext(
       query,
       relevantNotes,
@@ -184,7 +185,7 @@ export class BrainProtocol {
 
     // 6. Return the formatted protocol response
     // For medium-high relevance, include profile even if not a direct profile query
-    const includeProfileInResponse = isProfileQuery || profileRelevance > 0.5;
+    const includeProfileInResponse = isProfileQuery || profileRelevance > relevanceConfig.profileResponseThreshold;
 
     return {
       answer: modelResponse.response,
@@ -228,7 +229,9 @@ export class BrainProtocol {
   private async getProfileRelevance(query: string): Promise<number> {
     try {
       if (!this.profile || !this.profile.embedding) {
-        return this.isProfileQuery(query) ? 0.9 : 0.2;
+        return this.isProfileQuery(query) ? 
+          relevanceConfig.fallback.highRelevance : 
+          relevanceConfig.fallback.lowRelevance;
       }
 
       // Get embedding for the query
@@ -242,11 +245,13 @@ export class BrainProtocol {
 
       // Scale the similarity to be more decisive
       // (values closer to 0 or 1 rather than middle range)
-      return Math.pow(similarity * 0.5 + 0.5, 2);
+      return Math.pow(similarity * relevanceConfig.fallback.similarityScaleFactor + 0.5, 2);
     } catch (error) {
       logger.error('Error calculating profile relevance:', error);
       // Fall back to keyword matching
-      return this.isProfileQuery(query) ? 0.9 : 0.2;
+      return this.isProfileQuery(query) ? 
+        relevanceConfig.fallback.highRelevance : 
+        relevanceConfig.fallback.lowRelevance;
     }
   }
 
@@ -345,7 +350,7 @@ export class BrainProtocol {
     }
 
     // If internal notes have low coverage, use external sources
-    return highestCoverage < 0.6;
+    return highestCoverage < relevanceConfig.externalSourcesThreshold;
   }
 
   /**
@@ -509,7 +514,7 @@ ${query}`;
     }
 
     // For higher relevance queries, include more detail
-    if (queryRelevance > 0.5) {
+    if (queryRelevance > relevanceConfig.detailedProfileThreshold) {
       // Past Experience
       if (profile.experiences?.length) {
         const pastExperiences = (profile.experiences as ProfileExperience[]).filter(exp => exp.ends_at).slice(0, 5);
@@ -658,7 +663,7 @@ Guidelines:
     }
 
     // For queries with high profile relevance but not direct profile questions
-    if (profileRelevance > 0.7) {
+    if (profileRelevance > relevanceConfig.highProfileRelevanceThreshold) {
       return `You are a helpful assistant integrated with a personal knowledge base and profile information.
 Your task is to provide accurate, insightful responses that connect the user's notes with their background and expertise.
 
@@ -674,7 +679,7 @@ Guidelines:
     }
 
     // For queries with medium profile relevance, possibly with external sources
-    if (profileRelevance > 0.4) {
+    if (profileRelevance > relevanceConfig.mediumProfileRelevanceThreshold) {
       const externalSourcesGuideline = hasExternalSources
         ? '\n8. When using external information, clearly indicate the source\n9. Integrate external knowledge with personal insights when appropriate'
         : '';
