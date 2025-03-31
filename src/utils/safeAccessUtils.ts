@@ -3,6 +3,15 @@
  * 
  * These utilities help prevent TypeScript errors when using the noUncheckedIndexedAccess flag
  * and provide a safer way to access array elements and object properties.
+ * 
+ * USAGE GUIDANCE:
+ * - Use these utilities when accessing array elements by index: safeArrayAccess(array, index, defaultValue)
+ * - Use for object property access with dynamic keys: safeIndexAccess(obj, key, defaultValue)
+ * - Use for nested property access: safeNestedAccess(obj, 'path.to.property', defaultValue)
+ * - Use type narrowing with isDefined() to safely work with possibly undefined values
+ * 
+ * These utilities will become even more important when the noUncheckedIndexedAccess flag is enabled
+ * in tsconfig.json, which is planned for a future update.
  */
 import logger from '@/utils/logger';
 
