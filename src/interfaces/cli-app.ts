@@ -57,14 +57,14 @@ export class CLIApp {
   private async runCommandLineMode(): Promise<void> {
     const command = process.argv[2].toLowerCase();
     const args = process.argv.slice(3).join(' ');
-    
+
     logger.info(`Running command: ${command} ${args}`);
-    
+
     if (command === 'help') {
       this.renderer.renderHelp(this.commandHandler.getCommands());
       return;
     }
-    
+
     try {
       const result = await this.commandHandler.processCommand(command, args);
       this.renderer.render(result);
@@ -80,16 +80,16 @@ export class CLIApp {
   private async runInteractiveMode(): Promise<void> {
     CLIInterface.displayTitle('Personal Brain CLI');
     CLIInterface.info('Type "help" to see available commands, or "exit" to quit');
-    
+
     this.running = true;
     while (this.running) {
       try {
         const input = await this.promptForCommand();
         if (!input) continue;
-        
+
         // Handle special commands
         if (this.handleSpecialCommands(input)) continue;
-        
+
         // Parse and execute regular commands
         const { command, args } = this.parseCommand(input);
         await this.executeCommand(command, args);
@@ -98,10 +98,10 @@ export class CLIApp {
         logger.error(`Interactive mode error: ${error instanceof Error ? error.stack : String(error)}`);
       }
     }
-    
+
     CLIInterface.success('Goodbye!');
   }
-  
+
   /**
    * Prompt the user for a command
    */
@@ -111,34 +111,34 @@ export class CLIApp {
       name: 'action',
       message: chalk.cyan('brain>'),
     });
-    
+
     const input = action.trim();
     logger.info(`User entered: ${input}`);
     return input;
   }
-  
+
   /**
    * Handle special commands like exit and help
    * @returns true if handled as special command
    */
   private handleSpecialCommands(input: string): boolean {
     const normalizedInput = input.toLowerCase();
-    
+
     // Exit command
     if (normalizedInput === 'exit' || normalizedInput === 'quit') {
       this.running = false;
       return true;
     }
-    
+
     // Help command
     if (normalizedInput === 'help') {
       this.renderer.renderHelp(this.commandHandler.getCommands());
       return true;
     }
-    
+
     return false;
   }
-  
+
   /**
    * Parse a command string into command and arguments
    */
@@ -152,7 +152,7 @@ export class CLIApp {
       return { command: input.toLowerCase(), args: '' };
     }
   }
-  
+
   /**
    * Execute a parsed command
    */
@@ -174,7 +174,7 @@ export class CLIApp {
       logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
     }
   }
-  
+
   /**
    * Stop the CLI application
    */

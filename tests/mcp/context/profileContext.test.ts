@@ -3,7 +3,7 @@ import { ProfileContext } from '@mcp/context/profileContext';
 import { createMockEmbedding, mockEnv, resetMocks } from '@test/mocks';
 
 // Mock database
-mock.module('../src/db', () => {
+mock.module('@/db', () => {
   return {
     db: {
       select: () => ({
@@ -20,16 +20,16 @@ mock.module('../src/db', () => {
                   title: 'Ecosystem Architect',
                   company: 'Ecosystem Corp',
                   description: 'Building regenerative ecosystem architectures',
-                  startDate: '2020-01',
-                  endDate: null,
+                  starts_at: { day: 1, month: 1, year: 2020 },
+                  ends_at: null,
                 },
               ],
               education: [
                 {
-                  degree: 'PhD in Systemic Design',
+                  degree_name: 'PhD in Systemic Design',
                   school: 'University of Innovation',
-                  startDate: '2010-01',
-                  endDate: '2014-01',
+                  starts_at: { day: 1, month: 1, year: 2010 },
+                  ends_at: { day: 1, month: 1, year: 2014 },
                 },
               ],
               languages: ['English', 'JavaScript', 'Python'],
@@ -54,16 +54,16 @@ mock.module('../src/db', () => {
                   title: 'Ecosystem Architect',
                   company: 'Ecosystem Corp',
                   description: 'Building regenerative ecosystem architectures',
-                  startDate: '2020-01',
-                  endDate: null,
+                  starts_at: { day: 1, month: 1, year: 2020 },
+                  ends_at: null,
                 },
               ],
               education: [
                 {
-                  degree: 'PhD in Systemic Design',
+                  degree_name: 'PhD in Systemic Design',
                   school: 'University of Innovation',
-                  startDate: '2010-01',
-                  endDate: '2014-01',
+                  starts_at: { day: 1, month: 1, year: 2010 },
+                  ends_at: { day: 1, month: 1, year: 2014 },
                 },
               ],
               languages: ['English', 'JavaScript', 'Python'],

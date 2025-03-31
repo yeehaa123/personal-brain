@@ -95,6 +95,54 @@ export function mockCLIInterface(trackers: ReturnType<typeof createTrackers>) {
     return tags.map(tag => `#${tag}`).join(' ');
   };
   
+  // Fix printLabelValue for capturing output tests
+  CLIInterface.printLabelValue = function(
+    label: string, 
+    value: string | number | string[] | null, 
+    options: Record<string, unknown> = {},
+  ) {
+    trackers.printLabelValueCalls.push([label, value, options]);
+    
+    // Output something for capture tests to detect
+    const formattedLabel = `${label}:`;
+    let formattedValue = '';
+    
+    if (Array.isArray(value)) {
+      if (value.length === 0) {
+        formattedValue = options.emptyText as string || 'None';
+      } else {
+        const formatter = options.formatter as ((val: string) => string) || ((val: string) => `#${val}`);
+        formattedValue = value.map(formatter).join(' ');
+      }
+    } else {
+      if (value === null || value === undefined || value === '') {
+        formattedValue = options.emptyText as string || 'None';
+      } else {
+        formattedValue = options.formatter 
+          ? (options.formatter as ((val: string) => string))(value.toString())
+          : value.toString();
+      }
+    }
+    
+    process.stdout.write(`${formattedLabel} ${formattedValue}\n`);
+  };
+  
+  // Ensure CLIInterface.styles includes all necessary styles for testing
+  const originalStyles = CLIInterface.styles;
+  Object.defineProperty(CLIInterface, 'styles', {
+    get: function() {
+      return {
+        ...originalStyles,
+        // Add missing styles
+        tag: (text: string) => text,
+        number: (text: string) => text,
+        subtitle: originalStyles.subtitle || ((text: string) => text),
+        id: originalStyles.id || ((text: string) => text),
+        dim: originalStyles.dim || ((text: string) => text),
+      };
+    },
+  });
+  
   return original;
 }
 
