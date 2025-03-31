@@ -5,6 +5,7 @@
 import logger from '../../../utils/logger';
 import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '../../model/embeddings';
+import { getEnv } from '../../../utils/configUtils';
 
 // Define interfaces for NewsAPI response structures
 interface NewsApiSourceInfo {
@@ -39,7 +40,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   private maxAgeHours = 24 * 7; // 1 week by default
 
   constructor(apiKey?: string, openAiKey?: string, maxAgeHours = 24 * 7) {
-    this.apiKey = apiKey || process.env.NEWSAPI_KEY || '';
+    this.apiKey = apiKey || getEnv('NEWSAPI_KEY');
     this.maxAgeHours = maxAgeHours;
     
     if (!this.apiKey) {

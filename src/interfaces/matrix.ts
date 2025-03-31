@@ -11,6 +11,7 @@ import { MatrixRenderer } from '../commands/matrix-renderer';
 import logger from '../utils/logger';
 import { marked } from 'marked';
 import { sanitizeHtml } from '../utils/textUtils';
+import { getEnv } from '../utils/configUtils';
 
 // Configuration constants - load from environment
 interface MatrixConfig {
@@ -55,14 +56,14 @@ export class MatrixBrainInterface {
    * Load config from environment with validation
    */
   private loadConfig(): MatrixConfig {
-    const homeserverUrl = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
-    const accessToken = process.env.MATRIX_ACCESS_TOKEN;
-    const userId = process.env.MATRIX_USER_ID;
-    const roomIds = (process.env.MATRIX_ROOM_IDS || '').split(',').filter(Boolean);
-    const commandPrefix = process.env.COMMAND_PREFIX || '!brain';
+    const homeserverUrl = getEnv('MATRIX_HOMESERVER_URL', 'https://matrix.org');
+    const accessToken = getEnv('MATRIX_ACCESS_TOKEN');
+    const userId = getEnv('MATRIX_USER_ID');
+    const roomIds = getEnv('MATRIX_ROOM_IDS', '').split(',').filter(Boolean);
+    const commandPrefix = getEnv('COMMAND_PREFIX', '!brain');
 
     // Log configuration in non-production environments
-    if (process.env.NODE_ENV !== 'production') {
+    if (getEnv('NODE_ENV') !== 'production') {
       logger.debug(`MATRIX_HOMESERVER_URL: ${homeserverUrl}`);
       logger.debug(`MATRIX_USER_ID: ${userId}`);
       logger.debug(`MATRIX_ACCESS_TOKEN: ${accessToken ? 'Set (hidden)' : 'Not set'}`);

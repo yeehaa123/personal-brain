@@ -6,6 +6,7 @@ import { EmbeddingService } from '../model/embeddings';
 import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './sources/externalSourceInterface';
 import { WikipediaSource } from './sources/wikipediaSource';
 import { NewsApiSource } from './sources/newsApiSource';
+import { getEnv } from '../../utils/configUtils';
 
 export interface ExternalContextOptions {
   enabledSources?: string[];
@@ -37,7 +38,7 @@ export class ExternalSourceContext {
     this.registerSource(new WikipediaSource(apiKey));
     
     // Register NewsAPI source if key is provided
-    if (newsApiKey || process.env.NEWSAPI_KEY) {
+    if (newsApiKey || getEnv('NEWSAPI_KEY')) {
       this.registerSource(new NewsApiSource(newsApiKey, apiKey));
       logger.info('NewsAPI source registered');
     }

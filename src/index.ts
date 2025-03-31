@@ -2,6 +2,7 @@ import { BrainProtocol } from './mcp/protocol/brainProtocol';
 import { NoteContext } from './mcp/context/noteContext';
 import { displayNotes } from './utils/noteUtils';
 import logger from './utils/logger';
+import { getEnv } from './utils/configUtils';
 
 async function main() {
   try {
@@ -16,7 +17,7 @@ async function main() {
     logger.info(`Found ${allNotes.length} notes in your database:`, { context: 'Main' });
     await displayNotes(allNotes);
 
-    if (process.env.ANTHROPIC_API_KEY) {
+    if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
       const protocol = new BrainProtocol();
       const result = await protocol.processQuery('What are the main features of this system?');

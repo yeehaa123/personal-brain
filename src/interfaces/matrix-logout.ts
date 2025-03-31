@@ -1,12 +1,13 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
 import logger from '../utils/logger';
+import { getEnv } from '../utils/configUtils';
 
 async function logoutMatrixClient() {
   // Get values from environment variables
-  const baseUrl = process.env.MATRIX_HOMESERVER_URL || 'https://matrix.org';
-  const accessToken = process.env.MATRIX_ACCESS_TOKEN;
-  const userId = process.env.MATRIX_USER_ID;
+  const baseUrl = getEnv('MATRIX_HOMESERVER_URL', 'https://matrix.org');
+  const accessToken = getEnv('MATRIX_ACCESS_TOKEN');
+  const userId = getEnv('MATRIX_USER_ID');
 
   if (!accessToken || !userId) {
     logger.error('Missing required environment variables', { 
