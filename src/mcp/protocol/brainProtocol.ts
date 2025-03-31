@@ -1,16 +1,15 @@
 /**
  * BrainProtocol orchestrates the interaction between models and context
  */
-import { ClaudeModel } from '../model/claude';
-import { NoteContext } from '../context/noteContext';
-import { ProfileContext } from '../context/profileContext';
-import { ExternalSourceContext } from '../context/externalSourceContext';
-import type { ExternalSourceResult } from '../context/sources/externalSourceInterface';
-import type { Note } from '../../models/note';
-import type { Profile } from '../../models/profile';
-import { EmbeddingService } from '../model/embeddings';
-import logger from '../../utils/logger';
-import { relevanceConfig } from '../../config';
+import { ClaudeModel } from '@mcp/model/claude';
+import { NoteContext } from '@mcp/context/noteContext';
+import { ProfileContext } from '@mcp/context/profileContext';
+import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import type { Profile } from '@models/profile';
+import { EmbeddingService } from '@mcp/model/embeddings';
+import logger from '@utils/logger';
+import { relevanceConfig } from '@/config';
 
 // Import component classes
 import { PromptFormatter } from './components/promptFormatter';
@@ -20,7 +19,7 @@ import { ExternalSourceService } from './components/externalSourceService';
 import { NoteService } from './components/noteService';
 
 // Import types
-import type { ProtocolResponse, Citation, ExternalCitation } from './types';
+import type { ProtocolResponse, ExternalCitation } from './types';
 
 export class BrainProtocol {
   // Core services
@@ -56,7 +55,7 @@ export class BrainProtocol {
     this.externalSourceService = new ExternalSourceService(
       this.externalContext,
       this.profileAnalyzer,
-      this.promptFormatter
+      this.promptFormatter,
     );
     this.noteService = new NoteService(this.context);
     
@@ -196,7 +195,7 @@ export class BrainProtocol {
     const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
       isProfileQuery, 
       profileRelevance, 
-      externalResults.length > 0
+      externalResults.length > 0,
     );
     
     // 7. Query the LLM with the formatted prompt

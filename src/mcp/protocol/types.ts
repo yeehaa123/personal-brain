@@ -1,8 +1,8 @@
 /**
  * Types for the MCP protocol
  */
-import type { Note } from '../../models/note';
-import type { Profile } from '../../models/profile';
+import type { Note } from '@models/note';
+import type { Profile } from '@models/profile';
 
 // No need to re-export since these are already exported below
 

@@ -1,10 +1,10 @@
 /**
  * Analyzes the relevance of a profile to a user query
  */
-import { EmbeddingService } from '../../model/embeddings';
-import type { Profile } from '../../../models/profile';
-import logger from '../../../utils/logger';
-import { relevanceConfig } from '../../../config';
+import { EmbeddingService } from '@mcp/model/embeddings';
+import type { Profile } from '@models/profile';
+import logger from '@utils/logger';
+import { relevanceConfig } from '@/config';
 
 /**
  * Handles profile-related query analysis

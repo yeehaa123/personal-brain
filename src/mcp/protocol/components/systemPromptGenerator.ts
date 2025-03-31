@@ -1,8 +1,7 @@
 /**
  * Generates system prompts for LLM interactions based on query context
  */
-import { relevanceConfig } from '../../../config';
-import logger from '../../../utils/logger';
+import { relevanceConfig } from '@/config';
 
 /**
  * Handles the generation of system prompts for different types of queries
@@ -18,7 +17,7 @@ export class SystemPromptGenerator {
   getSystemPrompt(
     isProfileQuery: boolean = false, 
     profileRelevance: number = 0, 
-    hasExternalSources: boolean = false
+    hasExternalSources: boolean = false,
   ): string {
     // For when we have both profile and external info
     if (isProfileQuery && hasExternalSources) {

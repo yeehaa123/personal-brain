@@ -1,12 +1,11 @@
 /**
  * Handles formatting prompts with context for the MCP
  */
-import type { Note } from '../../../models/note';
-import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '../../../models/profile';
-import type { ExternalSourceResult } from '../../context/sources/externalSourceInterface';
-import { getExcerpt as noteExcerpt } from '../../../utils/noteUtils';
-import logger from '../../../utils/logger';
-import type { Citation, ExternalCitation } from '../types';
+import type { Note } from '@models/note';
+import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '@models/profile';
+import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import { getExcerpt as noteExcerpt } from '@utils/noteUtils';
+import type { Citation } from '../types';
 
 /**
  * Formats prompts and context for LLM interactions

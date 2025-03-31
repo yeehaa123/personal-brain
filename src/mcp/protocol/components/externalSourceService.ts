@@ -1,11 +1,11 @@
 /**
  * Service for handling external source interactions
  */
-import { ExternalSourceContext } from '../../context/externalSourceContext';
-import type { ExternalSourceResult } from '../../context/sources/externalSourceInterface';
-import type { Note } from '../../../models/note';
-import logger from '../../../utils/logger';
-import { relevanceConfig } from '../../../config';
+import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import type { Note } from '@models/note';
+import logger from '@utils/logger';
+import { relevanceConfig } from '@/config';
 import { ProfileAnalyzer } from './profileAnalyzer';
 import { PromptFormatter } from './promptFormatter';
 
@@ -20,7 +20,7 @@ export class ExternalSourceService {
   constructor(
     externalContext: ExternalSourceContext, 
     profileAnalyzer: ProfileAnalyzer,
-    promptFormatter: PromptFormatter
+    promptFormatter: PromptFormatter,
   ) {
     this.externalContext = externalContext;
     this.profileAnalyzer = profileAnalyzer;

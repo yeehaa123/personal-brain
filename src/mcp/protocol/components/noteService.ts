@@ -1,9 +1,9 @@
 /**
  * Service for handling note-related operations
  */
-import { NoteContext } from '../../context/noteContext';
-import type { Note } from '../../../models/note';
-import logger from '../../../utils/logger';
+import { NoteContext } from '@mcp/context/noteContext';
+import type { Note } from '@models/note';
+import logger from '@utils/logger';
 
 /**
  * Handles operations related to notes
