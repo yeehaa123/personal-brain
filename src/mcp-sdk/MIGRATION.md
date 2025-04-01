@@ -10,82 +10,16 @@ This document outlines the migration plan for integrating the Model Context Prot
 4. ✅ Updated the BrainProtocol class to use the new implementation
 5. ✅ Added a README.md with next steps and usage instructions
 6. ✅ Verified the application runs with the new implementation
+7. ✅ Migrated ProfileContext to MCP SDK
+8. ✅ Migrated ExternalSourceContext to MCP SDK
+9. ✅ Streamlined directory structure for all contexts
+10. ✅ Created Unified MCP Server for all contexts
+11. ✅ Modified context classes to support external server registration
+12. ✅ Added tests for the unified MCP server
 
 ## Next Steps
 
-### 1. Implement Complete MCP Resource Endpoints
-
-Enhance the NoteContext to fully expose note data through MCP resources:
-
-```typescript
-// Resource to get a note by ID
-mcpServer.resource(
-  "note", 
-  "note://:id",
-  async (uri) => {
-    // Implementation details
-  }
-);
-
-// Resource to search notes
-mcpServer.resource(
-  "notes",
-  "notes://search?query&tags&limit&offset&semantic",
-  async (uri) => {
-    // Implementation details
-  }
-);
-
-// Resource to get recent notes
-mcpServer.resource(
-  "recent_notes",
-  "notes://recent?limit",
-  async (uri) => {
-    // Implementation details
-  }
-);
-
-// Resource to get related notes
-mcpServer.resource(
-  "related_notes",
-  "notes://related/:id?limit",
-  async (uri) => {
-    // Implementation details
-  }
-);
-```
-
-### 2. Implement MCP Tools
-
-Add tools for write operations:
-
-```typescript
-// Tool to create a new note
-mcpServer.tool(
-  "create_note",
-  async (args) => {
-    // Implementation details
-  }
-);
-
-// Tool to generate embeddings for notes
-mcpServer.tool(
-  "generate_embeddings",
-  async () => {
-    // Implementation details
-  }
-);
-
-// Tool to search notes with embedding
-mcpServer.tool(
-  "search_with_embedding",
-  async (args) => {
-    // Implementation details
-  }
-);
-```
-
-### 3. Implement Transports
+### 1. Implement Transports
 
 Add support for different transport mechanisms:
 
@@ -93,54 +27,65 @@ Add support for different transport mechanisms:
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
-// Add transports to the server
-mcpServer.addTransport(new StdioServerTransport());
-mcpServer.addTransport(new SSEServerTransport({ port: 8000 }));
-```
-
-### 4. Migrate Other Contexts
-
-Migrate the following contexts using the same approach:
-
-- `ProfileContext`
-- `ExternalSourceContext`
-
-### 5. Create Unified MCP Server
-
-Create a single MCP server that combines all functionalities:
-
-```typescript
-// Create a unified MCP server
-const mcpServer = new McpServer({
-  name: "PersonalBrain",
-  version: "1.0.0"
+// Add transports to the unified server
+const unifiedServer = createUnifiedMcpServer({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+  newsApiKey: process.env.NEWSAPI_KEY,
 });
 
-// Register resources and tools from different contexts
-noteContext.registerResources(mcpServer);
-profileContext.registerResources(mcpServer);
-externalSourceContext.registerResources(mcpServer);
-
-// Start the server with the appropriate transports
-mcpServer.addTransport(new StdioServerTransport());
-mcpServer.start();
+// Add transports to the server
+unifiedServer.addTransport(new StdioServerTransport());
+unifiedServer.addTransport(new SSEServerTransport({ port: 8000 }));
 ```
 
-### 6. Update Tests
+### 2. Update BrainProtocol to Use Unified Server
 
-Ensure all tests pass with the new implementation:
+Modify the BrainProtocol class to use the unified MCP server:
 
-1. Update existing tests to work with MCP-based contexts
-2. Add specific tests for MCP resources and tools
-3. Add integration tests for the unified MCP server
+```typescript
+// In BrainProtocol constructor
+this.unifiedMcpServer = createUnifiedMcpServer({
+  apiKey,
+  newsApiKey,
+  name: 'BrainProtocol',
+  version: '1.0.0',
+  enableExternalSources: useExternalSources,
+});
 
-### 7. Documentation
+// Add method to get unified server
+getMcpServer() {
+  return this.unifiedMcpServer;
+}
+```
+
+### 3. Add MCP Server CLI Interface
+
+Create a CLI interface specifically for the MCP server:
+
+```typescript
+// In a new file: src/interfaces/mcp-cli.ts
+import { createUnifiedMcpServer } from '@/mcp-sdk';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+export async function startMcpServer(options: { apiKey?: string, newsApiKey?: string }) {
+  const server = createUnifiedMcpServer({
+    apiKey: options.apiKey,
+    newsApiKey: options.newsApiKey,
+  });
+  
+  server.addTransport(new StdioServerTransport());
+  return server;
+}
+```
+
+### 4. Update Documentation
 
 Update the project documentation:
 
-1. Add usage instructions for MCP resources and tools
-2. Document available endpoints and their parameters
+1. Add usage instructions for the unified MCP server
+2. Document available resources and tools
 3. Provide examples of using the MCP SDK with the application
+4. Document transport options
 
 ## Reference
 
