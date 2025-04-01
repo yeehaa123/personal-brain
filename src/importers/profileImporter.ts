@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as yaml from 'js-yaml';
-import { ProfileContext } from '../mcp/context/profileContext';
+import { ProfileContext } from '@/mcp-sdk';
 import { selectProfileSchema } from '../models/profile';
 import logger from '../utils/logger';
 
@@ -20,8 +20,16 @@ export class ProfileImporter {
       const fileContent = fs.readFileSync(filePath, 'utf8');
       const profileData = yaml.load(fileContent) as Record<string, unknown>;
       const profileToSave = this.transformYamlToProfile(profileData);
-      const profile = selectProfileSchema.parse(profileToSave);
-      const profileId = await this.profileContext.saveProfile(profile);
+      const parsedProfile = selectProfileSchema.parse(profileToSave);
+      
+      // Convert the profile to match the expected input format for the MCP SDK implementation
+      const profileForSaving = {
+        ...parsedProfile,
+        // Make sure followerCount is not null for MCP SDK implementation
+        followerCount: parsedProfile.followerCount ?? undefined,
+      };
+      
+      const profileId = await this.profileContext.saveProfile(profileForSaving);
       logger.info(`Successfully imported profile with ID: ${profileId}`, { context: 'ProfileImporter' });
       return profileId;
     } catch (error) {
