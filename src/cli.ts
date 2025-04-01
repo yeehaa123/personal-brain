@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { BrainProtocol } from './mcp/protocol/brainProtocol';
+import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { CommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
 import { CLIApp } from './interfaces/cli-app';

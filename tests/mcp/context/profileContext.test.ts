@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { ProfileContext } from '@/mcp-sdk';
+import { ProfileContext } from '@/mcp';
 import { createMockEmbedding, mockEnv, resetMocks } from '@test/mocks';
 
 // Mock services

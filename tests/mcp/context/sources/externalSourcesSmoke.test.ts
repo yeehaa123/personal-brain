@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import { ExternalSourceContext } from '@/mcp-sdk';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
-import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources';
+import { WikipediaSource, NewsApiSource } from '@/mcp/contexts/externalSources/sources';
+import { BrainProtocol } from '@/mcp/protocol';
 
 describe('External Sources Smoke Test', () => {
   test('it should create and register sources without errors', () => {
@@ -49,16 +48,16 @@ describe('External Sources Smoke Test', () => {
     const brainProtocolPath = import.meta.resolve('../src/mcp/protocol/brainProtocol');
     expect(brainProtocolPath).toBeDefined();
     
-    const externalSourceContextPath = import.meta.resolve('../src/mcp/context/externalSourceContext');
+    const externalSourceContextPath = import.meta.resolve('../src/mcp/contexts/externalSources/externalSourceContext');
     expect(externalSourceContextPath).toBeDefined();
     
-    const wikpediaSourcePath = import.meta.resolve('../src/mcp/context/sources/wikipediaSource');
+    const wikpediaSourcePath = import.meta.resolve('../src/mcp/contexts/externalSources/sources/wikipediaSource');
     expect(wikpediaSourcePath).toBeDefined();
     
-    const newsApiSourcePath = import.meta.resolve('../src/mcp/context/sources/newsApiSource');
+    const newsApiSourcePath = import.meta.resolve('../src/mcp/contexts/externalSources/sources/newsApiSource');
     expect(newsApiSourcePath).toBeDefined();
     
-    const interfacePath = import.meta.resolve('../src/mcp/context/sources/externalSourceInterface');
+    const interfacePath = import.meta.resolve('../src/mcp/contexts/externalSources/sources/externalSourceInterface');
     expect(interfacePath).toBeDefined();
   });
 });

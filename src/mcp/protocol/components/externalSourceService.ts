@@ -1,8 +1,8 @@
 /**
  * Service for handling external source interactions
  */
-import { ExternalSourceContext } from '@/mcp-sdk';
-import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import { ExternalSourceContext } from '@/mcp';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import logger from '@utils/logger';
 import { relevanceConfig } from '@/config';

@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { BrainProtocol } from '@/mcp/protocol';
 
 describe('BrainProtocol External Sources', () => {
   test('should initialize correctly with external sources', () => {

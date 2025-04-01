@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { sql } from 'drizzle-orm';
-import { NoteContext } from '@/mcp-sdk';
+import { NoteContext } from '@/mcp';
 import { EmbeddingService } from '@/mcp/model/embeddings';
 import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
 import logger from '@/utils/logger';

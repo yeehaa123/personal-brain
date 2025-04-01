@@ -1,8 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { ExternalSourceContext } from '@/mcp-sdk';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
-import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
-import type { ExternalSourceInterface } from '@mcp/context/sources/externalSourceInterface';
+import { ExternalSourceContext } from '@/mcp';
+import { WikipediaSource } from '@/mcp/contexts/externalSources/sources';
+import { NewsApiSource } from '@/mcp/contexts/externalSources/sources';
+import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
 
 // Create a mock for fetch
 const originalFetch = globalThis.fetch;

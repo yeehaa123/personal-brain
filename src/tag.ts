@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { batchProcessNoteTags } from '@/utils/tagExtractor';
-import { ProfileContext } from '@/mcp-sdk';
+import { ProfileContext } from '@/mcp';
 import logger from '@/utils/logger';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;

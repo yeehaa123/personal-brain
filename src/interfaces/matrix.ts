@@ -5,7 +5,7 @@ import { ClientEvent } from 'matrix-js-sdk';
 import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 import { MsgType } from 'matrix-js-sdk/lib/@types/event';
-import { BrainProtocol } from '../mcp/protocol/brainProtocol';
+import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
 import logger from '../utils/logger';

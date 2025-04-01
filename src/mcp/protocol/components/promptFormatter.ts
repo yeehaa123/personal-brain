@@ -3,7 +3,7 @@
  */
 import type { Note } from '@models/note';
 import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '@models/profile';
-import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { getExcerpt as noteExcerpt } from '@utils/noteUtils';
 import type { Citation } from '../types';
 

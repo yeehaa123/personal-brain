@@ -1,5 +1,5 @@
 import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
+import { WikipediaSource } from '@/mcp/contexts/externalSources/sources';
 
 // Save the original fetch
 const originalFetch = globalThis.fetch;

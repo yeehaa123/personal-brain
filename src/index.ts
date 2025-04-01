@@ -1,6 +1,5 @@
-import { BrainProtocol } from './mcp-sdk/protocol/brainProtocol';
-// Using the MCP SDK implementation of NoteContext
-import { NoteContext } from './mcp-sdk';
+import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { NoteContext } from '@mcp/contexts/notes/noteContext';
 import { displayNotes } from './utils/noteUtils';
 import logger from './utils/logger';
 import { getEnv } from './utils/configUtils';

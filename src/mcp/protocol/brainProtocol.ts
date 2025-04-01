@@ -1,17 +1,16 @@
 /**
  * BrainProtocol orchestrates the interaction between models and context
  */
-import { ClaudeModel } from '@mcp/model/claude';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { 
   NoteContext, 
   ProfileContext, 
   ExternalSourceContext,
   createUnifiedMcpServer,
-} from '@/mcp-sdk'; // Import all MCP SDK implementations
-import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+} from '@/mcp'; // Import all MCP implementations
+import { ClaudeModel, EmbeddingService } from '@/mcp/model';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Profile } from '@models/profile';
-import { EmbeddingService } from '@mcp/model/embeddings';
 import logger from '@utils/logger';
 import { relevanceConfig, aiConfig } from '@/config';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';

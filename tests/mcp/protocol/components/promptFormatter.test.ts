@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'bun:test';
-import { PromptFormatter } from '@mcp/protocol/components/promptFormatter';
+import { PromptFormatter } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { createMockEmbedding } from '@test/mocks';
 
 describe('PromptFormatter', () => {

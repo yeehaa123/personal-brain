@@ -4,7 +4,7 @@
 
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 
 // Mock function types
 export type MockFunction<T extends (...args: unknown[]) => unknown> = {

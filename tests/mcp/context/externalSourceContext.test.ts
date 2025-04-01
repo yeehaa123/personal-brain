@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
-import { ExternalSourceContext } from '@/mcp-sdk';
-import type { ExternalSourceInterface } from '@mcp/context/sources/externalSourceInterface';
+import { ExternalSourceContext } from '@/mcp';
+import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
 
 // Create a truly simple mock that doesn't rely on external classes
 function createMockSource(name: string, available: boolean = true): ExternalSourceInterface {

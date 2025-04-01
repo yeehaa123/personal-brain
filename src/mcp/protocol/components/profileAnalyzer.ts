@@ -1,7 +1,7 @@
 /**
  * Analyzes the relevance of a profile to a user query
  */
-import { EmbeddingService } from '@mcp/model/embeddings';
+import { EmbeddingService } from '@/mcp/model';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
 import { relevanceConfig } from '@/config';

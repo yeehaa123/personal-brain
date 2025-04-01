@@ -1,8 +1,8 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { NoteContext } from '@/mcp-sdk';
+import { NoteContext } from '@/mcp';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
-import { EmbeddingService } from '@mcp/model/embeddings';
+import { EmbeddingService } from '@/mcp/model';
 
 import { createMockEmbedding } from '@test/mocks';
 

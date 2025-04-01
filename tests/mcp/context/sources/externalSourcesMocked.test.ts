@@ -2,9 +2,9 @@
  * Tests for external sources with all network calls properly mocked
  */
 import { describe, test, expect, mock, beforeEach, beforeAll, afterAll } from 'bun:test';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
-import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
-import { ExternalSourceContext } from '@/mcp-sdk';
+import { WikipediaSource } from '@/mcp/contexts/externalSources/sources';
+import { NewsApiSource } from '@/mcp/contexts/externalSources/sources';
+import { ExternalSourceContext } from '@/mcp';
 
 // Define interfaces for the mock
 interface EmbeddingResult {

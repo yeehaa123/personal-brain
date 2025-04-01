@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { SystemPromptGenerator } from '@mcp/protocol/components/systemPromptGenerator';
+import { SystemPromptGenerator } from '@/mcp/protocol/components';
 import { relevanceConfig } from '@/config';
 
 describe('SystemPromptGenerator', () => {

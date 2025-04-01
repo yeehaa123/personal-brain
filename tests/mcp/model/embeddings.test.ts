@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { EmbeddingService } from '@mcp/model/embeddings';
+import { EmbeddingService } from '@/mcp/model';
 import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 
 import { createMockEmbedding } from '@test/mocks';

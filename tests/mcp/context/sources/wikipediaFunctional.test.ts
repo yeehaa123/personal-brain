@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
+import { WikipediaSource } from '@/mcp/contexts/externalSources/sources';
 
 // These tests perform real API calls to Wikipedia for functional testing
 // They are disabled by default to avoid rate limits and network dependencies

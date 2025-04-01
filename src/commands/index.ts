@@ -21,8 +21,7 @@ export interface CommandInfo {
 /**
  * Command result types to make interfaces easier to manage
  */
-import type { ExternalCitation } from '../mcp/protocol/types';
-import type { NoteContext, ProfileContext, ExternalSourceContext } from '@/mcp-sdk';
+import type { ExternalCitation, NoteContext, ProfileContext, ExternalSourceContext } from '@/mcp';
 
 export type CommandResult =
   | { type: 'error'; message: string }
