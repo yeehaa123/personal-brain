@@ -6,36 +6,61 @@ import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
 import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
 
+// Define interfaces for the mock
+interface EmbeddingResult {
+  embedding: number[];
+  truncated: boolean;
+}
+
+interface EmbeddingConfig {
+  apiKey?: string;
+  embeddingModel?: string;
+  embeddingDimension?: number;
+}
+
 // Mock the EmbeddingService to prevent any actual API calls
 mock.module('@mcp/model/embeddings', () => {
+  // Create a singleton mock instance
+  let instance: MockEmbeddingService | null = null;
+  
+  class MockEmbeddingService {
+    constructor() {
+      // No actual API calls
+    }
+    
+    async getEmbedding(): Promise<EmbeddingResult> {
+      return {
+        embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
+        truncated: false,
+      };
+    }
+    
+    async getBatchEmbeddings(texts: string[]): Promise<EmbeddingResult[]> {
+      return texts.map(() => ({
+        embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
+        truncated: false,
+      }));
+    }
+    
+    cosineSimilarity(_vec1: number[], _vec2: number[]): number {
+      return 0.5; // Mock similarity
+    }
+    
+    chunkText(_text: string, _chunkSize: number, _overlap: number): string[] {
+      return ['chunk1', 'chunk2'];
+    }
+    
+    // Add the static getInstance method to match the real implementation
+    static getInstance(_config?: EmbeddingConfig): MockEmbeddingService {
+      if (!instance) {
+        instance = new MockEmbeddingService();
+      }
+      return instance;
+    }
+  }
+  
   return {
-    EmbeddingService: class MockEmbeddingService {
-      constructor() {
-        // No actual API calls
-      }
-      
-      async getEmbedding() {
-        return {
-          embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
-          truncated: false,
-        };
-      }
-      
-      async getBatchEmbeddings(texts: string[]) {
-        return texts.map(() => ({
-          embedding: Array(1536).fill(0).map((_, i) => Math.sin(i)),
-          truncated: false,
-        }));
-      }
-      
-      cosineSimilarity(_vec1: number[], _vec2: number[]) {
-        return 0.5; // Mock similarity
-      }
-      
-      chunkText(_text: string, _chunkSize: number, _overlap: number) {
-        return ['chunk1', 'chunk2'];
-      }
-    },
+    EmbeddingService: MockEmbeddingService,
   };
 });
 

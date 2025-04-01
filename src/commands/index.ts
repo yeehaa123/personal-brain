@@ -22,7 +22,7 @@ export interface CommandInfo {
  * Command result types to make interfaces easier to manage
  */
 import type { ExternalCitation } from '../mcp/protocol/types';
-import type { NoteContext } from '../mcp/context/noteContext';
+import type { NoteContext } from '@/mcp-sdk';
 import type { ProfileContext } from '../mcp/context/profileContext';
 import type { ExternalSourceContext } from '../mcp/context/externalSourceContext';
 

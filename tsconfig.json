@@ -53,6 +53,7 @@
       "@utils/*": ["src/utils/*"],
       "@commands/*": ["src/commands/*"],
       "@mcp/*": ["src/mcp/*"],
+      "@mcp-sdk/*": ["src/mcp-sdk/*"],
       "@interfaces/*": ["src/interfaces/*"],
       "@db/*": ["src/db/*"],
       "@importers/*": ["src/importers/*"]

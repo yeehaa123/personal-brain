@@ -10,6 +10,9 @@ const mockCommunityNote = createMockNote('note-2', 'Building Communities', ['com
 
 // Create mock versions of the context objects
 const mockNoteContext = {
+  // Add getMcpServer method required by MCP-based NoteContext
+  getMcpServer: () => ({ name: 'MockMCP', version: '1.0.0' }),
+  
   searchNotes: async ({ query, tags, limit: _limit }: { query?: unknown; tags?: unknown; limit?: unknown }) => {
     // For list command with tag
     if (tags && Array.isArray(tags) && tags.includes('ecosystem')) {

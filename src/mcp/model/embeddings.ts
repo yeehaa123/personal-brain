@@ -156,24 +156,39 @@ export class EmbeddingService {
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
   private readonly batchSize: number;
+  
+  // Singleton instance
+  private static instance: EmbeddingService | null = null;
+  
+  /**
+   * Get the singleton instance of EmbeddingService
+   * @param config Optional configuration to override defaults
+   * @returns The singleton EmbeddingService instance
+   */
+  public static getInstance(config?: EmbeddingConfig): EmbeddingService {
+    if (!EmbeddingService.instance) {
+      EmbeddingService.instance = new EmbeddingService(config);
+      logger.info(`Embedding service initialized (API key available: ${Boolean(EmbeddingService.instance.apiKey)})`);
+      
+      if (EmbeddingService.instance.apiKey) {
+        logger.info(`Using OpenAI model: ${EmbeddingService.instance.embeddingModel}`);
+      } else {
+        logger.warn('No API key available, will use fallback embeddings');
+      }
+    }
+    return EmbeddingService.instance;
+  }
 
   /**
    * Create a new embedding service
    * @param config Optional configuration to override defaults
+   * @private Use getInstance() instead of constructor directly
    */
-  constructor(config?: EmbeddingConfig) {
+  private constructor(config?: EmbeddingConfig) {
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
     this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
     this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
     this.batchSize = aiConfig.openAI.batchSize;
-    
-    logger.info(`Embedding service initialized (API key available: ${Boolean(this.apiKey)})`);
-    
-    if (this.apiKey) {
-      logger.info(`Using OpenAI model: ${this.embeddingModel}`);
-    } else {
-      logger.warn('No API key available, will use fallback embeddings');
-    }
   }
 
   /**

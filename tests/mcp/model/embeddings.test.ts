@@ -147,8 +147,8 @@ describe('EmbeddingService', () => {
   });
   
   beforeEach(() => {
-    // Create a new service instance for each test
-    service = new EmbeddingService({ apiKey: 'mock-api-key' });
+    // Get the singleton service instance for each test
+    service = EmbeddingService.getInstance({ apiKey: 'mock-api-key' });
   });
 
   test('should create a deterministic embedding', async () => {

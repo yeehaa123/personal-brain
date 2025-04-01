@@ -2,7 +2,7 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { ClaudeModel } from '@mcp/model/claude';
-import { NoteContext } from '@mcp/context/noteContext';
+import { NoteContext } from '@/mcp-sdk'; // Import the MCP SDK implementation
 import { ProfileContext } from '@mcp/context/profileContext';
 import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
 import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
@@ -21,6 +21,8 @@ import { NoteService } from './components/noteService';
 
 // Import types
 import type { ProtocolResponse, ExternalCitation } from './types';
+
+// MCP SDK is now imported directly
 
 export class BrainProtocol {
   // Core services
@@ -44,10 +46,15 @@ export class BrainProtocol {
   constructor(apiKey?: string, newsApiKey?: string, useExternalSources: boolean = false) {
     // Initialize core services
     this.model = new ClaudeModel(apiKey);
+    
+    // Get the singleton instance of EmbeddingService
+    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+    
+    // Use the MCP SDK implementation of NoteContext
     this.context = new NoteContext(apiKey);
+    
     this.profileContext = new ProfileContext(apiKey);
     this.externalContext = new ExternalSourceContext(apiKey, newsApiKey);
-    this.embeddingService = new EmbeddingService(apiKey ? { apiKey } : undefined);
     
     // Initialize component classes
     this.promptFormatter = new PromptFormatter();
@@ -58,7 +65,7 @@ export class BrainProtocol {
       this.profileAnalyzer,
       this.promptFormatter,
     );
-    this.noteService = new NoteService(this.context);
+    this.noteService = new NoteService(this.context); // No cast needed now
     
     // Set initial state
     this.useExternalSources = useExternalSources;
@@ -67,6 +74,7 @@ export class BrainProtocol {
     this.loadProfile();
 
     logger.info(`Brain protocol initialized with external sources ${useExternalSources ? 'enabled' : 'disabled'}`);
+    logger.info('Using MCP SDK implementation for note context');
   }
 
   /**
@@ -74,6 +82,13 @@ export class BrainProtocol {
    */
   getNoteContext(): NoteContext {
     return this.context;
+  }
+
+  /**
+   * Get the MCP server instance
+   */
+  getMcpServer() {
+    return this.context.getMcpServer();
   }
 
   /**

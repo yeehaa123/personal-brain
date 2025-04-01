@@ -158,6 +158,9 @@ mock.module('@utils/tagExtractor', () => {
 
 // Create a mock NoteContext that implements the required interface
 const mockNoteContext = {
+  // Add getMcpServer method required by MCP-based NoteContext
+  getMcpServer: () => ({ name: 'MockMCP', version: '1.0.0' }),
+  
   // Implement minimal required methods
   searchNotes: async (options: { 
     query?: string; 
@@ -299,6 +302,7 @@ describe('ProfileContext', () => {
       // Override searchNotes to return empty results and force fallback
       searchNotes: async (_options: unknown) => [], 
       // Override searchNotesWithEmbedding to return semantic results
+      getMcpServer: () => ({ name: 'MockMCP', version: '1.0.0' }),
       searchNotesWithEmbedding: async (_embedding: number[], _limit: number = 5) => [{
         id: 'semantic-note',
         title: 'Semantic Note',

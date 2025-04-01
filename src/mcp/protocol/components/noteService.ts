@@ -1,7 +1,7 @@
 /**
  * Service for handling note-related operations
  */
-import { NoteContext } from '@mcp/context/noteContext';
+import type { NoteContext } from '@/mcp-sdk';
 import type { Note } from '@models/note';
 import logger from '@utils/logger';
 

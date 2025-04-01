@@ -17,7 +17,7 @@ export class NoteEmbeddingService {
   private noteRepository: NoteRepository;
 
   constructor(apiKey?: string) {
-    this.embeddingService = new EmbeddingService(apiKey ? { apiKey } : undefined);
+    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
     this.noteRepository = new NoteRepository();
   }
 

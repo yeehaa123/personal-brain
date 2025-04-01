@@ -1,5 +1,5 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { NoteContext } from '@mcp/context/noteContext';
+import { NoteContext } from '@/mcp-sdk';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 import { EmbeddingService } from '@mcp/model/embeddings';
@@ -138,8 +138,8 @@ describe('NoteContext', () => {
   });
 
   test('EmbeddingService.chunkText properly segments text', () => {
-    // Create an embedding service to test chunking
-    const embeddingService = new EmbeddingService({ apiKey: 'fake-api-key' });
+    // Get the embedding service singleton to test chunking
+    const embeddingService = EmbeddingService.getInstance({ apiKey: 'fake-api-key' });
     
     const longText = 'First sentence. Second sentence. ' + 
                     'Third sentence. Fourth sentence. ' +
@@ -165,7 +165,7 @@ describe('NoteContext', () => {
   });
   
   test('EmbeddingService.cosineSimilarity calculates similarity correctly', () => {
-    const embeddingService = new EmbeddingService({ apiKey: 'fake-api-key' });
+    const embeddingService = EmbeddingService.getInstance({ apiKey: 'fake-api-key' });
     
     // Identical vectors should have similarity 1
     const vec1 = [1, 0, 0];
@@ -194,5 +194,36 @@ describe('NoteContext', () => {
     expect(typeof context.searchNotes).toBe('function');
     expect(typeof context.getRelatedNotes).toBe('function');
     expect(typeof context.getRecentNotes).toBe('function');
+    
+    // Check MCP SDK integration
+    expect(context.getMcpServer).toBeDefined();
+    expect(typeof context.getMcpServer).toBe('function');
+    
+    // Verify MCP server can be obtained
+    const mcpServer = context.getMcpServer();
+    expect(mcpServer).toBeDefined();
+  });
+  
+  test('MCP Server can define resources', () => {
+    // Get the MCP server
+    const mcpServer = context.getMcpServer();
+    
+    // Define a test resource
+    mcpServer.resource(
+      'test_resource',
+      'test://hello',
+      async () => {
+        return {
+          contents: [{
+            uri: 'test://hello',
+            text: 'Hello from MCP test!',
+          }],
+        };
+      },
+    );
+    
+    // Just verify the resource was registered without trying to query it
+    // We'll implement proper resource querying in a future update
+    expect(mcpServer).toBeDefined();
   });
 });

@@ -1,5 +1,6 @@
 import { BrainProtocol } from './mcp/protocol/brainProtocol';
-import { NoteContext } from './mcp/context/noteContext';
+// Using the MCP SDK implementation of NoteContext
+import { NoteContext } from './mcp-sdk';
 import { displayNotes } from './utils/noteUtils';
 import logger from './utils/logger';
 import { getEnv } from './utils/configUtils';
@@ -20,6 +21,12 @@ async function main() {
     if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
       const protocol = new BrainProtocol();
+      
+      // Check that MCP is available
+      protocol.getMcpServer(); // This confirms the MCP server can be accessed
+      logger.info('MCP Server initialized successfully', { context: 'Main' });
+      
+      // Process a query through the protocol
       const result = await protocol.processQuery('What are the main features of this system?');
 
       logger.info('\nAnswer:', { context: 'Main' });
