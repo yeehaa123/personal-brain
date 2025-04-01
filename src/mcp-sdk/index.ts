@@ -3,6 +3,9 @@
  * Main entry point for the MCP SDK integration
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { NoteContext } from './contexts/notes';
+import { ProfileContext } from './contexts/profiles';
+import { ExternalSourceContext } from './contexts/externalSources';
 
 // Export all the context implementations from their respective directories
 export { NoteContext } from './contexts/notes';
@@ -30,7 +33,6 @@ export interface UnifiedMcpServerConfig {
 
 /**
  * Creates a unified MCP server with all context resources and tools registered
- * This is a placeholder implementation that will be expanded in the next migration step
  * 
  * @param config Configuration options for the unified MCP server
  * @returns A configured McpServer instance with all resources and tools
@@ -42,10 +44,22 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
     version: config.version || '1.0.0',
   });
   
-  // TODO: Implement unified MCP server by:
-  // 1. Creating the context instances
-  // 2. Modifying context classes to support registering resources on an external server
-  // 3. Implementing a method to register all resources from all contexts
+  // Create instances of all contexts
+  const noteContext = new NoteContext(config.apiKey);
+  const profileContext = new ProfileContext(config.apiKey);
+  const externalSourceContext = new ExternalSourceContext(
+    config.apiKey, 
+    config.newsApiKey,
+    { 
+      // Initialize external sources as enabled or disabled based on config
+      enabledSources: config.enableExternalSources === false ? [] : undefined,
+    }
+  );
+  
+  // Register all contexts on the unified server
+  noteContext.registerOnServer(mcpServer);
+  profileContext.registerOnServer(mcpServer);
+  externalSourceContext.registerOnServer(mcpServer);
   
   return mcpServer;
 }

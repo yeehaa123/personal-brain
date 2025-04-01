@@ -41,10 +41,10 @@ export class NoteContext {
       version: '1.0.0',
     });
     
-    // Register the MCP resources
+    // Register the MCP resources on our internal server
     this.registerMcpResources();
     
-    // Register the MCP tools
+    // Register the MCP tools on our internal server
     this.registerMcpTools();
     
     logger.debug('MCP-based NoteContext initialized with resources and tools');
@@ -52,10 +52,13 @@ export class NoteContext {
   
   /**
    * Register MCP resources for accessing note data
+   * @param server Optional external MCP server to register resources on
    */
-  private registerMcpResources(): void {
+  registerMcpResources(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Resource to get a note by ID
-    this.mcpServer.resource(
+    targetServer.resource(
       'note', 
       'note://:id',
       async (uri) => {
@@ -108,7 +111,7 @@ export class NoteContext {
     );
     
     // Resource to search notes
-    this.mcpServer.resource(
+    targetServer.resource(
       'notes',
       'notes://search',
       async (uri) => {
@@ -153,7 +156,7 @@ export class NoteContext {
     );
     
     // Resource to get recent notes
-    this.mcpServer.resource(
+    targetServer.resource(
       'recent_notes',
       'notes://recent',
       async (uri) => {
@@ -191,7 +194,7 @@ export class NoteContext {
     );
     
     // Resource to get related notes
-    this.mcpServer.resource(
+    targetServer.resource(
       'related_notes',
       'notes://related/:id',
       async (uri) => {
@@ -241,10 +244,13 @@ export class NoteContext {
   
   /**
    * Register MCP tools for note operations
+   * @param server Optional external MCP server to register tools on
    */
-  private registerMcpTools(): void {
+  registerMcpTools(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Tool to create a new note
-    this.mcpServer.tool(
+    targetServer.tool(
       'create_note',
       'Create a new note with optional title and tags',
       {
@@ -285,7 +291,7 @@ export class NoteContext {
     );
     
     // Tool to generate embeddings for all notes
-    this.mcpServer.tool(
+    targetServer.tool(
       'generate_embeddings',
       'Generate or update embeddings for all notes in the database',
       async () => {
@@ -312,7 +318,7 @@ export class NoteContext {
     );
     
     // Tool to search notes with embedding
-    this.mcpServer.tool(
+    targetServer.tool(
       'search_with_embedding',
       'Search for notes similar to a given embedding vector',
       {
@@ -363,6 +369,23 @@ export class NoteContext {
    */
   getMcpServer(): McpServer {
     return this.mcpServer;
+  }
+  
+  /**
+   * Register all MCP resources and tools on an external server
+   * @param server The MCP server to register on
+   */
+  registerOnServer(server: McpServer): void {
+    if (!server) {
+      logger.warn('Cannot register NoteContext on undefined server');
+      return;
+    }
+    
+    // Register resources and tools on the external server
+    this.registerMcpResources(server);
+    this.registerMcpTools(server);
+    
+    logger.debug('NoteContext registered on external MCP server');
   }
 
   /**

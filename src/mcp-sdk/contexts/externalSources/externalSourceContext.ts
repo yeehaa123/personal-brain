@@ -57,10 +57,10 @@ export class ExternalSourceContext {
       version: '1.0.0',
     });
     
-    // Register MCP resources
+    // Register MCP resources on our internal server
     this.registerMcpResources();
     
-    // Register MCP tools
+    // Register MCP tools on our internal server
     this.registerMcpTools();
     
     logger.info(`External source context initialized with ${this.sources.size} sources and MCP SDK integration`);
@@ -68,10 +68,13 @@ export class ExternalSourceContext {
   
   /**
    * Register MCP resources for external sources
+   * @param server Optional external MCP server to register resources on
    */
-  private registerMcpResources(): void {
+  registerMcpResources(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Resource to search external sources
-    this.mcpServer.resource(
+    targetServer.resource(
       'external_search',
       'external://search',
       async (uri) => {
@@ -120,7 +123,7 @@ export class ExternalSourceContext {
     );
     
     // Resource to get external source availability
-    this.mcpServer.resource(
+    targetServer.resource(
       'external_sources',
       'external://sources',
       async () => {
@@ -158,10 +161,13 @@ export class ExternalSourceContext {
   
   /**
    * Register MCP tools for external source operations
+   * @param server Optional external MCP server to register tools on
    */
-  private registerMcpTools(): void {
+  registerMcpTools(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Tool to search external sources
-    this.mcpServer.tool(
+    targetServer.tool(
       'search_external_sources',
       'Search across multiple external knowledge sources with optional semantic search',
       {
@@ -204,7 +210,7 @@ export class ExternalSourceContext {
     );
     
     // Tool to toggle external sources
-    this.mcpServer.tool(
+    targetServer.tool(
       'toggle_external_source',
       'Enable or disable a specific external knowledge source',
       {
@@ -264,6 +270,23 @@ export class ExternalSourceContext {
    */
   getMcpServer(): McpServer {
     return this.mcpServer;
+  }
+  
+  /**
+   * Register all MCP resources and tools on an external server
+   * @param server The MCP server to register on
+   */
+  registerOnServer(server: McpServer): void {
+    if (!server) {
+      logger.warn('Cannot register ExternalSourceContext on undefined server');
+      return;
+    }
+    
+    // Register resources and tools on the external server
+    this.registerMcpResources(server);
+    this.registerMcpTools(server);
+    
+    logger.debug('ExternalSourceContext registered on external MCP server');
   }
   
   /**

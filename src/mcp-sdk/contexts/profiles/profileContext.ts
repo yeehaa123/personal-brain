@@ -66,10 +66,10 @@ export class ProfileContext {
       version: '1.0.0',
     });
     
-    // Register MCP resources
+    // Register MCP resources on our internal server
     this.registerMcpResources();
     
-    // Register MCP tools
+    // Register MCP tools on our internal server
     this.registerMcpTools();
     
     logger.debug('MCP-based ProfileContext initialized with resources and tools');
@@ -81,13 +81,33 @@ export class ProfileContext {
   getMcpServer(): McpServer {
     return this.mcpServer;
   }
+  
+  /**
+   * Register all MCP resources and tools on an external server
+   * @param server The MCP server to register on
+   */
+  registerOnServer(server: McpServer): void {
+    if (!server) {
+      logger.warn('Cannot register ProfileContext on undefined server');
+      return;
+    }
+    
+    // Register resources and tools on the external server
+    this.registerMcpResources(server);
+    this.registerMcpTools(server);
+    
+    logger.debug('ProfileContext registered on external MCP server');
+  }
 
   /**
    * Register MCP resources for accessing profile data
+   * @param server Optional external MCP server to register resources on
    */
-  private registerMcpResources(): void {
+  registerMcpResources(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Resource to get profile
-    this.mcpServer.resource(
+    targetServer.resource(
       'profile',
       'profile://me',
       async () => {
@@ -133,7 +153,7 @@ export class ProfileContext {
     );
     
     // Resource to get profile keywords
-    this.mcpServer.resource(
+    targetServer.resource(
       'profile_keywords',
       'profile://keywords',
       async () => {
@@ -173,7 +193,7 @@ export class ProfileContext {
     );
     
     // Resource to get related notes by embedding
-    this.mcpServer.resource(
+    targetServer.resource(
       'related_notes',
       'profile://related?limit',
       async (uri) => {
@@ -213,10 +233,13 @@ export class ProfileContext {
   
   /**
    * Register MCP tools for profile operations
+   * @param server Optional external MCP server to register tools on
    */
-  private registerMcpTools(): void {
+  registerMcpTools(server?: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
     // Tool to save/update profile
-    this.mcpServer.tool(
+    targetServer.tool(
       'save_profile',
       'Create or update a user profile with automatic tag and embedding generation',
       {
@@ -269,7 +292,7 @@ export class ProfileContext {
     );
     
     // Tool to update profile tags
-    this.mcpServer.tool(
+    targetServer.tool(
       'update_profile_tags',
       'Update or generate tags for an existing profile',
       {
@@ -310,7 +333,7 @@ export class ProfileContext {
     );
     
     // Tool to generate embeddings for the profile
-    this.mcpServer.tool(
+    targetServer.tool(
       'generate_profile_embedding',
       'Generate or update embeddings for the profile',
       async () => {
