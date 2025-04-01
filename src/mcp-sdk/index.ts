@@ -12,6 +12,12 @@ export { NoteContext } from './contexts/notes';
 export { ProfileContext } from './contexts/profiles';
 export { ExternalSourceContext } from './contexts/externalSources';
 
+// Export model implementations
+export * from './model';
+
+// Export protocol implementations
+export * from './protocol';
+
 // Export our type definitions
 export * from './types';
 

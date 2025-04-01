@@ -5,14 +5,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import logger from '@/utils/logger';
-import { EmbeddingService } from '@mcp/model/embeddings';
+import { EmbeddingService } from '@/mcp-sdk/model/embeddings';
 import type { 
   ExternalSourceInterface, 
   ExternalSourceResult, 
   ExternalSearchOptions, 
-} from '@mcp/context/sources/externalSourceInterface';
-import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
-import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
+} from '@/mcp-sdk/contexts/externalSources/sources/externalSourceInterface';
+import { WikipediaSource } from '@/mcp-sdk/contexts/externalSources/sources/wikipediaSource';
+import { NewsApiSource } from '@/mcp-sdk/contexts/externalSources/sources/newsApiSource';
 import { getEnv } from '@/utils/configUtils';
 
 export interface ExternalContextOptions {
