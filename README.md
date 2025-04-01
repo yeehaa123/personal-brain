@@ -192,47 +192,71 @@ external on
 ```
 personal-brain/
 ├── src/
-│   ├── api/              # API integration
 │   ├── commands/         # Command processing for CLI and Matrix
 │   │   ├── cli-renderer.ts    # CLI-specific rendering
 │   │   ├── index.ts           # Shared command logic
 │   │   └── matrix-renderer.ts # Matrix-specific rendering
 │   ├── db/               # Database setup and schema
+│   │   ├── index.ts           # Database connection
+│   │   ├── schema.ts          # Table definitions
+│   │   └── migrate.ts         # Migration utilities
 │   ├── importers/        # Importers for markdown files and profiles
+│   │   ├── markdownImporter.ts # Import markdown files
+│   │   └── profileImporter.ts  # Import profile YAML
 │   ├── interfaces/       # User interfaces
+│   │   ├── cli-app.ts         # CLI interface app
 │   │   ├── matrix.ts          # Matrix chat interface
-│   │   └── matrix-setup.ts    # Matrix authentication setup
-│   ├── mcp/              # MCP architecture components
-│   │   ├── model/           # AI model integration (Claude)
-│   │   │   ├── claude.ts       # Claude API integration
-│   │   │   └── embeddings.ts   # Embeddings service
-│   │   ├── context/         # Context management for data
-│   │   │   ├── noteContext.ts           # Note operations facade
-│   │   │   ├── profileContext.ts        # Profile operations facade
-│   │   │   ├── externalSourceContext.ts # External knowledge sources
-│   │   │   └── sources/                 # External source implementations
-│   │   └── protocol/        # Interaction protocol
-│   │       └── brainProtocol.ts # Orchestrates model and context
+│   │   ├── matrix-setup.ts    # Matrix authentication setup
+│   │   └── mcp-cli.ts         # MCP command-line interface
+│   ├── mcp/              # Model Context Protocol implementation
+│   │   ├── contexts/        # Context providers
+│   │   │   ├── notes/             # Note context
+│   │   │   ├── profiles/          # Profile context
+│   │   │   └── externalSources/   # External knowledge sources
+│   │   ├── model/           # AI model integration
+│   │   │   ├── claude.ts         # Claude API integration
+│   │   │   └── embeddings.ts     # Embeddings service
+│   │   ├── protocol/        # Protocol components
+│   │   │   ├── brainProtocol.ts  # Main orchestration class
+│   │   │   ├── components/       # Protocol service components
+│   │   │   └── types.ts          # Protocol type definitions
+│   │   ├── MIGRATION.md     # MCP integration docs
+│   │   └── README.md        # MCP architecture docs
 │   ├── models/           # Data models and validation
+│   │   ├── note.ts           # Note data model
+│   │   └── profile.ts        # Profile data model
 │   ├── services/         # Service implementations
-│   │   ├── notes/        # Note-related services
-│   │   │   ├── noteRepository.ts        # Database operations for notes
-│   │   │   ├── noteEmbeddingService.ts  # Embedding operations for notes
-│   │   │   └── noteSearchService.ts     # Search functionality for notes
-│   │   └── profiles/     # Profile-related services 
-│   │       ├── profileRepository.ts     # Database operations for profiles
-│   │       ├── profileEmbeddingService.ts # Embedding operations for profiles
-│   │       ├── profileTagService.ts     # Tag generation for profiles
-│   │       └── profileSearchService.ts  # Search functionality for profiles
+│   │   ├── notes/           # Note-related services
+│   │   │   ├── noteRepository.ts      # Database operations
+│   │   │   ├── noteEmbeddingService.ts # Embedding operations
+│   │   │   └── noteSearchService.ts   # Search functionality
+│   │   └── profiles/        # Profile-related services 
+│   │       ├── profileRepository.ts    # Database operations
+│   │       ├── profileEmbeddingService.ts # Embedding operations
+│   │       ├── profileTagService.ts    # Tag generation
+│   │       └── profileSearchService.ts # Search functionality
 │   ├── utils/            # Shared utility functions
-│   ├── cli.ts            # CLI interface
-│   ├── import.ts         # Import script
+│   │   ├── cliInterface.ts    # CLI formatting utilities
+│   │   ├── configUtils.ts     # Configuration helpers
+│   │   ├── errorUtils.ts      # Error handling
+│   │   ├── logger.ts          # Logging system
+│   │   ├── noteUtils.ts       # Note utilities
+│   │   ├── tagExtractor.ts    # Tag extraction utilities
+│   │   └── textUtils.ts       # Text processing utilities
+│   ├── cli.ts            # CLI entry point
+│   ├── config.ts         # Application configuration
+│   ├── embed.ts          # Embedding generation script
+│   ├── import.ts         # Import entry point
 │   ├── delete.ts         # Delete script
 │   └── index.ts          # Main application
 ├── tests/                # Unit tests
-├── articles/             # Directory for your markdown files
+├── articles/             # Directory for markdown files
 ├── drizzle/              # Database migrations
+├── scripts/              # Utility scripts
+├── .github/workflows/    # GitHub Actions workflow definitions
+│   └── deploy.yml        # Deployment workflow
 ├── drizzle.config.ts     # Drizzle ORM configuration
+├── CLAUDE.md             # Claude-specific guidelines
 └── package.json          # Project dependencies
 ```
 
@@ -275,18 +299,32 @@ bun test
 bun test --coverage
 ```
 
-## Future Improvements
+## Roadmap
 
-The following improvements are planned for future development:
+The Personal Brain project is focused on enhancing personal knowledge management with AI conversations. Here's our planned development path:
 
-1. **Additional Service Tests**: Create more unit tests for the new service classes
-2. **Service Interfaces**: Define interfaces for services to allow alternative implementations
-3. **Enhanced Documentation**: Document interactions between services with sequence diagrams
-4. **Performance Optimization**: Improve data access patterns and caching
-5. **Event System**: Implement an event system for better cross-service communication
-6. **Dependency Injection**: Add proper DI for better testability and flexibility
-7. **API Documentation**: Generate API documentation for service interfaces
-8. **Domain Events**: Implement domain events for better decoupling of services
+### Near-term (Next 3 months)
+1. **Enhanced AI Conversations**: Improve the quality and relevance of AI responses by refining context selection
+2. **Contextual Memory**: Implement conversation history and context awareness in AI interactions
+3. **Knowledge Graph Visualization**: Create basic visualizations of connections between notes and concepts
+4. **Matrix Interface Enhancements**: Add rich media support and improve response formatting
+5. **Multimodal Support (Phase 1)**: Add ability to store and reference images within notes
+
+### Mid-term (3-6 months)
+1. **Cross-reference Discovery**: Automatically identify and suggest connections between related notes
+2. **Advanced External Sources**: Integrate additional knowledge sources beyond Wikipedia and News API
+3. **Semantic Navigation**: Navigate between related concepts and notes using semantic similarity
+4. **Interactive Visualizations**: Add interactive knowledge maps that help discover relationships
+5. **Multimodal Support (Phase 2)**: Add support for PDF documents and audio note references
+
+### Long-term (6-12 months)
+1. **Personal Knowledge Assistant**: Proactively suggest relevant notes and resources based on current work
+2. **Embedded Media Processing**: Extract and index content from images and documents for search
+3. **Timeline Views**: Visualize the evolution of knowledge and concepts over time
+4. **Extended Matrix Features**: Add commands for knowledge organization and filtering
+5. **Local-first Sync**: Ensure all operations work offline with reliable local storage and synchronization
+
+This roadmap emphasizes improving the AI conversation quality with contextual memory, enhancing knowledge connections and visualizations, and supporting multimodal content while maintaining a focus on the Matrix interface.
 
 ### Testing
 
@@ -306,35 +344,86 @@ bun test tests/embeddings.test.ts
 
 ## Deployment
 
-The project includes GitHub Actions for deployment to a server. To use it:
+### Automatic Deployment with GitHub Actions
 
-1. Set up the following secrets in your GitHub repository:
-   - `SSH_PRIVATE_KEY`: Your server's SSH private key
-   - `SSH_USER`: Username for your VPS
-   - `SSH_HOST`: Hostname/IP of your VPS
-   - `PROJECT_PATH`: Path to project directory on server
-   - `MATRIX_HOMESERVER_URL`: Your Matrix server URL
-   - `MATRIX_USER_ID`: Your Matrix user ID
-   - `MATRIX_ACCESS_TOKEN`: Your Matrix access token
-   - `MATRIX_ROOM_IDS`: Comma-separated list of room IDs
-   - `COMMAND_PREFIX`: Command prefix (default: !brain)
-   - `ANTHROPIC_API_KEY`: Your Anthropic API key
+The project includes a GitHub Actions workflow for automated deployment to a VPS or dedicated server. This allows you to host your Personal Brain bot with continuous deployment on every push to the main branch.
 
-2. Push to the main branch to trigger deployment
+#### Setting Up GitHub Actions Deployment
 
-3. For manual deployment:
-   ```bash
-   # Start the Matrix interface with PM2
-   bun run start
+1. **Configure GitHub Secrets**
    
-   # Stop the bot
-   bun run stop
-   
-   # Restart the bot
-   bun run restart
-   ```
+   Go to your repository Settings → Secrets and variables → Actions, and add the following secrets:
 
-PM2 will keep your bot running and restart it if it crashes.
+   | Secret Name | Description |
+   |-------------|-------------|
+   | `SSH_PRIVATE_KEY` | Your server's SSH private key (the content of your `id_rsa` file) |
+   | `SSH_USER` | Username for your server (e.g., `ubuntu`, `root`) |
+   | `SERVER_IP` | Hostname or IP address of your server |
+   | `MATRIX_HOMESERVER_URL` | Your Matrix homeserver URL (e.g., `https://matrix.org`) |
+   | `MATRIX_USER_ID` | Your bot's Matrix user ID (e.g., `@personalbot:matrix.org`) |
+   | `MATRIX_ACCESS_TOKEN` | Your Matrix access token (from `bun run matrix:setup`) |
+   | `MATRIX_ROOM_IDS` | Comma-separated list of room IDs where the bot should be active |
+   | `COMMAND_PREFIX` | Command prefix for the bot (default: `!brain`) |
+   | `ANTHROPIC_API_KEY` | Your Anthropic API key for Claude |
+   | `OPENAI_API_KEY` | Your OpenAI API key for embeddings (optional) |
+
+2. **Workflow Details**
+
+   The GitHub Action workflow will:
+   - Connect to your server via SSH using the provided credentials
+   - Clone or update the repository at `/opt/personal-brain` (created automatically)
+   - Install Bun runtime if not already installed
+   - Set up all environment variables from the GitHub secrets
+   - Run database migrations and generate embeddings automatically
+   - Start or restart the application using PM2
+
+3. **Triggering Deployment**
+
+   The deployment is triggered automatically on every push to the `main` branch. You can also manually trigger the workflow from the Actions tab in your repository.
+
+### How the GitHub Actions Workflow Works
+
+The workflow executes the following steps on your server:
+
+1. Sets up an SSH connection to your server
+2. Creates the project directory if it doesn't exist
+3. Clones or updates the repository with the latest code
+4. Installs Bun if not already installed
+5. Installs project dependencies
+6. Creates a `.env` file with all your secrets and configuration
+7. Runs database migrations
+8. Generates embeddings for all notes
+9. Starts or restarts the application
+
+### Manual Deployment Commands
+
+For manual operations on your server, you can use these commands:
+
+```bash
+# Start the Personal Brain Matrix bot
+bun run start
+
+# Stop the bot
+bun run stop
+
+# Restart the bot (after code changes)
+bun run restart
+
+# Check the bot's status
+bun run status
+
+# View logs
+bun run logs
+```
+
+The bot is managed by PM2, which ensures it stays running and automatically restarts if it crashes.
+
+### Server Requirements
+
+- Ubuntu 20.04+ or similar Linux distribution
+- At least 1GB RAM and 10GB storage
+- Open outbound connections (for API calls)
+- SSH access for deployment
 
 ## Advanced Features
 

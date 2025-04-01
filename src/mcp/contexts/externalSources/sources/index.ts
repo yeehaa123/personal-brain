@@ -1,5 +1,5 @@
 /**
- * External sources module for MCP SDK
+ * External sources module for Model Context Protocol
  * Exports interface and implementations for external knowledge sources
  * This barrel file simplifies imports from external sources
  */
@@ -11,5 +11,5 @@ export { NewsApiSource } from './newsApiSource';
 export type { 
   ExternalSourceInterface,
   ExternalSourceResult,
-  ExternalSearchOptions
+  ExternalSearchOptions,
 } from './externalSourceInterface';
