@@ -9,7 +9,7 @@ import { EmbeddingService } from '@mcp/model/embeddings';
 import type { 
   ExternalSourceInterface, 
   ExternalSourceResult, 
-  ExternalSearchOptions 
+  ExternalSearchOptions, 
 } from '@mcp/context/sources/externalSourceInterface';
 import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '@mcp/context/sources/newsApiSource';

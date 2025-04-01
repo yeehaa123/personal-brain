@@ -1,6 +1,6 @@
 import { describe, test, expect, mock } from 'bun:test';
 import { ExternalSourceService } from '@mcp/protocol/components/externalSourceService';
-import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import { ExternalSourceContext } from '@/mcp-sdk';
 import { ProfileAnalyzer } from '@mcp/protocol/components/profileAnalyzer';
 import { PromptFormatter } from '@mcp/protocol/components/promptFormatter';
 import type { Note } from '@models/note';

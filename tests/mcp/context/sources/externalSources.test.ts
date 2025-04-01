@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
-import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import { ExternalSourceContext } from '@/mcp-sdk';
 import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
 import type { ExternalSourceInterface } from '@mcp/context/sources/externalSourceInterface';

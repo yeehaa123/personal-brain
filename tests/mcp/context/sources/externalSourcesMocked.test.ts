@@ -4,7 +4,7 @@
 import { describe, test, expect, mock, beforeEach, beforeAll, afterAll } from 'bun:test';
 import { WikipediaSource } from '@mcp/context/sources/wikipediaSource';
 import { NewsApiSource } from '@mcp/context/sources/newsApiSource';
-import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import { ExternalSourceContext } from '@/mcp-sdk';
 
 // Define interfaces for the mock
 interface EmbeddingResult {

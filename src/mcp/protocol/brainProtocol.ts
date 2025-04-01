@@ -2,8 +2,7 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { ClaudeModel } from '@mcp/model/claude';
-import { NoteContext, ProfileContext } from '@/mcp-sdk'; // Import the MCP SDK implementations
-import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
+import { NoteContext, ProfileContext, ExternalSourceContext } from '@/mcp-sdk'; // Import all MCP SDK implementations
 import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
 import type { Profile } from '@models/profile';
 import { EmbeddingService } from '@mcp/model/embeddings';
@@ -99,6 +98,13 @@ export class BrainProtocol {
    */
   getProfileMcpServer() {
     return this.profileContext.getMcpServer();
+  }
+  
+  /**
+   * Get the External Source MCP server instance
+   */
+  getExternalSourceMcpServer() {
+    return this.externalContext.getMcpServer();
   }
 
   /**

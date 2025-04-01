@@ -9,7 +9,8 @@ export { NoteContext } from './noteContext';
 // Export the ProfileContext implementation using MCP SDK
 export { ProfileContext } from './profiles';
 
-// The ExternalSourceContext implementation is temporarily disabled for testing
+// Export the ExternalSourceContext implementation using MCP SDK
+export { ExternalSourceContext } from './contexts/externalSources';
 
 // Export our type definitions
 export * from './types';
