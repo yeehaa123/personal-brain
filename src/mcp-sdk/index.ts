@@ -3,13 +3,9 @@
  * Main entry point for the MCP SDK integration
  */
 
-// Export the NoteContext implementation using MCP SDK
-export { NoteContext } from './noteContext';
-
-// Export the ProfileContext implementation using MCP SDK
-export { ProfileContext } from './profiles';
-
-// Export the ExternalSourceContext implementation using MCP SDK
+// Export all the context implementations from their respective directories
+export { NoteContext } from './contexts/notes';
+export { ProfileContext } from './contexts/profiles';
 export { ExternalSourceContext } from './contexts/externalSources';
 
 // Export our type definitions
