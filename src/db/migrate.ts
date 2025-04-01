@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { join } from 'path';
-import { NoteContext } from '../mcp/context/noteContext';
+import { NoteContext } from '../mcp-sdk';
 import logger from '../utils/logger';
 
 async function runMigration() {

@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { NoteContext } from '@/mcp/context/noteContext';
+import { NoteContext } from '@/mcp-sdk';
 import { ProfileContext } from '@/mcp/context/profileContext';
 import { db } from '@/db';
 import { notes, profiles } from '@/db/schema';

@@ -66,8 +66,8 @@ export class NoteContext {
             return {
               contents: [{
                 uri: uri.toString(),
-                text: 'Error: No note ID provided'
-              }]
+                text: 'Error: No note ID provided',
+              }],
             };
           }
           
@@ -77,8 +77,8 @@ export class NoteContext {
             return {
               contents: [{
                 uri: uri.toString(),
-                text: `Note with ID ${id} not found`
-              }]
+                text: `Note with ID ${id} not found`,
+              }],
             };
           }
           
@@ -91,20 +91,20 @@ export class NoteContext {
                 title: note.title,
                 tags: note.tags,
                 createdAt: note.createdAt,
-                updatedAt: note.updatedAt
-              }
-            }]
+                updatedAt: note.updatedAt,
+              },
+            }],
           };
         } catch (error) {
           logger.error(`Error in note resource: ${error instanceof Error ? error.message : String(error)}`);
           return {
             contents: [{
               uri: uri.toString(),
-              text: `Error retrieving note: ${error instanceof Error ? error.message : String(error)}`
-            }]
+              text: `Error retrieving note: ${error instanceof Error ? error.message : String(error)}`,
+            }],
           };
         }
-      }
+      },
     );
     
     // Resource to search notes
@@ -120,7 +120,7 @@ export class NoteContext {
             tags: params.has('tags') ? params.get('tags')?.split(',') : undefined,
             limit: params.has('limit') ? parseInt(params.get('limit') || '10', 10) : 10,
             offset: params.has('offset') ? parseInt(params.get('offset') || '0', 10) : 0,
-            semanticSearch: params.has('semantic') ? params.get('semantic') === 'true' : true
+            semanticSearch: params.has('semantic') ? params.get('semantic') === 'true' : true,
           };
           
           const notes = await this.searchNotes(options);
@@ -136,20 +136,20 @@ export class NoteContext {
                 title: note.title,
                 tags: note.tags,
                 createdAt: note.createdAt,
-                updatedAt: note.updatedAt
-              }
-            }))
+                updatedAt: note.updatedAt,
+              },
+            })),
           };
         } catch (error) {
           logger.error(`Error in notes search resource: ${error instanceof Error ? error.message : String(error)}`);
           return {
             contents: [{
               uri: uri.toString(),
-              text: `Error searching notes: ${error instanceof Error ? error.message : String(error)}`
-            }]
+              text: `Error searching notes: ${error instanceof Error ? error.message : String(error)}`,
+            }],
           };
         }
-      }
+      },
     );
     
     // Resource to get recent notes
@@ -174,20 +174,20 @@ export class NoteContext {
                 title: note.title,
                 tags: note.tags,
                 createdAt: note.createdAt,
-                updatedAt: note.updatedAt
-              }
-            }))
+                updatedAt: note.updatedAt,
+              },
+            })),
           };
         } catch (error) {
           logger.error(`Error in recent notes resource: ${error instanceof Error ? error.message : String(error)}`);
           return {
             contents: [{
               uri: uri.toString(),
-              text: `Error retrieving recent notes: ${error instanceof Error ? error.message : String(error)}`
-            }]
+              text: `Error retrieving recent notes: ${error instanceof Error ? error.message : String(error)}`,
+            }],
           };
         }
-      }
+      },
     );
     
     // Resource to get related notes
@@ -204,8 +204,8 @@ export class NoteContext {
             return {
               contents: [{
                 uri: uri.toString(),
-                text: 'Error: No note ID provided'
-              }]
+                text: 'Error: No note ID provided',
+              }],
             };
           }
           
@@ -222,20 +222,20 @@ export class NoteContext {
                 title: note.title,
                 tags: note.tags,
                 createdAt: note.createdAt,
-                updatedAt: note.updatedAt
-              }
-            }))
+                updatedAt: note.updatedAt,
+              },
+            })),
           };
         } catch (error) {
           logger.error(`Error in related notes resource: ${error instanceof Error ? error.message : String(error)}`);
           return {
             contents: [{
               uri: uri.toString(),
-              text: `Error retrieving related notes: ${error instanceof Error ? error.message : String(error)}`
-            }]
+              text: `Error retrieving related notes: ${error instanceof Error ? error.message : String(error)}`,
+            }],
           };
         }
-      }
+      },
     );
   }
   
@@ -250,7 +250,7 @@ export class NoteContext {
       {
         title: z.string().optional(),
         content: z.string(),
-        tags: z.array(z.string()).optional()
+        tags: z.array(z.string()).optional(),
       },
       async (args) => {
         try {
@@ -261,27 +261,27 @@ export class NoteContext {
             content: args.content,
             tags: args.tags || null,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
           });
           
           // Return in the format expected by MCP
           return {
             content: [{
               type: 'text',
-              text: `Note created with ID: ${noteId}`
-            }]
+              text: `Note created with ID: ${noteId}`,
+            }],
           };
         } catch (error) {
           logger.error(`Error creating note via MCP tool: ${error instanceof Error ? error.message : String(error)}`);
           return {
             content: [{
               type: 'text',
-              text: `Failed to create note: ${error instanceof Error ? error.message : String(error)}`
+              text: `Failed to create note: ${error instanceof Error ? error.message : String(error)}`,
             }],
-            isError: true
+            isError: true,
           };
         }
-      }
+      },
     );
     
     // Tool to generate embeddings for all notes
@@ -295,20 +295,20 @@ export class NoteContext {
           return {
             content: [{
               type: 'text',
-              text: `Generated embeddings for ${result.updated} notes (${result.failed} failed)`
-            }]
+              text: `Generated embeddings for ${result.updated} notes (${result.failed} failed)`,
+            }],
           };
         } catch (error) {
           logger.error(`Error generating embeddings via MCP tool: ${error instanceof Error ? error.message : String(error)}`);
           return {
             content: [{
               type: 'text',
-              text: `Failed to generate embeddings: ${error instanceof Error ? error.message : String(error)}`
+              text: `Failed to generate embeddings: ${error instanceof Error ? error.message : String(error)}`,
             }],
-            isError: true
+            isError: true,
           };
         }
-      }
+      },
     );
     
     // Tool to search notes with embedding
@@ -317,13 +317,13 @@ export class NoteContext {
       'Search for notes similar to a given embedding vector',
       {
         embedding: z.array(z.number()),
-        maxResults: z.number().optional()
+        maxResults: z.number().optional(),
       },
       async (args) => {
         try {
           const notes = await this.searchNotesWithEmbedding(
             args.embedding, 
-            args.maxResults || 5
+            args.maxResults || 5,
           );
           
           // Format the results as required by MCP
@@ -331,8 +331,8 @@ export class NoteContext {
             return {
               content: [{
                 type: 'text',
-                text: 'No matching notes found'
-              }]
+                text: 'No matching notes found',
+              }],
             };
           }
           
@@ -342,19 +342,19 @@ export class NoteContext {
               text: `# ${note.title || 'Untitled Note'}\n\n${
                 note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
-            }))
+            })),
           };
         } catch (error) {
           logger.error(`Error searching with embedding via MCP tool: ${error instanceof Error ? error.message : String(error)}`);
           return {
             content: [{
               type: 'text',
-              text: `Failed to search with embedding: ${error instanceof Error ? error.message : String(error)}`
+              text: `Failed to search with embedding: ${error instanceof Error ? error.message : String(error)}`,
             }],
-            isError: true
+            isError: true,
           };
         }
-      }
+      },
     );
   }
 
