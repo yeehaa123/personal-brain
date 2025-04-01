@@ -2,8 +2,7 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { ClaudeModel } from '@mcp/model/claude';
-import { NoteContext } from '@/mcp-sdk'; // Import the MCP SDK implementation
-import { ProfileContext } from '@mcp/context/profileContext';
+import { NoteContext, ProfileContext } from '@/mcp-sdk'; // Import the MCP SDK implementations
 import { ExternalSourceContext } from '@mcp/context/externalSourceContext';
 import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
 import type { Profile } from '@models/profile';
@@ -85,10 +84,21 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the MCP server instance
+   * Get the MCP server instances
+   * Currently returns the NoteContext MCP server, but in the future
+   * could combine all MCP servers into one unified server
    */
   getMcpServer() {
+    // For now, just return the NoteContext MCP server
+    // In the future, we could create a unified server with all resources
     return this.context.getMcpServer();
+  }
+  
+  /**
+   * Get the Profile MCP server instance
+   */
+  getProfileMcpServer() {
+    return this.profileContext.getMcpServer();
   }
 
   /**
