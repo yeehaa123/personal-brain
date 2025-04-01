@@ -1,5 +1,7 @@
 import { test, expect, describe } from 'bun:test';
 import { NoteContext, ProfileContext } from '@/mcp-sdk';
+// Import directly from the implementation file for testing
+import { ExternalSourceContext } from '@/mcp-sdk/contexts/externalSources/externalSourceContext';
 
 describe('MCP SDK', () => {
   test('NoteContext can be imported and instantiated', () => {
@@ -14,14 +16,23 @@ describe('MCP SDK', () => {
     expect(profileContext).toBeInstanceOf(ProfileContext);
   });
   
-  test('Both contexts return MCP servers', () => {
+  test('ExternalSourceContext can be imported and instantiated', () => {
+    const externalSourceContext = new ExternalSourceContext('mock-api-key', 'mock-newsapi-key');
+    expect(externalSourceContext).toBeDefined();
+    expect(externalSourceContext).toBeInstanceOf(ExternalSourceContext);
+  });
+  
+  test('All contexts return MCP servers', () => {
     const noteContext = new NoteContext('mock-api-key');
     const profileContext = new ProfileContext('mock-api-key');
+    const externalSourceContext = new ExternalSourceContext('mock-api-key', 'mock-newsapi-key');
     
     const noteMcpServer = noteContext.getMcpServer();
     const profileMcpServer = profileContext.getMcpServer();
+    const externalSourceMcpServer = externalSourceContext.getMcpServer();
     
     expect(noteMcpServer).toBeDefined();
     expect(profileMcpServer).toBeDefined();
+    expect(externalSourceMcpServer).toBeDefined();
   });
 });
