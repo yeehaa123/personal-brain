@@ -53,7 +53,7 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
     { 
       // Initialize external sources as enabled or disabled based on config
       enabledSources: config.enableExternalSources === false ? [] : undefined,
-    }
+    },
   );
   
   // Register all contexts on the unified server

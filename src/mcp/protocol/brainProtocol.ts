@@ -2,7 +2,13 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { ClaudeModel } from '@mcp/model/claude';
-import { NoteContext, ProfileContext, ExternalSourceContext } from '@/mcp-sdk'; // Import all MCP SDK implementations
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { 
+  NoteContext, 
+  ProfileContext, 
+  ExternalSourceContext,
+  createUnifiedMcpServer,
+} from '@/mcp-sdk'; // Import all MCP SDK implementations
 import type { ExternalSourceResult } from '@mcp/context/sources/externalSourceInterface';
 import type { Profile } from '@models/profile';
 import { EmbeddingService } from '@mcp/model/embeddings';
@@ -20,8 +26,6 @@ import { NoteService } from './components/noteService';
 // Import types
 import type { ProtocolResponse, ExternalCitation } from './types';
 
-// MCP SDK is now imported directly
-
 export class BrainProtocol {
   // Core services
   private model: ClaudeModel;
@@ -29,6 +33,9 @@ export class BrainProtocol {
   private profileContext: ProfileContext;
   private externalContext: ExternalSourceContext;
   private embeddingService: EmbeddingService;
+  
+  // Unified MCP server
+  private unifiedMcpServer: McpServer;
   
   // Component classes
   private promptFormatter: PromptFormatter;
@@ -48,9 +55,17 @@ export class BrainProtocol {
     // Get the singleton instance of EmbeddingService
     this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
     
-    // Use the MCP SDK implementation of NoteContext
-    this.context = new NoteContext(apiKey);
+    // Create the unified MCP server
+    this.unifiedMcpServer = createUnifiedMcpServer({
+      apiKey,
+      newsApiKey,
+      name: 'BrainProtocol',
+      version: '1.0.0',
+      enableExternalSources: useExternalSources,
+    });
     
+    // Initialize context objects
+    this.context = new NoteContext(apiKey);
     this.profileContext = new ProfileContext(apiKey);
     this.externalContext = new ExternalSourceContext(apiKey, newsApiKey);
     
@@ -63,7 +78,7 @@ export class BrainProtocol {
       this.profileAnalyzer,
       this.promptFormatter,
     );
-    this.noteService = new NoteService(this.context); // No cast needed now
+    this.noteService = new NoteService(this.context);
     
     // Set initial state
     this.useExternalSources = useExternalSources;
@@ -72,7 +87,7 @@ export class BrainProtocol {
     this.loadProfile();
 
     logger.info(`Brain protocol initialized with external sources ${useExternalSources ? 'enabled' : 'disabled'}`);
-    logger.info('Using MCP SDK implementation for note context');
+    logger.info('Using unified MCP server for all contexts');
   }
 
   /**
@@ -83,28 +98,11 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the MCP server instances
-   * Currently returns the NoteContext MCP server, but in the future
-   * could combine all MCP servers into one unified server
+   * Get the unified MCP server instance
+   * Returns a single MCP server with resources and tools from all contexts
    */
-  getMcpServer() {
-    // For now, just return the NoteContext MCP server
-    // In the future, we could create a unified server with all resources
-    return this.context.getMcpServer();
-  }
-  
-  /**
-   * Get the Profile MCP server instance
-   */
-  getProfileMcpServer() {
-    return this.profileContext.getMcpServer();
-  }
-  
-  /**
-   * Get the External Source MCP server instance
-   */
-  getExternalSourceMcpServer() {
-    return this.externalContext.getMcpServer();
+  getMcpServer(): McpServer {
+    return this.unifiedMcpServer;
   }
 
   /**
@@ -292,7 +290,4 @@ export class BrainProtocol {
       externalSources: externalCitations.length > 0 ? externalCitations : undefined,
     };
   }
-
-  // All component methods have been extracted to separate service classes
-
 }
