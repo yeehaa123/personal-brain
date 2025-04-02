@@ -12,6 +12,7 @@ A personal knowledge management system built with TypeScript, Bun, and Drizzle O
 - 💬 Multiple interfaces: CLI and Matrix chat
 - 🌐 Optional integration with external knowledge sources
 - 👤 Profile-aware contextual responses
+- 🧩 Tiered conversation memory with AI-generated summaries
 
 ## What is the MCP Architecture?
 
@@ -26,6 +27,7 @@ This architecture allows the system to:
 2. Format the context appropriately for the AI model
 3. Process the response with proper attribution and citations
 4. Adapt responses based on your personal profile and preferences
+5. Maintain conversation history with tiered memory management
 
 ## Getting Started
 
@@ -80,6 +82,7 @@ The configuration is organized into the following categories:
 - **External APIs**: Base URLs, API keys for external services
 - **Application Paths**: Standard file locations for imports/profiles
 - **Database Configuration**: Database connection settings
+- **Conversation Memory**: Settings for tiered memory management, summarization
 
 All configuration values have sensible defaults, but can be overridden with environment variables.
 
@@ -219,6 +222,8 @@ personal-brain/
 │   │   ├── protocol/        # Protocol components
 │   │   │   ├── brainProtocol.ts  # Main orchestration class
 │   │   │   ├── components/       # Protocol service components
+│   │   │   ├── memory/           # Conversation memory system
+│   │   │   ├── schemas/          # Data validation schemas
 │   │   │   └── types.ts          # Protocol type definitions
 │   │   ├── MIGRATION.md     # MCP integration docs
 │   │   └── README.md        # MCP architecture docs
@@ -268,14 +273,24 @@ The project uses a service-oriented architecture following the Single Responsibi
 2. **Repository Pattern**: Data access is abstracted through repository classes
 3. **Service Layer**: Business logic is contained in focused service classes
 4. **MCP Architecture**: The overall system uses Model-Context-Protocol architecture
+5. **Tiered Memory Pattern**: Conversation history uses active, summary, and archive tiers
 
 ### Recent Architectural Improvements
 
-The codebase has been refactored from monolithic context classes into a service-oriented architecture:
+The codebase has been significantly enhanced with new architectural patterns:
 
-- **NoteContext**: Previously 896 lines, now a lightweight facade over specialized services
-- **ProfileContext**: Converted to a facade over repository, embedding, tag, and search services
-- **Services**: Focused classes with single responsibilities for better maintainability and testing
+- **Service-Oriented Refactoring**: Transformed monolithic context classes into lightweight facades
+  - **NoteContext**: Previously 896 lines, now a lightweight facade over specialized services
+  - **ProfileContext**: Converted to a facade over repository, embedding, tag, and search services
+  - **Services**: Focused classes with single responsibilities for better maintainability and testing
+
+- **Tiered Memory System**: Implemented a sophisticated conversation memory system
+  - **Active Tier**: Maintains recent conversation turns in full detail
+  - **Summary Tier**: Stores AI-generated summaries of older conversation segments
+  - **Archive Tier**: Preserves original turns that have been summarized
+  - **Automatic Summarization**: Uses AI to condense older conversations to optimize token usage
+  - **Memory Management**: Configurable thresholds for tier transitions
+  - [Detailed documentation](docs/TIERED_MEMORY.md) available
 
 ## Development
 
@@ -299,14 +314,37 @@ bun test
 bun test --coverage
 ```
 
+## Implementation Metrics
+
+The development of the Personal Brain system has been carefully tracked to understand resource utilization and efficiency:
+
+| Metric | Value |
+|--------|-------|
+| Total development cost | $60.72 |
+| Total API interaction time | 2h 30m 9s |
+| Total development time | 20h 14m 28s |
+| Code changes | 9,179 lines added, 2,098 lines removed |
+| Total test count | 297 tests across 41 files |
+
+These metrics demonstrate the efficiency of leveraging AI-assisted development for complex architectural features.
+
 ## Roadmap
 
 The Personal Brain project is focused on enhancing personal knowledge management with AI conversations. Here's our planned development path:
 
+### Recently Completed
+1. ✅ **Tiered Memory System**: Implemented sophisticated conversation memory with three tiers for optimized token usage
+2. ✅ **Conversation Summarization**: Added AI-powered summarization of older conversation turns
+3. ✅ **Enhanced Context Management**: Improved context handling with automatic tier transitions
+4. ✅ **ESLint Configuration**: Updated linting rules to better handle error handling patterns
+
 ### Near-term (Next 3 months)
-1. **Enhanced AI Conversations**: Improve the quality and relevance of AI responses by refining context selection
-2. **Contextual Memory**: Implement conversation history and context awareness in AI interactions
-3. **Knowledge Graph Visualization**: Create basic visualizations of connections between notes and concepts
+1. **Integration with Note System**: Connect conversations with notes for a cohesive knowledge base
+   - Convert key insights from conversations into notes
+   - Reference relevant notes in conversation context
+   - Create bidirectional links between notes and conversations
+2. **Memory Usage Optimization**: Implement token counting for precise context management
+3. **Knowledge Graph Visualization**: Create visualizations of connections between notes and concepts
 4. **Matrix Interface Enhancements**: Add rich media support and improve response formatting
 5. **Multimodal Support (Phase 1)**: Add ability to store and reference images within notes
 
@@ -323,8 +361,9 @@ The Personal Brain project is focused on enhancing personal knowledge management
 3. **Timeline Views**: Visualize the evolution of knowledge and concepts over time
 4. **Extended Matrix Features**: Add commands for knowledge organization and filtering
 5. **Local-first Sync**: Ensure all operations work offline with reliable local storage and synchronization
+6. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
 
-This roadmap emphasizes improving the AI conversation quality with contextual memory, enhancing knowledge connections and visualizations, and supporting multimodal content while maintaining a focus on the Matrix interface.
+This roadmap prioritizes features that create a cohesive experience between conversations and notes, optimize memory usage, and enhance the overall knowledge management capabilities.
 
 ### Testing
 
