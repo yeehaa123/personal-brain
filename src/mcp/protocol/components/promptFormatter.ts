@@ -19,6 +19,7 @@ export class PromptFormatter {
    * @param includeProfile Whether to include profile information
    * @param profileRelevance Profile relevance score
    * @param profile User profile (optional)
+   * @param conversationHistory Optional conversation history text
    * @returns Formatted prompt and citations
    */
   formatPromptWithContext(
@@ -28,9 +29,16 @@ export class PromptFormatter {
     includeProfile: boolean = false,
     profileRelevance: number = 1.0,
     profile?: Profile,
+    conversationHistory?: string,
   ): { formattedPrompt: string, citations: Citation[] } {
     const citations: Citation[] = [];
     let contextText = '';
+    
+    // Add conversation history if provided
+    if (conversationHistory && conversationHistory.trim().length > 0) {
+      contextText += '\n\nRecent Conversation History:\n';
+      contextText += conversationHistory;
+    }
 
     // Add profile information if requested, with relevance level determining detail
     if (includeProfile && profile) {

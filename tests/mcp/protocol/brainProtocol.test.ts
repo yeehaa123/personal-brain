@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import { BrainProtocol } from '@/mcp/protocol';
 
-describe('BrainProtocol External Sources', () => {
-  test('should initialize correctly with external sources', () => {
+describe('BrainProtocol API', () => {
+  test('should initialize correctly', () => {
     const protocol = new BrainProtocol();
     expect(protocol).toBeDefined();
   });

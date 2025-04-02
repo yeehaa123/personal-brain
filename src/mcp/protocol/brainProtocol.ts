@@ -9,6 +9,8 @@ import {
   createUnifiedMcpServer,
 } from '@/mcp'; // Import all MCP implementations
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
+import { ConversationMemory } from '@/mcp/protocol/memory';
+import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
@@ -24,6 +26,17 @@ import { NoteService } from './components/noteService';
 
 // Import types
 import type { ProtocolResponse, ExternalCitation } from './types';
+
+/**
+ * Interface for BrainProtocol constructor options
+ */
+export interface BrainProtocolOptions {
+  apiKey?: string;
+  newsApiKey?: string;
+  useExternalSources?: boolean;
+  interfaceType?: 'cli' | 'matrix';
+  roomId?: string;
+}
 
 export class BrainProtocol {
   // Core services
@@ -46,8 +59,37 @@ export class BrainProtocol {
   // State
   private profile: Profile | undefined;
   private useExternalSources: boolean = false;
+  private interfaceType: 'cli' | 'matrix';
+  private currentRoomId?: string;
+  
+  // Conversation Memory
+  private conversationMemory: ConversationMemory;
 
-  constructor(apiKey?: string, newsApiKey?: string, useExternalSources: boolean = false) {
+  /**
+   * Creates a new instance of the BrainProtocol
+   * @param options Options or legacy API key parameter
+   * @param newsApiKey Legacy news API key parameter
+   * @param useExternalSources Legacy external sources flag
+   */
+  constructor(
+    optionsOrApiKey?: BrainProtocolOptions | string,
+    newsApiKey?: string,
+    useExternalSources: boolean = false
+  ) {
+    // Handle both new options object and legacy parameters
+    const options: BrainProtocolOptions = typeof optionsOrApiKey === 'string'
+      ? { apiKey: optionsOrApiKey, newsApiKey, useExternalSources }
+      : optionsOrApiKey || {};
+    
+    // Extract values with defaults
+    const apiKey = options.apiKey;
+    const newsApiKeyValue = options.newsApiKey || newsApiKey;
+    const useExternalSourcesValue = options.useExternalSources ?? useExternalSources;
+    
+    // Set interface type (default to CLI if not specified)
+    this.interfaceType = options.interfaceType || 'cli';
+    this.currentRoomId = options.roomId;
+    
     // Initialize core services
     this.model = new ClaudeModel(apiKey);
     
@@ -57,16 +99,16 @@ export class BrainProtocol {
     // Create the unified MCP server
     this.unifiedMcpServer = createUnifiedMcpServer({
       apiKey,
-      newsApiKey,
+      newsApiKey: newsApiKeyValue,
       name: 'BrainProtocol',
       version: '1.0.0',
-      enableExternalSources: useExternalSources,
+      enableExternalSources: useExternalSourcesValue,
     });
     
     // Initialize context objects
     this.context = new NoteContext(apiKey);
     this.profileContext = new ProfileContext(apiKey);
-    this.externalContext = new ExternalSourceContext(apiKey, newsApiKey);
+    this.externalContext = new ExternalSourceContext(apiKey, newsApiKeyValue);
     
     // Initialize component classes
     this.promptFormatter = new PromptFormatter();
@@ -79,13 +121,23 @@ export class BrainProtocol {
     );
     this.noteService = new NoteService(this.context);
     
+    // Initialize conversation memory with the specified interface type
+    this.conversationMemory = new ConversationMemory(
+      this.interfaceType,
+      new InMemoryStorage()
+    );
+    
     // Set initial state
-    this.useExternalSources = useExternalSources;
+    this.useExternalSources = useExternalSourcesValue;
+    
+    // Initialize conversation based on interface type
+    this.initializeConversation();
 
     // Load profile asynchronously
     this.loadProfile();
 
-    logger.info(`Brain protocol initialized with external sources ${useExternalSources ? 'enabled' : 'disabled'}`);
+    logger.info(`Brain protocol initialized with external sources ${useExternalSourcesValue ? 'enabled' : 'disabled'}`);
+    logger.info(`Using interface type: ${this.interfaceType}`);
     logger.info('Using unified MCP server for all contexts');
   }
 
@@ -117,6 +169,13 @@ export class BrainProtocol {
   getExternalSourceContext(): ExternalSourceContext {
     return this.externalContext;
   }
+  
+  /**
+   * Get the conversation memory instance to manage conversation history
+   */
+  getConversationMemory(): ConversationMemory {
+    return this.conversationMemory;
+  }
 
   /**
    * Enable or disable the use of external sources
@@ -146,6 +205,41 @@ export class BrainProtocol {
   hasOpenAIApiKey(): boolean {
     return !!aiConfig.openAI.apiKey;
   }
+  
+  /**
+   * Initialize conversation based on interface type
+   */
+  private async initializeConversation(): Promise<void> {
+    try {
+      if (this.interfaceType === 'matrix' && this.currentRoomId) {
+        // For Matrix, get or create a conversation for the current room
+        await this.conversationMemory.getOrCreateConversationForRoom(this.currentRoomId);
+        logger.info(`Started Matrix conversation for room ${this.currentRoomId}`);
+      } else {
+        // For CLI, start a new conversation if there's no current one
+        if (!this.conversationMemory.currentConversation) {
+          await this.conversationMemory.startConversation();
+          logger.info('Started default CLI conversation for memory');
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to initialize conversation:', error);
+    }
+  }
+  
+  /**
+   * Set the current Matrix room ID (for Matrix interface only)
+   * @param roomId The Matrix room ID
+   */
+  async setCurrentRoom(roomId: string): Promise<void> {
+    if (this.interfaceType !== 'matrix') {
+      throw new Error('Cannot set room ID for non-Matrix interface');
+    }
+    
+    this.currentRoomId = roomId;
+    await this.conversationMemory.getOrCreateConversationForRoom(roomId);
+    logger.debug(`Switched to Matrix room ${roomId}`);
+  }
 
   /**
    * Load the user profile
@@ -173,7 +267,20 @@ export class BrainProtocol {
    * @param query The user's query to process
    * @returns A structured response with answer and contextual information
    */
-  async processQuery(query: string): Promise<ProtocolResponse> {
+  /**
+   * Process a user query through the full MCP pipeline with conversation history
+   * @param query The user's query to process
+   * @param options Optional parameters like user info for conversation tracking
+   * @returns A structured response with answer and contextual information
+   */
+  async processQuery(
+    query: string, 
+    options?: {
+      userId?: string;
+      userName?: string;
+      roomId?: string;
+    }
+  ): Promise<ProtocolResponse> {
     // Validate input
     if (!isNonEmptyString(query)) {
       logger.warn('Empty query received, using default question');
@@ -181,10 +288,20 @@ export class BrainProtocol {
     }
     
     logger.info(`Processing query: "${query}"`);
+    
+    // If Matrix roomId is provided, ensure we're using the right conversation
+    if (options?.roomId && this.interfaceType === 'matrix') {
+      await this.setCurrentRoom(options.roomId);
+    }
 
     // Ensure profile is loaded
     if (!isDefined(this.profile)) {
       await this.loadProfile();
+    }
+    
+    // Ensure we have an active conversation
+    if (!this.conversationMemory.currentConversation) {
+      await this.initializeConversation();
     }
 
     // 1. Analyze profile relevance
@@ -246,7 +363,19 @@ export class BrainProtocol {
       }
     }
 
-    // 4. Format the context and query for the model
+    // 4. Get conversation history if available
+    let conversationHistory = '';
+    try {
+      conversationHistory = await this.conversationMemory.formatHistoryForPrompt();
+      if (conversationHistory.length > 0) {
+        logger.debug('Including conversation history in prompt');
+      }
+    } catch (error) {
+      logger.warn('Failed to get conversation history:', error);
+      // Continue without history if there's an error
+    }
+    
+    // 5. Format the context and query for the model
     // For highly relevant profile queries, always include profile context
     const includeProfile = isProfileQuery || profileRelevance > relevanceConfig.profileInclusionThreshold;
     const { formattedPrompt, citations } = this.promptFormatter.formatPromptWithContext(
@@ -256,27 +385,51 @@ export class BrainProtocol {
       includeProfile,
       profileRelevance,
       this.profile,
+      conversationHistory,
     );
 
-    // 5. Get related notes to suggest to the user
+    // 6. Get related notes to suggest to the user
     const relatedNotesResult = await this.noteService.getRelatedNotes(relevantNotes);
     // Ensure relatedNotes is always an array
     const relatedNotes = Array.isArray(relatedNotesResult) ? relatedNotesResult : [];
 
-    // 6. Generate system prompt based on query analysis
+    // 7. Generate system prompt based on query analysis
     const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
       isProfileQuery, 
       profileRelevance, 
       externalResults.length > 0,
     );
     
-    // 7. Query the LLM with the formatted prompt
+    // 8. Query the LLM with the formatted prompt
     const modelResponse = await this.model.complete(systemPrompt, formattedPrompt);
     const responseText = isNonEmptyString(modelResponse.response) 
       ? modelResponse.response 
       : 'I apologize, but I could not generate a response. Please try asking again.';
+    
+    // 9. Save the conversation turn
+    try {
+      await this.conversationMemory.addTurn(
+        query, 
+        responseText,
+        {
+          userId: options?.userId,
+          userName: options?.userName,
+          metadata: {
+            hasProfile: !!this.profile,
+            isProfileQuery,
+            profileRelevance,
+            notesUsed: relevantNotes.length,
+            externalSourcesUsed: externalResults.length,
+          },
+        }
+      );
+      logger.debug('Saved conversation turn to memory');
+    } catch (error) {
+      logger.warn('Failed to save conversation turn:', error);
+      // Continue even if saving fails
+    }
 
-    // 8. Return the formatted protocol response
+    // 10. Return the formatted protocol response
     // For medium-high relevance, include profile even if not a direct profile query
     const includeProfileInResponse = isProfileQuery || profileRelevance > relevanceConfig.profileResponseThreshold;
     const citationsArray = Array.isArray(citations) ? citations : [];
