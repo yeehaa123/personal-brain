@@ -1,7 +1,7 @@
 # Conversation Memory System Design
 
 ## Core Concept
-A room-based conversation system that tracks user attribution, with consistent recognition of the brain's "Anchor" person across all interfaces, designed to scale across multiple Matrix rooms.
+A room-based conversation system that tracks user attribution, with consistent recognition of the brain's "Anchor" person across all interfaces, designed to scale across multiple Matrix rooms with advanced UX features.
 
 ## Detailed Approach
 
@@ -10,6 +10,7 @@ A room-based conversation system that tracks user attribution, with consistent r
 - The conversation will be identified by the room ID
 - All messages from all users in that room contribute to the same conversation history
 - For CLI usage, we'll have a default conversation context
+- Some common memory will be shared between CLI and Matrix interfaces
 
 ### 2. Consistent Anchor Identification
 - For each turn in a conversation, we'll store:
@@ -35,28 +36,52 @@ A room-based conversation system that tracks user attribution, with consistent r
   Assistant: Classical computing uses binary bits that are either 0 or 1...
   ```
 - This gives the AI context about the conversation flow and highlights the Anchor's messages
+- When using conversation history, the system will add subtle references ("As we discussed earlier...")
 
-### 4. Implementation Details
+### 4. User Experience Features
+- **Tiered Memory System:**
+  - **Active Memory:** Most recent turns (~10-20) kept in complete detail
+  - **Summarized Memory:** Older turns condensed into topic-based summaries
+  - **Archived Memory:** Very old conversations moved to persistent storage, retrievable by command
+
+- **Anchor-Only Memory Controls:**
+  - Only the Anchor user can issue memory management commands
+  - Explicit commands like "forget this conversation" or "remember this important point"
+  - Ability to mark certain exchanges as high priority for long-term retention
+
+- **Enhanced Memory Capabilities:**
+  - Track named entities, timestamps, emotional context, and importance markers
+  - Preserve links to external documents/resources mentioned in conversations
+  - Record system actions (file operations, searches) alongside dialogue
+  - Attempt to resolve contradictions when user statements change over time
+  - Proactively recall relevant information from older conversations
+
+### 5. Implementation Details
 - We'll extend the `ConversationTurn` schema to include:
   - `userId` (optional)
   - `userName` (optional)
   - Anchor status is computed at runtime based on userId matching
+  - Metadata fields for tracking priority, entities, and linked resources
 - In both interfaces, we'll check if the configured MATRIX_USER_ID exists:
   - If it exists, we'll use it as the Anchor identifier
   - If not (CLI-only scenario), the CLI user will be considered the Anchor by default
 - Configuration will be loaded from environment variables at startup
+- Maintain separate but linked stores for conversation history and user preferences
 
-### 5. Conversation Management
+### 6. Conversation Management
 - In Matrix: Create/retrieve conversation history by room ID
 - In CLI: Use a default conversation ID but with the same Anchor identity as Matrix
 - This ensures the brain perceives the same person as the Anchor regardless of interface
+- Implement automatic summarization for older conversation segments
+- Track conversation activity to manage memory resources efficiently
 
-### 6. Integration with BrainProtocol
+### 7. Integration with BrainProtocol
 - Modify `processQuery` to include user information and consistent Anchor status
 - Update `PromptFormatter` to format conversation history with Anchor recognition
 - Maintain a consistent identity representation across interfaces
+- Add command handling for memory-related user requests
 
-### 7. Scalability Considerations
+### 8. Scalability Considerations
 - **Storage Strategy:**
   - Implement a pluggable storage interface (ConversationMemoryStorage)
   - Provide both in-memory implementation (for development) and persistent implementations
