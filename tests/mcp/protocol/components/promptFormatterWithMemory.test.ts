@@ -16,7 +16,10 @@ describe('PromptFormatter with ConversationMemory', () => {
   test('should format prompt with conversation history', async () => {
     // Set up conversation memory
     const storage = new InMemoryStorage();
-    const memory = new ConversationMemory('cli', storage);
+    const memory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: storage,
+    });
     
     // Create a new conversation
     await memory.startConversation();

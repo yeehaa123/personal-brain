@@ -1,7 +1,7 @@
 /**
- * Storage interface for conversation memory
+ * Storage interface for tiered conversation memory
  */
-import type { Conversation, ConversationTurn } from './conversationSchemas';
+import type { Conversation, ConversationTurn, ConversationSummary } from './conversationSchemas';
 
 /**
  * Interface for conversation storage adapters
@@ -33,13 +33,31 @@ export interface ConversationMemoryStorage {
   getConversationByRoomId(roomId: string): Promise<Conversation | null>;
 
   /**
-   * Update an existing conversation with a new turn
+   * Add a new turn to an existing conversation's active tier
    * @param conversationId The conversation ID
    * @param turn The new conversation turn to add
    * @returns The updated conversation
    * @throws Error if conversation not found
    */
   addTurn(conversationId: string, turn: Omit<ConversationTurn, 'id'>): Promise<Conversation>;
+
+  /**
+   * Add a summary to an existing conversation's summary tier
+   * @param conversationId The conversation ID
+   * @param summary The new summary to add
+   * @returns The updated conversation
+   * @throws Error if conversation not found
+   */
+  addSummary(conversationId: string, summary: Omit<ConversationSummary, 'id'>): Promise<Conversation>;
+
+  /**
+   * Move turns from active tier to archive tier
+   * @param conversationId The conversation ID
+   * @param turnIndices The indices of turns to move from active to archive
+   * @returns The updated conversation
+   * @throws Error if conversation not found
+   */
+  moveTurnsToArchive(conversationId: string, turnIndices: number[]): Promise<Conversation>;
 
   /**
    * Get the most recent conversations, optionally limited by count and filtered by interface type

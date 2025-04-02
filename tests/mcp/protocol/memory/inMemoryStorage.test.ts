@@ -17,7 +17,7 @@ describe('InMemoryStorage', () => {
     expect(conversation.id).toBeDefined();
     expect(conversation.createdAt).toBeInstanceOf(Date);
     expect(conversation.updatedAt).toBeInstanceOf(Date);
-    expect(conversation.turns).toEqual([]);
+    expect(conversation.activeTurns).toEqual([]);
     expect(conversation.interfaceType).toBe('cli');
   });
 
@@ -56,12 +56,12 @@ describe('InMemoryStorage', () => {
     
     const updated = await storage.addTurn(conversation.id, turn);
     
-    expect(updated.turns.length).toBe(1);
-    expect(updated.turns[0].query).toBe('Test query');
-    expect(updated.turns[0].response).toBe('Test response');
-    expect(updated.turns[0].userId).toBe('test-user');
-    expect(updated.turns[0].userName).toBe('Test User');
-    expect(updated.turns[0].id).toBeDefined(); // Should have generated an ID
+    expect(updated.activeTurns.length).toBe(1);
+    expect(updated.activeTurns[0].query).toBe('Test query');
+    expect(updated.activeTurns[0].response).toBe('Test response');
+    expect(updated.activeTurns[0].userId).toBe('test-user');
+    expect(updated.activeTurns[0].userName).toBe('Test User');
+    expect(updated.activeTurns[0].id).toBeDefined(); // Should have generated an ID
     expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(conversation.updatedAt.getTime());
   });
 

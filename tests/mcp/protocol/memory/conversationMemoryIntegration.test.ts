@@ -16,10 +16,10 @@ class MockBrainProtocol {
     this.currentRoomId = options?.roomId;
     
     // Initialize conversation memory
-    this.conversationMemory = new ConversationMemory(
-      this.interfaceType,
-      new InMemoryStorage(),
-    );
+    this.conversationMemory = new ConversationMemory({
+      interfaceType: this.interfaceType,
+      storage: new InMemoryStorage(),
+    });
     
     // Mock model
     this.model = {
@@ -41,7 +41,7 @@ class MockBrainProtocol {
       } else if (!this.conversationMemory.currentConversation) {
         await this.conversationMemory.startConversation();
       }
-    } catch (_) {
+    } catch (_error) {
       // Ignore errors in tests
     }
   }
@@ -57,7 +57,7 @@ class MockBrainProtocol {
     let conversationHistory = '';
     try {
       conversationHistory = await this.conversationMemory.formatHistoryForPrompt();
-    } catch (_) {
+    } catch (_error) {
       // Ignore errors in tests
     }
     
@@ -81,7 +81,7 @@ class MockBrainProtocol {
           metadata: { test: true },
         },
       );
-    } catch (_) {
+    } catch (_error) {
       // Ignore errors in tests
     }
     

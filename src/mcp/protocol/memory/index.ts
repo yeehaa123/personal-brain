@@ -1,7 +1,6 @@
 /**
- * Export conversation memory components
+ * Export memory components for the MCP protocol
  */
-export * from './conversationMemory';
-export * from './inMemoryStorage';
-export * from '../schemas/conversationMemoryStorage';
-export * from '../schemas/conversationSchemas';
+export { ConversationMemory } from './conversationMemory';
+export { InMemoryStorage } from './inMemoryStorage';
+export { ConversationSummarizer } from './summarizer';

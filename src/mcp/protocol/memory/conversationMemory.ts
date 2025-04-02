@@ -1,19 +1,33 @@
 /**
- * ConversationMemory class for managing conversation history
+ * Tiered ConversationMemory class for managing conversation history
  */
 import { getEnv } from '@/utils/configUtils';
+// UUID is used by the InMemoryStorage implementation
 import type {
   Conversation,
   ConversationMemoryOptions,
   ConversationTurn,
+  ConversationSummary,
 } from '../schemas/conversationSchemas';
 import { ConversationMemoryOptionsSchema } from '../schemas/conversationSchemas';
 import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 import { InMemoryStorage } from './inMemoryStorage';
+import { ConversationSummarizer } from './summarizer';
+import logger from '@utils/logger';
 
 /**
- * ConversationMemory class that manages conversation history with
- * pluggable storage backend and Anchor recognition
+ * Configuration options for ConversationMemory constructor
+ */
+interface ConversationMemoryConfig {
+  interfaceType: 'cli' | 'matrix';
+  storage?: ConversationMemoryStorage;
+  options?: Partial<ConversationMemoryOptions>;
+  apiKey?: string;
+}
+
+/**
+ * Tiered ConversationMemory class that manages conversation history with
+ * active, summary, and archive tiers for efficient token usage
  */
 export class ConversationMemory {
   private storage: ConversationMemoryStorage;
@@ -22,32 +36,30 @@ export class ConversationMemory {
   private anchorId: string | null = null;
   private anchorName: string;
   private interfaceType: 'cli' | 'matrix';
+  private summarizer: ConversationSummarizer;
 
   /**
    * Create a new ConversationMemory instance
-   * @param storage Storage adapter to use (defaults to InMemoryStorage)
-   * @param options Configuration options
-   * @param interfaceType The interface type ('cli' or 'matrix')
+   * @param config Configuration object
    */
-  constructor(
-    interfaceType: 'cli' | 'matrix',
-    storage?: ConversationMemoryStorage,
-    options?: Partial<ConversationMemoryOptions>,
-  ) {
+  constructor(config: ConversationMemoryConfig) {
     // Store the interface type
-    this.interfaceType = interfaceType;
+    this.interfaceType = config.interfaceType;
     
     // Use provided storage or create in-memory storage as default
-    this.storage = storage || new InMemoryStorage();
+    this.storage = config.storage || new InMemoryStorage();
     
     // Parse and validate options with defaults from the schema
-    this.options = ConversationMemoryOptionsSchema.parse(options || {});
+    this.options = ConversationMemoryOptionsSchema.parse(config.options || {});
     
     // Initialize anchor information from environment/options
     this.initializeAnchorInfo();
     
     // Store anchor name from options
     this.anchorName = this.options.anchorName;
+    
+    // Initialize summarizer
+    this.summarizer = new ConversationSummarizer(config.apiKey);
   }
 
   /**
@@ -156,12 +168,131 @@ export class ConversationMemory {
       metadata: options?.metadata,
     };
 
-    await this.storage.addTurn(this.currentConversationId, turn);
+    // Add the turn to the active tier
+    const updatedConversation = await this.storage.addTurn(this.currentConversationId, turn);
+    
+    // Check if we need to manage the memory tiers
+    await this.manageTiers(updatedConversation);
   }
 
   /**
-   * Get conversation history for the current conversation
-   * @param maxTurns Maximum number of turns to retrieve (defaults to options.maxTurns)
+   * Manage memory tiers by summarizing and archiving as needed
+   * @param conversation The current conversation
+   */
+  private async manageTiers(conversation: Conversation): Promise<void> {
+    try {
+      // If active turns exceed the max, summarize older turns
+      if (conversation.activeTurns.length > this.options.maxActiveTurns) {
+        await this.summarizeOldestActiveTurns(conversation);
+      }
+      
+      // If summaries exceed the max, remove the oldest summaries
+      if (conversation.summaries.length > this.options.maxSummaries) {
+        // For now, we just remove the oldest summaries over the limit
+        // In a more advanced implementation, we could merge older summaries
+        const excessSummaries = conversation.summaries.length - this.options.maxSummaries;
+        if (excessSummaries > 0) {
+          // We don't actually delete them, just accept there will be excess
+          // In a database implementation, we might want to remove them
+          logger.debug(`Conversation has ${excessSummaries} excess summaries over the limit`);
+        }
+      }
+      
+      // If archived turns exceed the max, remove the oldest archived turns
+      if (conversation.archivedTurns.length > this.options.maxArchivedTurns) {
+        // For now, we just accept there will be excess archived turns
+        // In a database implementation, we might want to remove them
+        const excessArchives = conversation.archivedTurns.length - this.options.maxArchivedTurns;
+        if (excessArchives > 0) {
+          logger.debug(`Conversation has ${excessArchives} excess archived turns over the limit`);
+        }
+      }
+    } catch (error) {
+      logger.error('Error managing memory tiers:', error);
+      // Continue even if tier management fails
+    }
+  }
+
+  /**
+   * Summarize the oldest turns in the active tier and move them to archive
+   * @param conversation The current conversation
+   */
+  private async summarizeOldestActiveTurns(conversation: Conversation): Promise<void> {
+    if (!this.currentConversationId) {
+      return;
+    }
+
+    if (conversation.activeTurns.length <= this.options.maxActiveTurns) {
+      // No need to summarize if we're under the limit
+      return;
+    }
+
+    try {
+      // Determine how many turns to summarize (keeping the most recent ones)
+      const turnsToSummarize = Math.min(
+        this.options.summaryTurnCount,
+        conversation.activeTurns.length - Math.floor(this.options.maxActiveTurns * 0.8),
+      );
+      
+      if (turnsToSummarize < 2) {
+        // Need at least 2 turns to make a meaningful summary
+        return;
+      }
+      
+      // Get the oldest turns to summarize
+      const turnsToProcess = conversation.activeTurns.slice(0, turnsToSummarize);
+      
+      // Create a summary
+      const summary = await this.summarizer.summarizeTurns(turnsToProcess);
+      
+      // Add the summary to the summary tier
+      await this.storage.addSummary(this.currentConversationId, summary);
+      
+      // Move the turns from active to archive
+      const turnIndices = Array.from({ length: turnsToSummarize }, (_, i) => i);
+      await this.storage.moveTurnsToArchive(this.currentConversationId, turnIndices);
+      
+      logger.debug(`Summarized ${turnsToSummarize} turns into memory tier: summary`);
+    } catch (error) {
+      logger.error('Error summarizing turns:', error);
+      // Continue even if summarization fails
+    }
+  }
+
+  /**
+   * Get conversation history from all tiers
+   * @param maxActiveTurns Maximum number of active turns to retrieve (defaults to options.maxActiveTurns)
+   * @returns Object containing turns from each tier
+   * @throws Error if no current conversation
+   */
+  async getTieredHistory(maxActiveTurns?: number): Promise<{
+    activeTurns: ConversationTurn[];
+    summaries: ConversationSummary[];
+    archivedTurns: ConversationTurn[];
+  }> {
+    if (!this.currentConversationId) {
+      throw new Error('No active conversation. Call startConversation first.');
+    }
+
+    const conversation = await this.storage.getConversation(this.currentConversationId);
+    if (!conversation) {
+      throw new Error(`Current conversation with ID ${this.currentConversationId} not found`);
+    }
+
+    // Apply the maxTurns limit to active turns (either from parameters or from options)
+    const limit = maxActiveTurns || this.options.maxActiveTurns;
+    
+    // Return most recent active turns, with the most recent at the end
+    return {
+      activeTurns: conversation.activeTurns.slice(-limit),
+      summaries: conversation.summaries,
+      archivedTurns: conversation.archivedTurns,
+    };
+  }
+
+  /**
+   * Get active conversation turns
+   * @param maxTurns Maximum number of turns to retrieve (defaults to options.maxActiveTurns)
    * @returns Array of conversation turns, newest last
    * @throws Error if no current conversation
    */
@@ -176,10 +307,10 @@ export class ConversationMemory {
     }
 
     // Apply the maxTurns limit (either from parameters or from options)
-    const limit = maxTurns || this.options.maxTurns;
+    const limit = maxTurns || this.options.maxActiveTurns;
     
     // Return most recent turns, with the most recent at the end
-    return conversation.turns.slice(-limit);
+    return conversation.activeTurns.slice(-limit);
   }
 
   /**
@@ -187,26 +318,57 @@ export class ConversationMemory {
    * @returns Formatted conversation history string
    */
   async formatHistoryForPrompt(): Promise<string> {
-    const history = await this.getHistory();
-    
-    if (history.length === 0) {
+    if (!this.currentConversationId) {
       return '';
     }
-
-    // Format each turn with user attribution and anchor highlighting
-    const formattedTurns = history.map(turn => {
-      // Format user query
-      let userPrefix = turn.userName || 'User';
+    
+    try {
+      // Get tiered history
+      const { activeTurns, summaries } = await this.getTieredHistory();
       
-      // Dynamically determine if this user is the anchor
-      if (turn.userId && this.isAnchor(turn.userId)) {
-        userPrefix = `${this.anchorName} (${turn.userName || 'User'})`;
+      let historyText = '';
+      
+      // Add summaries first (oldest to newest)
+      if (summaries.length > 0) {
+        historyText += 'CONVERSATION SUMMARIES:\n';
+        
+        // Sort summaries by timestamp (oldest first)
+        const sortedSummaries = [...summaries].sort(
+          (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+        );
+        
+        sortedSummaries.forEach((summary, index) => {
+          historyText += `Summary ${index + 1}: ${summary.content}\n\n`;
+        });
+        
+        historyText += 'RECENT CONVERSATION:\n';
       }
       
-      return `${userPrefix}: ${turn.query}\nAssistant: ${turn.response}`;
-    });
-
-    return formattedTurns.join('\n\n') + '\n\n';
+      // Add active turns
+      if (activeTurns.length === 0) {
+        return historyText;
+      }
+      
+      // Format each turn with user attribution and anchor highlighting
+      const formattedTurns = activeTurns.map(turn => {
+        // Format user query
+        let userPrefix = turn.userName || 'User';
+        
+        // Dynamically determine if this user is the anchor
+        if (turn.userId && this.isAnchor(turn.userId)) {
+          userPrefix = `${this.anchorName} (${turn.userName || 'User'})`;
+        }
+        
+        return `${userPrefix}: ${turn.query}\nAssistant: ${turn.response}`;
+      });
+      
+      historyText += formattedTurns.join('\n\n') + '\n\n';
+      
+      return historyText;
+    } catch (error) {
+      logger.error('Error formatting history for prompt:', error);
+      return '';
+    }
   }
 
   /**
@@ -261,5 +423,47 @@ export class ConversationMemory {
     }
     
     return result;
+  }
+  
+  /**
+   * Force summarize the active turns (for testing or manual management)
+   * @returns The created summary if successful
+   */
+  async forceSummarizeActiveTurns(): Promise<ConversationSummary | null> {
+    if (!this.currentConversationId) {
+      throw new Error('No active conversation. Call startConversation first.');
+    }
+    
+    const conversation = await this.storage.getConversation(this.currentConversationId);
+    if (!conversation) {
+      throw new Error(`Current conversation with ID ${this.currentConversationId} not found`);
+    }
+    
+    if (conversation.activeTurns.length < 2) {
+      throw new Error('Need at least 2 turns to create a summary');
+    }
+    
+    // Take the oldest half of active turns to summarize
+    const turnsToSummarize = Math.max(2, Math.floor(conversation.activeTurns.length / 2));
+    const turnsToProcess = conversation.activeTurns.slice(0, turnsToSummarize);
+    
+    try {
+      // Create a summary
+      const summary = await this.summarizer.summarizeTurns(turnsToProcess);
+      
+      // Add the summary to the summary tier
+      await this.storage.addSummary(this.currentConversationId, summary);
+      
+      // Move the turns from active to archive
+      const turnIndices = Array.from({ length: turnsToSummarize }, (_, i) => i);
+      await this.storage.moveTurnsToArchive(this.currentConversationId, turnIndices);
+      
+      logger.info(`Manually summarized ${turnsToSummarize} turns into the summary tier`);
+      
+      return summary;
+    } catch (error) {
+      logger.error('Error during manual summarization:', error);
+      return null;
+    }
   }
 }

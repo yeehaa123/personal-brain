@@ -45,7 +45,7 @@ describe('Conversation Schema Validation', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       interfaceType: 'cli' as const,
-      turns: [
+      activeTurns: [
         {
           id: 'turn-1',
           timestamp: new Date(),
@@ -64,6 +64,8 @@ describe('Conversation Schema Validation', () => {
           metadata: { sentiment: 'positive' },
         },
       ],
+      summaries: [],
+      archivedTurns: [],
       metadata: { topic: 'greeting' },
     };
 
@@ -78,7 +80,9 @@ describe('Conversation Schema Validation', () => {
       updatedAt: new Date(),
       interfaceType: 'matrix' as const,
       roomId: 'room-123',
-      turns: [],
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
     };
 
     const result = ConversationSchema.safeParse(emptyConversation);
@@ -90,40 +94,50 @@ describe('Conversation Schema Validation', () => {
     const result = ConversationMemoryOptionsSchema.parse({});
 
     // Check that defaults are applied
-    expect(result.maxTurns).toBe(10);
+    expect(result.maxActiveTurns).toBe(10);
     expect(result.maxTokens).toBe(2000);
     expect(result.includeSystemMessages).toBe(false);
     expect(result.relevanceDecay).toBe(0.9);
+    expect(result.maxSummaries).toBe(3);
+    expect(result.summaryTurnCount).toBe(5);
+    expect(result.maxArchivedTurns).toBe(50);
   });
 
   test('should validate custom conversation memory options', () => {
     const customOptions = {
-      maxTurns: 5,
+      maxActiveTurns: 5,
       maxTokens: 1000,
       includeSystemMessages: true,
       relevanceDecay: 0.5,
       defaultUserId: 'custom-user',
       defaultUserName: 'Custom User',
       anchorName: 'Custom Anchor',
+      maxSummaries: 2,
+      summaryTurnCount: 3,
+      maxArchivedTurns: 30,
     };
 
     const result = ConversationMemoryOptionsSchema.parse(customOptions);
     
     // Should have all properties from the input
-    expect(result.maxTurns).toBe(customOptions.maxTurns);
+    expect(result.maxActiveTurns).toBe(customOptions.maxActiveTurns);
     expect(result.maxTokens).toBe(customOptions.maxTokens);
     expect(result.includeSystemMessages).toBe(customOptions.includeSystemMessages);
     expect(result.relevanceDecay).toBe(customOptions.relevanceDecay);
     expect(result.defaultUserId).toBe(customOptions.defaultUserId);
     expect(result.defaultUserName).toBe(customOptions.defaultUserName);
     expect(result.anchorName).toBe(customOptions.anchorName);
+    expect(result.maxSummaries).toBe(customOptions.maxSummaries);
+    expect(result.summaryTurnCount).toBe(customOptions.summaryTurnCount);
+    expect(result.maxArchivedTurns).toBe(customOptions.maxArchivedTurns);
   });
 
   test('should reject invalid option values', () => {
     const invalidOptions = {
-      maxTurns: -5, // Negative value, should be positive
+      maxActiveTurns: -5, // Negative value, should be positive
       maxTokens: 0, // Zero value, should be positive
       relevanceDecay: 1.5, // > 1.0, should be between 0 and 1
+      maxSummaries: -1, // Negative value, should be positive
     };
 
     // Should throw a ZodError

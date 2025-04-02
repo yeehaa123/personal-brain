@@ -34,7 +34,9 @@ describe('ConversationMemory', () => {
       id,
       createdAt: now,
       updatedAt: now,
-      turns: mockTurns,
+      activeTurns: mockTurns,
+      summaries: [],
+      archivedTurns: [],
       interfaceType,
       roomId,
     };
@@ -72,7 +74,30 @@ describe('ConversationMemory', () => {
         return {
           ...conversation,
           updatedAt: new Date(),
-          turns: [...conversation.turns, newTurn],
+          activeTurns: [...conversation.activeTurns, newTurn],
+        };
+      }),
+      addSummary: mock(async (conversationId: string, summary) => {
+        const conversation = await mockStorage.getConversation(conversationId);
+        if (!conversation) {
+          throw new Error(`Conversation with ID ${conversationId} not found`);
+        }
+        
+        return {
+          ...conversation,
+          updatedAt: new Date(),
+          summaries: [...conversation.summaries, summary],
+        };
+      }),
+      moveTurnsToArchive: mock(async (conversationId: string, _turnIndices) => {
+        const conversation = await mockStorage.getConversation(conversationId);
+        if (!conversation) {
+          throw new Error(`Conversation with ID ${conversationId} not found`);
+        }
+        
+        return {
+          ...conversation,
+          updatedAt: new Date(),
         };
       }),
       getRecentConversations: mock(async (options) => {
@@ -110,7 +135,10 @@ describe('ConversationMemory', () => {
     };
     
     // Create ConversationMemory with mock storage
-    memory = new ConversationMemory('cli', mockStorage);
+    memory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: mockStorage,
+    });
   });
 
   test('should use provided storage and options', () => {
@@ -120,14 +148,20 @@ describe('ConversationMemory', () => {
       includeSystemMessages: true,
     };
     
-    const customMemory = new ConversationMemory('cli', mockStorage, customOptions);
+    const customMemory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: mockStorage,
+      options: customOptions,
+    });
     
     // Can't directly test private fields, but we can test behavior
     expect(customMemory).toBeInstanceOf(ConversationMemory);
   });
 
   test('should use InMemoryStorage by default', () => {
-    const defaultMemory = new ConversationMemory('cli');
+    const defaultMemory = new ConversationMemory({
+      interfaceType: 'cli',
+    });
     
     // Can't directly test private fields, but we can test behavior
     expect(defaultMemory).toBeInstanceOf(ConversationMemory);
@@ -263,14 +297,16 @@ describe('ConversationMemory', () => {
         updatedAt: new Date(),
         interfaceType: options.interfaceType,
         roomId: options.roomId,
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
       })),
       getConversation: mock(async (id) => ({
         id,
         createdAt: new Date(),
         updatedAt: new Date(),
         interfaceType: 'cli' as const,
-        turns: [
+        activeTurns: [
           {
             id: 'turn-1',
             timestamp: new Date(),
@@ -288,6 +324,8 @@ describe('ConversationMemory', () => {
             userName: 'Regular User',
           },
         ],
+        summaries: [],
+        archivedTurns: [],
       })),
       getConversationByRoomId: mock(async (roomId) => roomId === 'test-room' ? {
         id: 'test-id',
@@ -295,15 +333,21 @@ describe('ConversationMemory', () => {
         updatedAt: new Date(),
         interfaceType: 'matrix' as const,
         roomId,
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
       } : null),
       addTurn: mock(async (conversationId, turn) => ({ 
         id: conversationId, 
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
-        turns: [{...turn, id: 'new-turn-id'}],
+        activeTurns: [{...turn, id: 'new-turn-id'}],
+        summaries: [],
+        archivedTurns: [],
       })),
+      addSummary: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      moveTurnsToArchive: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
       getRecentConversations: mock(async () => []),
       deleteConversation: mock(async () => true),
       updateMetadata: mock(async (id, metadata) => ({ 
@@ -311,15 +355,21 @@ describe('ConversationMemory', () => {
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
         metadata,
       })),
     };
     
     // First, set up memory with our anchor ID
-    const formatMemory = new ConversationMemory('cli', customMockStorage, {
-      anchorId: 'anchor-id',
-      anchorName: 'Anchor',
+    const formatMemory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: customMockStorage,
+      options: {
+        anchorId: 'anchor-id',
+        anchorName: 'Anchor',
+      },
     });
     
     // Start a conversation
@@ -449,14 +499,16 @@ describe('ConversationMemory', () => {
         updatedAt: new Date(),
         interfaceType: options.interfaceType,
         roomId: options.roomId,
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
       })),
       getConversation: mock(async (id) => ({
         id,
         createdAt: new Date(),
         updatedAt: new Date(),
         interfaceType: 'cli' as const,
-        turns: [
+        activeTurns: [
           {
             id: 'turn-1',
             timestamp: new Date(),
@@ -474,6 +526,8 @@ describe('ConversationMemory', () => {
             userName: 'Regular User',
           },
         ],
+        summaries: [],
+        archivedTurns: [],
       })),
       getConversationByRoomId: mock(async (roomId) => roomId === 'test-room' ? {
         id: 'anchor-test-id',
@@ -481,15 +535,13 @@ describe('ConversationMemory', () => {
         updatedAt: new Date(),
         interfaceType: 'matrix' as const,
         roomId,
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
       } : null),
-      addTurn: mock(async (conversationId, turn) => ({ 
-        id: conversationId, 
-        createdAt: new Date(), 
-        updatedAt: new Date(), 
-        interfaceType: 'cli' as const, 
-        turns: [{...turn, id: 'new-turn-id'}],
-      })),
+      addTurn: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      addSummary: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      moveTurnsToArchive: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
       getRecentConversations: mock(async () => []),
       deleteConversation: mock(async () => true),
       updateMetadata: mock(async (id, metadata) => ({ 
@@ -497,7 +549,9 @@ describe('ConversationMemory', () => {
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
-        turns: [],
+        activeTurns: [],
+        summaries: [],
+        archivedTurns: [],
         metadata,
       })),
     };
@@ -509,7 +563,11 @@ describe('ConversationMemory', () => {
     };
     
     // Create a memory object with our custom options and storage
-    const anchorTestMemory = new ConversationMemory('cli', anchorMockStorage, options);
+    const anchorTestMemory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: anchorMockStorage,
+      options,
+    });
     
     // Start a conversation to get its history
     await anchorTestMemory.startConversation();
@@ -529,7 +587,10 @@ describe('ConversationMemory', () => {
 
   test('should handle real InMemoryStorage', async () => {
     // Create ConversationMemory with real InMemoryStorage
-    const realMemory = new ConversationMemory('cli', new InMemoryStorage());
+    const realMemory = new ConversationMemory({
+      interfaceType: 'cli',
+      storage: new InMemoryStorage(),
+    });
     
     // Test full lifecycle
     const id = await realMemory.startConversation();

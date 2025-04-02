@@ -74,7 +74,7 @@ export class BrainProtocol {
   constructor(
     optionsOrApiKey?: BrainProtocolOptions | string,
     newsApiKey?: string,
-    useExternalSources: boolean = false
+    useExternalSources: boolean = false,
   ) {
     // Handle both new options object and legacy parameters
     const options: BrainProtocolOptions = typeof optionsOrApiKey === 'string'
@@ -122,10 +122,11 @@ export class BrainProtocol {
     this.noteService = new NoteService(this.context);
     
     // Initialize conversation memory with the specified interface type
-    this.conversationMemory = new ConversationMemory(
-      this.interfaceType,
-      new InMemoryStorage()
-    );
+    this.conversationMemory = new ConversationMemory({
+      interfaceType: this.interfaceType,
+      storage: new InMemoryStorage(),
+      apiKey, // Pass the API key for summarization
+    });
     
     // Set initial state
     this.useExternalSources = useExternalSourcesValue;
@@ -279,7 +280,7 @@ export class BrainProtocol {
       userId?: string;
       userName?: string;
       roomId?: string;
-    }
+    },
   ): Promise<ProtocolResponse> {
     // Validate input
     if (!isNonEmptyString(query)) {
@@ -421,7 +422,7 @@ export class BrainProtocol {
             notesUsed: relevantNotes.length,
             externalSourcesUsed: externalResults.length,
           },
-        }
+        },
       );
       logger.debug('Saved conversation turn to memory');
     } catch (error) {

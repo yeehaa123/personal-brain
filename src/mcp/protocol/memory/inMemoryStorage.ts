@@ -5,12 +5,17 @@ import { v4 as uuidv4 } from 'uuid';
 import type {
   Conversation,
   ConversationTurn,
+  ConversationSummary,
 } from '../schemas/conversationSchemas';
-import { ConversationSchema, ConversationTurnSchema } from '../schemas/conversationSchemas';
+import { 
+  ConversationSchema, 
+  ConversationTurnSchema,
+  ConversationSummarySchema,
+} from '../schemas/conversationSchemas';
 import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 
 /**
- * In-memory storage adapter for conversation memory
+ * In-memory storage adapter for tiered conversation memory
  * This implementation stores all data in memory and will be lost when the process ends
  */
 export class InMemoryStorage implements ConversationMemoryStorage {
@@ -31,7 +36,9 @@ export class InMemoryStorage implements ConversationMemoryStorage {
       id: conversationId,
       createdAt: now,
       updatedAt: now,
-      turns: [],
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
       interfaceType: options.interfaceType,
       roomId: options.roomId,
     };
@@ -69,7 +76,7 @@ export class InMemoryStorage implements ConversationMemoryStorage {
   }
 
   /**
-   * Add a new turn to an existing conversation
+   * Add a new turn to an existing conversation (active tier)
    */
   async addTurn(
     conversationId: string,
@@ -88,11 +95,87 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     // Validate the turn using Zod schema
     ConversationTurnSchema.parse(completeTurn);
 
+    // Update the conversation with the new turn in the active tier
+    const updatedConversation: Conversation = {
+      ...conversation,
+      updatedAt: new Date(),
+      activeTurns: [...conversation.activeTurns, completeTurn],
+    };
+
+    // Validate the updated conversation
+    ConversationSchema.parse(updatedConversation);
+
+    this.conversations.set(conversationId, updatedConversation);
+    return updatedConversation;
+  }
+
+  /**
+   * Add a summary to the conversation (summary tier)
+   */
+  async addSummary(
+    conversationId: string,
+    summary: Omit<ConversationSummary, 'id'>,
+  ): Promise<Conversation> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation with ID ${conversationId} not found`);
+    }
+
+    const completeSummary: ConversationSummary = {
+      ...summary,
+      id: uuidv4(),
+    };
+
+    // Validate the summary using Zod schema
+    ConversationSummarySchema.parse(completeSummary);
+
+    // Update the conversation with the new summary
+    const updatedConversation: Conversation = {
+      ...conversation,
+      updatedAt: new Date(),
+      summaries: [...conversation.summaries, completeSummary],
+    };
+
+    // Validate the updated conversation
+    ConversationSchema.parse(updatedConversation);
+
+    this.conversations.set(conversationId, updatedConversation);
+    return updatedConversation;
+  }
+
+  /**
+   * Move turns from active to archive
+   */
+  async moveTurnsToArchive(
+    conversationId: string,
+    turnIndices: number[],
+  ): Promise<Conversation> {
+    const conversation = this.conversations.get(conversationId);
+    if (!conversation) {
+      throw new Error(`Conversation with ID ${conversationId} not found`);
+    }
+
+    // Sort indices in descending order to avoid issues when removing items
+    const sortedIndices = [...turnIndices].sort((a, b) => b - a);
+    
+    // Create a copy of the active turns
+    const activeTurns = [...conversation.activeTurns];
+    const turnsToArchive: ConversationTurn[] = [];
+    
+    // Remove turns from active and add to archive
+    for (const index of sortedIndices) {
+      if (index >= 0 && index < activeTurns.length) {
+        const [turn] = activeTurns.splice(index, 1);
+        turnsToArchive.push(turn);
+      }
+    }
+    
     // Update the conversation
     const updatedConversation: Conversation = {
       ...conversation,
       updatedAt: new Date(),
-      turns: [...conversation.turns, completeTurn],
+      activeTurns,
+      archivedTurns: [...conversation.archivedTurns, ...turnsToArchive.reverse()],
     };
 
     // Validate the updated conversation
