@@ -23,6 +23,8 @@
     "matrix": "bun run src/interfaces/matrix.ts",
     "matrix:setup": "bun run src/interfaces/matrix-setup.ts",
     "matrix:logout": "bun run src/interfaces/matrix-logout.ts",
+    "mcp:server": "bun run src/mcp-http-server.ts",
+    "mcp:inspect": "mcp-inspector bun run src/mcp-http-server.ts",
     "start": "pm2 start src/interfaces/matrix.ts --interpreter $(which bun) --name personal-brain",
     "stop": "pm2 stop personal-brain",
     "restart": "pm2 describe personal-brain > /dev/null 2>&1 && pm2 restart personal-brain || bun run start",
@@ -32,6 +34,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
+    "@modelcontextprotocol/inspector": "^0.7.0",
     "@types/bun": "latest",
     "@types/sanitize-html": "^2.15.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
