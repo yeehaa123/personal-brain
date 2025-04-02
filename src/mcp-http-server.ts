@@ -1,203 +1,206 @@
-/**
- * MCP HTTP Server for Personal Brain
- * 
- * This script creates a basic HTTP server that implements the Model-Context-Protocol (MCP) standard,
- * allowing the Personal Brain to connect with MCP Inspector and other clients.
- */
-
+import express from 'express';
+import type { Request, Response, NextFunction } from 'express';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { createUnifiedMcpServer } from './mcp';
+import type { McpServer as ExtendedMcpServer } from './mcp/types';
+import { aiConfig, apiConfig, serverConfig } from './config';
 import logger from './utils/logger';
-import { serverConfig } from './config';
 
-// Tell ESLint that we're using global browser APIs in Node.js
-/* global setInterval, clearInterval */
-
-// Define a type for the server state
-interface ServerInfo {
-  name: string;
-  version: string;
-  resources: string[];
-  tools: string[];
+// Interface for ExpressResponse to make TypeScript happy with our cast
+interface ExpressResponse extends Response {
+  flush?: () => void;
+  writableEnded: boolean;
 }
 
-/**
- * Initialize the MCP server and create an HTTP server with Bun
- */
-function main() {
-  // Server info
-  const serverInfo: ServerInfo = {
-    name: 'Personal Brain MCP Server',
-    version: '1.0.0',
-    resources: [],
-    tools: [],
-  };
+// Heartbeat-enabled SSE transport that extends the standard implementation
+class HeartbeatSSETransport extends SSEServerTransport {
+  private heartbeatInterval: ReturnType<typeof globalThis.setInterval> | null = null;
 
-  // Create a Bun HTTP server
-  const port = serverConfig.mcpHttpPort;
-  
-  const server = Bun.serve({
-    port,
-    async fetch(req) {
-      // Add CORS headers for all responses
-      const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      };
+  constructor(messagesEndpoint: string, res: Response) {
+    super(messagesEndpoint, res);
 
-      // Handle CORS preflight requests
+    // Setup heartbeat interval (every 30 seconds)
+    this.heartbeatInterval = globalThis.setInterval(() => this.sendHeartbeat(), 30000);
+
+    // Ensure proper cleanup on connection close
+    res.on('close', () => {
+      if (this.heartbeatInterval) {
+        globalThis.clearInterval(this.heartbeatInterval);
+      }
+    });
+  }
+
+  // Send a heartbeat to keep the connection alive
+  sendHeartbeat(): void {
+    // Get the sessionId safely - use bracket notation for TypeScript
+    const sessionId = this['sessionId'];
+
+    // Access the protected res property via private method
+    this.sendCustomEvent('message', {
+      type: 'heartbeat',
+      transportType: 'sse',
+      sessionId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Send a custom event
+  sendCustomEvent(eventName: string, data: unknown): void {
+    const expressRes = this['res'] as ExpressResponse;
+    if (!expressRes || expressRes.writableEnded) {
+      return;
+    }
+
+    expressRes.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
+
+    // Flush the response if possible
+    if (typeof expressRes.flush === 'function') {
+      expressRes.flush();
+    }
+  }
+
+  // Override close to clean up resources and match the expected return type
+  override async close(): Promise<void> {
+    if (this.heartbeatInterval) {
+      globalThis.clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+    await super.close();
+  }
+}
+
+// A mapping of session IDs to their transports
+const transports: { [key: string]: HeartbeatSSETransport } = {};
+
+// Start the HTTP server
+export function startMcpHttpServer() {
+  const app = express();
+  const PORT = serverConfig.mcpHttpPort;
+
+  try {
+    // Configure CORS middleware
+    app.use((req: Request, res: Response, next: NextFunction): void => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       if (req.method === 'OPTIONS') {
-        return new Response(null, {
-          status: 204,
-          headers: corsHeaders,
-        });
+        res.status(204).end();
+        return;
+      }
+      next();
+    });
+
+    // Create the unified MCP server
+    const mcpServer = createUnifiedMcpServer({
+      apiKey: aiConfig.anthropic.apiKey,
+      newsApiKey: apiConfig.newsApi.apiKey,
+      name: 'PersonalBrainMCP',
+      version: '1.0.0',
+      enableExternalSources: true,
+    });
+
+    // Basic MCP info endpoint
+    app.get('/mcp', (_req, res) => {
+      res.json({
+        name: 'PersonalBrainMCP',
+        version: '1.0.0',
+        resources: [],
+        tools: [],
+      });
+    });
+
+    // SSE endpoints
+    app.get('/sse', (req: Request, res: Response): void => {
+      void setupSseTransport(req, res, mcpServer as unknown as ExtendedMcpServer);
+    });
+
+    app.get('/mcp/sse', (req: Request, res: Response): void => {
+      void setupSseTransport(req, res, mcpServer as unknown as ExtendedMcpServer);
+    });
+
+    // Messages endpoint
+    app.post('/messages', async (req: Request, res: Response): Promise<void> => {
+      const sessionId = req.query['sessionId'] as string;
+
+      if (!sessionId) {
+        res.status(400).json({ error: 'No sessionId provided' });
+        return;
       }
 
-      const url = new URL(req.url);
-      
-      // Basic info endpoint
-      if (url.pathname === '/mcp' && req.method === 'GET') {
-        return new Response(
-          JSON.stringify(serverInfo),
-          { 
-            headers: { 
-              'Content-Type': 'application/json',
-              ...corsHeaders,
-            }, 
-          },
-        );
+      const transport = transports[sessionId];
+      if (transport) {
+        await transport.handlePostMessage(req, res);
+      } else {
+        res.status(404).json({ error: 'No active transport found for this session' });
       }
-      
-      // SSE endpoint at root level - preferred for standard compatibility
-      if (url.pathname === '/sse' && req.method === 'GET') {
-        logger.info(`SSE connection request received at /sse: ${req.url}`);
-        
-        // Generate a session ID for tracking this connection
-        const sessionId = Math.random().toString(36).substring(2, 15);
-        
-        // Create a ReadableStream for the SSE connection
-        return new Response(
-          new ReadableStream({
-            start(controller) {
-              // Send an initial connection_ready message
-              const message = JSON.stringify({
-                type: 'connection_ready',
-                sessionId,
-                serverName: serverInfo.name,
-                serverVersion: serverInfo.version,
-                timestamp: new Date().toISOString(),
-              });
-              
-              logger.debug(`Sending initial SSE message: ${message}`);
-              controller.enqueue(`data: ${message}\n\n`);
-              
-              // Set up a heartbeat to keep the connection alive
-              const intervalId = setInterval(() => {
-                const heartbeat = JSON.stringify({
-                  type: 'heartbeat',
-                  timestamp: new Date().toISOString(),
-                });
-                controller.enqueue(`data: ${heartbeat}\n\n`);
-              }, 30000); // Send heartbeat every 30 seconds
-              
-              // Clean up the interval when the request is aborted
-              req.signal.addEventListener('abort', () => {
-                clearInterval(intervalId);
-                logger.info(`SSE connection closed: ${sessionId}`);
-              });
-              
-              logger.info(`SSE connection established with session ID: ${sessionId}`);
-            },
-          }),
-          {
-            headers: {
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive',
-              ...corsHeaders,
-            },
-          },
-        );
-      }
-      
-      // SSE endpoint under /mcp path - for MCP Inspector compatibility
-      if (url.pathname === '/mcp/sse' && req.method === 'GET') {
-        logger.info(`SSE connection request received at /mcp/sse: ${req.url}`);
-        
-        // Generate a session ID for tracking this connection
-        const sessionId = Math.random().toString(36).substring(2, 15);
-        
-        // Create a ReadableStream for the SSE connection
-        return new Response(
-          new ReadableStream({
-            start(controller) {
-              // Send an initial connection_ready message
-              const message = JSON.stringify({
-                type: 'connection_ready',
-                sessionId,
-                serverName: serverInfo.name,
-                serverVersion: serverInfo.version,
-                timestamp: new Date().toISOString(),
-              });
-              
-              logger.debug(`Sending initial SSE message: ${message}`);
-              controller.enqueue(`data: ${message}\n\n`);
-              
-              // Set up a heartbeat to keep the connection alive
-              const intervalId = setInterval(() => {
-                const heartbeat = JSON.stringify({
-                  type: 'heartbeat',
-                  timestamp: new Date().toISOString(),
-                });
-                controller.enqueue(`data: ${heartbeat}\n\n`);
-              }, 30000); // Send heartbeat every 30 seconds
-              
-              // Clean up the interval when the request is aborted
-              req.signal.addEventListener('abort', () => {
-                clearInterval(intervalId);
-                logger.info(`SSE connection closed: ${sessionId}`);
-              });
-              
-              logger.info(`SSE connection established with session ID: ${sessionId}`);
-            },
-          }),
-          {
-            headers: {
-              'Content-Type': 'text/event-stream',
-              'Cache-Control': 'no-cache',
-              'Connection': 'keep-alive',
-              ...corsHeaders,
-            },
-          },
-        );
-      }
-      
-      // Default response
-      return new Response(
-        JSON.stringify({ error: 'Endpoint not found' }), 
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json',
-            ...corsHeaders,
-          },
-        },
-      );
-    },
-  });
+    });
 
-  logger.info(`MCP HTTP server running at http://${server.hostname}:${server.port}`);
-  logger.info('Available endpoints:');
-  logger.info(`- Server info: http://${server.hostname}:${server.port}/mcp`);
-  logger.info(`- SSE endpoint (standard): http://${server.hostname}:${server.port}/sse`);
-  logger.info(`- SSE endpoint (MCP Inspector): http://${server.hostname}:${server.port}/mcp/sse`);
+    // Start the server
+    const server = app.listen(PORT, () => {
+      logger.info(`MCP HTTP server running at http://localhost:${PORT}`);
+      logger.info('Available endpoints:');
+      logger.info(`- Server info: http://localhost:${PORT}/mcp`);
+      logger.info(`- SSE endpoint (standard): http://localhost:${PORT}/sse`);
+      logger.info(`- SSE endpoint (MCP Inspector): http://localhost:${PORT}/mcp/sse`);
+    });
 
-  // Handle graceful shutdown
-  process.on('SIGINT', () => {
-    logger.info('Shutting down MCP HTTP server...');
-    server.stop();
-    process.exit(0);
-  });
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+      logger.info('Shutting down MCP HTTP server...');
+      Object.values(transports).forEach(transport => void transport.close());
+      server.close();
+      process.exit(0);
+    });
+
+    return server;
+  } catch (error) {
+    logger.error(`Error starting MCP server: ${error}`);
+    if (error instanceof Error && error.stack) {
+      logger.error(`Error stack: ${error.stack}`);
+    }
+    process.exit(1);
+  }
 }
 
-// Run the main function
-main();
+// Set up SSE transport for a connection
+async function setupSseTransport(req: Request, res: Response, mcpServer: ExtendedMcpServer): Promise<void> {
+  // Socket optimizations
+  req.socket.setTimeout(0);
+  req.socket.setNoDelay(true);
+  req.socket.setKeepAlive(true);
+
+  // Add custom header for buffering (not part of standard transport)
+  res.setHeader('X-Accel-Buffering', 'no');
+
+  // Create and store the transport
+  const transport = new HeartbeatSSETransport('/messages', res);
+  const sessionId = transport['sessionId'] as string;
+  transports[sessionId] = transport;
+
+  logger.info(`SSE connection established with session ID: ${sessionId}`);
+
+  // Clean up on connection close
+  res.on('close', () => {
+    delete transports[sessionId];
+    logger.info(`SSE connection closed: ${sessionId}`);
+  });
+
+  // Send connection_ready event before connecting
+  transport.sendCustomEvent('connection_ready', {
+    type: 'connection_ready',
+    transportType: 'sse',
+    sessionId: sessionId,
+    serverName: 'PersonalBrainMCP',
+    serverVersion: '1.0.0',
+    timestamp: new Date().toISOString(),
+  });
+
+  // Connect the transport to the MCP server (this will call start() automatically)
+  await mcpServer.connect(transport as unknown as Transport);
+}
+
+// Auto-start the server when this module is loaded directly
+if (require.main === module) {
+  startMcpHttpServer();
+}
