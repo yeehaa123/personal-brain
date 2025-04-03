@@ -140,8 +140,10 @@ describe('ExternalSourceService', () => {
 
   test('should handle errors in semantic search', async () => {
     // Create a service with a context that throws errors
+    const mockSearchFn = () => { throw new Error('Search failed'); };
+    
     const errorContext = {
-      semanticSearch: mock(() => { throw new Error('Search failed'); }),
+      semanticSearch: mockSearchFn,
     } as unknown as ExternalSourceContext;
     
     const service = new ExternalSourceService(

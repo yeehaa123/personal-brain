@@ -77,9 +77,9 @@ describe('ProfileAnalyzer', () => {
 
   test('should handle errors in embedding calculation', async () => {
     // Create a service that throws an error
-    const mockFailingGetEmbedding = mock<(text: string) => Promise<{id: string, embedding: number[], text: string}>>(() => {
+    const mockFailingGetEmbedding = async () => {
       throw new Error('Embedding service failed');
-    });
+    };
     
     const failingEmbeddingService = {
       getEmbedding: mockFailingGetEmbedding,

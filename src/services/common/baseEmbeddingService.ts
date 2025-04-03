@@ -5,11 +5,12 @@ import { EmbeddingService } from '@/mcp/model/embeddings';
 import logger from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import { ApiError, ValidationError } from '@/utils/errorUtils';
+import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
 
 /**
  * Base embedding service with common functionality
  */
-export abstract class BaseEmbeddingService {
+export abstract class BaseEmbeddingService implements IEmbeddingService {
   protected embeddingService: EmbeddingService;
 
   /**

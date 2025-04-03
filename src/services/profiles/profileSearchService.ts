@@ -40,13 +40,32 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
   private tagService: ProfileTagService;
 
   /**
-   * Create a new ProfileSearchService
+   * Create a new ProfileSearchService with injected dependencies
+   * @param repository Repository for accessing profiles
+   * @param embeddingService Service for profile embeddings
+   * @param tagService Service for profile tag operations
    */
-  constructor(apiKey?: string) {
+  constructor(
+    repository: ProfileRepository,
+    embeddingService: ProfileEmbeddingService,
+    tagService: ProfileTagService,
+  ) {
     super();
-    this.repository = new ProfileRepository();
-    this.embeddingService = new ProfileEmbeddingService(apiKey);
-    this.tagService = new ProfileTagService();
+    this.repository = repository;
+    this.embeddingService = embeddingService;
+    this.tagService = tagService;
+  }
+  
+  /**
+   * Legacy constructor support for backwards compatibility
+   * @deprecated Use dependency injection instead
+   * @param apiKey Optional API key for embeddings
+   */
+  static createWithApiKey(apiKey?: string): ProfileSearchService {
+    const repository = new ProfileRepository();
+    const embeddingService = new ProfileEmbeddingService(apiKey);
+    const tagService = new ProfileTagService();
+    return new ProfileSearchService(repository, embeddingService, tagService);
   }
 
   /**
@@ -70,7 +89,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     query?: string, 
     tags?: string[], 
     _limit = 10, 
-    _offset = 0
+    _offset = 0,
   ): Promise<Profile[]> {
     // Since there's only one profile, we just return it if it matches the query/tags
     try {
@@ -116,7 +135,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     query: string, 
     tags?: string[], 
     _limit = 10, // Renamed to avoid unused parameter warning
-    _offset = 0  // Renamed to avoid unused parameter warning
+    _offset = 0,  // Renamed to avoid unused parameter warning
   ): Promise<Profile[]> {
     try {
       if (!isNonEmptyString(query)) {

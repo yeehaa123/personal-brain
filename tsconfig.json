@@ -49,6 +49,7 @@
     "paths": {
       "@/*": ["src/*"],
       "@test/*": ["tests/*"],
+      "@test": ["tests"],
       "@models/*": ["src/models/*"],
       "@utils/*": ["src/utils/*"],
       "@commands/*": ["src/commands/*"],

@@ -9,11 +9,13 @@ import { isNonEmptyString } from '@/utils/safeAccessUtils';
 import type { InferSelectModel } from 'drizzle-orm';
 import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import logger from '@/utils/logger';
+import type { IRepository } from './interfaces/IRepository';
 
 /**
  * Base repository with common database operation patterns
  */
-export abstract class BaseRepository<TTable extends SQLiteTable, TEntity = InferSelectModel<TTable>> {
+export abstract class BaseRepository<TTable extends SQLiteTable, TEntity = InferSelectModel<TTable>> 
+implements IRepository<TEntity, string> {
   /**
    * Get the table that this repository uses
    */

@@ -1,119 +1,237 @@
 import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
 import { NoteContext } from '@/mcp';
-import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
-import { createMockEmbedding } from '@test/mocks';
+import {
+  setMockEnv,
+  clearMockEnv,
+  setupAnthropicMocks,
+  setupMcpServerMocks,
+  createMockNotes,
+  setupDITestSuite,
+} from '@test';
+import { ServiceIdentifiers } from '@/services/serviceRegistry';
 
-// Mock the Anthropic client
-mock.module('@anthropic-ai/sdk', () => {
+// Create mock notes for testing
+const mockNotes = createMockNotes();
+
+// Setup MCP server and Anthropic mocks
+setupMcpServerMocks();
+setupAnthropicMocks();
+
+// Create mock repository and services
+const mockNoteRepository = {
+  getNoteById: async (id: string) => {
+    return mockNotes.find(note => note.id === id);
+  },
+  getRecentNotes: async () => {
+    return [...mockNotes];
+  },
+  searchNotesByKeywords: async () => {
+    return [...mockNotes];
+  },
+  getAllNotes: async () => {
+    return [...mockNotes];
+  },
+};
+
+const mockNoteEmbeddingService = {
+  findRelatedNotes: async () => {
+    return mockNotes.map(note => ({
+      ...note,
+      score: 0.9,
+    }));
+  },
+  createNoteChunks: async () => {
+    return ['chunk-1', 'chunk-2'];
+  },
+};
+
+const mockNoteSearchService = {
+  searchNotes: async () => {
+    return [...mockNotes];
+  },
+  findRelated: async () => {
+    return [...mockNotes];
+  },
+};
+
+// Setup mock services in the dependency container
+mock.module('@/services/serviceRegistry', () => {
   return {
-    default: class MockAnthropic {
-      constructor() {
-        // Mock constructor
+    ServiceIdentifiers: {
+      NoteRepository: 'repositories.note',
+      ProfileRepository: 'repositories.profile',
+      NoteEmbeddingService: 'embedding.note',
+      ProfileEmbeddingService: 'embedding.profile',
+      NoteSearchService: 'search.note',
+      ProfileSearchService: 'search.profile',
+      ProfileTagService: 'tag.profile',
+    },
+    registerServices: (container: { register: (id: string, factory: () => unknown) => void }, _config = {}) => {
+      container.register(ServiceIdentifiers.NoteRepository, () => mockNoteRepository);
+      container.register(ServiceIdentifiers.NoteEmbeddingService, () => mockNoteEmbeddingService);
+      container.register(ServiceIdentifiers.NoteSearchService, () => mockNoteSearchService);
+    },
+    getService: (serviceId: string) => {
+      switch (serviceId) {
+      case ServiceIdentifiers.NoteRepository:
+        return mockNoteRepository;
+      case ServiceIdentifiers.NoteEmbeddingService:
+        return mockNoteEmbeddingService;
+      case ServiceIdentifiers.NoteSearchService:
+        return mockNoteSearchService;
+      default:
+        return {};
       }
-      
-      messages = {
-        create: async () => ({
-          id: 'mock-msg-id',
-          type: 'message',
-          role: 'assistant',
-          content: [{ type: 'text', text: 'Mock response' }],
-          model: 'claude-3-haiku-20240307',
-          stop_reason: 'end_turn',
-        }),
-      };
     },
   };
 });
 
-// Override cosineSimilarity method for testing
-mock.module('@mcp/model/embeddings', () => {
+// Mock the dependency container to return our mock services
+mock.module('@/utils/dependencyContainer', () => {
   return {
-    EmbeddingService: class MockEmbeddingService {
-      private static _instance: MockEmbeddingService | null = null;
-
-      static getInstance() {
-        if (!MockEmbeddingService._instance) {
-          MockEmbeddingService._instance = new MockEmbeddingService();
+    getContainer: () => ({
+      resolve: (serviceId: string) => {
+        switch (serviceId) {
+        case ServiceIdentifiers.NoteRepository:
+          return mockNoteRepository;
+        case ServiceIdentifiers.NoteEmbeddingService:
+          return mockNoteEmbeddingService;
+        case ServiceIdentifiers.NoteSearchService:
+          return mockNoteSearchService;
+        default:
+          return {};
         }
-        return MockEmbeddingService._instance;
+      },
+      register: () => {},
+      has: () => true,
+      clear: () => {},
+    }),
+    getService: (serviceId: string) => {
+      switch (serviceId) {
+      case ServiceIdentifiers.NoteRepository:
+        return mockNoteRepository;
+      case ServiceIdentifiers.NoteEmbeddingService:
+        return mockNoteEmbeddingService;
+      case ServiceIdentifiers.NoteSearchService:
+        return mockNoteSearchService;
+      default:
+        return {};
       }
-
-      constructor() {}
-      
-      getEmbedding() {
-        return Promise.resolve({
-          embedding: createMockEmbedding('test embedding'),
-          truncated: false,
-        });
-      }
-      
-      cosineSimilarity(_vec1: number[], _vec2: number[]) {
-        // Simple mock - return 0.8 for simplicity
-        return 0.8;
-      }
-      
-      chunkText(text: string) {
-        return [text];
-      }
+    },
+    container: {
+      resolve: (serviceId: string) => {
+        switch (serviceId) {
+        case ServiceIdentifiers.NoteRepository:
+          return mockNoteRepository;
+        case ServiceIdentifiers.NoteEmbeddingService:
+          return mockNoteEmbeddingService;
+        case ServiceIdentifiers.NoteSearchService:
+          return mockNoteSearchService;
+        default:
+          return {};
+        }
+      },
+      register: () => {},
+      has: () => true,
+      clear: () => {},
     },
   };
 });
 
-describe('NoteContext MCP SDK Implementation', () => {
+describe('NoteContext Tests', () => {
   let noteContext: NoteContext;
   
+  // Setup test isolation
+  setupDITestSuite();
+  
   beforeAll(() => {
-    // Set up mock environment
-    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
+    // Set up mock environment variables using centralized function
+    setMockEnv();
   });
   
   afterAll(() => {
-    // Clean up mock environment
-    clearTestEnv('ANTHROPIC_API_KEY');
+    // Clean up environment variables using centralized function
+    clearMockEnv();
   });
   
   beforeEach(() => {
-    // Create a new context with a mock API key for each test
+    // Create a fresh context for each test
     noteContext = new NoteContext('mock-api-key');
+    
+    // Now directly override the internal service references
+    // This is a bit of a hack but necessary for the tests
+    Object.defineProperty(noteContext, 'repository', {
+      value: mockNoteRepository,
+      writable: true,
+    });
+    
+    Object.defineProperty(noteContext, 'searchService', {
+      value: mockNoteSearchService,
+      writable: true,
+    });
+    
+    Object.defineProperty(noteContext, 'embeddingService', {
+      value: mockNoteEmbeddingService,
+      writable: true,
+    });
   });
   
   test('NoteContext properly initializes all services', () => {
+    // Basic validation of the instance and its methods
     expect(noteContext).toBeDefined();
-    
-    // Check that basic methods are available
     expect(typeof noteContext.getNoteById).toBe('function');
     expect(typeof noteContext.searchNotes).toBe('function');
     expect(typeof noteContext.getRelatedNotes).toBe('function');
     expect(typeof noteContext.getRecentNotes).toBe('function');
-    
-    // Check MCP SDK integration
-    expect(noteContext.getMcpServer).toBeDefined();
-    expect(typeof noteContext.getMcpServer).toBe('function');
-    
-    // Verify MCP server can be obtained
-    const mcpServer = noteContext.getMcpServer();
-    expect(mcpServer).toBeDefined();
   });
   
   test('MCP Server can define resources', () => {
-    // Get the MCP server
+    // Create a simple mock for the handler
+    const resourceHandler = async () => ({
+      contents: [{ 
+        uri: 'test://uri', 
+        text: 'Test content', 
+      }],
+    });
+    
+    // Get the MCP server and define a resource
     const mcpServer = noteContext.getMcpServer();
+    mcpServer.resource('test_resource', 'test://pattern', resourceHandler);
     
-    // Define a test resource
-    mcpServer.resource(
-      'test_resource',
-      'test://hello',
-      async () => {
-        return {
-          contents: [{
-            uri: 'test://hello',
-            text: 'Hello from MCP test!',
-          }],
-        };
-      },
-    );
-    
-    // Just verify the resource was registered without trying to query it
+    // Since we replaced toHaveBeenCalledWith with our own implementation,
+    // we'll just verify the server is properly defined
     expect(mcpServer).toBeDefined();
+  });
+  
+  test('getNoteById returns a note object or null', async () => {
+    const note = await noteContext.getNoteById('note-1');
+    
+    // We just check the interface, not exact values which may depend on mocks
+    expect(note).toBeDefined();
+    if (note) {
+      expect(typeof note.id).toBe('string');
+      expect(typeof note.title).toBe('string');
+    }
+  });
+  
+  test('searchNotes returns search results', async () => {
+    const results = await noteContext.searchNotes({ query: 'test' });
+    
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBeGreaterThan(0);
+  });
+  
+  test('getRelatedNotes returns related notes', async () => {
+    const results = await noteContext.getRelatedNotes('note-1');
+    
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBeGreaterThan(0);
+  });
+  
+  test('getRecentNotes returns recent notes', async () => {
+    const results = await noteContext.getRecentNotes();
+    
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBeGreaterThan(0);
   });
 });

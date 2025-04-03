@@ -15,11 +15,19 @@ import {
 } from './sources';
 import { getEnv } from '@/utils/configUtils';
 
+// Import DI container and service registry
+import { getContainer, DependencyContainer } from '@/utils/dependencyContainer';
+
 export interface ExternalContextOptions {
   enabledSources?: string[];
   maxResults?: number;
   cacheTtl?: number; // Time to live in milliseconds
 }
+
+// Constants for service identification in the DI container
+const SERVICE_EMBEDDING = 'external.embedding';
+const SERVICE_WIKIPEDIA = 'external.source.wikipedia';
+const SERVICE_NEWSAPI = 'external.source.newsapi';
 
 /**
  * Manages retrieval of information from external knowledge sources using MCP SDK
@@ -30,6 +38,7 @@ export class ExternalSourceContext {
   private sourceCache: Map<string, {data: ExternalSourceResult[], timestamp: number}> = new Map();
   private options: ExternalContextOptions;
   private mcpServer: McpServer;
+  private diContainer: DependencyContainer;
   
   constructor(apiKey?: string, newsApiKey?: string, options: ExternalContextOptions = {}) {
     // Initialize with default options
@@ -39,16 +48,56 @@ export class ExternalSourceContext {
       cacheTtl: options.cacheTtl || 1000 * 60 * 60, // 1 hour by default
     };
     
-    // Initialize embedding service with singleton pattern
-    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+    // Set up DI container
+    this.diContainer = getContainer();
     
-    // Register available sources
-    this.registerSource(new WikipediaSource(apiKey));
+    // Helper function to avoid duplicate registrations
+    const registerIfNeeded = <T>(serviceId: string, factory: (container: DependencyContainer) => T, singleton = true) => {
+      // Only register if not already registered
+      if (!this.diContainer.has(serviceId)) {
+        this.diContainer.register<T>(serviceId, factory, singleton);
+      }
+    };
+    
+    // Register services in the container with duplicate protection
+    // Register embedding service
+    registerIfNeeded<EmbeddingService>(
+      SERVICE_EMBEDDING,
+      () => EmbeddingService.getInstance(apiKey ? { apiKey } : undefined),
+      true, // singleton
+    );
+    
+    // Register Wikipedia source
+    registerIfNeeded<ExternalSourceInterface>(
+      SERVICE_WIKIPEDIA,
+      () => {
+        return new WikipediaSource(apiKey);
+      },
+    );
     
     // Register NewsAPI source if key is provided
     if (newsApiKey || getEnv('NEWSAPI_KEY')) {
-      this.registerSource(new NewsApiSource(newsApiKey, apiKey));
-      logger.info('NewsAPI source registered');
+      registerIfNeeded<ExternalSourceInterface>(
+        SERVICE_NEWSAPI,
+        () => {
+          return new NewsApiSource(newsApiKey, apiKey);
+        },
+      );
+      
+      if (!this.diContainer.has(SERVICE_NEWSAPI)) {
+        logger.info('NewsAPI source registered in container');
+      }
+    }
+    
+    // Resolve embedding service from container
+    this.embeddingService = this.diContainer.resolve<EmbeddingService>(SERVICE_EMBEDDING);
+    
+    // Register available sources from container
+    this.registerSource(this.diContainer.resolve<ExternalSourceInterface>(SERVICE_WIKIPEDIA));
+    
+    // Register NewsAPI source if available
+    if (this.diContainer.has(SERVICE_NEWSAPI)) {
+      this.registerSource(this.diContainer.resolve<ExternalSourceInterface>(SERVICE_NEWSAPI));
     }
     
     // Initialize MCP server

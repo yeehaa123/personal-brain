@@ -7,17 +7,13 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import { ValidationError, safeExec } from '@/utils/errorUtils';
 import { BaseRepository } from '@/services/BaseRepository';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
+import type { ISearchService, SearchOptions } from '@/services/interfaces/ISearchService';
 
 /**
- * Shared search options for all search services
+ * Re-export SearchOptions type from interface
  */
-export type BaseSearchOptions = {
-  query?: string;
-  tags?: string[];
-  limit?: number;
-  offset?: number;
-  semanticSearch?: boolean;
-}
+export type BaseSearchOptions = SearchOptions;
 
 /**
  * Scored entity with similarity score and other metadata
@@ -34,9 +30,9 @@ export type ScoredEntity<T> = {
  */
 export abstract class BaseSearchService<
   TEntity, 
-  TRepository extends BaseRepository<any, TEntity>,
+  TRepository extends BaseRepository<SQLiteTable, TEntity>,
   TEmbeddingService extends BaseEmbeddingService
-> {
+> implements ISearchService<TEntity> {
   protected abstract entityName: string;
   protected abstract repository: TRepository;
   protected abstract embeddingService: TEmbeddingService;
@@ -172,7 +168,7 @@ export abstract class BaseSearchService<
   protected deduplicateResults<T>(
     results: T[], 
     getEntityId: (entity: T) => string,
-    excludeId?: string
+    excludeId?: string,
   ): T[] {
     return results.reduce<T[]>((unique, entity) => {
       const id = getEntityId(entity);

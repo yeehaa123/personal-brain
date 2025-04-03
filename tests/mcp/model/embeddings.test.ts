@@ -59,79 +59,92 @@ mock.module('@anthropic-ai/sdk', () => {
   };
 });
 
-// Override specific methods in EmbeddingService
-EmbeddingService.prototype.getEmbedding = async function(text: string) {
-  console.log('Using mocked getEmbedding');
-  const embedding = createMockEmbedding(text);
+// Override the EmbeddingService with our own implementation
+mock.module('@/mcp/model', () => {
   return {
-    embedding,
-    truncated: false,
+    // Provide a mock EmbeddingService implementation
+    EmbeddingService: class MockEmbeddingService {
+      private static instance: MockEmbeddingService | null = null;
+      
+      static getInstance(_options?: { apiKey?: string }) {
+        if (!MockEmbeddingService.instance) {
+          MockEmbeddingService.instance = new MockEmbeddingService();
+        }
+        return MockEmbeddingService.instance;
+      }
+      
+      async getEmbedding(text: string) {
+        console.log('Using mocked getEmbedding');
+        const embedding = createMockEmbedding(text);
+        return {
+          embedding,
+          truncated: false,
+        };
+      }
+      
+      async getBatchEmbeddings(texts: string[]) {
+        console.log('Using mocked getBatchEmbeddings');
+        return texts.map(text => ({
+          embedding: createMockEmbedding(text),
+          truncated: false,
+        }));
+      }
+      
+      chunkText(text: string, chunkSize = 512, overlap = 100) {
+        // Real implementation for tests
+        const chunks: string[] = [];
+        const sentences = text.split(/(?<=[.!?])\s+/);
+        
+        let currentChunk = '';
+        
+        for (const sentence of sentences) {
+          // If adding this sentence would exceed the chunk size and we already have some content
+          if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
+            chunks.push(currentChunk);
+            // Start a new chunk with overlap
+            const words = currentChunk.split(' ');
+            const overlapWords = words.slice(Math.max(0, words.length - overlap / 5));
+            currentChunk = overlapWords.join(' ') + ' ' + sentence;
+          } else {
+            currentChunk += (currentChunk ? ' ' : '') + sentence;
+          }
+        }
+        
+        // Add the last chunk if it has content
+        if (currentChunk.length > 0) {
+          chunks.push(currentChunk);
+        }
+        
+        return chunks;
+      }
+      
+      cosineSimilarity(vec1: number[], vec2: number[]) {
+        if (vec1.length !== vec2.length) {
+          throw new Error('Vectors must have the same dimensions');
+        }
+      
+        let dotProduct = 0;
+        let mag1 = 0;
+        let mag2 = 0;
+      
+        for (let i = 0; i < vec1.length; i++) {
+          dotProduct += vec1[i] * vec2[i];
+          mag1 += vec1[i] * vec1[i];
+          mag2 += vec2[i] * vec2[i];
+        }
+      
+        mag1 = Math.sqrt(mag1);
+        mag2 = Math.sqrt(mag2);
+      
+        if (mag1 === 0 || mag2 === 0) {
+          return 0;
+        }
+      
+        return dotProduct / (mag1 * mag2);
+      }
+    },
   };
-};
-
-// Also mock the batch embedding method
-EmbeddingService.prototype.getBatchEmbeddings = async function(texts: string[]) {
-  console.log('Using mocked getBatchEmbeddings');
-  return texts.map(text => ({
-    embedding: createMockEmbedding(text),
-    truncated: false,
-  }));
-};
-
-// Also override these methods for tests
-EmbeddingService.prototype.chunkText = function(text: string, chunkSize = 512, overlap = 100) {
-  // Real implementation for tests
-  const chunks: string[] = [];
-  const sentences = text.split(/(?<=[.!?])\s+/);
-  
-  let currentChunk = '';
-  
-  for (const sentence of sentences) {
-    // If adding this sentence would exceed the chunk size and we already have some content
-    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk);
-      // Start a new chunk with overlap
-      const words = currentChunk.split(' ');
-      const overlapWords = words.slice(Math.max(0, words.length - overlap / 5));
-      currentChunk = overlapWords.join(' ') + ' ' + sentence;
-    } else {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
-    }
-  }
-  
-  // Add the last chunk if it has content
-  if (currentChunk.length > 0) {
-    chunks.push(currentChunk);
-  }
-  
-  return chunks;
-};
-
-// Also override cosineSimilarity to match the real implementation
-EmbeddingService.prototype.cosineSimilarity = function(vec1: number[], vec2: number[]) {
-  if (vec1.length !== vec2.length) {
-    throw new Error('Vectors must have the same dimensions');
-  }
-
-  let dotProduct = 0;
-  let mag1 = 0;
-  let mag2 = 0;
-
-  for (let i = 0; i < vec1.length; i++) {
-    dotProduct += vec1[i] * vec2[i];
-    mag1 += vec1[i] * vec1[i];
-    mag2 += vec2[i] * vec2[i];
-  }
-
-  mag1 = Math.sqrt(mag1);
-  mag2 = Math.sqrt(mag2);
-
-  if (mag1 === 0 || mag2 === 0) {
-    return 0;
-  }
-
-  return dotProduct / (mag1 * mag2);
-};
+});
 
 describe('EmbeddingService', () => {
   let service: EmbeddingService;

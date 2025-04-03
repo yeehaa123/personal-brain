@@ -9,6 +9,12 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import logger from '@/utils/logger';
 import { textConfig } from '@/config';
 import { nanoid } from 'nanoid';
+
+// Import DI container and service registry
+import { getContainer, getService } from '@/utils/dependencyContainer';
+import { ServiceIdentifiers, registerServices } from '@/services/serviceRegistry';
+
+// Import service types
 import { 
   NoteRepository, 
   NoteEmbeddingService, 
@@ -31,9 +37,14 @@ export class NoteContext {
    * @param apiKey Optional API key for embedding service
    */
   constructor(apiKey?: string) {
-    this.repository = new NoteRepository();
-    this.embeddingService = new NoteEmbeddingService(apiKey);
-    this.searchService = new NoteSearchService(apiKey);
+    // Register services in the container (service registry handles duplicates)
+    const container = getContainer();
+    registerServices(container, { apiKey });
+    
+    // Resolve dependencies from container
+    this.repository = getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
+    this.embeddingService = getService<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
+    this.searchService = getService<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
     
     // Initialize MCP server
     this.mcpServer = new McpServer({

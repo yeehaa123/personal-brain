@@ -15,6 +15,12 @@ import type {
   ProfileVolunteerWork,
 } from '@/models/profile';
 import logger from '@/utils/logger';
+
+// Import DI container and service registry
+import { getContainer, getService } from '@/utils/dependencyContainer';
+import { ServiceIdentifiers, registerServices } from '@/services/serviceRegistry';
+
+// Import service types
 import {
   ProfileRepository,
   ProfileEmbeddingService,
@@ -55,10 +61,15 @@ export class ProfileContext {
    * @param apiKey Optional API key for embedding service
    */
   constructor(apiKey?: string) {
-    this.repository = new ProfileRepository();
-    this.embeddingService = new ProfileEmbeddingService(apiKey);
-    this.tagService = new ProfileTagService();
-    this.searchService = new ProfileSearchService();
+    // Register services in the container (service registry handles duplicates)
+    const container = getContainer();
+    registerServices(container, { apiKey });
+    
+    // Resolve dependencies from container
+    this.repository = getService<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
+    this.embeddingService = getService<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
+    this.tagService = getService<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
+    this.searchService = getService<ProfileSearchService>(ServiceIdentifiers.ProfileSearchService);
     
     // Initialize MCP server
     this.mcpServer = new McpServer({

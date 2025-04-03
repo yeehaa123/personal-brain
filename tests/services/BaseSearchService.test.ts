@@ -9,6 +9,7 @@ import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import logger from '@/utils/logger';
 import { mockLogger, restoreLogger } from '../mocks';
 import { ValidationError } from '@/utils/errorUtils';
+import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 // Create mock entity type
 interface TestEntity {
@@ -19,9 +20,9 @@ interface TestEntity {
 }
 
 // Create mock repository
-class TestRepository extends BaseRepository<any, TestEntity> {
+class TestRepository extends BaseRepository<SQLiteTable, TestEntity> {
   protected get table() {
-    return { id: { name: 'id' } } as any;
+    return { id: { name: 'id' } } as unknown as SQLiteTable;
   }
 
   protected get entityName() {
@@ -29,21 +30,21 @@ class TestRepository extends BaseRepository<any, TestEntity> {
   }
 
   protected getIdColumn() {
-    return { name: 'id' } as any;
+    return { name: 'id' } as unknown as SQLiteColumn;
   }
 
   // Add methods needed for search
   async searchByKeywords(_query?: string, _tags?: string[]): Promise<TestEntity[]> {
     return [
       { id: '1', name: 'Test 1', tags: ['tag1'] },
-      { id: '2', name: 'Test 2', tags: ['tag2'] }
+      { id: '2', name: 'Test 2', tags: ['tag2'] },
     ];
   }
 
   async getRecentEntities(): Promise<TestEntity[]> {
     return [
       { id: '3', name: 'Recent 1' },
-      { id: '4', name: 'Recent 2' }
+      { id: '4', name: 'Recent 2' },
     ];
   }
 }
@@ -53,7 +54,7 @@ class TestEmbeddingService extends BaseEmbeddingService {
   async searchSimilar(_embedding: number[]): Promise<TestEntity[]> {
     return [
       { id: '5', name: 'Similar 1', embedding: [0.1, 0.2, 0.3] },
-      { id: '6', name: 'Similar 2', embedding: [0.2, 0.3, 0.4] }
+      { id: '6', name: 'Similar 2', embedding: [0.2, 0.3, 0.4] },
     ];
   }
 }
@@ -74,7 +75,7 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
     _query?: string,
     _tags?: string[],
     _limit = 10,
-    _offset = 0
+    _offset = 0,
   ): Promise<TestEntity[]> {
     return this.repository.searchByKeywords(_query, _tags);
   }
@@ -83,7 +84,7 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
     query: string,
     tags?: string[],
     _limit = 10,
-    _offset = 0
+    _offset = 0,
   ): Promise<TestEntity[]> {
     const embedding = await this.embeddingService.generateEmbedding(query); // Variable used
     const results = await this.embeddingService.searchSimilar(embedding);
@@ -101,7 +102,7 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
   async findRelated(_entityId: string, _maxResults = 5): Promise<TestEntity[]> {
     return [
       { id: '7', name: 'Related 1' },
-      { id: '8', name: 'Related 2' }
+      { id: '8', name: 'Related 2' },
     ];
   }
 
@@ -127,7 +128,7 @@ describe('BaseSearchService', () => {
   });
 
   test('search method should validate options', async () => {
-    await expect(searchService.search(null as any)).rejects.toThrow(ValidationError);
+    await expect(searchService.search(null as unknown as BaseSearchOptions)).rejects.toThrow(ValidationError);
   });
 
   test('search should use semantic search when enabled with query', async () => {
@@ -143,12 +144,12 @@ describe('BaseSearchService', () => {
       value: async function() {
         semanticSearchCalled = true;
         return [{ id: '5', name: 'Semantic Result' }];
-      }
+      },
     });
 
     const options: BaseSearchOptions = {
       query: 'test query',
-      semanticSearch: true
+      semanticSearch: true,
     };
 
     const results = await spy.search(options);
@@ -169,12 +170,12 @@ describe('BaseSearchService', () => {
       value: async function() {
         keywordSearchCalled = true;
         return [{ id: '1', name: 'Keyword Result' }];
-      }
+      },
     });
 
     const options: BaseSearchOptions = {
       query: 'test query',
-      semanticSearch: false
+      semanticSearch: false,
     };
 
     const results = await spy.search(options);
@@ -197,13 +198,13 @@ describe('BaseSearchService', () => {
         capturedLimit = limit;
         capturedOffset = offset;
         return [{ id: '1', name: 'Result' }];
-      }
+      },
     });
 
     await spy.search({
       limit: 20,
       offset: 5,
-      semanticSearch: false
+      semanticSearch: false,
     });
     
     expect(capturedLimit).toBe(20);
@@ -273,7 +274,7 @@ describe('BaseSearchService', () => {
       public exposeDeduplicateResults<T>(
         results: T[], 
         getEntityId: (entity: T) => string,
-        excludeId?: string
+        excludeId?: string,
       ): T[] {
         return this.deduplicateResults(results, getEntityId, excludeId);
       }
@@ -295,7 +296,7 @@ describe('BaseSearchService', () => {
     
     const deduplicated = testService.exposeDeduplicateResults(
       entities,
-      entity => entity.id
+      entity => entity.id,
     );
     
     expect(deduplicated.length).toBe(3);
@@ -322,7 +323,7 @@ describe('BaseSearchService', () => {
       public exposeDeduplicateResults<T>(
         results: T[], 
         getEntityId: (entity: T) => string,
-        excludeId?: string
+        excludeId?: string,
       ): T[] {
         return this.deduplicateResults(results, getEntityId, excludeId);
       }
@@ -344,7 +345,7 @@ describe('BaseSearchService', () => {
     const deduplicated = testService.exposeDeduplicateResults(
       entities,
       entity => entity.id,
-      '2'
+      '2',
     );
     
     expect(deduplicated.length).toBe(2);
