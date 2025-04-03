@@ -29,6 +29,26 @@ This architecture allows the system to:
 4. Adapt responses based on your personal profile and preferences
 5. Maintain conversation history with tiered memory management
 
+### MCP Inspector Integration
+
+Personal Brain can be inspected and visualized with the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) tool, which provides a web interface for exploring MCP implementations.
+
+```bash
+# Start the MCP Inspector with Personal Brain using stdin/stdout
+bun run mcp:inspect
+
+# Alternative: Use HTTP/SSE connection (more stable in some environments)
+bun run mcp:server  # Start the HTTP server in one terminal
+bun run mcp:inspect:http  # Connect inspector via HTTP in another terminal
+
+# Run tests to validate MCP serialization
+bun run mcp:test:stdio
+```
+
+For more details, see:
+- [MCP implementation documentation](src/mcp/README.md)
+- [MCP Inspector guide](src/mcp/INSPECTOR.md)
+
 ## Getting Started
 
 ### Installation
@@ -312,6 +332,15 @@ bun test
 
 # Run tests with coverage
 bun test --coverage
+
+# MCP-related commands
+bun run mcp:server       # Run the HTTP server for MCP
+bun run mcp:stdio        # Run the stdio server for MCP Inspector
+bun run mcp:inspect      # Run the MCP Inspector with Personal Brain using stdio
+bun run mcp:inspect:http # Run the MCP Inspector with Personal Brain using HTTP/SSE
+bun run mcp:inspect:kill # Kill any running MCP Inspector instances
+bun run mcp:test         # Run HTTP server tests
+bun run mcp:test:stdio   # Run stdio server tests
 ```
 
 ## Implementation Metrics

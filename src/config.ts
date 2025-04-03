@@ -89,6 +89,11 @@ export const dbConfig = {
   dbPath: getEnv('DB_PATH', './brain.db'),
 };
 
+// Server configuration
+export const serverConfig = {
+  mcpHttpPort: getEnvAsInt('MCP_PORT', 8080),
+};
+
 // Semantic relevance thresholds for query processing
 export const relevanceConfig = {
   // When profile relevance exceeds this threshold, consider it a profile-related query
@@ -133,5 +138,6 @@ export default {
   api: apiConfig,
   path: pathConfig,
   db: dbConfig,
+  server: serverConfig,
   relevance: relevanceConfig,
 };

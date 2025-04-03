@@ -1,74 +1,11 @@
 import express from 'express';
 import type { Request, Response, NextFunction } from 'express';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { createUnifiedMcpServer } from './mcp';
 import type { McpServer as ExtendedMcpServer } from './mcp/types';
+import { HeartbeatSSETransport } from './mcp/transport';
 import { aiConfig, apiConfig, serverConfig } from './config';
 import logger from './utils/logger';
-
-// Interface for ExpressResponse to make TypeScript happy with our cast
-interface ExpressResponse extends Response {
-  flush?: () => void;
-  writableEnded: boolean;
-}
-
-// Heartbeat-enabled SSE transport that extends the standard implementation
-class HeartbeatSSETransport extends SSEServerTransport {
-  private heartbeatInterval: ReturnType<typeof globalThis.setInterval> | null = null;
-
-  constructor(messagesEndpoint: string, res: Response) {
-    super(messagesEndpoint, res);
-
-    // Setup heartbeat interval (every 30 seconds)
-    this.heartbeatInterval = globalThis.setInterval(() => this.sendHeartbeat(), 30000);
-
-    // Ensure proper cleanup on connection close
-    res.on('close', () => {
-      if (this.heartbeatInterval) {
-        globalThis.clearInterval(this.heartbeatInterval);
-      }
-    });
-  }
-
-  // Send a heartbeat to keep the connection alive
-  sendHeartbeat(): void {
-    // Get the sessionId safely - use bracket notation for TypeScript
-    const sessionId = this['sessionId'];
-
-    // Access the protected res property via private method
-    this.sendCustomEvent('message', {
-      type: 'heartbeat',
-      transportType: 'sse',
-      sessionId,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  // Send a custom event
-  sendCustomEvent(eventName: string, data: unknown): void {
-    const expressRes = this['res'] as ExpressResponse;
-    if (!expressRes || expressRes.writableEnded) {
-      return;
-    }
-
-    expressRes.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
-
-    // Flush the response if possible
-    if (typeof expressRes.flush === 'function') {
-      expressRes.flush();
-    }
-  }
-
-  // Override close to clean up resources and match the expected return type
-  override async close(): Promise<void> {
-    if (this.heartbeatInterval) {
-      globalThis.clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-    await super.close();
-  }
-}
 
 // A mapping of session IDs to their transports
 const transports: { [key: string]: HeartbeatSSETransport } = {};
@@ -90,7 +27,7 @@ export function startMcpHttpServer() {
       }
       next();
     });
-
+    
     // Create the unified MCP server
     const mcpServer = createUnifiedMcpServer({
       apiKey: aiConfig.anthropic.apiKey,
@@ -114,7 +51,7 @@ export function startMcpHttpServer() {
     app.get('/sse', (req: Request, res: Response): void => {
       void setupSseTransport(req, res, mcpServer as unknown as ExtendedMcpServer);
     });
-
+    
     app.get('/mcp/sse', (req: Request, res: Response): void => {
       void setupSseTransport(req, res, mcpServer as unknown as ExtendedMcpServer);
     });
@@ -169,12 +106,14 @@ async function setupSseTransport(req: Request, res: Response, mcpServer: Extende
   req.socket.setTimeout(0);
   req.socket.setNoDelay(true);
   req.socket.setKeepAlive(true);
-
+  
   // Add custom header for buffering (not part of standard transport)
-  res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('X-Accel-Buffering', 'no'); 
 
   // Create and store the transport
   const transport = new HeartbeatSSETransport('/messages', res);
+  
+  // Get the session ID safely with bracket notation
   const sessionId = transport['sessionId'] as string;
   transports[sessionId] = transport;
 
@@ -190,7 +129,7 @@ async function setupSseTransport(req: Request, res: Response, mcpServer: Extende
   transport.sendCustomEvent('connection_ready', {
     type: 'connection_ready',
     transportType: 'sse',
-    sessionId: sessionId,
+    sessionId,
     serverName: 'PersonalBrainMCP',
     serverVersion: '1.0.0',
     timestamp: new Date().toISOString(),

@@ -1,107 +1,117 @@
-# Model Context Protocol (MCP)
+# Model-Context-Protocol (MCP) Implementation
 
-This directory contains the integration of the Model Context Protocol (MCP) into the Personal Brain application.
+This directory contains the MCP implementation for the Personal Brain project. MCP is a standard protocol that allows AI models to interact with various context sources in a structured way.
 
-## Architecture Overview
+## Architecture
 
-The Personal Brain application uses a unified MCP server architecture with the following components:
+The MCP implementation in Personal Brain is organized as follows:
 
-1. **Contexts** - Core context providers:
-   - `NoteContext` - Manages notes and their embeddings
-   - `ProfileContext` - Handles user profile information
-   - `ExternalSourceContext` - Integrates with external knowledge sources
+- **Main Entry Point**: `index.ts` exports the `createUnifiedMcpServer` function which creates an MCP server with all contexts.
+- **Contexts**: These provide access to different types of data in the Personal Brain:
+  - `NoteContext`: Access to notes and related functionality
+  - `ProfileContext`: Access to user profile information
+  - `ExternalSourceContext`: Access to external information sources like Wikipedia
 
-2. **Protocol** - Coordination and interaction:
-   - `BrainProtocol` - Main orchestration class for all contexts
-   - Protocol Components - Services for specific functionality
+## Server Implementations
 
-3. **Model** - AI model implementations:
-   - `ClaudeModel` - Interface to the Claude API
-   - `EmbeddingService` - Manages vector embeddings for semantic search
+We provide two different server implementations to expose the MCP functionality:
 
-4. **Unified MCP Server** - Exposes all contexts through a standard interface:
-   - Resources - RESTful-like endpoints for retrieving data
-   - Tools - Function-like endpoints for performing actions
+### HTTP Server
 
-## Features
+- **File**: `/src/mcp-http-server.ts`
+- **Usage**: `bun run mcp:server`
+- **Description**: Implements an HTTP server that exposes the MCP resources and tools via RESTful endpoints.
+- **Features**: 
+  - Server-Sent Events (SSE) for real-time messaging
+  - JSON-based message API
+  - CORS support for cross-origin requests
+- **Testing**: `bun run mcp:test`
 
-1. **Unified Resource Endpoints**:
-   ```
-   note://:id - Access a specific note by ID
-   profile:// - Access the user's profile
-   source://wiki/:query - Access Wikipedia information
-   source://news/:query - Access news articles
-   ```
+### StdIO Server (for MCP Inspector)
 
-2. **MCP Tools**:
-   ```
-   search_notes - Search notes by query or tags
-   update_profile - Update the user's profile
-   query_external_sources - Search external knowledge sources
-   ```
+- **File**: `/src/mcp-stdio-server.ts`
+- **Usage**: `bun run mcp:stdio` or `bun run mcp:inspect`
+- **Description**: Implements an MCP server that communicates via standard input/output (stdin/stdout), which is required for the MCP Inspector tool.
+- **Testing**: `bun run mcp:test:stdio`
 
-3. **Transports**:
-   - `StdioServerTransport` - Command-line interface
-   - `SSEServerTransport` - Server-sent events for web interfaces
+## MCP Inspector Integration
 
-## Usage Examples
+The MCP Inspector is a tool for visualizing and debugging MCP implementations. Personal Brain supports connecting to the MCP Inspector in two ways:
 
-### Creating a Unified MCP Server
+### 1. Using StdIO (Default)
 
-```typescript
-import { createUnifiedMcpServer } from '@mcp';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+The MCP Inspector primarily works with the stdin/stdout protocol:
 
-// Create a unified server with all contexts
-const mcpServer = createUnifiedMcpServer({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  newsApiKey: process.env.NEWSAPI_KEY,
-  name: 'PersonalBrain',
-  version: '1.0.0',
-  enableExternalSources: true,
-});
-
-// Add transport for CLI interaction
-mcpServer.connect(new StdioServerTransport());
+```bash
+# Make sure no other MCP Inspector instances are running (port 5173 must be available)
+bun run mcp:inspect
 ```
 
-### Using the BrainProtocol with MCP Server
+### 2. Using HTTP/SSE
 
-```typescript
-import { BrainProtocol } from '@mcp/protocol';
+You can also connect to the MCP Inspector using Server-Sent Events over HTTP:
 
-// Create the brain protocol instance
-const protocol = new BrainProtocol({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  useExternalSources: true,
-});
+```bash
+# First, start the HTTP server in one terminal
+bun run mcp:server
 
-// Get the MCP server for external interfaces
-const mcpServer = protocol.getMcpServer();
-
-// Connect transport
-mcpServer.connect(new StdioServerTransport());
+# In another terminal, run the MCP Inspector with SSE transport
+bun run mcp:inspect:http
 ```
 
-## Directory Structure
+This approach provides a more robust connection that works even when the stdio connection has issues.
 
-```
-mcp/
-├── contexts/           # Context providers
-│   ├── externalSources/  # External knowledge sources
-│   ├── notes/            # Note context and operations
-│   └── profiles/         # User profile management
-├── model/              # AI model implementations
-│   ├── claude.ts         # Claude API interface
-│   └── embeddings.ts     # Vector embedding services
-├── protocol/           # Main coordination layer
-│   ├── brainProtocol.ts  # Core orchestration class
-│   └── components/       # Protocol service components
-└── index.ts            # Entry point with exports
-```
+### Troubleshooting
 
-## Resources
+For detailed instructions and troubleshooting tips, see [INSPECTOR.md](INSPECTOR.md).
 
-- [MCP TypeScript SDK Documentation](https://github.com/modelcontextprotocol/typescript-sdk)
-- [MCP Specification](https://github.com/modelcontextprotocol/mcp)
-- [MIGRATION.md](./MIGRATION.md) - Migration status and history
+## Available Resources and Tools
+
+The Personal Brain MCP implementation provides the following resources and tools:
+
+### Resources
+
+- `note://:id` - Get a specific note by ID
+- `notes://search` - Search notes
+- `notes://recent` - Get recently created/updated notes
+- `notes://related/:id` - Get notes related to a specific note
+- `profile://me` - Get the user's profile
+- `profile://keywords` - Get profile keywords
+- `profile://related?limit` - Get content related to the profile
+- `external://search` - Search external sources
+- `external://sources` - List available external sources
+
+### Tools
+
+- `create_note` - Create a new note
+- `generate_embeddings` - Generate embeddings for text
+- `search_with_embedding` - Search using an embedding vector
+- `save_profile` - Save the user profile
+- `update_profile_tags` - Update profile tags
+- `generate_profile_embedding` - Generate embedding for a profile
+- `search_external_sources` - Search external knowledge sources
+- `toggle_external_source` - Enable/disable an external source
+
+
+## Troubleshooting
+
+Common issues and solutions when working with the MCP Inspector:
+
+### 1. Connection issues
+
+- **Port conflicts**: If the MCP Inspector fails with "address already in use" errors, use `bun run mcp:inspect:kill` to terminate existing processes.
+- **SSE connection failures**: Start with the stdio transport first, and if that works, try the HTTP/SSE transport. Use the debug option `bun run mcp:inspect:http:debug` for verbose logging.
+- **No resources or tools showing up**: Make sure the server is properly initialized. Check the logs for any initialization errors.
+
+### 2. JSON serialization issues
+
+- Verify that all resources and tools are properly registered in the MCP server
+- Check that all objects can be serialized to JSON without circular references
+- Use the `safeSerialize` function in `mcp-stdio-server.ts` to handle complex objects
+- Run the test suite with `bun run mcp:test:stdio` to verify serialization works
+
+### 3. Inspector navigation
+
+- If the Inspector shows resources but clicking on them doesn't load details, check that your message handling implementation correctly processes requests for resource details.
+- If tool execution fails, verify the error messages in the server logs and make sure the tool implementation correctly handles all parameters.
+
