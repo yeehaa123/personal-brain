@@ -1,12 +1,10 @@
 /**
  * Service for managing profile embeddings
  */
-import { EmbeddingService } from '@/mcp/model/embeddings';
 import { ProfileRepository } from './profileRepository';
 import type { Profile } from '@/models/profile';
-import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import logger from '@/utils/logger';
-import { ApiError } from '@/utils/errorUtils';
+import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 
 import type {
   ProfileEducation,
@@ -18,8 +16,7 @@ import type {
 /**
  * Service for generating and managing profile embeddings
  */
-export class ProfileEmbeddingService {
-  private embeddingService: EmbeddingService;
+export class ProfileEmbeddingService extends BaseEmbeddingService {
   private repository: ProfileRepository;
 
   /**
@@ -27,35 +24,8 @@ export class ProfileEmbeddingService {
    * @param apiKey Optional API key for the embeddings service
    */
   constructor(apiKey?: string) {
-    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+    super(apiKey);
     this.repository = new ProfileRepository();
-  }
-
-  /**
-   * Generate embedding for profile text
-   * @param text The text to generate embedding for
-   * @returns The embedding vector
-   */
-  async generateEmbedding(text: string): Promise<number[]> {
-    try {
-      if (!isNonEmptyString(text)) {
-        logger.warn('Empty text provided for profile embedding generation');
-        return [];
-      }
-
-      const result = await this.embeddingService.getEmbedding(text);
-      
-      if (!isDefined(result) || !Array.isArray(result.embedding) || result.embedding.length === 0) {
-        throw new ApiError('Failed to generate valid profile embedding', undefined, {
-          textLength: text.length,
-        });
-      }
-      
-      return result.embedding;
-    } catch (error) {
-      logger.error(`Error generating profile embedding: ${error instanceof Error ? error.message : String(error)}`);
-      return [];
-    }
   }
 
   /**

@@ -12,11 +12,11 @@ describe('HTTP Server with HeartbeatSSETransport Integration', () => {
     // Mock the listen method to prevent the server from actually starting
     const originalListen = Object.getPrototypeOf(Object.getPrototypeOf(startMcpHttpServer)).listen;
     
-    // @ts-ignore - For testing
+    // Override the listen method
     Object.getPrototypeOf(Object.getPrototypeOf(startMcpHttpServer)).listen = function() {
       // Return a mock server object
       return {
-        close: () => {}
+        close: () => {},
       };
     };
     
@@ -28,7 +28,6 @@ describe('HTTP Server with HeartbeatSSETransport Integration', () => {
       expect(server).toBeDefined();
     } finally {
       // Restore original method
-      // @ts-ignore - For testing
       Object.getPrototypeOf(Object.getPrototypeOf(startMcpHttpServer)).listen = originalListen;
     }
   });

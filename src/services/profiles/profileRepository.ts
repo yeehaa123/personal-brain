@@ -11,12 +11,34 @@ import {
 import { nanoid } from 'nanoid';
 import { isDefined } from '@/utils/safeAccessUtils';
 import logger from '@/utils/logger';
-import { DatabaseError, ValidationError, safeExec } from '@/utils/errorUtils';
+import { DatabaseError, ValidationError } from '@/utils/errorUtils';
+import { BaseRepository } from '@/services/BaseRepository';
 
 /**
  * Repository for profile data operations
  */
-export class ProfileRepository {
+export class ProfileRepository extends BaseRepository<typeof profiles, Profile> {
+  /**
+   * Get the table that this repository uses
+   */
+  protected get table() {
+    return profiles;
+  }
+
+  /**
+   * Get entity name for error messages and logging
+   */
+  protected get entityName() {
+    return 'profile';
+  }
+  
+  /**
+   * Get the ID column for the table
+   */
+  protected getIdColumn() {
+    return profiles.id;
+  }
+
   /**
    * Retrieve the user profile
    * @returns The user profile or undefined if not found
@@ -105,7 +127,6 @@ export class ProfileRepository {
       }
       
       // Use our safe data object for the update
-
       await db.update(profiles)
         .set(safeData)
         .where(eq(profiles.id, id));
@@ -123,13 +144,6 @@ export class ProfileRepository {
    * @returns true if successful
    */
   async deleteProfile(id: string): Promise<boolean> {
-    return safeExec(async () => {
-      if (!isDefined(id)) {
-        throw new ValidationError('Profile ID is required');
-      }
-      
-      await db.delete(profiles).where(eq(profiles.id, id));
-      return true;
-    }, false, 'error');
+    return this.deleteById(id);
   }
 }

@@ -1,23 +1,22 @@
 /**
  * Service for managing note embeddings and vector operations
  */
-import { EmbeddingService } from '@/mcp/model/embeddings';
 import { NoteRepository } from './noteRepository';
 import type { Note } from '@/models/note';
 import logger from '@/utils/logger';
 import { textConfig } from '@/config';
 import { isDefined, isNonEmptyString, assertDefined } from '@/utils/safeAccessUtils';
 import { ApiError, ValidationError, tryExec } from '@/utils/errorUtils';
+import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 
 /**
  * Service for managing note embeddings
  */
-export class NoteEmbeddingService {
-  private embeddingService: EmbeddingService;
+export class NoteEmbeddingService extends BaseEmbeddingService {
   private noteRepository: NoteRepository;
 
   constructor(apiKey?: string) {
-    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+    super(apiKey);
     this.noteRepository = new NoteRepository();
   }
 
@@ -27,32 +26,19 @@ export class NoteEmbeddingService {
    * @param content The note content
    * @returns The embedding vector
    */
-  async generateEmbedding(title: string, content: string): Promise<number[]> {
+  async generateNoteEmbedding(title: string, content: string): Promise<number[]> {
     if (!isNonEmptyString(title) && !isNonEmptyString(content)) {
       throw new ValidationError('Empty note content for embedding generation');
     }
 
-    try {
-      // Combine title and content for better embedding context
-      const combinedText = `${title || ''} ${content || ''}`.trim();
-      
-      if (combinedText.length === 0) {
-        throw new ValidationError('Empty combined text for embedding generation');
-      }
-      
-      const result = await this.embeddingService.getEmbedding(combinedText);
-      
-      if (!isDefined(result) || !Array.isArray(result.embedding) || result.embedding.length === 0) {
-        throw new ApiError('Failed to generate valid embedding', undefined, {
-          textLength: combinedText.length,
-        });
-      }
-      
-      return result.embedding;
-    } catch (error) {
-      logger.error(`Error generating note embedding: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    // Combine title and content for better embedding context
+    const combinedText = `${title || ''} ${content || ''}`.trim();
+    
+    if (combinedText.length === 0) {
+      throw new ValidationError('Empty combined text for embedding generation');
     }
+    
+    return this.generateEmbedding(combinedText);
   }
 
   /**
@@ -145,21 +131,6 @@ export class NoteEmbeddingService {
   }
 
   /**
-   * Calculate similarity score between two notes
-   * @param embedding1 First embedding
-   * @param embedding2 Second embedding
-   * @returns Similarity score (0 to 1)
-   */
-  calculateSimilarity(embedding1: number[], embedding2: number[]): number {
-    try {
-      return this.embeddingService.cosineSimilarity(embedding1, embedding2);
-    } catch (error) {
-      logger.error(`Error calculating similarity: ${error instanceof Error ? error.message : String(error)}`);
-      return 0;
-    }
-  }
-
-  /**
    * Generate or update embeddings for all notes that don't have them
    * @returns Statistics on the update operation
    */
@@ -198,7 +169,7 @@ export class NoteEmbeddingService {
           }
           
           // Generate embedding
-          const embedding = await this.generateEmbedding(title, content);
+          const embedding = await this.generateNoteEmbedding(title, content);
           
           // Update the note with the embedding
           await this.noteRepository.updateNoteEmbedding(note.id, embedding);
@@ -261,10 +232,7 @@ export class NoteEmbeddingService {
       for (const note of notesWithEmbeddings) {
         if (Array.isArray(note.embedding) && note.embedding.length > 0) {
           try {
-            const score = this.embeddingService.cosineSimilarity(
-              embedding,
-              note.embedding,
-            );
+            const score = this.calculateSimilarity(embedding, note.embedding);
             
             scoredNotes.push({ 
               ...note, 
@@ -334,7 +302,7 @@ export class NoteEmbeddingService {
       for (const note of otherNotes) {
         if (Array.isArray(note.embedding) && note.embedding.length > 0) {
           try {
-            const score = this.embeddingService.cosineSimilarity(
+            const score = this.calculateSimilarity(
               assertDefined(sourceNote.embedding),
               note.embedding,
             );

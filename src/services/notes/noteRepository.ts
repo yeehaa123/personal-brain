@@ -8,13 +8,35 @@ import { eq, like, and, or, desc, isNull, not } from 'drizzle-orm';
 import type { Note } from '@/models/note';
 import { nanoid } from 'nanoid';
 import logger from '@/utils/logger';
-import { isDefined, isNonEmptyString, safeArrayAccess } from '@/utils/safeAccessUtils';
+import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import { DatabaseError, ValidationError, tryExec } from '@/utils/errorUtils';
+import { BaseRepository } from '@/services/BaseRepository';
 
 /**
  * Repository for accessing and managing notes in the database
  */
-export class NoteRepository {
+export class NoteRepository extends BaseRepository<typeof notes, Note> {
+  /**
+   * Get the table that this repository uses
+   */
+  protected get table() {
+    return notes;
+  }
+
+  /**
+   * Get entity name for error messages and logging
+   */
+  protected get entityName() {
+    return 'note';
+  }
+  
+  /**
+   * Get the ID column for the table
+   */
+  protected getIdColumn() {
+    return notes.id;
+  }
+
   /**
    * Retrieve a note by its ID
    * @param id The ID of the note to retrieve
@@ -22,19 +44,7 @@ export class NoteRepository {
    * @throws DatabaseError If there's an error accessing the database
    */
   async getNoteById(id: string): Promise<Note | undefined> {
-    if (!isNonEmptyString(id)) {
-      throw new ValidationError('Invalid note ID provided', { id });
-    }
-
-    try {
-      const result = await db.select().from(notes).where(eq(notes.id, id)).limit(1);
-      return safeArrayAccess(result, 0, undefined);
-    } catch (error) {
-      throw new DatabaseError(
-        `Failed to retrieve note with ID: ${id}`, 
-        { id, error: error instanceof Error ? error.message : String(error) },
-      );
-    }
+    return this.getById(id);
   }
 
   /**
@@ -240,24 +250,7 @@ export class NoteRepository {
    * @throws DatabaseError If there's an error accessing the database
    */
   async getNoteCount(): Promise<number> {
-    return tryExec(async () => {
-      try {
-        // Get just the IDs for efficiency
-        const allNotes = await db.select({ id: notes.id }).from(notes);
-        
-        // Handle potential null or undefined return
-        if (!Array.isArray(allNotes)) {
-          logger.warn('Database query returned non-array result for note count');
-          return 0;
-        }
-        
-        return allNotes.length;
-      } catch (error) {
-        throw new DatabaseError(
-          `Error getting note count: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }, 'Error getting note count');
+    return this.getCount();
   }
 
   /**

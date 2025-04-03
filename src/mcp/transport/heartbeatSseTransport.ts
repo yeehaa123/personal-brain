@@ -31,14 +31,14 @@ export class HeartbeatSSETransport extends SSEServerTransport {
   constructor(
     messagesEndpoint: string, 
     res: Response, 
-    heartbeatIntervalMs: number = 30000
+    heartbeatIntervalMs: number = 30000,
   ) {
     super(messagesEndpoint, res);
 
     // Setup heartbeat interval
     this.heartbeatInterval = globalThis.setInterval(
       () => this.sendHeartbeat(), 
-      heartbeatIntervalMs
+      heartbeatIntervalMs,
     );
 
     // Ensure proper cleanup on connection close
@@ -53,16 +53,24 @@ export class HeartbeatSSETransport extends SSEServerTransport {
    * Send a heartbeat to keep the connection alive
    */
   sendHeartbeat(): void {
-    // Get the sessionId safely using bracket notation for TypeScript
-    const sessionId = this['sessionId'];
+    // Generate a timestamp
+    const timestamp = new Date().toISOString();
     
     // Access the protected res property via private method
     this.sendCustomEvent('message', {
       type: 'heartbeat',
       transportType: 'sse',
-      sessionId,
-      timestamp: new Date().toISOString(),
+      sessionId: this.getSessionId(),
+      timestamp,
     });
+  }
+  
+  /**
+   * Helper method to access the protected sessionId property
+   * This is used for testing and internal use
+   */
+  getSessionId(): string {
+    return this['sessionId'] as string;
   }
 
   /**

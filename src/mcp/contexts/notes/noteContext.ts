@@ -412,7 +412,9 @@ export class NoteContext {
         const content = isNonEmptyString(note.content) ? note.content : '';
         
         if (title.length > 0 || content.length > 0) {
-          embedding = await this.embeddingService.generateEmbedding(title, content);
+          // Combine title and content for embedding
+          const combinedText = `${title} ${content}`.trim();
+          embedding = await this.embeddingService.generateEmbedding(combinedText);
         }
       } catch (error) {
         logger.error(`Error generating embedding for new note: ${error instanceof Error ? error.message : String(error)}`);

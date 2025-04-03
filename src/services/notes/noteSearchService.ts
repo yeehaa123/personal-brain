@@ -123,7 +123,7 @@ export class NoteSearchService {
       const safeOffset = Math.max(0, offset);
       
       // Generate embedding for the query
-      const embedding = await this.embeddingService.generateEmbedding('', query);
+      const embedding = await this.embeddingService.generateEmbedding(query);
       
       // Search for similar notes
       const scoredNotes = await this.embeddingService.searchSimilarNotes(embedding, safeLimit + safeOffset);

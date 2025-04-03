@@ -14,8 +14,8 @@ const originalSetInterval = globalThis.setInterval;
 const originalClearInterval = globalThis.clearInterval;
 
 // Track mock call data
-type MockCall = { args: any[] };
-interface MockFunction<T extends (...args: any[]) => any> {
+type MockCall = { args: unknown[] };
+interface MockFunction<T extends (...args: unknown[]) => unknown> {
   (...args: Parameters<T>): ReturnType<T>;
   mock: {
     calls: MockCall[];
@@ -25,18 +25,20 @@ interface MockFunction<T extends (...args: any[]) => any> {
 // Create a mock Response object that satisfies type requirements
 function createMockResponse() {
   // For tracking write calls
-  const calls: { args: any[] }[] = [];
+  const calls: { args: unknown[] }[] = [];
   
   // Create write function that tracks calls
-  const writeFn: MockFunction<(data: string) => boolean> = (...args: any[]): boolean => {
-    calls.push({ args });
+  // We need to specify the function type as string => boolean but use unknown for args to satisfy TypeScript
+  type WriteFnType = (data: unknown) => boolean;
+  const writeFn = function(data: unknown): boolean {
+    calls.push({ args: [data] });
     return true;
-  };
+  } as MockFunction<WriteFnType>;
   writeFn.mock = { calls };
   
   // Base response object with proper typing
   type MockResponseType = Response & { 
-    write: MockFunction<(data: string) => boolean>;
+    write: MockFunction<WriteFnType>;
     writableEnded: boolean;
   };
   
@@ -45,7 +47,7 @@ function createMockResponse() {
     write: writeFn,
     writableEnded: false,
     flush: () => {},
-    on: (_event: string, _listener: Function) => responseObj,
+    on: (_event: string, _listener: (...args: unknown[]) => void) => responseObj,
     end: () => {
       responseObj.writableEnded = true;
       return responseObj;
@@ -56,10 +58,10 @@ function createMockResponse() {
     send: () => responseObj,
     sendStatus: () => responseObj,
     // Additional properties for Response compatibility
-    app: {} as any,
-    req: {} as any,
+    app: {} as unknown,
+    req: {} as unknown,
     locals: {},
-    headersSent: false
+    headersSent: false,
   };
   
   // Cast to response type after creation
@@ -75,8 +77,8 @@ describe('HeartbeatSSETransport', () => {
   
   test('should create a transport instance with heartbeat interval', () => {
     // Setup mocks
-    globalThis.setInterval = setIntervalMock as any;
-    globalThis.clearInterval = clearIntervalMock as any;
+    globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
+    globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
     // Create a test instance
     const mockResponse = createMockResponse();
@@ -94,16 +96,15 @@ describe('HeartbeatSSETransport', () => {
   
   test('should send heartbeat messages', () => {
     // Setup mocks
-    globalThis.setInterval = setIntervalMock as any;
-    globalThis.clearInterval = clearIntervalMock as any;
+    globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
+    globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
     // Create a test instance
     const mockResponse = createMockResponse();
     const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
     
-    // Mock the protected sessionId field
-    // @ts-ignore - Accessing private property for testing
-    transportInstance['_sessionId'] = 'test-session-id';
+    // Mock the getSessionId method for testing
+    transportInstance.getSessionId = () => 'test-session-id';
     
     try {
       // Act
@@ -128,8 +129,8 @@ describe('HeartbeatSSETransport', () => {
   
   test('should handle custom events', () => {
     // Setup mocks
-    globalThis.setInterval = setIntervalMock as any;
-    globalThis.clearInterval = clearIntervalMock as any;
+    globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
+    globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
     // Create a test instance
     const mockResponse = createMockResponse();
@@ -158,17 +159,16 @@ describe('HeartbeatSSETransport', () => {
   
   test('should not send events if response is ended', () => {
     // Setup mocks
-    globalThis.setInterval = setIntervalMock as any;
-    globalThis.clearInterval = clearIntervalMock as any;
+    globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
+    globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
     // Create a test instance with ended response
     const mockResponse = createMockResponse();
     mockResponse.writableEnded = true;
     const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
     
-    // Mock the protected sessionId field
-    // @ts-ignore - Accessing private property for testing
-    transportInstance['_sessionId'] = 'test-session-id';
+    // Mock the getSessionId method for testing
+    transportInstance.getSessionId = () => 'test-session-id';
     
     try {
       // Act
@@ -188,25 +188,31 @@ describe('HeartbeatSSETransport', () => {
     // This test verifies the close() method exists and doesn't throw
     
     // Setup mocks
-    globalThis.setInterval = setIntervalMock as any;
-    globalThis.clearInterval = clearIntervalMock as any;
+    globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
+    globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
     // Create a test instance
     const mockResponse = createMockResponse();
     const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
     
-    // Directly set the interval
-    // @ts-ignore - For testing only
-    transportInstance.heartbeatInterval = 123 as any;
+    // Set the private heartbeatInterval field
+    Object.defineProperty(transportInstance, 'heartbeatInterval', {
+      value: 123,
+      writable: true,
+    });
     
     try {
       // Mock super.close to be a no-op that also clears the interval
       const originalClose = HeartbeatSSETransport.prototype.close;
       HeartbeatSSETransport.prototype.close = async function() {
-        // @ts-ignore - Directly accessing private property for testing
-        if (this.heartbeatInterval) {
-          // @ts-ignore - For testing only
-          this.heartbeatInterval = null;
+        // Define a getter to access the private field
+        const interval = Object.getOwnPropertyDescriptor(this, 'heartbeatInterval')?.value;
+        if (interval) {
+          // Set to null using Object.defineProperty
+          Object.defineProperty(this, 'heartbeatInterval', {
+            value: null,
+            writable: true,
+          });
         }
         return Promise.resolve();
       };
@@ -215,8 +221,8 @@ describe('HeartbeatSSETransport', () => {
       await transportInstance.close();
       
       // Verify the interval was cleared by checking it was set to null
-      // @ts-ignore - For testing only
-      expect(transportInstance.heartbeatInterval).toBeNull();
+      const interval = Object.getOwnPropertyDescriptor(transportInstance, 'heartbeatInterval')?.value;
+      expect(interval).toBeNull();
       
       // Restore method
       HeartbeatSSETransport.prototype.close = originalClose;
