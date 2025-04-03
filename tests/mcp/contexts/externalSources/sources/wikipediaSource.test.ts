@@ -54,7 +54,7 @@ describe('WikipediaSource', () => {
     expect(source.name).toBe('Wikipedia');
   });
   
-  test.skip('should handle search properly', async () => {
+  test('should handle search properly', async () => {
     const customSource = new WikipediaSource('mock-api-key');
     
     // Create mock search and fetch functions - explicitly using the WikipediaSearchResult type
@@ -98,7 +98,7 @@ describe('WikipediaSource', () => {
     expect(results[0].sourceType).toBe('encyclopedia');
   });
   
-  test.skip('should handle search with embedding generation', async () => {
+  test('should handle search with embedding generation', async () => {
     // Create a source instance for this test
     const source = new WikipediaSource('mock-api-key');
     
@@ -176,7 +176,7 @@ describe('WikipediaSource', () => {
     expect(Array.isArray(results[0].embedding)).toBe(true);
   });
   
-  test.skip('should handle API errors gracefully', async () => {
+  test('should handle API errors gracefully', async () => {
     // Create a custom source with mocked methods
     const errorSource = new WikipediaSource('mock-api-key');
     
@@ -197,7 +197,7 @@ describe('WikipediaSource', () => {
     expect(results.length).toBe(0);
   });
   
-  test.skip('should handle empty results gracefully', async () => {
+  test('should handle empty results gracefully', async () => {
     // Create a custom source
     const emptySource = new WikipediaSource('mock-api-key');
     
