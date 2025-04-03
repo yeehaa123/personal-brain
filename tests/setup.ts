@@ -11,6 +11,13 @@ import { setTestEnv } from './utils/envUtils';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
 import { setupMockFetch } from './utils/fetchUtils';
 import { mock, beforeAll, beforeEach, afterEach, afterAll } from 'bun:test';
+// Import singleton reset functions and mocks
+import { resetServiceRegistration } from '@/services/serviceRegistry';
+import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import { ProfileContext } from '@/mcp/contexts/profiles/profileContext';
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources/externalSourceContext';
+import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
 
 // Set test environment
 setTestEnv('NODE_ENV', 'test');
@@ -31,10 +38,20 @@ beforeAll(() => {
     default: mockLogger,
     createLogger: () => mockLogger,
   }));
+  
+  // Set up global mocks for BrainProtocol and related classes
+  setupMcpServerMocks(mock);
 });
 
 // Per-test setup - runs before each test
 beforeEach(() => {
+  // Reset all singletons for test isolation
+  BrainProtocol.resetInstance();
+  NoteContext.resetInstance();
+  ProfileContext.resetInstance();
+  ExternalSourceContext.resetInstance();
+  resetServiceRegistration();
+  
   // Setup embedding mocks for consistent vector operations
   setupEmbeddingMocks(mock);
   
