@@ -444,8 +444,8 @@ export function setupDependencyContainerMocks(mock: typeof viMock = viMock) {
  * Set up the dependency injection test suite
  * @param mock The Bun test mock function
  */
-export function setupDITestSuite(mock: typeof viMock = viMock) {
-  // Set up all mocks
+export function setupMcpTestSuite(mock: typeof viMock = viMock) {
+  // Set up all mocks for MCP tests
   setupAnthropicMocks(mock);
   setupMcpServerMocks();
   setupDependencyContainerMocks(mock);

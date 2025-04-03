@@ -1,5 +1,19 @@
 /**
  * External Source Mocks
+ * 
+ * This file contains mock implementations of external sources and related utilities.
+ * Use these mocks for isolating tests from actual network requests.
+ * 
+ * Usage:
+ * ```
+ * import { MockWikipediaSource, setupMockFetch } from '@test';
+ * 
+ * // Create a mock source for testing
+ * const source = new MockWikipediaSource();
+ * 
+ * // Setup fetch mock for network isolation
+ * global.fetch = setupMockFetch({});
+ * ```
  */
 import { createMockEmbedding } from '@test/utils/embeddingUtils';
 

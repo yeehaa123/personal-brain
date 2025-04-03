@@ -1,6 +1,6 @@
 # Personal Brain Test Suite
 
-This directory contains unit tests for the Personal Brain project.
+This directory contains unit and integration tests for the Personal Brain project.
 
 ## Running Tests
 
@@ -13,7 +13,13 @@ bun test
 To run specific test files:
 
 ```bash
-bun test tests/embeddings.test.ts
+bun test tests/services/notes/noteRepository.test.ts
+```
+
+To run tests with the global setup file (required for some tests):
+
+```bash
+bun test --preload tests/setup.ts tests/path/to/file.test.ts
 ```
 
 To generate test coverage report:
@@ -24,20 +30,41 @@ bun test --coverage
 
 ## Test Organization
 
-- `embeddings.test.ts` - Tests for the embedding service
-- `noteContext.test.ts` - Tests for the note context operations
-- `note.test.ts` - Tests for note validation
+Tests are organized to mirror the source code structure:
+
+- `/tests/commands` - CLI command tests
+- `/tests/interfaces` - Interface implementation tests
+- `/tests/mcp` - Model-Context-Protocol pattern tests
+  - `/contexts` - Context layer tests
+  - `/model` - Model layer tests
+  - `/protocol` - Protocol layer tests
+- `/tests/models` - Data model tests
+- `/tests/services` - Service layer tests
+- `/tests/utils` - Utility function tests
+
+## Utility Files
+
+- `setup.ts` - Global test setup that runs automatically
+- `index.ts` - Central export point for all test utilities
+- `test-utils.ts` - Common test helper functions
+- `mocks.ts` - Mock data and factory functions
+- `utils/` directory - Specialized test utilities by category
 
 ## Adding New Tests
 
-1. Create a new `.test.ts` file in this directory
-2. Import the module to test
+1. Create a new `.test.ts` file in the appropriate directory
+2. Import utilities from the centralized location: `import { ... } from '@test'`
 3. Write test cases using the Bun test framework
 4. Run with `bun test`
 
 ## Mocking
 
-The tests use Bun's mocking features to mock database operations and API calls.
+The tests use several mocking approaches:
+
+1. **Module Mocks**: Using Bun's `mock.module()` to replace entire modules
+2. **Function Mocks**: Replacing individual functions with tracked versions
+3. **Service Mocks**: Providing test implementations of services
+4. **Dependency Injection**: Configuring the container with mock services
 
 ## Recent Test Fixes
 

@@ -17,8 +17,8 @@ export function setupDependencyContainerMocks(
   });
 }
 
-// Helper function to set up and tear down DI test suite
-export function setupDITestSuite(
+// Helper function to set up and tear down lifecycle hooks
+export function setupLifecycleHooks(
   beforeAllFn: () => void, 
   afterAllFn: () => void,
 ): void {

@@ -1,22 +1,23 @@
-import { test, expect, describe, beforeEach, beforeAll, afterAll } from 'bun:test';
+import { test, expect, describe, beforeEach, beforeAll, afterAll, mock } from 'bun:test';
 import { ExternalSourceContext } from '@/mcp';
-import { setMockEnv, clearMockEnv, setupDITestSuite } from '@test/test-utils';
-import { setupMcpServerMocks, setupAnthropicMocks, setupDependencyContainerMocks } from '@test/utils/mcpUtils';
+import { setMockEnv, clearMockEnv } from '@test/test-utils';
+import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/utils/mcpUtils';
+import { setupMcpServerMocks as createMockServerMock } from '@test/mcp/contexts/__mocks__/mcpMocks';
 
-// Setup MCP server mocks
-setupMcpServerMocks();
+// Create a mock MCP server 
+// The global mock is used in the ExternalSourceContext
+createMockServerMock(mock);
 
 // Setup Anthropic mocks
-setupAnthropicMocks();
+setupAnthropicMocks(mock);
 
 // Setup dependency container with all mock services
-setupDependencyContainerMocks();
+setupDependencyContainerMocks(mock);
 
 describe('ExternalSourceContext MCP SDK Implementation', () => {
   let externalSourceContext: ExternalSourceContext;
   
-  // Setup dependency container management for this test suite
-  setupDITestSuite();
+  // We don't need additional test setup since we're handling it manually
   
   beforeAll(() => {
     // Set up mock environment using centralized function

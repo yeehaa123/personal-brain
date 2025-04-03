@@ -1,17 +1,24 @@
 /**
  * Main exports for the test directory
+ * 
+ * This file centralizes all test utilities and mocks, providing a single import point
+ * for test files. This helps maintain a cleaner and more organized test suite.
+ * 
+ * Import pattern: import { functionName } from '@test';
  */
 
-// Re-export everything from test-utils
+// Core test utilities
 export * from './test-utils';
+export * from './utils';
 
-// Export mocks but avoid duplicates
-export { 
+// Mock data and factories
+export {
+  // Mock data generators
   createMockNotes,
   createMockNote,
   createMockProfile,
-  createMockEmbedding,
-  hashString,
+  
+  // Mock utility functions
   createTrackers,
   mockLogger,
   restoreLogger,
@@ -19,28 +26,24 @@ export {
   resetMocks,
 } from './mocks';
 
-// Export test utilities
-import { setupEmbeddingMocks } from './utils/embeddingUtils';
-import { setupMockFetch } from './utils/fetchUtils';
-import { 
-  setupAnthropicMocks, 
-  setupMcpServerMocks, 
-  setupDependencyContainerMocks,
-  setupDITestSuite,
-} from './utils/mcpUtils';
-
-export { 
-  setupEmbeddingMocks,
-  setupMockFetch,
-  setupAnthropicMocks,
-  setupMcpServerMocks,
-  setupDependencyContainerMocks,
-  setupDITestSuite,
-};
-
-// Export mock repositories
+// Service mocks
 export { MockProfileRepository } from './services/profiles/profileRepository.test';
 export { MockNoteRepository } from './services/notes/noteRepository.test';
 
-// Export additional test utilities
-export * from './utils/envUtils';
+// MCP mocks
+export { 
+  setupAnthropicMocks,
+  setupMcpServerMocks,
+  createMockMcpServer,
+} from './mcp/contexts/__mocks__/mcpMocks';
+
+// External sources mocks
+export { 
+  MockNewsApiSource,
+  MockWikipediaSource,
+  setupMockFetch,
+  setupMockFetch as setupExternalSourceMocks,
+} from './mcp/contexts/externalSources/__mocks__/externalSourceMocks';
+
+// Component mocks
+export * from './mcp/protocol/components/__mocks__/noteServiceMocks';

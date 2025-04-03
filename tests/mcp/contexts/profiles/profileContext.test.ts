@@ -60,11 +60,17 @@ const mockProfileSearchService = {
   ]),
 };
 
+// Import the mock server creator that doesn't take parameters
+import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
+
 // Setup MCP server mock globally
-const mockMcpServer = setupMcpServerMocks();
+const mockMcpServer = createMockMcpServer();
 
 // Setup Anthropic mocks
-setupAnthropicMocks();
+setupAnthropicMocks(mock);
+
+// Setup the MCP module mock using the wrapper function that takes mock parameter
+setupMcpServerMocks(mock);
 
 // We need to mock these specific imports together
 mock.module('@/utils/dependencyContainer', () => {

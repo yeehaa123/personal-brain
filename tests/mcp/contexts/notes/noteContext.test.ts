@@ -6,7 +6,6 @@ import {
   setupAnthropicMocks,
   setupMcpServerMocks,
   createMockNotes,
-  setupDITestSuite,
 } from '@test';
 import { ServiceIdentifiers } from '@/services/serviceRegistry';
 
@@ -14,8 +13,8 @@ import { ServiceIdentifiers } from '@/services/serviceRegistry';
 const mockNotes = createMockNotes();
 
 // Setup MCP server and Anthropic mocks
-setupMcpServerMocks();
-setupAnthropicMocks();
+setupMcpServerMocks(mock);
+setupAnthropicMocks(mock);
 
 // Create mock repository and services
 const mockNoteRepository = {
@@ -141,8 +140,8 @@ mock.module('@/utils/dependencyContainer', () => {
 describe('NoteContext Tests', () => {
   let noteContext: NoteContext;
   
-  // Setup test isolation
-  setupDITestSuite();
+  // We don't need any extra test isolation here since we're
+  // already setting up everything we need manually
   
   beforeAll(() => {
     // Set up mock environment variables using centralized function

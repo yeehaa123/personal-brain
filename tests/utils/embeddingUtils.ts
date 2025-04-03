@@ -1,5 +1,20 @@
 /**
- * Embedding utilities for tests
+ * Embedding Utilities for Tests
+ * 
+ * This file provides utilities for creating and mocking embeddings in tests.
+ * It includes functions for generating deterministic mock embeddings and
+ * setting up embedding-related mocks.
+ * 
+ * Usage:
+ * ```typescript
+ * import { createMockEmbedding, setupEmbeddingMocks } from '@test';
+ * 
+ * // Create a deterministic embedding for testing
+ * const embedding = createMockEmbedding('test input');
+ * 
+ * // Setup mocks for the embedding service
+ * setupEmbeddingMocks(mock);
+ * ```
  */
 
 // Simple hash function for strings

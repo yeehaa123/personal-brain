@@ -1,13 +1,21 @@
 /**
  * Global test setup for the personal-brain application
  * This file is automatically loaded by Bun when running tests
+ * 
+ * This file centralizes all the global setup and mocking required for tests.
+ * It ensures consistent behavior across all test suites.
  */
 
 // Set the environment to test
 import { setTestEnv } from './utils/envUtils';
+import { setupEmbeddingMocks } from './utils/embeddingUtils';
+import { setupMockFetch } from './utils/fetchUtils';
+import { mock, beforeAll, beforeEach, afterEach, afterAll } from 'bun:test';
+
+// Set test environment
 setTestEnv('NODE_ENV', 'test');
 
-// Mock the logger to prevent logs during tests
+// Define mock logger for silent operation during tests
 const mockLogger = {
   info: () => {},
   debug: () => {},
@@ -16,44 +24,30 @@ const mockLogger = {
   child: () => mockLogger,
 };
 
-// Import Bun test utilities
-import { mock, beforeAll, beforeEach, afterEach } from 'bun:test';
-import { setupEmbeddingMocks } from './utils/embeddingUtils';
-// Add RequestInfo type for fetch
-import type { RequestInfo } from 'node-fetch';
-
 // Global setup - runs once before all tests
 beforeAll(() => {
-  // Replace the real logger with our mock
-  mock.module('@utils/logger', () => {
-    return {
-      default: mockLogger,
-      createLogger: () => mockLogger,
-    };
-  });
+  // Mock the logger to prevent console noise during tests
+  mock.module('@utils/logger', () => ({
+    default: mockLogger,
+    createLogger: () => mockLogger,
+  }));
 });
 
 // Per-test setup - runs before each test
 beforeEach(() => {
-  // Setup consistent embedding mocks for each test
+  // Setup embedding mocks for consistent vector operations
   setupEmbeddingMocks(mock);
   
-  // Reset fetch mocks
-  if (global.fetch) {
-    global.fetch = (async (_url: URL | RequestInfo) => {
-      // Create a proper Response object
-      return new Response(JSON.stringify({}), {
-        status: 200,
-        statusText: 'OK',
-        headers: new Headers({
-          'Content-Type': 'application/json',
-        }),
-      });
-    }) as unknown as typeof global.fetch;
-  }
+  // Setup default fetch mock for network isolation
+  global.fetch = setupMockFetch({});
 });
 
 // Cleanup after each test
 afterEach(() => {
-  // Any global cleanup needed
+  // Reset any per-test state that needs cleaning
+});
+
+// Final cleanup - runs once after all tests
+afterAll(() => {
+  // Any final cleanup
 });
