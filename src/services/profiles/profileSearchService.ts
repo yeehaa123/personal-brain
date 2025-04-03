@@ -3,8 +3,16 @@
  */
 import { ProfileRepository } from './profileRepository';
 import { ProfileTagService } from './profileTagService';
-import { isDefined } from '@/utils/safeAccessUtils';
+import { ProfileEmbeddingService } from './profileEmbeddingService';
+import { BaseSearchService } from '@/services/common/baseSearchService';
+import type { BaseSearchOptions } from '@/services/common/baseSearchService';
+import type { Profile } from '@/models/profile';
+import { isNonEmptyString } from '@/utils/safeAccessUtils';
 import logger from '@/utils/logger';
+import { extractKeywords } from '@/utils/textUtils';
+import { ValidationError } from '@/utils/errorUtils';
+
+export type ProfileSearchOptions = BaseSearchOptions;
 
 interface NoteWithSimilarity {
   id: string;
@@ -25,16 +33,132 @@ interface NoteContext {
 /**
  * Service for finding notes related to a profile
  */
-export class ProfileSearchService {
-  private repository: ProfileRepository;
+export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepository, ProfileEmbeddingService> {
+  protected entityName = 'profile';
+  protected repository: ProfileRepository;
+  protected embeddingService: ProfileEmbeddingService;
   private tagService: ProfileTagService;
 
   /**
    * Create a new ProfileSearchService
    */
-  constructor() {
+  constructor(apiKey?: string) {
+    super();
     this.repository = new ProfileRepository();
+    this.embeddingService = new ProfileEmbeddingService(apiKey);
     this.tagService = new ProfileTagService();
+  }
+
+  /**
+   * Search profiles with various strategies
+   * @param options Search options 
+   * @returns Array of matching profiles
+   */
+  async searchProfiles(options: ProfileSearchOptions): Promise<Profile[]> {
+    return this.search(options);
+  }
+
+  /**
+   * Search profiles using keywords
+   * @param query Optional search query
+   * @param tags Optional tags to filter by
+   * @param limit Maximum results
+   * @param offset Pagination offset
+   * @returns Array of matching profiles
+   */
+  protected async keywordSearch(
+    query?: string, 
+    tags?: string[], 
+    _limit = 10, 
+    _offset = 0
+  ): Promise<Profile[]> {
+    // Since there's only one profile, we just return it if it matches the query/tags
+    try {
+      const profile = await this.repository.getProfile();
+      if (!profile) {
+        return [];
+      }
+
+      // If no query or tags, just return the profile
+      if (!isNonEmptyString(query) && (!tags || tags.length === 0)) {
+        return [profile];
+      }
+
+      // Check if profile matches the query
+      let matchesQuery = true;
+      if (isNonEmptyString(query)) {
+        const profileText = this.tagService.prepareProfileTextForEmbedding(profile);
+        matchesQuery = profileText.toLowerCase().includes(query.toLowerCase());
+      }
+
+      // Check if profile matches the tags
+      let matchesTags = true;
+      if (tags && tags.length > 0 && profile.tags) {
+        matchesTags = tags.some(tag => profile.tags?.includes(tag));
+      }
+
+      return (matchesQuery && matchesTags) ? [profile] : [];
+    } catch (error) {
+      logger.error(`Profile keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
+
+  /**
+   * Search profiles using embeddings
+   * @param query Search query
+   * @param tags Optional tags to filter by
+   * @param limit Maximum results
+   * @param offset Pagination offset
+   * @returns Array of matching profiles
+   */
+  protected async semanticSearch(
+    query: string, 
+    tags?: string[], 
+    _limit = 10, // Renamed to avoid unused parameter warning
+    _offset = 0  // Renamed to avoid unused parameter warning
+  ): Promise<Profile[]> {
+    try {
+      if (!isNonEmptyString(query)) {
+        throw new ValidationError('Empty query for semantic profile search');
+      }
+      
+      const profile = await this.repository.getProfile();
+      if (!profile || !profile.embedding) {
+        return this.keywordSearch(query, tags, _limit, _offset);
+      }
+
+      // Generate embedding for the query
+      const queryEmbedding = await this.embeddingService.generateEmbedding(query);
+      
+      // Calculate similarity between query and profile
+      const similarity = this.embeddingService.calculateSimilarity(queryEmbedding, profile.embedding);
+      
+      // Use a threshold to determine if profile matches
+      const threshold = 0.7; // Adjust as needed
+      
+      // Filter by tags if provided
+      let matchesTags = true;
+      if (tags && tags.length > 0 && profile.tags) {
+        matchesTags = tags.some(tag => profile.tags?.includes(tag));
+      }
+      
+      return (similarity >= threshold && matchesTags) ? [profile] : [];
+    } catch (error) {
+      logger.error(`Profile semantic search failed: ${error instanceof Error ? error.message : String(error)}`);
+      return this.keywordSearch(query, tags, _limit, _offset);
+    }
+  }
+
+  /**
+   * Find related entity (not implemented for profiles)
+   * @param profileId ID of the profile
+   * @param maxResults Maximum results to return
+   * @returns Empty array (not implemented for profiles)
+   */
+  async findRelated(_profileId: string, _maxResults = 5): Promise<Profile[]> {
+    // This method doesn't make sense for profiles since there's only one
+    return [];
   }
 
   /**
@@ -75,7 +199,7 @@ export class ProfileSearchService {
       }
 
       // Otherwise fall back to keyword search
-      const keywords = this.tagService.extractProfileKeywords(profile);
+      const keywords = this.extractKeywords(this.tagService.prepareProfileTextForEmbedding(profile));
       return await noteContext.searchNotes({
         query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
         limit,
@@ -100,6 +224,7 @@ export class ProfileSearchService {
     noteContext: NoteContext,
     profileTags: string[],
     limit = 5,
+    _offset = 0, // Add unused parameter for consistency
   ): Promise<NoteWithSimilarity[]> {
     if (!profileTags?.length) {
       return [];
@@ -142,26 +267,28 @@ export class ProfileSearchService {
   }
 
   /**
-   * Calculate how well tags match between a note and profile
-   * @param noteTags The note tags to compare
-   * @param profileTags The profile tags to compare against
-   * @returns Weighted match score
+   * Extract keywords from text
+   * @param text Source text
+   * @param maxKeywords Maximum number of keywords
+   * @returns Array of keywords
    */
-  private calculateTagMatchScore(noteTags: string[], profileTags: string[]): number {
-    if (!isDefined(noteTags) || !isDefined(profileTags) || noteTags.length === 0 || profileTags.length === 0) {
-      return 0;
+  protected extractKeywords(text: string, maxKeywords = 10): string[] {
+    if (!isNonEmptyString(text)) {
+      return [];
     }
     
-    return noteTags.reduce((count, noteTag) => {
-      // Direct match (exact tag match)
-      const directMatch = profileTags.includes(noteTag);
-
-      // Partial match (tag contains or is contained by a profile tag)
-      const partialMatch = !directMatch && profileTags.some(profileTag =>
-        noteTag.includes(profileTag) || profileTag.includes(noteTag),
-      );
-
-      return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
-    }, 0);
+    try {
+      // Apply safe limits with defaults
+      const safeMaxKeywords = Math.max(1, Math.min(maxKeywords || 10, 50));
+      
+      // Use the utility function to extract keywords
+      const keywords = extractKeywords(text, safeMaxKeywords);
+      
+      // Ensure we return a valid array
+      return Array.isArray(keywords) ? keywords.filter(isNonEmptyString) : [];
+    } catch (error) {
+      logger.warn(`Error extracting profile keywords: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
   }
 }

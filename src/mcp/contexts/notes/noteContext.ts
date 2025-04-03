@@ -14,7 +14,7 @@ import {
   NoteEmbeddingService, 
   NoteSearchService, 
 } from '@/services/notes';
-import type { SearchOptions } from '@/services/notes/noteSearchService';
+import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 
 /**
  * Context for working with notes using MCP SDK
@@ -118,7 +118,7 @@ export class NoteContext {
         try {
           const params = new URLSearchParams(uri.search);
           
-          const options: SearchOptions = {
+          const options: NoteSearchOptions = {
             query: params.get('query') || undefined,
             tags: params.has('tags') ? params.get('tags')?.split(',') : undefined,
             limit: params.has('limit') ? parseInt(params.get('limit') || '10', 10) : 10,
@@ -450,7 +450,7 @@ export class NoteContext {
    * @param options Search options including query, tags, limit, offset, and search type
    * @returns Array of matching notes
    */
-  async searchNotes(options: SearchOptions): Promise<Note[]> {
+  async searchNotes(options: NoteSearchOptions): Promise<Note[]> {
     return this.searchService.searchNotes(options);
   }
 
@@ -461,7 +461,7 @@ export class NoteContext {
    * @returns Array of related notes
    */
   async getRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
-    return this.searchService.getRelatedNotes(noteId, maxResults);
+    return this.searchService.findRelated(noteId, maxResults);
   }
   
   /**

@@ -169,4 +169,66 @@ export class ProfileTagService {
 
     return parts.join('\n');
   }
+  
+  /**
+   * Prepare profile text for embedding generation
+   * @param profile The profile to prepare text for
+   * @returns Formatted profile text suitable for embedding
+   */
+  prepareProfileTextForEmbedding(profile: Partial<Profile>): string {
+    const parts: string[] = [];
+
+    // Add header information
+    if (profile.fullName) parts.push(`Name: ${profile.fullName}`);
+    if (profile.headline) parts.push(`Headline: ${profile.headline}`);
+    if (profile.occupation) parts.push(`Occupation: ${profile.occupation}`);
+    
+    // Add summary
+    if (profile.summary) parts.push(`Summary: ${profile.summary}`);
+    
+    // Add location information
+    const location: string[] = [];
+    if (profile.city) location.push(profile.city);
+    if (profile.state) location.push(profile.state);
+    if (profile.countryFullName) location.push(profile.countryFullName);
+    if (location.length > 0) parts.push(`Location: ${location.join(', ')}`);
+
+    // Add experiences
+    if (isDefined(profile.experiences) && profile.experiences.length > 0) {
+      parts.push('Experience:');
+      (profile.experiences as ProfileExperience[]).forEach(exp => {
+        const expParts: string[] = [];
+        if (exp.title) expParts.push(exp.title);
+        if (exp.company) expParts.push(`at ${exp.company}`);
+        
+        parts.push(`- ${expParts.join(' ')}`);
+        if (exp.description) parts.push(`  ${exp.description}`);
+      });
+    }
+
+    // Add education
+    if (isDefined(profile.education) && profile.education.length > 0) {
+      parts.push('Education:');
+      (profile.education as ProfileEducation[]).forEach(edu => {
+        const eduParts: string[] = [];
+        if (edu.degree_name) eduParts.push(edu.degree_name);
+        if (edu.field_of_study) eduParts.push(`in ${edu.field_of_study}`);
+        if (edu.school) eduParts.push(`from ${edu.school}`);
+        
+        parts.push(`- ${eduParts.join(' ')}`);
+      });
+    }
+
+    // Add languages
+    if (isDefined(profile.languages) && profile.languages.length > 0) {
+      parts.push(`Languages: ${(profile.languages as string[]).join(', ')}`);
+    }
+
+    // Add tags if available
+    if (isDefined(profile.tags) && profile.tags.length > 0) {
+      parts.push(`Tags: ${(profile.tags as string[]).join(', ')}`);
+    }
+
+    return parts.join('\n');
+  }
 }

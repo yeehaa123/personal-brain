@@ -6,26 +6,24 @@ import { NoteEmbeddingService } from './noteEmbeddingService';
 import type { Note } from '@/models/note';
 import logger from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import { ValidationError, safeExec } from '@/utils/errorUtils';
+import { ValidationError } from '@/utils/errorUtils';
 import { extractKeywords } from '@/utils/textUtils';
+import { BaseSearchService } from '@/services/common/baseSearchService';
+import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 
-export interface SearchOptions {
-  query?: string;
-  tags?: string[];
-  limit?: number;
-  offset?: number;
-  semanticSearch?: boolean;
-}
+export type NoteSearchOptions = BaseSearchOptions;
 
 /**
  * Service for searching notes using various strategies
  */
-export class NoteSearchService {
-  private noteRepository: NoteRepository;
-  private embeddingService: NoteEmbeddingService;
+export class NoteSearchService extends BaseSearchService<Note, NoteRepository, NoteEmbeddingService> {
+  protected entityName = 'note';
+  protected repository: NoteRepository;
+  protected embeddingService: NoteEmbeddingService;
 
   constructor(apiKey?: string) {
-    this.noteRepository = new NoteRepository();
+    super();
+    this.repository = new NoteRepository();
     this.embeddingService = new NoteEmbeddingService(apiKey);
   }
 
@@ -34,47 +32,8 @@ export class NoteSearchService {
    * @param options Search options including query, tags, limit, offset, and search type
    * @returns Array of matching notes
    */
-  async searchNotes(options: SearchOptions): Promise<Note[]> {
-    // Validate options parameter
-    if (!options || typeof options !== 'object') {
-      throw new ValidationError('Invalid search options', { optionsType: typeof options });
-    }
-    
-    return safeExec(async () => {
-      // Safely extract options with defaults
-      const limit = isDefined(options.limit) ? Math.max(1, Math.min(options.limit, 100)) : 10;
-      const offset = isDefined(options.offset) ? Math.max(0, options.offset) : 0;
-      const semanticSearch = options.semanticSearch !== false; // Default to true
-      
-      // Handle query safely, ensuring it's a string
-      const query = isNonEmptyString(options.query) ? options.query : undefined;
-      
-      // Ensure tags is an array if present and filter out invalid tags
-      const tags = Array.isArray(options.tags) 
-        ? options.tags.filter(isNonEmptyString)
-        : undefined;
-        
-      logger.debug(`Searching notes with: ${JSON.stringify({
-        query: query?.substring(0, 30) + (query && query.length > 30 ? '...' : ''),
-        tagsCount: tags?.length,
-        limit,
-        offset,
-        semanticSearch,
-      })}`);
-
-      // If semantic search is enabled and there's a query, perform vector search
-      if (semanticSearch && query) {
-        const results = await this.semanticSearch(query, tags, limit, offset);
-        logger.info(`Semantic search found ${results.length} results`);
-        return results;
-      }
-
-      // Otherwise, fall back to keyword search
-      const results = await this.keywordSearch(query, tags, limit, offset);
-      
-      logger.info(`Keyword search found ${results.length} results`);
-      return results;
-    }, [], 'warn');  // Use 'warn' level and return empty array on error
+  async searchNotes(options: NoteSearchOptions): Promise<Note[]> {
+    return this.search(options);
   }
 
   /**
@@ -85,17 +44,17 @@ export class NoteSearchService {
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  private async keywordSearch(
+  protected async keywordSearch(
     query?: string, 
     tags?: string[], 
     limit = 10, 
     offset = 0,
   ): Promise<Note[]> {
     try {
-      return await this.noteRepository.searchNotesByKeywords(query, tags, limit, offset);
+      return await this.repository.searchNotesByKeywords(query, tags, limit, offset);
     } catch (error) {
       logger.error(`Keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
-      return this.noteRepository.getRecentNotes(limit);
+      return this.repository.getRecentNotes(limit);
     }
   }
 
@@ -107,7 +66,7 @@ export class NoteSearchService {
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  private async semanticSearch(
+  protected async semanticSearch(
     query: string, 
     tags?: string[], 
     limit = 10, 
@@ -156,7 +115,7 @@ export class NoteSearchService {
    * @param maxResults Maximum number of results to return
    * @returns Array of related notes
    */
-  async getRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
+  async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
     try {
       // Try semantic similarity first
       const relatedNotes = await this.embeddingService.findRelatedNotes(noteId, maxResults);
@@ -186,7 +145,7 @@ export class NoteSearchService {
       const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
       
       // Get the source note
-      const sourceNote = await this.noteRepository.getNoteById(noteId);
+      const sourceNote = await this.repository.getNoteById(noteId);
       
       if (!isDefined(sourceNote)) {
         logger.warn(`Source note not found for keyword relation: ${noteId}`);
@@ -196,7 +155,7 @@ export class NoteSearchService {
       // Make sure the note has content
       if (!isNonEmptyString(sourceNote.content)) {
         logger.debug(`Source note has no content for keyword extraction: ${noteId}`);
-        return this.noteRepository.getRecentNotes(safeMaxResults);
+        return this.repository.getRecentNotes(safeMaxResults);
       }
       
       // Extract keywords from the source note
@@ -204,14 +163,14 @@ export class NoteSearchService {
       
       if (!Array.isArray(keywords) || keywords.length === 0) {
         logger.debug(`No keywords extracted from note: ${noteId}`);
-        return this.noteRepository.getRecentNotes(safeMaxResults);
+        return this.repository.getRecentNotes(safeMaxResults);
       }
       
       logger.debug(`Extracted ${keywords.length} keywords from note ${noteId}: ${keywords.join(', ')}`);
       
       // Use each keyword as a search term
       const keywordPromises = keywords.map(keyword => 
-        this.noteRepository.searchNotesByKeywords(keyword, undefined, Math.ceil(safeMaxResults / 2), 0),
+        this.repository.searchNotesByKeywords(keyword, undefined, Math.ceil(safeMaxResults / 2), 0),
       );
       
       const keywordResults = await Promise.all(keywordPromises);
@@ -219,21 +178,15 @@ export class NoteSearchService {
       // Combine and deduplicate results
       const allResults = keywordResults.flat();
       
-      // Remove duplicates and the source note itself
-      const uniqueResults = allResults.reduce<Note[]>((unique, note) => {
-        if (
-          note.id !== noteId && 
-          !unique.some(existingNote => existingNote.id === note.id)
-        ) {
-          unique.push(note);
-        }
-        return unique;
-      }, []);
-      
-      return uniqueResults.slice(0, safeMaxResults);
+      // Remove duplicates and the source note itself using the base class method
+      return this.deduplicateResults(
+        allResults, 
+        note => note.id, 
+        noteId
+      ).slice(0, safeMaxResults);
     } catch (error) {
       logger.error(`Error finding keyword-related notes: ${error instanceof Error ? error.message : String(error)}`);
-      return this.noteRepository.getRecentNotes(maxResults);
+      return this.repository.getRecentNotes(maxResults);
     }
   }
 
@@ -243,7 +196,7 @@ export class NoteSearchService {
    * @param maxKeywords Maximum number of keywords to extract (default: 10)
    * @returns Array of extracted keywords
    */
-  private extractKeywords(text: string, maxKeywords = 10): string[] {
+  protected extractKeywords(text: string, maxKeywords = 10): string[] {
     if (!isNonEmptyString(text)) {
       logger.debug('Empty text provided for keyword extraction');
       return [];
