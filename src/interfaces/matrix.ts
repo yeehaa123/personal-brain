@@ -33,6 +33,9 @@ export class MatrixBrainInterface {
   private renderer: MatrixRenderer;
   private isReady = false;
   private config: MatrixConfig;
+  
+  // Store pending save note requests by roomId
+  private pendingSaveNotes: Map<string, { conversationId: string, title: string }> = new Map();
 
   constructor() {
     // Load and validate configuration
@@ -54,6 +57,9 @@ export class MatrixBrainInterface {
       this.config.commandPrefix,
       this.sendMessage.bind(this),
     );
+    
+    // Connect the command handler to the renderer for interactive commands
+    this.renderer.setCommandHandler(this.commandHandler);
   }
 
   /**
@@ -247,6 +253,19 @@ export class MatrixBrainInterface {
       await this.renderer.renderHelp(roomId, this.commandHandler.getCommands());
       return;
     }
+    
+    // Handle confirm command for save-note
+    if (command === 'confirm') {
+      await this.handleConfirmSaveNote(roomId, args);
+      return;
+    }
+    
+    // Handle cancel command for save-note
+    if (command === 'cancel') {
+      this.pendingSaveNotes.delete(roomId);
+      await this.sendMessage(roomId, '❌ Note creation cancelled.');
+      return;
+    }
 
     // Process the command through our shared command handler
     try {
@@ -275,6 +294,77 @@ export class MatrixBrainInterface {
     const args = parts.slice(1).join(' ');
     
     return { command, args };
+  }
+  
+  /**
+   * Handle confirmation of save-note command
+   */
+  private async handleConfirmSaveNote(roomId: string, newTitle?: string): Promise<void> {
+    try {
+      // Find the most recent save-note-preview message to extract the conversation ID
+      const room = this.client.getRoom(roomId);
+      if (!room) {
+        await this.sendMessage(roomId, '❌ Error: Room not found.');
+        return;
+      }
+      
+      // Get recent timeline events
+      const timeline = room.timeline;
+      if (!timeline || timeline.length === 0) {
+        await this.sendMessage(roomId, '❌ Error: No conversation history found.');
+        return;
+      }
+      
+      // Find the most recent message with a conversation ID
+      let conversationId: string | null = null;
+      let title: string | null = null;
+      
+      // Look for a message containing the conversation ID marker
+      for (let i = timeline.length - 1; i >= 0; i--) {
+        const event = timeline[i];
+        if (event.getType() === 'm.room.message') {
+          const content = event.getContent();
+          if (content.msgtype === MsgType.Text) {
+            const body = content['body'] as string;
+            
+            // Look for the hidden conversation ID in the message
+            const match = body.match(/_Conversation ID: ([a-zA-Z0-9-_]+)_/);
+            if (match && match[1]) {
+              conversationId = match[1];
+              
+              // Extract the title from the same message
+              const titleMatch = body.match(/\*\*Title\*\*: (.+)$/m);
+              if (titleMatch && titleMatch[1]) {
+                title = titleMatch[1];
+              }
+              
+              break;
+            }
+          }
+        }
+      }
+      
+      if (!conversationId) {
+        await this.sendMessage(roomId, '❌ Error: No pending note to save. Please create a note first using the save-note command.');
+        return;
+      }
+      
+      // Use the new title if provided
+      if (newTitle && newTitle.trim()) {
+        // Remove quotation marks if present
+        title = newTitle.trim().replace(/^"(.*)"$/, '$1');
+      }
+      
+      // Confirm the save note using the command handler
+      const result = await this.commandHandler.confirmSaveNote(conversationId, title || undefined);
+      
+      // Render the result
+      await this.renderer.render(roomId, result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Error confirming save note: ${errorMessage}`);
+      await this.sendMessage(roomId, `❌ Error confirming note: ${errorMessage}`);
+    }
   }
 
   /**

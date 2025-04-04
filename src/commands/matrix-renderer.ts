@@ -3,6 +3,7 @@
  * This module handles formatting and displaying command results in Matrix
  */
 
+import type { CommandHandler } from '.';
 import type { Note } from '../models/note';
 import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
 import { formatNotePreview } from '../utils/noteUtils';
@@ -16,10 +17,23 @@ import type { CommandInfo, CommandResult } from './index';
 export class MatrixRenderer {
   private commandPrefix: string;
   private sendMessageFn: (roomId: string, message: string) => void;
+  // private member used in methods called by tests
+  private commandHandler?: CommandHandler;
 
   constructor(commandPrefix: string, sendMessageFn: (roomId: string, message: string) => void) {
     this.commandPrefix = commandPrefix;
     this.sendMessageFn = sendMessageFn;
+  }
+  
+  /**
+   * Set the command handler for interactive confirmation
+   */
+  setCommandHandler(handler: CommandHandler): void {
+    this.commandHandler = handler;
+    // Validate the command handler has the required methods
+    if (!this.commandHandler || typeof this.commandHandler.confirmSaveNote !== 'function') {
+      throw new Error('Command handler must implement confirmSaveNote');
+    }
   }
 
   /**
@@ -196,6 +210,21 @@ export class MatrixRenderer {
       this.sendMessageFn(roomId, externalMsg);
       break;
     }
+    
+    case 'save-note-preview': {
+      this.renderSaveNotePreview(roomId, result);
+      break;
+    }
+    
+    case 'save-note-confirm': {
+      this.renderSaveNoteConfirm(roomId, result);
+      break;
+    }
+    
+    case 'conversation-notes': {
+      this.renderConversationNotes(roomId, result);
+      break;
+    }
     }
   }
 
@@ -310,5 +339,69 @@ export class MatrixRenderer {
     }
 
     return infoLines;
+  }
+  
+  /**
+   * Render save-note-preview with options to edit or confirm
+   */
+  private renderSaveNotePreview(roomId: string, result: { noteContent: string; title: string; conversationId: string }): void {
+    // Format preview message
+    const previewContent = result.noteContent.length > 300
+      ? result.noteContent.substring(0, 297) + '...'
+      : result.noteContent;
+    
+    const message = [
+      '### Note Preview',
+      '',
+      `**Title**: ${result.title}`,
+      '',
+      '**Content Preview**:',
+      '',
+      previewContent,
+      '',
+      '---',
+      '',
+      'This is a preview of the note that will be created from your conversation.',
+      '',
+      `To save this note, reply with \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\``,
+      `To cancel, reply with \`${this.commandPrefix} cancel\``,
+      '',
+      `_Conversation ID: ${result.conversationId}_`, // Include this for the Matrix interface to parse
+    ].join('\n');
+    
+    this.sendMessageFn(roomId, message);
+  }
+  
+  /**
+   * Render save-note confirmation
+   */
+  private renderSaveNoteConfirm(roomId: string, result: { noteId: string; title: string }): void {
+    const message = [
+      `✅ Note "${result.title}" saved successfully!`,
+      '',
+      `Note ID: \`${result.noteId}\``,
+      '',
+      `To view the note, use the command: \`${this.commandPrefix} note ${result.noteId}\``,
+    ].join('\n');
+    
+    this.sendMessageFn(roomId, message);
+  }
+  
+  /**
+   * Render conversation notes list
+   */
+  private renderConversationNotes(roomId: string, result: { notes: Note[] }): void {
+    if (result.notes.length === 0) {
+      this.sendMessageFn(roomId, '⚠️ No conversation notes found.');
+      return;
+    }
+    
+    const message = [
+      '### Notes Created from Conversations',
+      '',
+      ...result.notes.map((note, index) => formatNotePreview(note, index + 1)),
+    ].join('\n');
+    
+    this.sendMessageFn(roomId, message);
   }
 }
