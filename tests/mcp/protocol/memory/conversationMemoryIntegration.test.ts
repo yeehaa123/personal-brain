@@ -3,8 +3,11 @@
  */
 import { describe, expect, mock, test } from 'bun:test';
 
-import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
+import { ConversationMemory } from '@/mcp/protocol/memory';
+import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
+
+import { createIsolatedMemory } from '../../../utils/memoryUtils';
 
 // Create a partial mock of BrainProtocol for testing
 class MockBrainProtocol {
@@ -111,8 +114,10 @@ class MockBrainProtocol {
  * and ConversationMemory using a mock implementation.
  */
 describe('Conversation Memory Integration', () => {
-  test('should provide access to conversation memory instance', () => {
-    const protocol = new MockBrainProtocol();
+  test('should provide access to conversation memory instance', async () => {
+    // Use isolated memory to prevent test interference
+    const { storage } = await createIsolatedMemory();
+    const protocol = new MockBrainProtocol({ storage });
     const memory = protocol.getConversationMemory();
     
     expect(memory).toBeDefined();
@@ -121,7 +126,9 @@ describe('Conversation Memory Integration', () => {
   });
   
   test('should include conversation history in processQuery', async () => {
-    const protocol = new MockBrainProtocol();
+    // Use isolated memory to prevent test interference
+    const { storage } = await createIsolatedMemory();
+    const protocol = new MockBrainProtocol({ storage });
     
     // Process a query
     await protocol.processQuery('test query');
@@ -134,7 +141,9 @@ describe('Conversation Memory Integration', () => {
   });
   
   test('CLI should be the default interface type', async () => {
-    const protocol = new MockBrainProtocol();
+    // Use isolated memory to prevent test interference
+    const { storage } = await createIsolatedMemory();
+    const protocol = new MockBrainProtocol({ storage });
     const memory = protocol.getConversationMemory();
     
     // Add a conversation turn
@@ -146,9 +155,12 @@ describe('Conversation Memory Integration', () => {
   });
   
   test('Matrix interface should support room-based conversations', async () => {
+    // Use isolated memory to prevent test interference
+    const { storage } = await createIsolatedMemory({ interfaceType: 'matrix' });
     const protocol = new MockBrainProtocol({
       interfaceType: 'matrix',
       roomId: 'test-room',
+      storage,
     });
     
     // This should work without throwing

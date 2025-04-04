@@ -159,13 +159,30 @@ describe('ConversationMemory', () => {
     expect(customMemory).toBeInstanceOf(ConversationMemory);
   });
 
-  test('should use InMemoryStorage by default', () => {
-    const defaultMemory = new ConversationMemory({
-      interfaceType: 'cli',
-    });
+  test('should use InMemoryStorage singleton by default in production', () => {
+    // Save the original getInstance method
+    const originalGetInstance = InMemoryStorage.getInstance;
     
-    // Can't directly test private fields, but we can test behavior
-    expect(defaultMemory).toBeInstanceOf(ConversationMemory);
+    // Mock getInstance to track if it was called
+    let getInstanceCalled = false;
+    InMemoryStorage.getInstance = () => {
+      getInstanceCalled = true;
+      return originalGetInstance();
+    };
+    
+    try {
+      // Create memory without providing storage
+      const defaultMemory = new ConversationMemory({
+        interfaceType: 'cli',
+      });
+      
+      // Verify behavior
+      expect(defaultMemory).toBeInstanceOf(ConversationMemory);
+      expect(getInstanceCalled).toBe(true);
+    } finally {
+      // Restore original method
+      InMemoryStorage.getInstance = originalGetInstance;
+    }
   });
 
   test('should start a new conversation', async () => {

@@ -54,6 +54,42 @@
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 /**
+ * Create an isolated ConversationMemory instance for testing
+ * 
+ * This function follows best practices for test isolation by using InMemoryStorage.createFresh()
+ * and explicitly passing the storage to the memory instance.
+ * 
+ * @param options Optional configuration for the ConversationMemory
+ * @returns Object containing the memory instance and its isolated storage
+ */
+export async function createIsolatedMemory(options?: {
+  interfaceType?: 'cli' | 'matrix';
+  apiKey?: string;
+  memoryOptions?: Record<string, unknown>;
+}) {
+  // Import dynamically to avoid circular dependencies
+  // Using dynamic imports instead of require() to satisfy linting rules
+  const InMemoryStorageModule = await import('@/mcp/protocol/memory/inMemoryStorage');
+  const ConversationMemoryModule = await import('@/mcp/protocol/memory/conversationMemory');
+  
+  const { InMemoryStorage } = InMemoryStorageModule;
+  const { ConversationMemory } = ConversationMemoryModule;
+  
+  // Always create a fresh isolated storage instance
+  const storage = InMemoryStorage.createFresh();
+  
+  // Create the memory with the isolated storage
+  const memory = new ConversationMemory({
+    interfaceType: options?.interfaceType || 'cli',
+    storage,
+    options: options?.memoryOptions,
+    apiKey: options?.apiKey,
+  });
+  
+  return { memory, storage };
+}
+
+/**
  * Setup memory-related mocks for testing
  */
 export function setupMemoryMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {

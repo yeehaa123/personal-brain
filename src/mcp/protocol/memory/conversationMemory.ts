@@ -52,6 +52,8 @@ export class ConversationMemory {
     this.interfaceType = config.interfaceType;
     
     // Use provided storage or create in-memory storage as default
+    // Note: In production, we use the singleton instance, but tests should use createFresh()
+    // for proper isolation. This way we avoid test interference.
     this.storage = config.storage || InMemoryStorage.getInstance();
     
     // Parse and validate options with defaults from the schema
