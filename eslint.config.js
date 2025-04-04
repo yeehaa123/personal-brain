@@ -1,6 +1,7 @@
 import js from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
+import importPlugin from 'eslint-plugin-import';
 
 export default [
   js.configs.recommended,
@@ -51,10 +52,24 @@ export default [
       parserOptions: {
         ecmaVersion: 'latest',
         sourceType: 'module',
+        project: './tsconfig.json',
+      },
+    },
+    settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: './tsconfig.json',
+        },
+        node: true,
+      },
+      'import/parsers': {
+        '@typescript-eslint/parser': ['.ts', '.tsx']
       },
     },
     plugins: {
       '@typescript-eslint': typescriptEslint,
+      'import': importPlugin,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
@@ -63,6 +78,73 @@ export default [
         'argsIgnorePattern': '^_',
         'caughtErrorsIgnorePattern': '^_' 
       }],
+      // Import Rules - Start with just import ordering to fix first
+      // Sort imports
+      'sort-imports': ['error', {
+        'ignoreCase': true,
+        'ignoreDeclarationSort': true, // don't want to sort import lines, use eslint-plugin-import instead
+        'ignoreMemberSort': false,
+        'memberSyntaxSortOrder': ['none', 'all', 'multiple', 'single'],
+        'allowSeparatedGroups': true
+      }],
+      
+      // Import sorting
+      'import/order': ['error', {
+        'groups': [
+          'builtin',    // Node.js built-in modules
+          'external',   // npm packages
+          'internal',   // Aliased paths (e.g. @/)
+          'parent',     // Imports from parent directories
+          'sibling',    // Imports from sibling files
+          'index'       // imports from ./index files
+        ],
+        'newlines-between': 'always',
+        'alphabetize': {
+          'order': 'asc',
+          'caseInsensitive': true
+        },
+        'pathGroups': [
+          // Internal alias patterns
+          {
+            'pattern': '@/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@test/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@models/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@utils/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@commands/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@mcp/**', 
+            'group': 'internal'
+          },
+          {
+            'pattern': '@interfaces/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@db/**',
+            'group': 'internal'
+          },
+          {
+            'pattern': '@importers/**',
+            'group': 'internal'
+          }
+        ]
+      }],
+      'import/no-unresolved': ['error', { ignore: ['^bun:'] }],
+      'import/first': 'error',
     },
   },
 ];
