@@ -238,7 +238,16 @@ export class MatrixBrainInterface {
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(`Error processing command: ${errorMessage}`);
-        await this.sendMessage(room.roomId, `Error: ${errorMessage}`);
+        
+        // Enhanced error message with better styling
+        const formattedErrorMessage = [
+          '<div style="background-color: #ffe6e6; padding: 10px; border-left: 4px solid #cc0000; margin: 10px 0; border-radius: 0 4px 4px 0;">',
+          '<h4>❌ Error Processing Command</h4>',
+          `<p>${errorMessage}</p>`,
+          '</div>',
+        ].join('\n');
+        
+        await this.sendMessage(room.roomId, formattedErrorMessage);
       }
     }
   }
@@ -335,10 +344,13 @@ export class MatrixBrainInterface {
           if (content.msgtype === MsgType.Text) {
             const body = content['body'] as string;
             
-            // Look for the hidden conversation ID in the message
-            const match = body.match(/_Conversation ID: ([a-zA-Z0-9-_]+)_/);
-            if (match && match[1]) {
-              conversationId = match[1];
+            // Look for the hidden conversation ID in the message - support both formats:
+            // 1. Old format: _Conversation ID: abc123_
+            // 2. New HTML format: <small><i>Conversation ID: abc123</i></small>
+            const match = body.match(/(?:_Conversation ID: ([a-zA-Z0-9-_]+)_)|(?:Conversation ID: ([a-zA-Z0-9-_]+))/);
+            if (match) {
+              // Take whichever group matched (either old or new format)
+              conversationId = match[1] || match[2];
               
               // Extract the title from the same message
               const titleMatch = body.match(/\*\*Title\*\*: (.+)$/m);
@@ -371,7 +383,16 @@ export class MatrixBrainInterface {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Error confirming save note: ${errorMessage}`);
-      await this.sendMessage(roomId, `❌ Error confirming note: ${errorMessage}`);
+      
+      // Enhanced error message with better styling
+      const formattedErrorMessage = [
+        '<div style="background-color: #ffe6e6; padding: 10px; border-left: 4px solid #cc0000; margin: 10px 0; border-radius: 0 4px 4px 0;">',
+        '<h4>❌ Error Saving Note</h4>',
+        `<p>${errorMessage}</p>`,
+        '</div>',
+      ].join('\n');
+      
+      await this.sendMessage(roomId, formattedErrorMessage);
     }
   }
 

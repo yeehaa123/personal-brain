@@ -4,8 +4,9 @@ import type { CommandResult } from '@commands/index';
 import { createMockNote, mockEnv, resetMocks } from '@test/mocks';
 import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
 
-// Import MatrixRenderer directly for testing its methods
+import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
 import { MatrixRenderer } from '../../src/commands/matrix-renderer';
+import type { BrainProtocol } from '../../src/mcp/protocol/brainProtocol';
 
 // Mock environment variables
 beforeEach(() => {
@@ -32,10 +33,6 @@ const mockConversationNote = createMockNote(
   'What is ecosystem architecture?', 
   ['ecosystem-architecture', 'systems-thinking'],
 );
-
-// Import CommandHandler and BrainProtocol to extend it
-import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
-import { BrainProtocol } from '../../src/mcp/protocol/brainProtocol';
 
 // Create a mock brain protocol for testing
 const mockBrainProtocol = {
@@ -105,12 +102,12 @@ describe('MatrixRenderer Conversation Notes', () => {
     
     const message = messages[0].message;
     // Check essential parts of the rendered message
-    expect(message).toContain('### Note Preview');
+    expect(message).toContain('### 📝 Note Preview');
     expect(message).toContain('**Title**: What is ecosystem architecture?');
     expect(message).toContain('This is a sample note content');
     expect(message).toContain('!brain confirm');
     expect(message).toContain('!brain cancel');
-    expect(message).toContain('_Conversation ID: conv123_');
+    expect(message).toContain('Conversation ID: conv123');
   });
 
   test('should render save-note-confirm correctly', () => {
@@ -127,7 +124,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     
     const message = messages[0].message;
     expect(message).toContain('✅ Note "What is ecosystem architecture?" saved successfully!');
-    expect(message).toContain('Note ID: `note-123`');
+    expect(message).toContain('<strong>Note ID</strong>: `note-123`');
     expect(message).toContain('!brain note note-123');
   });
 
@@ -143,7 +140,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('### Notes Created from Conversations');
+    expect(message).toContain('📚 Notes Created from Conversations');
     expect(message).toContain('What is ecosystem architecture?');
     expect(message).toContain('ecosystem-architecture');
   });
@@ -160,7 +157,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('⚠️ No conversation notes found.');
+    expect(message).toContain('⚠️ No conversation notes found');
   });
 });
 
@@ -212,7 +209,7 @@ describe('Matrix Interface Conversation Note Functionality', () => {
       {
         type: 'm.room.message',
         msgtype: 'm.text',
-        body: `### Note Preview\n\n**Title**: Test Title\n\nSome content\n\n_Conversation ID: conv123_`,
+        body: '### Note Preview\n\n**Title**: Test Title\n\nSome content\n\n_Conversation ID: conv123_',
       },
     ]);
     

@@ -3,11 +3,11 @@
  * This module handles formatting and displaying command results in Matrix
  */
 
-import type { CommandHandler } from '.';
 import type { Note } from '../models/note';
 import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
-import { formatNotePreview } from '../utils/noteUtils';
+import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
 
+import type { CommandHandler } from '.';
 import type { CommandInfo, CommandResult } from './index';
 
 
@@ -350,23 +350,28 @@ export class MatrixRenderer {
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     
+    // Markdown formatted message with enhanced styling
     const message = [
-      '### Note Preview',
+      '### 📝 Note Preview',
       '',
       `**Title**: ${result.title}`,
       '',
       '**Content Preview**:',
       '',
+      '```',
       previewContent,
+      '```',
       '',
-      '---',
+      '<hr style="border: 1px solid #ccc; margin: 1em 0;">',
       '',
-      'This is a preview of the note that will be created from your conversation.',
+      '_This is a preview of the note that will be created from your conversation._',
       '',
-      `To save this note, reply with \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\``,
-      `To cancel, reply with \`${this.commandPrefix} cancel\``,
+      '<div style="background-color: #f0f8ff; padding: 10px; border-left: 4px solid #0066cc; margin: 10px 0;">',
+      `To save this note: \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\`<br>`,
+      `To cancel: \`${this.commandPrefix} cancel\``,
+      '</div>',
       '',
-      `_Conversation ID: ${result.conversationId}_`, // Include this for the Matrix interface to parse
+      `<small><i>Conversation ID: ${result.conversationId}</i></small>`, // Include this for the Matrix interface to parse
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -377,11 +382,15 @@ export class MatrixRenderer {
    */
   private renderSaveNoteConfirm(roomId: string, result: { noteId: string; title: string }): void {
     const message = [
-      `✅ Note "${result.title}" saved successfully!`,
+      '<div style="background-color: #e6ffe6; padding: 12px; border-radius: 4px; border-left: 4px solid #33cc33; margin: 10px 0;">',
+      `<h3>✅ Note "${result.title}" saved successfully!</h3>`,
+      '</div>',
       '',
-      `Note ID: \`${result.noteId}\``,
+      `<strong>Note ID</strong>: \`${result.noteId}\``,
       '',
-      `To view the note, use the command: \`${this.commandPrefix} note ${result.noteId}\``,
+      '<div style="background-color: #f5f5f5; padding: 8px; border-radius: 4px; margin: 10px 0;">',
+      `To view the note, use: \`${this.commandPrefix} note ${result.noteId}\``,
+      '</div>',
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -392,16 +401,43 @@ export class MatrixRenderer {
    */
   private renderConversationNotes(roomId: string, result: { notes: Note[] }): void {
     if (result.notes.length === 0) {
-      this.sendMessageFn(roomId, '⚠️ No conversation notes found.');
+      this.sendMessageFn(roomId, '<div style="background-color: #fff8e6; padding: 12px; border-radius: 4px; border-left: 4px solid #ffcc00; margin: 10px 0;"><h3>⚠️ No conversation notes found.</h3></div>');
       return;
     }
     
-    const message = [
-      '### Notes Created from Conversations',
-      '',
-      ...result.notes.map((note, index) => formatNotePreview(note, index + 1)),
-    ].join('\n');
+    // Create an enhanced presentation for notes
+    const messageParts = [
+      '<h3>📚 Notes Created from Conversations</h3>',
+      '<hr style="border: 0; border-top: 1px solid #ccc; margin: 1em 0;">',
+    ];
     
-    this.sendMessageFn(roomId, message);
+    // Add each note as a card
+    result.notes.forEach((note, index) => {
+      // Extract tags and format them
+      const tags = note.tags && note.tags.length > 0
+        ? note.tags.map(tag => `<code>${tag}</code>`).join(' ')
+        : '<em>No tags</em>';
+      
+      // Format content preview
+      const preview = getExcerpt(note.content, 120);
+      
+      // Format date
+      const created = new Date(note.createdAt).toLocaleDateString();
+      
+      // Create a card for each note
+      messageParts.push(
+        '<div style="background-color: #f9f9f9; border-left: 4px solid #3f51b5; padding: 10px; margin: 12px 0; border-radius: 0 4px 4px 0;">',
+        `<h4>${index + 1}. ${note.title}</h4>`,
+        `<div><strong>ID:</strong> <code>${note.id}</code> • <strong>Created:</strong> ${created}</div>`,
+        `<div><strong>Tags:</strong> ${tags}</div>`,
+        '<div style="margin-top: 8px; font-style: italic;">',
+        preview,
+        '</div>',
+        `<div style="margin-top: 8px;"><small>View with: <code>${this.commandPrefix} note ${note.id}</code></small></div>`,
+        '</div>',
+      );
+    });
+    
+    this.sendMessageFn(roomId, messageParts.join('\n'));
   }
 }
