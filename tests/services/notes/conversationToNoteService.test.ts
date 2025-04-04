@@ -3,6 +3,8 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import { createIsolatedMemory } from '@test/utils/memoryUtils';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
@@ -16,10 +18,10 @@ mock.module('@/utils/tagExtractor', () => ({
   extractTags: mockExtractTags,
 }));
 
-// Mock the uuid module
-const mockUuidv4 = mock(() => 'mock-uuid');
-mock.module('uuid', () => ({
-  v4: mockUuidv4,
+// Mock the nanoid module
+const mockNanoid = mock(() => 'mock-id');
+mock.module('nanoid', () => ({
+  nanoid: mockNanoid,
 }));
 
 describe('ConversationToNoteService', () => {
@@ -80,6 +82,9 @@ describe('ConversationToNoteService', () => {
   // Create service instance
   let service: ConversationToNoteService;
 
+  // Storage for isolated InMemoryStorage instance
+  let isolatedStorage: InMemoryStorage;
+
   // Sample conversation and turns for testing
   const sampleConversation: Conversation = {
     id: 'conv-123',
@@ -110,7 +115,7 @@ describe('ConversationToNoteService', () => {
     },
   ];
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clear tracking variables
     insertNoteCalls = [];
 
@@ -120,18 +125,40 @@ describe('ConversationToNoteService', () => {
       async () => ['ecosystem', 'architecture', 'example'],
     );
 
-    // Create service instance
+    // Create a fresh isolated memory storage instance for testing
+    const { storage } = await createIsolatedMemory();
+    isolatedStorage = storage as InMemoryStorage;
+
+    // We need to manually create a conversation with ID 'conv-123' in our test storage
+    // Since we can't mock UUID in InMemoryStorage easily, use direct object manipulation
+    // to insert the test conversation directly
+    const testConversation = {
+      id: 'conv-123',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
+      interfaceType: 'cli' as const,
+      roomId: undefined,
+    };
+    
+    // Add the conversation directly to the storage's conversations map
+    Object.defineProperty(isolatedStorage, 'conversations', {
+      value: new Map([['conv-123', testConversation]]),
+    });
+
+    // Create service instance with isolated storage
     service = new ConversationToNoteService(
       mockNoteRepository,
       mockEmbeddingService,
+      isolatedStorage,
     );
   });
 
   test('should create a note from conversation turns', async () => {
-    // Act
     await service.createNoteFromConversation(sampleConversation, sampleTurns);
 
-    // Assert
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
 
@@ -142,13 +169,11 @@ describe('ConversationToNoteService', () => {
   });
 
   test('should format conversation with attribution header', async () => {
-    // Act
     const result = await service.prepareNotePreview(
       sampleConversation,
       sampleTurns,
     );
 
-    // Assert
     expect(result.content).toContain('**Note**: This content was derived from a conversation');
     expect(result.content).toContain('**Source**: Conversation with AI assistant');
     expect(result.content).toContain('**Original Query**: "What is ecosystem architecture?"');
@@ -159,7 +184,6 @@ describe('ConversationToNoteService', () => {
   });
 
   test('should handle user-edited content', async () => {
-    // Arrange
     const userEdits = 'This is my custom edited content about ecosystem architecture.';
 
     // Act
@@ -180,10 +204,8 @@ describe('ConversationToNoteService', () => {
   });
 
   test('should generate tags from conversation content', async () => {
-    // Act
     await service.createNoteFromConversation(sampleConversation, sampleTurns);
 
-    // Assert
     expect(mockExtractTags).toHaveBeenCalledTimes(1);
 
     expect(insertNoteCalls.length).toBe(1);
@@ -192,15 +214,12 @@ describe('ConversationToNoteService', () => {
   });
 
   test('should use fallback tag extraction if AI generation fails', async () => {
-    // Arrange
     mockExtractTags.mockImplementation(
       async () => { throw new Error('Tag generation failed'); },
     );
 
-    // Act
     await service.createNoteFromConversation(sampleConversation, sampleTurns);
 
-    // Assert
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
     expect(insertCall.tags).toBeDefined();
@@ -208,7 +227,6 @@ describe('ConversationToNoteService', () => {
   });
 
   test('should extract main user name from conversation turns', async () => {
-    // Arrange
     const multipleTurns: ConversationTurn[] = [
       ...sampleTurns,
       {
@@ -229,17 +247,14 @@ describe('ConversationToNoteService', () => {
       },
     ];
 
-    // Act
     await service.createNoteFromConversation(sampleConversation, multipleTurns);
 
-    // Assert
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
     expect(insertCall.conversationMetadata?.userName).toBe('Alice');
   });
 
   test('should truncate long titles', async () => {
-    // Arrange
     const longQueryTurns: ConversationTurn[] = [
       {
         id: 'turn-1',
@@ -251,40 +266,52 @@ describe('ConversationToNoteService', () => {
       },
     ];
 
-    // Act
     const result = await service.prepareNotePreview(
       sampleConversation,
       longQueryTurns,
     );
 
-    // Assert
     expect(result.title.length).toBeLessThan(51);
     expect(result.title.endsWith('...')).toBe(true);
   });
 
   test('should prepare note preview', async () => {
-    // Act
     const preview = await service.prepareNotePreview(
       sampleConversation,
       sampleTurns,
       'Custom Preview Title',
     );
 
-    // Assert
     expect(preview.title).toBe('Custom Preview Title');
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to...');
   });
 
   test('should handle highlighting of conversation segments', async () => {
-    // Act
     const result = await service.highlightConversationSegment(
       'conv-123',
       'turn-1',
       'Ecosystem architecture refers to',
     );
 
-    // Assert
     expect(result).toBe(true);
+  });
+
+  test('should update conversation metadata when creating a note', async () => {
+    // We'll use the existing conv-123 from storage
+    const testConversation = await isolatedStorage.getConversation('conv-123');
+    
+    expect(testConversation).toBeDefined();
+    
+    await service.createNoteFromConversation(testConversation!, sampleTurns);
+    
+    const updatedConversation = await isolatedStorage.getConversation('conv-123');
+    
+    expect(updatedConversation).toBeDefined();
+    expect(updatedConversation?.metadata).toBeDefined();
+    
+    // Use bracket notation to access dynamic properties
+    expect(updatedConversation?.metadata?.['noteId']).toBeDefined();
+    expect(updatedConversation?.metadata?.['noteCreatedAt']).toBeDefined();
   });
 });

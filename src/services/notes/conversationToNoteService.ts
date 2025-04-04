@@ -1,8 +1,9 @@
 /**
  * Service for converting conversations to permanent notes
  */
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
+import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { NewNote, Note } from '@/models/note';
 import logger from '@/utils/logger';
@@ -14,10 +15,19 @@ import type { NoteRepository } from './noteRepository';
 export class ConversationToNoteService {
   private noteRepository: NoteRepository;
   private embeddingService: NoteEmbeddingService;
+  private memoryStorage: InMemoryStorage;
 
-  constructor(noteRepository: NoteRepository, embeddingService: NoteEmbeddingService) {
+  constructor(
+    noteRepository: NoteRepository, 
+    embeddingService: NoteEmbeddingService,
+    memoryStorage?: InMemoryStorage
+  ) {
     this.noteRepository = noteRepository;
     this.embeddingService = embeddingService;
+    
+    // Use provided storage or get singleton instance
+    // Note: In tests, always use createFresh() and pass it explicitly for proper isolation
+    this.memoryStorage = memoryStorage || InMemoryStorage.getInstance();
   }
 
   /**
@@ -40,7 +50,7 @@ export class ConversationToNoteService {
     
     // Create new note
     const newNote: NewNote = {
-      id: `note-${uuidv4().substring(0, 8)}`,
+      id: `note-${nanoid(8)}`,
       title: noteTitle,
       content,
       tags,
@@ -139,7 +149,8 @@ export class ConversationToNoteService {
     try {
       return await extractTags(content);
     } catch (error) {
-      logger.error('Error generating tags:', error);
+      // Log at debug level since we have a fallback mechanism
+      logger.debug('Tag extraction API failed, using fallback keyword extraction:', error);
       // Extract keywords as fallback
       return this.extractKeywords(content);
     }
@@ -196,9 +207,25 @@ export class ConversationToNoteService {
     _turns: ConversationTurn[],
     noteId: string,
   ): Promise<void> {
-    // This will be implemented when we have access to the conversation storage
-    // For now, just log the linkage
-    logger.debug(`Linking conversation ${conversationId} to note ${noteId}`);
+    try {
+      // Get the conversation from storage
+      const conversation = await this.memoryStorage.getConversation(conversationId);
+      
+      if (!conversation) {
+        logger.warn(`Cannot link note: Conversation ${conversationId} not found`);
+        return;
+      }
+      
+      // Update the conversation metadata to include the note ID
+      await this.memoryStorage.updateMetadata(conversationId, {
+        noteId,
+        noteCreatedAt: new Date(),
+      });
+      
+      logger.info(`Linked conversation ${conversationId} to note ${noteId}`);
+    } catch (error) {
+      logger.error(`Error linking conversation ${conversationId} to note ${noteId}:`, error);
+    }
   }
   
   /**
