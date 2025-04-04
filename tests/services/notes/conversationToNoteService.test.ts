@@ -3,14 +3,14 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-import { createIsolatedMemory } from '@test/utils/memoryUtils';
+import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { createTestNote } from '@test/utils/embeddingUtils';
+import { createIsolatedMemory } from '@test/utils/memoryUtils';
 
 // Mock the tagExtractor module
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));
@@ -130,7 +130,7 @@ describe('ConversationToNoteService', () => {
     isolatedStorage = storage as InMemoryStorage;
 
     // We need to manually create a conversation with ID 'conv-123' in our test storage
-    // Since we can't mock UUID in InMemoryStorage easily, use direct object manipulation
+    // Since we can't mock nanoid in InMemoryStorage easily, use direct object manipulation
     // to insert the test conversation directly
     const testConversation = {
       id: 'conv-123',

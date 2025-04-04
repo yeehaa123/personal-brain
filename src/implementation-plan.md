@@ -82,7 +82,7 @@ export const ConversationTurnSchema = z.object({
 ### Create ConversationToNoteService (`src/services/notes/conversationToNoteService.ts`)
 
 ```typescript
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note, NewNote } from '@/models/note';
 import { NoteRepository } from './noteRepository';
@@ -119,7 +119,7 @@ export class ConversationToNoteService {
     
     // Create new note
     const newNote: NewNote = {
-      id: `note-${uuidv4().substring(0, 8)}`,
+      id: `note-${nanoid(8)}`,
       title: noteTitle,
       content,
       tags,

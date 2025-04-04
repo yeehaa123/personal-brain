@@ -5,7 +5,7 @@ import { getEnv } from '@/utils/configUtils';
 import logger from '@utils/logger';
 
 
-// UUID is used by the InMemoryStorage implementation
+// nanoid is used for ID generation across the application
 import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 import { ConversationMemoryOptionsSchema } from '../schemas/conversationSchemas';
 import type {
