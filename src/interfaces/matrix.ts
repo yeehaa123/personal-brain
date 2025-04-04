@@ -33,6 +33,8 @@ export class MatrixBrainInterface {
   private renderer: MatrixRenderer;
   private isReady = false;
   private config: MatrixConfig;
+  // Matrix is a specific interface type for conversation memory
+  private interfaceType = 'matrix';
   
   // Store pending save note requests by roomId
   private pendingSaveNotes: Map<string, { conversationId: string, title: string }> = new Map();
@@ -226,6 +228,12 @@ export class MatrixBrainInterface {
       const commandText = text.substring(this.config.commandPrefix.length).trim();
       
       try {
+        // Make sure we're using the correct room ID for this message
+        // This is crucial for conversation memory to work properly
+        if (this.interfaceType === 'matrix') {
+          await this.brainProtocol.setCurrentRoom(room.roomId);
+        }
+        
         await this.processCommand(commandText, room.roomId, event);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
