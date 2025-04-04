@@ -5,8 +5,8 @@
 
 import type { Note } from '../models/note';
 import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
-import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
 import logger from '../utils/logger';
+import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
 
 import type { CommandHandler } from '.';
 import type { CommandInfo, CommandResult } from './index';
@@ -381,7 +381,8 @@ export class MatrixRenderer {
       `<p>• To cancel: <code>${this.commandPrefix} cancel</code></p>`,
       '</blockquote>',
       '',
-      `<p><!-- ${conversationMarker} --><em>ID: ${result.conversationId}</em></p>`,
+      // Include conversation ID in a visible format (the map approach means this is now just for display)
+      `<p><em>Note ID: ${result.conversationId}</em></p>`,
     ].join('\n');
     
     this.sendMessageFn(roomId, message);

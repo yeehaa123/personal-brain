@@ -291,6 +291,16 @@ export class MatrixBrainInterface {
 
       const result = await this.commandHandler.processCommand(command, args);
 
+      // Special handling for save-note preview - store conversation ID for later confirmation
+      if (result.type === 'save-note-preview') {
+        // Store the conversation ID and title for later retrieval
+        this.pendingSaveNotes.set(roomId, {
+          conversationId: result.conversationId,
+          title: result.title,
+        });
+        logger.debug(`Stored pending note for room ${roomId} with conversation ID ${result.conversationId}`);
+      }
+
       // Render the result using our Matrix renderer
       await this.renderer.render(roomId, result);
     } catch (error) {
@@ -322,74 +332,20 @@ export class MatrixBrainInterface {
         await this.brainProtocol.setCurrentRoom(roomId);
       }
       
-      // Find the most recent save-note-preview message to extract the conversation ID
-      const room = this.client.getRoom(roomId);
-      if (!room) {
-        await this.sendMessage(roomId, '❌ Error: Room not found.');
-        return;
-      }
+      // Get the pending save note from our map (stored during save-note command)
+      const pendingSaveNote = this.pendingSaveNotes.get(roomId);
       
-      // Get recent timeline events
-      const timeline = room.timeline;
-      if (!timeline || timeline.length === 0) {
-        await this.sendMessage(roomId, '❌ Error: No conversation history found.');
-        return;
-      }
-      
-      // Find the most recent message with a conversation ID
-      let conversationId: string | null = null;
-      let title: string | null = null;
-      
-      // Look for a message containing the conversation ID marker
-      for (let i = timeline.length - 1; i >= 0; i--) {
-        const event = timeline[i];
-        if (event.getType() === 'm.room.message') {
-          const content = event.getContent();
-          if (content.msgtype === MsgType.Text) {
-            const body = content['body'] as string;
-            
-            // Look for the conversation ID marker in any of these formats:
-            // 1. New format (most reliable): CONVERSATION_ID=abc123
-            // 2. Old format: _Conversation ID: abc123_
-            // 3. HTML format: Conversation ID: abc123
-            const matchNew = body.match(/CONVERSATION_ID=([a-zA-Z0-9-_]+)/);
-            const matchOld = body.match(/(?:_Conversation ID: ([a-zA-Z0-9-_]+)_)|(?:Conversation ID: ([a-zA-Z0-9-_]+))/);
-            
-            if (matchNew) {
-              // New format (preferred)
-              conversationId = matchNew[1];
-              logger.debug(`Found new format conversation ID: ${conversationId}`);
-              
-              // Title is in the same message with new format
-              const titleMatch = body.match(/Title: (.+?)(?:\n|$)/);
-              if (titleMatch) {
-                title = titleMatch[1];
-                logger.debug(`Found title from new format: ${title}`);
-              }
-            } else if (matchOld) {
-              // Old format (for backward compatibility)
-              conversationId = matchOld[1] || matchOld[2];
-              logger.debug(`Found old format conversation ID: ${conversationId}`);
-              
-              // Try old title formats
-              const titleMatch = body.match(/(?:\*\*Title\*\*: (.+)$)|(?:Title: (.+)$)/m);
-              if (titleMatch) {
-                title = titleMatch[1] || titleMatch[2];
-                logger.debug(`Found title from old format: ${title}`);
-              }
-            }
-              
-            if (matchNew || matchOld) {
-              break;
-            }
-          }
-        }
-      }
-      
-      if (!conversationId) {
+      if (!pendingSaveNote) {
+        logger.debug(`No pending note found for room ${roomId}`);
         await this.sendMessage(roomId, '❌ Error: No pending note to save. Please create a note first using the save-note command.');
         return;
       }
+      
+      // Extract conversation ID and title from the stored data
+      const conversationId = pendingSaveNote.conversationId;
+      let title = pendingSaveNote.title;
+      
+      logger.debug(`Found pending note with conversation ID: ${conversationId} and title: ${title}`);
       
       // Use the new title if provided
       if (newTitle && newTitle.trim()) {
@@ -405,6 +361,9 @@ export class MatrixBrainInterface {
       
       // Render the result
       await this.renderer.render(roomId, result);
+      
+      // Clear the pending note after successful save
+      this.pendingSaveNotes.delete(roomId);
       
       logger.debug('Save note confirmation successful');
     } catch (error) {

@@ -107,8 +107,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(message).toContain('This is a sample note content');
     expect(message).toContain('!brain confirm');
     expect(message).toContain('!brain cancel');
-    expect(message).toContain('CONVERSATION_ID=conv123');
-    expect(message).toContain('<em>ID: conv123</em>');
+    expect(message).toContain('<em>Note ID: conv123</em>');
   });
 
   test('should render save-note-confirm correctly', () => {
@@ -163,34 +162,10 @@ describe('MatrixRenderer Conversation Notes', () => {
   });
 });
 
-// ====== Mock Matrix client and room for testing command handling ======
+// ====== Matrix Conversation Note Testing ======
 
-// Mock Matrix Event for testing message parsing
-class MockMatrixEvent {
-  private type: string;
-  private content: Record<string, unknown>;
-
-  constructor(type: string, content: Record<string, unknown>) {
-    this.type = type;
-    this.content = content;
-  }
-
-  getType(): string {
-    return this.type;
-  }
-
-  getContent(): Record<string, unknown> {
-    return this.content;
-  }
-}
-
-// Mock room timeline for testing conversation ID extraction
-const createMockTimeline = (messages: Array<{ body: string, type: string, msgtype: string }>) => {
-  return messages.map(msg => new MockMatrixEvent(msg.type, {
-    'msgtype': msg.msgtype,
-    'body': msg.body,
-  }));
-};
+// We no longer need the MockMatrixEvent and timeline mock since we're storing 
+// conversation ID in a map instead of parsing it from messages
 
 // Tests specifically for Matrix message processing - would normally be in the main matrix.test.ts
 // but creating separately to focus on conversation-note functionality
@@ -198,54 +173,27 @@ describe('Matrix Interface Conversation Note Functionality', () => {
   // We'll use the MockMatrixEvent and MockMatrixClient to test the command handling
   // rather than trying to test through the full MatrixBrainInterface class
 
-  test('can extract conversation ID from message', () => {
-    // This is testing the functionality of extracting the conversation ID
-    // from a save-note-preview message when confirming
+  test('should store conversation ID and title in pendingSaveNotes map', () => {
+    // This is testing the updated functionality of storing conversation info in a map
+    // rather than extracting it from messages
     
-    const timeline = createMockTimeline([
-      {
-        type: 'm.room.message',
-        msgtype: 'm.text',
-        body: 'Some other message',
-      },
-      {
-        type: 'm.room.message',
-        msgtype: 'm.text',
-        body: '📝 Note Preview\n\nTitle: Test Title\n\nContent Preview:\nSome content\n\n<!-- CONVERSATION_ID=conv123 -->ID: conv123',
-      },
-    ]);
+    // In our updated approach, we now store the conversation ID and title in a map
+    // instead of trying to extract it from messages
+    const pendingSaveNotes = new Map<string, { conversationId: string, title: string }>();
+    const roomId = 'test-room';
+    const conversationId = 'conv123';
+    const title = 'Test Title';
     
-    // Check if the message extraction works by manually implementing the logic
-    // from handleConfirmSaveNote
-    let conversationId: string | null = null;
-    let title: string | null = null;
+    // Store conversation data in the map (simulating what happens in processCommand)
+    pendingSaveNotes.set(roomId, {
+      conversationId,
+      title,
+    });
     
-    // Look for a message containing the conversation ID marker
-    for (let i = timeline.length - 1; i >= 0; i--) {
-      const event = timeline[i];
-      if (event.getType() === 'm.room.message') {
-        const content = event.getContent();
-        if (content['msgtype'] === 'm.text') {
-          const body = content['body'] as string;
-          
-          // Look for the new conversation ID marker
-          const match = body.match(/CONVERSATION_ID=([a-zA-Z0-9-_]+)/);
-          if (match && match[1]) {
-            conversationId = match[1];
-            
-            // Extract the title from the same message
-            const titleMatch = body.match(/Title: (.+?)(?:\n|$)/);
-            if (titleMatch && titleMatch[1]) {
-              title = titleMatch[1];
-            }
-            
-            break;
-          }
-        }
-      }
-    }
-    
-    expect(conversationId).toBe('conv123');
-    expect(title).toBe('Test Title');
+    // Verify the data was stored correctly
+    const savedNote = pendingSaveNotes.get(roomId);
+    expect(savedNote).toBeDefined();
+    expect(savedNote?.conversationId).toBe(conversationId);
+    expect(savedNote?.title).toBe(title);
   });
 });
