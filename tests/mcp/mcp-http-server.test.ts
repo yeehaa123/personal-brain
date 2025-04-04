@@ -8,7 +8,7 @@
 
 /* global TextDecoder */
 
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
 // Use a different port for tests to avoid conflicts
 const TEST_PORT = 8001;

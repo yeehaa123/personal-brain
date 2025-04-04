@@ -1,7 +1,7 @@
 /**
  * Tests for the MCP Stdio Server implementation
  */
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 
 /**
  * Test for basic JSON serialization in the MCP server

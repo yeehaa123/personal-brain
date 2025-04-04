@@ -1,8 +1,8 @@
 /**
  * Configuration interfaces for ConversationMemory
  */
-import type { ConversationMemoryOptions } from './conversationSchemas';
 import type { ConversationMemoryStorage } from './conversationMemoryStorage';
+import type { ConversationMemoryOptions } from './conversationSchemas';
 
 /**
  * Configuration options for ConversationMemory constructor

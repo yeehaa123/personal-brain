@@ -2,15 +2,17 @@
  * Repository for managing Note storage and retrieval
  * Centralizes database access for notes
  */
-import { db } from '@/db';
-import { notes, noteChunks } from '@/db/schema';
-import { eq, like, and, or, desc, isNull, not } from 'drizzle-orm';
-import type { Note } from '@/models/note';
+import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+
+import { db } from '@/db';
+import { noteChunks, notes } from '@/db/schema';
+import type { Note } from '@/models/note';
+import { BaseRepository } from '@/services/BaseRepository';
+import { DatabaseError, tryExec, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import { DatabaseError, ValidationError, tryExec } from '@/utils/errorUtils';
-import { BaseRepository } from '@/services/BaseRepository';
+
 
 /**
  * Repository for accessing and managing notes in the database

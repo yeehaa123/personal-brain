@@ -1,7 +1,13 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { createMockEmbedding, mockEnv, resetMocks, createMockNote, createMockProfile } from '@test/mocks';
-import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import type { CommandInfo, CommandResult } from '@commands/index';
+import { MatrixBrainInterface } from '@interfaces/matrix';
+import { createMockEmbedding, createMockNote, createMockProfile, mockEnv, resetMocks } from '@test/mocks';
+import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+
+
+
+// Import after mocking
 
 // Define the interfaces for our mocks
 interface TestRenderer {
@@ -69,9 +75,6 @@ mock.module('@interfaces/matrix', () => {
     },
   };
 });
-
-// Import after mocking
-import { MatrixBrainInterface } from '@interfaces/matrix';
 
 // Mock matrix-js-sdk
 mock.module('matrix-js-sdk', () => {

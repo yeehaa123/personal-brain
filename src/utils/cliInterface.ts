@@ -1,10 +1,13 @@
 /**
  * CLI Interface utility using Inquirer for prompts and Chalk for styling
  */
-import inquirer from 'inquirer';
+import { clearInterval, setInterval } from 'timers';
+
 import chalk from 'chalk';
+import inquirer from 'inquirer';
+
 import logger from './logger';
-import { setInterval, clearInterval } from 'timers';
+
 
 export class CLIInterface {
   // Color styles

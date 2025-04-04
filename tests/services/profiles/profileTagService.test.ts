@@ -1,7 +1,9 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
-import { ProfileTagService } from '@/services/profiles/profileTagService';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import type { Profile } from '@/models/profile';
+import { ProfileTagService } from '@/services/profiles/profileTagService';
 import { MockProfileRepository } from '@test';
+
 
 // Mock the tag extractor module
 mock.module('@/utils/tagExtractor', () => {

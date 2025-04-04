@@ -1,7 +1,8 @@
 /**
  * Tests for the tiered memory system
  */
-import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 

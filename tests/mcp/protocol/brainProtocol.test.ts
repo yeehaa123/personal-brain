@@ -1,5 +1,5 @@
 // Use a separate test file to avoid conflicts with other tests
-import { describe, test, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 // Create a custom mock for BrainProtocol directly in this test file
 class MockBrainProtocol {

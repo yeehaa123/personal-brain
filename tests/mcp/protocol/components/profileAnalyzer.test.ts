@@ -1,6 +1,7 @@
-import { describe, test, expect, mock } from 'bun:test';
-import { ProfileAnalyzer } from '@/mcp/protocol/components';
+import { describe, expect, mock, test } from 'bun:test';
+
 import { EmbeddingService } from '@/mcp/model';
+import { ProfileAnalyzer } from '@/mcp/protocol/components';
 import { createMockProfile } from '@test/mocks';
 
 describe('ProfileAnalyzer', () => {

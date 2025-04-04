@@ -1,11 +1,14 @@
-import { describe, test, expect, mock } from 'bun:test';
-import { ExternalSourceService } from '@/mcp/protocol/components';
+import { describe, expect, mock, test } from 'bun:test';
+
 import { ExternalSourceContext } from '@/mcp';
-import { ProfileAnalyzer } from '@/mcp/protocol/components';
-import { PromptFormatter } from '@/mcp/protocol/components';
-import type { Note } from '@models/note';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
+import { ExternalSourceService , ProfileAnalyzer , PromptFormatter } from '@/mcp/protocol/components';
+import type { Note } from '@models/note';
 import { createMockEmbedding } from '@test/mocks';
+
+
+
+
 
 describe('ExternalSourceService', () => {
   // Use a constant threshold for tests to make them more predictable

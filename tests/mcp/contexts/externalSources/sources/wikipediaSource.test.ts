@@ -1,4 +1,5 @@
-import { describe, test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { WikipediaSource } from '@/mcp/contexts/externalSources/sources/wikipediaSource';
 import { setupEmbeddingMocks, setupMockFetch } from '@test';
 

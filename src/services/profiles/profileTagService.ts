@@ -1,16 +1,17 @@
 /**
  * Service for profile tag generation and management
  */
-import { ProfileRepository } from './profileRepository';
-import type { Profile } from '@/models/profile';
-import { extractTags } from '@/utils/tagExtractor';
-import { isDefined } from '@/utils/safeAccessUtils';
-import logger from '@/utils/logger';
-
 import type {
   ProfileEducation,
   ProfileExperience,
 } from '@/models/profile';
+import type { Profile } from '@/models/profile';
+import logger from '@/utils/logger';
+import { isDefined } from '@/utils/safeAccessUtils';
+import { extractTags } from '@/utils/tagExtractor';
+
+import { ProfileRepository } from './profileRepository';
+
 
 /**
  * Service for generating and managing profile tags

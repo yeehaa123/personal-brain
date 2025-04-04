@@ -1,8 +1,9 @@
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { NoteContext } from '@mcp/contexts/notes/noteContext';
-import { displayNotes } from './utils/noteUtils';
-import logger from './utils/logger';
+import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+
 import { getEnv } from './utils/configUtils';
+import logger from './utils/logger';
+import { displayNotes } from './utils/noteUtils';
 
 async function main() {
   try {
@@ -19,7 +20,8 @@ async function main() {
 
     if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
-      const protocol = new BrainProtocol();
+      // Use the singleton pattern for BrainProtocol
+      const protocol = BrainProtocol.getInstance();
       
       // Check that MCP is available
       protocol.getMcpServer(); // This confirms the MCP server can be accessed

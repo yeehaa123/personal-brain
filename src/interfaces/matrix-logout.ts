@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
-import logger from '../utils/logger';
+
 import { getEnv } from '../utils/configUtils';
+import logger from '../utils/logger';
 
 async function logoutMatrixClient() {
   // Get values from environment variables

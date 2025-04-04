@@ -1,8 +1,11 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-// Import only the type for type checking
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote, createMockProfile, mockEnv, resetMocks } from '@test/mocks';
 import { setTestEnv } from '@test/utils/envUtils';
+
+
+// Import only the type for type checking
 
 // Define the mock notes outside to reduce duplication
 const mockEcosystemNote = createMockNote('note-1', 'Ecosystem Architecture Principles', ['ecosystem-architecture', 'innovation']);

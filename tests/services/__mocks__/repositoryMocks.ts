@@ -1,6 +1,8 @@
 /**
  * Mocks for repository tests
  */
+
+
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 import { createMockEmbedding } from '@test/utils/embeddingUtils';

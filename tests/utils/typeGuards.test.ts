@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
+
 import {
-  isNote,
-  isNoteArray,
   hasProperty,
   hasStringProperty,
-  isNonEmptyString,
   isISODateString,
+  isNonEmptyString,
+  isNote,
+  isNoteArray,
 } from '@/utils/typeGuards';
 
 describe('typeGuards', () => {

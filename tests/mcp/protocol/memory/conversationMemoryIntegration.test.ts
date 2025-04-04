@@ -1,7 +1,8 @@
 /**
  * Test file for validating ConversationMemory integration with BrainProtocol
  */
-import { describe, test, expect, mock } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
+
 import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
 
 // Create a partial mock of BrainProtocol for testing

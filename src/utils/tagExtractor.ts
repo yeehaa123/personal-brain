@@ -1,12 +1,14 @@
-import { extractKeywords } from './textUtils';
 import { anthropic } from '@ai-sdk/anthropic';
 import { generateObject } from 'ai';
+import { sql } from 'drizzle-orm';
 import { z } from 'zod';
+
 import { aiConfig, textConfig } from '@/config';
-import logger from '@/utils/logger';
 import { db } from '@/db'; 
 import { notes } from '@/db/schema';
-import { sql } from 'drizzle-orm';
+import logger from '@/utils/logger';
+
+import { extractKeywords } from './textUtils';
 
 
 /**

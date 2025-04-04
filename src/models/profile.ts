@@ -1,5 +1,6 @@
+import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
 import { z } from 'zod';
-import { createInsertSchema, createUpdateSchema, createSelectSchema } from 'drizzle-zod';
+
 import { profiles } from '../db/schema';
 
 // Create base Zod schemas from Drizzle schema

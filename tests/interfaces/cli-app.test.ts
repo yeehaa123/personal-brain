@@ -1,4 +1,10 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
+// Now import the modules
+
+import type { CommandHandler } from '@/commands';
+import type { CLIRenderer } from '@/commands/cli-renderer';
+import { CLIApp } from '@/interfaces/cli-app';
 
 // Mock the logger module
 mock.module('@/utils/logger', () => ({
@@ -40,11 +46,6 @@ mock.module('@/utils/cliInterface', () => ({
 mock.module('inquirer', () => ({
   prompt: mock(() => Promise.resolve({ action: 'test command' })),
 }));
-
-// Now import the modules
-import { CLIApp } from '@/interfaces/cli-app';
-import type { CommandHandler } from '@/commands';
-import type { CLIRenderer } from '@/commands/cli-renderer';
 
 // Save original process properties
 const originalArgv = process.argv;

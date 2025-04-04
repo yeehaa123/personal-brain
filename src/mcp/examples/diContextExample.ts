@@ -3,22 +3,20 @@
  * This shows how to migrate from direct instantiation to DI
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import type { Note } from '@/models/note';
-import { isNonEmptyString } from '@/utils/safeAccessUtils';
-import logger from '@/utils/logger';
-import { textConfig } from '@/config';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
-// Import the DI container and service registry
-import { getContainer, getService } from '@/utils/dependencyContainer';
-import { ServiceIdentifiers, registerServices } from '@/services/serviceRegistry';
-
-// Import implementation types
-import { NoteRepository } from '@/services/notes/noteRepository';
+import { textConfig } from '@/config';
+import type { Note } from '@/models/note';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
+import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { getContainer, getService } from '@/utils/dependencyContainer';
+import logger from '@/utils/logger';
+import { isNonEmptyString } from '@/utils/safeAccessUtils';
+
 
 /**
  * Context for working with notes using MCP SDK and DI
@@ -41,20 +39,20 @@ export class NoteContextWithDI {
     this.repository = repository;
     this.embeddingService = embeddingService;
     this.searchService = searchService;
-    
+
     // Initialize MCP server
     this.mcpServer = new McpServer({
       name: 'PersonalBrain',
       version: '1.0.0',
     });
-    
+
     // Register the MCP resources and tools
     this.registerMcpResources();
     this.registerMcpTools();
-    
+
     logger.debug('MCP-based NoteContextWithDI initialized with resources and tools');
   }
-  
+
   /**
    * Factory method to create a new context with dependencies resolved from container
    * @param apiKey Optional API key for embedding service
@@ -63,12 +61,12 @@ export class NoteContextWithDI {
   static create(apiKey?: string): NoteContextWithDI {
     // Ensure services are registered
     registerServices(getContainer(), { apiKey });
-    
+
     // Get services from container
     const repository = getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
     const embeddingService = getService<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
     const searchService = getService<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
-    
+
     // Create and return the context with resolved dependencies
     return new NoteContextWithDI(repository, embeddingService, searchService);
   }
@@ -82,12 +80,12 @@ export class NoteContextWithDI {
     const targetServer = server || this.mcpServer;
     // Resource to get a note by ID
     targetServer.resource(
-      'note', 
+      'note',
       'note://:id',
       async (uri) => {
         try {
           const id = uri.pathname.substring(1); // Remove leading slash
-          
+
           if (!id) {
             return {
               contents: [{
@@ -96,9 +94,9 @@ export class NoteContextWithDI {
               }],
             };
           }
-          
+
           const note = await this.getNoteById(id);
-          
+
           if (!note) {
             return {
               contents: [{
@@ -107,7 +105,7 @@ export class NoteContextWithDI {
               }],
             };
           }
-          
+
           return {
             contents: [{
               uri: uri.toString(),
@@ -132,7 +130,7 @@ export class NoteContextWithDI {
         }
       },
     );
-    
+
     // Resource to search notes
     targetServer.resource(
       'notes',
@@ -140,7 +138,7 @@ export class NoteContextWithDI {
       async (uri) => {
         try {
           const params = new URLSearchParams(uri.search);
-          
+
           const options: NoteSearchOptions = {
             query: params.get('query') || undefined,
             tags: params.has('tags') ? params.get('tags')?.split(',') : undefined,
@@ -148,14 +146,13 @@ export class NoteContextWithDI {
             offset: params.has('offset') ? parseInt(params.get('offset') || '0', 10) : 0,
             semanticSearch: params.has('semantic') ? params.get('semantic') === 'true' : true,
           };
-          
+
           const notes = await this.searchNotes(options);
-          
+
           return {
             contents: notes.map(note => ({
               uri: `note://${note.id}`,
-              text: `# ${note.title || 'Untitled Note'}\n\n${
-                note.content?.substring(0, 150) || ''
+              text: `# ${note.title || 'Untitled Note'}\n\n${note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
               metadata: {
                 id: note.id,
@@ -178,7 +175,7 @@ export class NoteContextWithDI {
       },
     );
   }
-  
+
   /**
    * Register MCP tools for note operations
    * @param server Optional external MCP server to register tools on
@@ -206,7 +203,7 @@ export class NoteContextWithDI {
             createdAt: now,
             updatedAt: now,
           });
-          
+
           // Return in the format expected by MCP
           return {
             content: [{
@@ -234,7 +231,7 @@ export class NoteContextWithDI {
   getMcpServer(): McpServer {
     return this.mcpServer;
   }
-  
+
   /**
    * Register all MCP resources and tools on an external server
    * @param server The MCP server to register on
@@ -244,11 +241,11 @@ export class NoteContextWithDI {
       logger.warn('Cannot register NoteContext on undefined server');
       return;
     }
-    
+
     // Register resources and tools on the external server
     this.registerMcpResources(server);
     this.registerMcpTools(server);
-    
+
     logger.debug('NoteContext registered on external MCP server');
   }
 
@@ -269,12 +266,12 @@ export class NoteContextWithDI {
   async createNote(note: Omit<Note, 'embedding'> & { embedding?: number[] }): Promise<string> {
     // Generate embedding if not provided
     let embedding = note.embedding;
-    
+
     if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
       try {
         const title = isNonEmptyString(note.title) ? note.title : '';
         const content = isNonEmptyString(note.content) ? note.content : '';
-        
+
         if (title.length > 0 || content.length > 0) {
           // Combine title and content for embedding
           const combinedText = `${title} ${content}`.trim();
@@ -284,7 +281,7 @@ export class NoteContextWithDI {
         logger.error(`Error generating embedding for new note: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    
+
     // Insert the note
     const noteId = await this.repository.insertNote({
       id: note.id,
@@ -295,7 +292,7 @@ export class NoteContextWithDI {
       updatedAt: note.updatedAt,
       tags: note.tags || undefined,
     });
-    
+
     // If the note is long, also create chunks
     const content = isNonEmptyString(note.content) ? note.content : '';
     if (content.length > (textConfig.defaultChunkThreshold || 1000)) {
@@ -305,7 +302,7 @@ export class NoteContextWithDI {
         logger.error(`Failed to create chunks for note ${noteId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    
+
     return noteId;
   }
 

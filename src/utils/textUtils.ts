@@ -2,6 +2,7 @@
  * Text processing utilities
  */
 import sanitizeHtmlLib from 'sanitize-html';
+
 import { textConfig } from '@/config';
 
 /**

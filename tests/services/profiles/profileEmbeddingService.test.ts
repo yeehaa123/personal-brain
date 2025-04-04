@@ -1,11 +1,13 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+
+import type { Profile } from '@/models/profile';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import { 
-  setupEmbeddingMocks, 
+  createMockProfile, 
   MockProfileRepository,
-  createMockProfile,
+  setupEmbeddingMocks,
 } from '@test';
-import type { Profile } from '@/models/profile';
+
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);

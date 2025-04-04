@@ -1,11 +1,12 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+
 import type {
-  ProfileExperience,
-  ProfileEducation,
-  ProfileLanguageProficiency,
-  ProfilePublication,
-  ProfileProject,
   ProfileAward,
+  ProfileEducation,
+  ProfileExperience,
+  ProfileLanguageProficiency,
+  ProfileProject,
+  ProfilePublication,
   ProfileVolunteerWork,
 
 } from '../models/profile';

@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import * as sdk from 'matrix-js-sdk';
+
 import logger from '../utils/logger';
 
 async function setupMatrixClient() {

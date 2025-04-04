@@ -2,13 +2,18 @@
  * Base search service for common search functionality
  * Provides shared search patterns for different entity types
  */
-import logger from '@/utils/logger';
-import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import { ValidationError, safeExec } from '@/utils/errorUtils';
+
+import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
+
 import { BaseRepository } from '@/services/BaseRepository';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
-import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 import type { ISearchService, SearchOptions } from '@/services/interfaces/ISearchService';
+import { safeExec, ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
+
+
+
 
 /**
  * Re-export SearchOptions type from interface

@@ -1,13 +1,17 @@
 /**
  * Service for handling external source interactions
  */
+
+import { relevanceConfig } from '@/config';
 import { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import logger from '@utils/logger';
-import { relevanceConfig } from '@/config';
+
 import { ProfileAnalyzer } from './profileAnalyzer';
 import { PromptFormatter } from './promptFormatter';
+
+
 
 /**
  * Handles fetching and processing of external information

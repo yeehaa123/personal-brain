@@ -3,9 +3,10 @@
  * Main entry point for the MCP integration
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+import { ExternalSourceContext } from './contexts/externalSources';
 import { NoteContext } from './contexts/notes';
 import { ProfileContext } from './contexts/profiles';
-import { ExternalSourceContext } from './contexts/externalSources';
 
 // Export all the context implementations from their respective directories
 export { NoteContext } from './contexts/notes';
@@ -50,10 +51,10 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
     version: config.version || '1.0.0',
   });
   
-  // Create instances of all contexts
-  const noteContext = new NoteContext(config.apiKey);
-  const profileContext = new ProfileContext(config.apiKey);
-  const externalSourceContext = new ExternalSourceContext(
+  // Use singleton instances of all contexts
+  const noteContext = NoteContext.getInstance(config.apiKey);
+  const profileContext = ProfileContext.getInstance(config.apiKey);
+  const externalSourceContext = ExternalSourceContext.getInstance(
     config.apiKey, 
     config.newsApiKey,
     { 

@@ -1,8 +1,14 @@
 /**
  * Common test mocks for the personal-brain project
  */
+
+
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
+
+import { clearTestEnv, setTestEnv } from './utils/envUtils';
+
+
 
 // Mock deterministic embeddings for tests
 export function createMockEmbedding(input: string, dimensions: number = 1536): number[] {
@@ -171,8 +177,6 @@ export function restoreLogger(logger: Logger, original: Record<string, unknown>)
   logger.warn = original['warn'] as typeof logger.warn;
   logger.error = original['error'] as typeof logger.error;
 }
-
-import { setTestEnv, clearTestEnv } from './utils/envUtils';
 
 // Mock environment setup
 export function mockEnv() {

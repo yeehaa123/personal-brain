@@ -5,8 +5,9 @@
  * allowing it to work with the MCP Inspector tool.
  */
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createUnifiedMcpServer } from './mcp';
+
 import { aiConfig, apiConfig } from './config';
+import { createUnifiedMcpServer } from './mcp';
 import logger from './utils/logger';
 
 /**

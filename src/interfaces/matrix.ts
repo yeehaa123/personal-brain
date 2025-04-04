@@ -1,17 +1,21 @@
 #!/usr/bin/env bun
+import { marked } from 'marked';
 import * as sdk from 'matrix-js-sdk';
-import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
 import { ClientEvent } from 'matrix-js-sdk';
+import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
+import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
-import { MsgType } from 'matrix-js-sdk/lib/@types/event';
+
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+
 import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
-import logger from '../utils/logger';
-import { marked } from 'marked';
-import { sanitizeHtml } from '../utils/textUtils';
 import { getEnv } from '../utils/configUtils';
+import logger from '../utils/logger';
+import { sanitizeHtml } from '../utils/textUtils';
+
+
 
 // Configuration constants - load from environment
 interface MatrixConfig {
@@ -41,8 +45,8 @@ export class MatrixBrainInterface {
       userId: this.config.userId,
     });
 
-    // Initialize brain protocol and command handler
-    this.brainProtocol = new BrainProtocol();
+    // Initialize brain protocol and command handler using singleton pattern
+    this.brainProtocol = BrainProtocol.getInstance({ interfaceType: 'matrix', roomId: this.config.roomIds[0] });
     this.commandHandler = new CommandHandler(this.brainProtocol);
 
     // Initialize renderer with message sending function

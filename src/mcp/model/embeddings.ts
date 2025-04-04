@@ -2,13 +2,18 @@
  * Embedding service for generating vector representations of text
  * Provides both OpenAI API-based embeddings and fallback local embeddings
  */
-import { cosineSimilarity, normalizeVector } from '@/utils/vectorUtils';
-import { prepareText, chunkText } from '@/utils/textUtils';
-import logger from '@/utils/logger';
-import { aiConfig, textConfig } from '@/config';
+
 import type { OpenAI } from 'openai';
-import { isDefined, safeArrayAccess } from '@/utils/safeAccessUtils';
+
+import { aiConfig, textConfig } from '@/config';
 import { ApiError, ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { isDefined, safeArrayAccess } from '@/utils/safeAccessUtils';
+import { chunkText, prepareText } from '@/utils/textUtils';
+import { cosineSimilarity, normalizeVector } from '@/utils/vectorUtils';
+
+
+
 
 // Type definitions for OpenAI API responses with safer runtime validation
 interface OpenAIEmbeddingData {

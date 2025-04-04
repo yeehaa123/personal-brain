@@ -1,8 +1,9 @@
 /**
  * Tests for the dependency injection container
  */
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { DependencyContainer, createContainer } from '@/utils/dependencyContainer';
+import { beforeEach, describe, expect, test } from 'bun:test';
+
+import { createContainer, DependencyContainer } from '@/utils/dependencyContainer';
 
 // Test sample services
 interface Service1 {

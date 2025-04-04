@@ -4,19 +4,19 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
-import logger from '@/utils/logger';
-import { EmbeddingService } from '@/mcp/model';
-import { 
-  WikipediaSource,
-  NewsApiSource,
-  type ExternalSourceInterface, 
-  type ExternalSourceResult, 
-  type ExternalSearchOptions, 
-} from './sources';
-import { getEnv } from '@/utils/configUtils';
 
-// Import DI container and service registry
-import { getContainer, DependencyContainer } from '@/utils/dependencyContainer';
+import { EmbeddingService } from '@/mcp/model';
+import { getEnv } from '@/utils/configUtils';
+import { DependencyContainer, getContainer } from '@/utils/dependencyContainer';
+import logger from '@/utils/logger';
+
+import { 
+  type ExternalSearchOptions,
+  type ExternalSourceInterface,
+  type ExternalSourceResult, 
+  NewsApiSource, 
+  WikipediaSource, 
+} from './sources';
 
 export interface ExternalContextOptions {
   enabledSources?: string[];
@@ -39,6 +39,36 @@ export class ExternalSourceContext {
   private options: ExternalContextOptions;
   private mcpServer: McpServer;
   private diContainer: DependencyContainer;
+  
+  // Singleton instance
+  private static instance: ExternalSourceContext | null = null;
+  
+  /**
+   * Get singleton instance of ExternalSourceContext
+   * @param apiKey Optional API key for embedding service
+   * @param newsApiKey Optional NewsAPI key
+   * @param options Optional configuration options 
+   * @param forceNew Create a new instance (for testing)
+   * @returns The ExternalSourceContext instance
+   */
+  public static getInstance(
+    apiKey?: string, 
+    newsApiKey?: string, 
+    options: ExternalContextOptions = {},
+    forceNew = false,
+  ): ExternalSourceContext {
+    if (!ExternalSourceContext.instance || forceNew) {
+      ExternalSourceContext.instance = new ExternalSourceContext(apiKey, newsApiKey, options);
+    }
+    return ExternalSourceContext.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (for testing)
+   */
+  public static resetInstance(): void {
+    ExternalSourceContext.instance = null;
+  }
   
   constructor(apiKey?: string, newsApiKey?: string, options: ExternalContextOptions = {}) {
     // Initialize with default options

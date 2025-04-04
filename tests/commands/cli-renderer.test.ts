@@ -1,11 +1,14 @@
-import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandResult } from '@commands/index';
 import type { Note } from '@models/note';
-import logger from '@utils/logger';
 import { createMockNotes, createTrackers, mockLogger, restoreLogger } from '@test/mocks';
-import { mockCLIInterface, restoreCLIInterface, mockDisplayNotes } from '@test/test-utils';
+import { mockCLIInterface, mockDisplayNotes, restoreCLIInterface } from '@test/test-utils';
+import logger from '@utils/logger';
 import { displayNotes } from '@utils/noteUtils';
+
+
 
 describe('CLIRenderer', () => {
   let renderer: CLIRenderer;

@@ -1,10 +1,11 @@
-import { describe, test, expect } from 'bun:test';
-import {
-  ConversationTurnSchema,
-  ConversationSchema,
-  ConversationMemoryOptionsSchema,
-} from '@/mcp/protocol/schemas/conversationSchemas';
+import { describe, expect, test } from 'bun:test';
 import { z } from 'zod';
+
+import {
+  ConversationMemoryOptionsSchema,
+  ConversationSchema,
+  ConversationTurnSchema,
+} from '@/mcp/protocol/schemas/conversationSchemas';
 
 describe('Conversation Schema Validation', () => {
   test('should validate a valid conversation turn', () => {

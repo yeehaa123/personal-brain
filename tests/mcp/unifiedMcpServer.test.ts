@@ -1,8 +1,10 @@
-import { test, expect, describe, mock, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+
 import { createUnifiedMcpServer } from '@/mcp';
 import type { UnifiedMcpServerConfig } from '@/mcp';
-import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
 import { createMockEmbedding } from '@test/mocks';
+import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+
 
 // Mock the Anthropic client
 mock.module('@anthropic-ai/sdk', () => {

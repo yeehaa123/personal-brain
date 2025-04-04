@@ -1,8 +1,10 @@
 #!/usr/bin/env bun
+import { join } from 'path';
+
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
-import { join } from 'path';
+
 import { NoteContext } from '../mcp';
 import logger from '../utils/logger';
 

@@ -1,8 +1,9 @@
-import { test, expect, describe, beforeEach, afterEach, beforeAll, afterAll } from 'bun:test';
-import { CLIInterface } from '@utils/cliInterface';
-import logger from '@utils/logger';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+
 import { createTrackers, mockLogger, restoreLogger } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
+import { CLIInterface } from '@utils/cliInterface';
+import logger from '@utils/logger';
 
 describe('Tag Formatting', () => {
   let trackers: ReturnType<typeof createTrackers>;

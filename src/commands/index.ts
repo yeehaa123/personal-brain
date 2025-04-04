@@ -3,10 +3,16 @@
  * This module defines the core command logic that can be reused across interfaces
  */
 
+
+import type { ExternalCitation, ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
+import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import logger from '@/utils/logger';
+
+/**
+ * Command result types to make interfaces easier to manage
+ */
 
 /**
  * Interface for command descriptions
@@ -17,11 +23,6 @@ export interface CommandInfo {
   usage: string;
   examples?: string[];
 }
-
-/**
- * Command result types to make interfaces easier to manage
- */
-import type { ExternalCitation, NoteContext, ProfileContext, ExternalSourceContext } from '@/mcp';
 
 export type CommandResult =
   | { type: 'error'; message: string }

@@ -1,11 +1,16 @@
 /**
  * Handles formatting prompts with context for the MCP
  */
+
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '@models/profile';
-import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { getExcerpt as noteExcerpt } from '@utils/noteUtils';
+
 import type { Citation } from '../types';
+
+
+
 
 /**
  * Formats prompts and context for LLM interactions

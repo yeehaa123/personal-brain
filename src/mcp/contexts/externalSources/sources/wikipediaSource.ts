@@ -1,9 +1,10 @@
 /**
  * Wikipedia external knowledge source implementation
  */
-import logger from '@/utils/logger';
-import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '@/mcp/model';
+import logger from '@/utils/logger';
+
+import type { ExternalSearchOptions, ExternalSourceInterface, ExternalSourceResult } from './externalSourceInterface';
 
 // Define interfaces for Wikipedia API response structures
 interface WikipediaSearchResult {

@@ -1,5 +1,6 @@
-import { test, expect, describe } from 'bun:test';
-import { validateNote, noteSearchSchema } from '@models/note';
+import { describe, expect, test } from 'bun:test';
+
+import { noteSearchSchema, validateNote } from '@models/note';
 
 describe('Note model', () => {
   test('should validate a valid note', () => {

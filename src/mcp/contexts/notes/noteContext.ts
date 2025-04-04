@@ -3,24 +3,22 @@
  * This provides the same interface as the original NoteContext but uses MCP SDK internally
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { z } from 'zod';
-import type { Note } from '@/models/note';
-import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import logger from '@/utils/logger';
-import { textConfig } from '@/config';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
-// Import DI container and service registry
-import { getContainer, getService } from '@/utils/dependencyContainer';
-import { ServiceIdentifiers, registerServices } from '@/services/serviceRegistry';
-
-// Import service types
-import { 
-  NoteRepository, 
-  NoteEmbeddingService, 
-  NoteSearchService, 
+import { textConfig } from '@/config';
+import type { Note } from '@/models/note';
+import {
+  NoteEmbeddingService,
+  NoteRepository,
+  NoteSearchService,
 } from '@/services/notes';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
+import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { getContainer, getService } from '@/utils/dependencyContainer';
+import logger from '@/utils/logger';
+import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
+
 
 /**
  * Context for working with notes using MCP SDK
@@ -32,6 +30,29 @@ export class NoteContext {
   private searchService: NoteSearchService;
   private mcpServer: McpServer;
 
+  // Singleton instance
+  private static instance: NoteContext | null = null;
+
+  /**
+   * Get singleton instance of NoteContext
+   * @param apiKey Optional API key for embedding service 
+   * @param forceNew Create a new instance (for testing)
+   * @returns The NoteContext instance
+   */
+  public static getInstance(apiKey?: string, forceNew = false): NoteContext {
+    if (!NoteContext.instance || forceNew) {
+      NoteContext.instance = new NoteContext(apiKey);
+    }
+    return NoteContext.instance;
+  }
+
+  /**
+   * Reset the singleton instance (for testing)
+   */
+  public static resetInstance(): void {
+    NoteContext.instance = null;
+  }
+
   /**
    * Create a new NoteContext
    * @param apiKey Optional API key for embedding service
@@ -40,27 +61,27 @@ export class NoteContext {
     // Register services in the container (service registry handles duplicates)
     const container = getContainer();
     registerServices(container, { apiKey });
-    
+
     // Resolve dependencies from container
     this.repository = getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
     this.embeddingService = getService<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
     this.searchService = getService<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
-    
+
     // Initialize MCP server
     this.mcpServer = new McpServer({
       name: 'PersonalBrain',
       version: '1.0.0',
     });
-    
+
     // Register the MCP resources on our internal server
     this.registerMcpResources();
-    
+
     // Register the MCP tools on our internal server
     this.registerMcpTools();
-    
+
     logger.debug('MCP-based NoteContext initialized with resources and tools');
   }
-  
+
   /**
    * Register MCP resources for accessing note data
    * @param server Optional external MCP server to register resources on
@@ -70,12 +91,12 @@ export class NoteContext {
     const targetServer = server || this.mcpServer;
     // Resource to get a note by ID
     targetServer.resource(
-      'note', 
+      'note',
       'note://:id',
       async (uri) => {
         try {
           const id = uri.pathname.substring(1); // Remove leading slash
-          
+
           if (!id) {
             return {
               contents: [{
@@ -84,9 +105,9 @@ export class NoteContext {
               }],
             };
           }
-          
+
           const note = await this.getNoteById(id);
-          
+
           if (!note) {
             return {
               contents: [{
@@ -95,7 +116,7 @@ export class NoteContext {
               }],
             };
           }
-          
+
           return {
             contents: [{
               uri: uri.toString(),
@@ -120,7 +141,7 @@ export class NoteContext {
         }
       },
     );
-    
+
     // Resource to search notes
     targetServer.resource(
       'notes',
@@ -128,7 +149,7 @@ export class NoteContext {
       async (uri) => {
         try {
           const params = new URLSearchParams(uri.search);
-          
+
           const options: NoteSearchOptions = {
             query: params.get('query') || undefined,
             tags: params.has('tags') ? params.get('tags')?.split(',') : undefined,
@@ -136,14 +157,13 @@ export class NoteContext {
             offset: params.has('offset') ? parseInt(params.get('offset') || '0', 10) : 0,
             semanticSearch: params.has('semantic') ? params.get('semantic') === 'true' : true,
           };
-          
+
           const notes = await this.searchNotes(options);
-          
+
           return {
             contents: notes.map(note => ({
               uri: `note://${note.id}`,
-              text: `# ${note.title || 'Untitled Note'}\n\n${
-                note.content?.substring(0, 150) || ''
+              text: `# ${note.title || 'Untitled Note'}\n\n${note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
               metadata: {
                 id: note.id,
@@ -165,7 +185,7 @@ export class NoteContext {
         }
       },
     );
-    
+
     // Resource to get recent notes
     targetServer.resource(
       'recent_notes',
@@ -174,14 +194,13 @@ export class NoteContext {
         try {
           const params = new URLSearchParams(uri.search);
           const limit = params.has('limit') ? parseInt(params.get('limit') || '5', 10) : 5;
-          
+
           const notes = await this.getRecentNotes(limit);
-          
+
           return {
             contents: notes.map(note => ({
               uri: `note://${note.id}`,
-              text: `# ${note.title || 'Untitled Note'}\n\n${
-                note.content?.substring(0, 150) || ''
+              text: `# ${note.title || 'Untitled Note'}\n\n${note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
               metadata: {
                 id: note.id,
@@ -203,7 +222,7 @@ export class NoteContext {
         }
       },
     );
-    
+
     // Resource to get related notes
     targetServer.resource(
       'related_notes',
@@ -213,7 +232,7 @@ export class NoteContext {
           const id = uri.pathname.split('/').pop();
           const params = new URLSearchParams(uri.search);
           const limit = params.has('limit') ? parseInt(params.get('limit') || '5', 10) : 5;
-          
+
           if (!id) {
             return {
               contents: [{
@@ -222,14 +241,13 @@ export class NoteContext {
               }],
             };
           }
-          
+
           const notes = await this.getRelatedNotes(id, limit);
-          
+
           return {
             contents: notes.map(note => ({
               uri: `note://${note.id}`,
-              text: `# ${note.title || 'Untitled Note'}\n\n${
-                note.content?.substring(0, 150) || ''
+              text: `# ${note.title || 'Untitled Note'}\n\n${note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
               metadata: {
                 id: note.id,
@@ -252,7 +270,7 @@ export class NoteContext {
       },
     );
   }
-  
+
   /**
    * Register MCP tools for note operations
    * @param server Optional external MCP server to register tools on
@@ -280,7 +298,7 @@ export class NoteContext {
             createdAt: now,
             updatedAt: now,
           });
-          
+
           // Return in the format expected by MCP
           return {
             content: [{
@@ -300,7 +318,7 @@ export class NoteContext {
         }
       },
     );
-    
+
     // Tool to generate embeddings for all notes
     targetServer.tool(
       'generate_embeddings',
@@ -308,7 +326,7 @@ export class NoteContext {
       async () => {
         try {
           const result = await this.generateEmbeddingsForAllNotes();
-          
+
           return {
             content: [{
               type: 'text',
@@ -327,7 +345,7 @@ export class NoteContext {
         }
       },
     );
-    
+
     // Tool to search notes with embedding
     targetServer.tool(
       'search_with_embedding',
@@ -339,10 +357,10 @@ export class NoteContext {
       async (args) => {
         try {
           const notes = await this.searchNotesWithEmbedding(
-            args.embedding, 
+            args.embedding,
             args.maxResults || 5,
           );
-          
+
           // Format the results as required by MCP
           if (notes.length === 0) {
             return {
@@ -352,12 +370,11 @@ export class NoteContext {
               }],
             };
           }
-          
+
           return {
             content: notes.map(note => ({
               type: 'text',
-              text: `# ${note.title || 'Untitled Note'}\n\n${
-                note.content?.substring(0, 150) || ''
+              text: `# ${note.title || 'Untitled Note'}\n\n${note.content?.substring(0, 150) || ''
               }${note.content && note.content.length > 150 ? '...' : ''}`,
             })),
           };
@@ -381,7 +398,7 @@ export class NoteContext {
   getMcpServer(): McpServer {
     return this.mcpServer;
   }
-  
+
   /**
    * Register all MCP resources and tools on an external server
    * @param server The MCP server to register on
@@ -391,11 +408,11 @@ export class NoteContext {
       logger.warn('Cannot register NoteContext on undefined server');
       return;
     }
-    
+
     // Register resources and tools on the external server
     this.registerMcpResources(server);
     this.registerMcpTools(server);
-    
+
     logger.debug('NoteContext registered on external MCP server');
   }
 
@@ -416,12 +433,12 @@ export class NoteContext {
   async createNote(note: Omit<Note, 'embedding'> & { embedding?: number[] }): Promise<string> {
     // Generate embedding if not provided
     let embedding = note.embedding;
-    
+
     if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
       try {
         const title = isNonEmptyString(note.title) ? note.title : '';
         const content = isNonEmptyString(note.content) ? note.content : '';
-        
+
         if (title.length > 0 || content.length > 0) {
           // Combine title and content for embedding
           const combinedText = `${title} ${content}`.trim();
@@ -431,7 +448,7 @@ export class NoteContext {
         logger.error(`Error generating embedding for new note: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    
+
     // Insert the note
     const noteId = await this.repository.insertNote({
       id: note.id,
@@ -442,7 +459,7 @@ export class NoteContext {
       updatedAt: note.updatedAt,
       tags: note.tags || undefined,
     });
-    
+
     // If the note is long, also create chunks
     const content = isNonEmptyString(note.content) ? note.content : '';
     if (content.length > (textConfig.defaultChunkThreshold || 1000)) {
@@ -452,7 +469,7 @@ export class NoteContext {
         logger.error(`Failed to create chunks for note ${noteId}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    
+
     return noteId;
   }
 
@@ -474,7 +491,7 @@ export class NoteContext {
   async getRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
     return this.searchService.findRelated(noteId, maxResults);
   }
-  
+
   /**
    * Search notes by embedding similarity (for profile integration)
    * Finds notes similar to a given embedding vector
@@ -487,10 +504,10 @@ export class NoteContext {
       logger.warn('Invalid embedding provided to searchNotesWithEmbedding');
       return [];
     }
-    
+
     try {
       const scoredNotes = await this.embeddingService.searchSimilarNotes(embedding, maxResults);
-      
+
       // Return notes without the score property
       return scoredNotes.map(({ score: _score, ...note }) => note);
     } catch (error) {
@@ -515,7 +532,7 @@ export class NoteContext {
   async generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
     return this.embeddingService.generateEmbeddingsForAllNotes();
   }
-  
+
   /**
    * Get the total count of notes in the database
    * @returns The total number of notes

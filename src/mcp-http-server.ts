@@ -1,11 +1,14 @@
-import express from 'express';
-import type { Request, Response, NextFunction } from 'express';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { createUnifiedMcpServer } from './mcp';
-import type { McpServer as ExtendedMcpServer } from './mcp/types';
-import { HeartbeatSSETransport } from './mcp/transport';
+import express from 'express';
+import type { NextFunction, Request, Response } from 'express';
+
 import { aiConfig, apiConfig, serverConfig } from './config';
+import { createUnifiedMcpServer } from './mcp';
+import { HeartbeatSSETransport } from './mcp/transport';
+import type { McpServer as ExtendedMcpServer } from './mcp/types';
 import logger from './utils/logger';
+
+
 
 // A mapping of session IDs to their transports
 const transports: { [key: string]: HeartbeatSSETransport } = {};

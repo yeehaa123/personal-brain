@@ -1,9 +1,15 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { NoteService } from '@/mcp/protocol/components/noteService';
+import { beforeEach, describe, expect, test } from 'bun:test';
+
+
+import type { McpServer } from '@/mcp';
 import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import { NoteService } from '@/mcp/protocol/components/noteService';
+import type { Note } from '@/models/note';
 import {
   createMockNotes,
 } from '@test';
+
+
 
 // Define interface for search options
 interface SearchOptions {
@@ -12,10 +18,6 @@ interface SearchOptions {
   limit?: number;
   semanticSearch?: boolean;
 }
-
-// Create a proper mock NoteContext implementation
-import type { McpServer } from '@/mcp';
-import type { Note } from '@/models/note';
 
 // Define our own NoteRepository and service types to avoid circular dependencies
 interface INoteRepository {

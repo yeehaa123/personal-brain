@@ -1,15 +1,19 @@
 /**
  * Tests for BaseSearchService
  */
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { BaseSearchService } from '@/services/common/baseSearchService';
-import type { BaseSearchOptions } from '@/services/common/baseSearchService';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+
 import { BaseRepository } from '@/services/BaseRepository';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
-import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '../mocks';
+import { BaseSearchService } from '@/services/common/baseSearchService';
+import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
-import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import logger from '@/utils/logger';
+
+import { mockLogger, restoreLogger } from '../mocks';
+
+
 
 // Create mock entity type
 interface TestEntity {

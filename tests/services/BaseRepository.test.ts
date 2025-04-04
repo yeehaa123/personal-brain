@@ -1,13 +1,17 @@
 /**
  * Tests for BaseRepository
  */
-import { describe, test, expect, beforeAll, mock, afterAll } from 'bun:test';
-import { BaseRepository } from '@/services/BaseRepository';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+
 import { db } from '@/db';
+import { BaseRepository } from '@/services/BaseRepository';
 import { DatabaseError, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
+
 import { mockLogger, restoreLogger } from '../mocks';
-import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
+
+
 
 // Create a mock table with the minimum interface we need
 const mockTable = {

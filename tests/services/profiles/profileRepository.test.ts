@@ -1,7 +1,9 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { ProfileRepository } from '@/services/profiles/profileRepository';
-import type { Profile } from '@/models/profile';
+import { beforeEach, describe, expect, test } from 'bun:test';
+
 import { profiles } from '@/db/schema';
+import type { Profile } from '@/models/profile';
+import { ProfileRepository } from '@/services/profiles/profileRepository';
+
 
 // Define initial profile for testing
 const initialProfile: Profile = {

@@ -1,7 +1,9 @@
-import { describe, test, expect, mock, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+
+import type { Note } from '@/models/note';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import { createMockEmbedding, setupEmbeddingMocks } from '@test';
-import type { Note } from '@/models/note';
+
 
 // Set up all necessary mocks for embedding services
 setupEmbeddingMocks(mock);

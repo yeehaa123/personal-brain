@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { resolve } from 'path';
+
 import { importMarkdownDirectory, importMarkdownFile } from '@/importers/markdownImporter';
 import { ProfileImporter } from '@/importers/profileImporter';
 import logger from '@/utils/logger';

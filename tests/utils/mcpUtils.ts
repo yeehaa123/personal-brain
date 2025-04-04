@@ -1,9 +1,12 @@
 /**
  * MCP and related services mock utilities for tests
  */
-import { mock as viMock } from 'bun:test';
-import type { McpServer } from '@/mcp';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { mock as viMock } from 'bun:test';
+
+import type { McpServer } from '@/mcp';
+
+
 
 // We're not using this function but keeping it commented out for future reference
 /**

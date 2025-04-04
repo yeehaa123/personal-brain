@@ -5,8 +5,8 @@
  * and better connection management for Express applications.
  */
 
-import type { Response } from 'express';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import type { Response } from 'express';
 
 // Interface for ExpressResponse to make TypeScript happy with our cast
 interface ExpressResponse extends Response {

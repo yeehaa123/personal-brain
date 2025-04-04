@@ -4,29 +4,31 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+
 import type { 
   Profile, 
-  ProfileExperience, 
+  ProfileAward, 
   ProfileEducation,
+  ProfileExperience,
   ProfileLanguageProficiency,
-  ProfilePublication,
-  ProfileAward,
   ProfileProject,
+  ProfilePublication,
   ProfileVolunteerWork,
 } from '@/models/profile';
+import {
+  ProfileEmbeddingService,
+  ProfileRepository,
+  ProfileSearchService,
+  ProfileTagService,
+} from '@/services/profiles';
+import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { getContainer, getService } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
+
 // Import DI container and service registry
-import { getContainer, getService } from '@/utils/dependencyContainer';
-import { ServiceIdentifiers, registerServices } from '@/services/serviceRegistry';
 
 // Import service types
-import {
-  ProfileRepository,
-  ProfileEmbeddingService,
-  ProfileTagService,
-  ProfileSearchService,
-} from '@/services/profiles';
 
 // Re-use the NoteWithSimilarity interface from the original implementation
 interface NoteWithSimilarity {
@@ -55,6 +57,29 @@ export class ProfileContext {
   private tagService: ProfileTagService;
   private searchService: ProfileSearchService;
   private mcpServer: McpServer;
+  
+  // Singleton instance
+  private static instance: ProfileContext | null = null;
+  
+  /**
+   * Get singleton instance of ProfileContext
+   * @param apiKey Optional API key for embedding service 
+   * @param forceNew Create a new instance (for testing)
+   * @returns The ProfileContext instance
+   */
+  public static getInstance(apiKey?: string, forceNew = false): ProfileContext {
+    if (!ProfileContext.instance || forceNew) {
+      ProfileContext.instance = new ProfileContext(apiKey);
+    }
+    return ProfileContext.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (for testing)
+   */
+  public static resetInstance(): void {
+    ProfileContext.instance = null;
+  }
 
   /**
    * Create a new ProfileContext

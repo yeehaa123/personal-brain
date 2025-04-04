@@ -5,9 +5,13 @@
  * the standard SSEServerTransport and adds heartbeat functionality.
  */
 
-import { describe, test, expect, mock } from 'bun:test';
-import { HeartbeatSSETransport } from '../../../src/mcp/transport/heartbeatSseTransport';
+import { describe, expect, mock, test } from 'bun:test';
 import type { Response } from 'express';
+
+import { HeartbeatSSETransport } from '../../../src/mcp/transport/heartbeatSseTransport';
+
+
+
 
 // Save original interval functions
 const originalSetInterval = globalThis.setInterval;

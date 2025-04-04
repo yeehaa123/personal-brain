@@ -1,8 +1,10 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
-import { EmbeddingService } from '@/mcp/model';
-import { setTestEnv, clearTestEnv } from '@test/utils/envUtils';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import { EmbeddingService } from '@/mcp/model';
 import { createMockEmbedding } from '@test/mocks';
+import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+
+
 
 // Mock OpenAI
 mock.module('openai', () => {

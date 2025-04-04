@@ -1,5 +1,6 @@
-import { z } from 'zod';
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+import { z } from 'zod';
+
 import { notes } from '../db/schema';
 
 // Create Zod schemas from Drizzle schema

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-import { NoteContext, ProfileContext } from '@/mcp';
 import { db } from '@/db';
 import { notes, profiles } from '@/db/schema';
+import { NoteContext, ProfileContext } from '@/mcp';
 import logger from '@/utils/logger';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;

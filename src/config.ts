@@ -3,7 +3,7 @@
  * Loads values from environment variables with sensible defaults
  */
 
-import { getEnv, getEnvAsInt, getEnvAsFloat } from '@utils/configUtils';
+import { getEnv, getEnvAsFloat, getEnvAsInt } from '@utils/configUtils';
 
 // Log configuration
 export const logConfig = {

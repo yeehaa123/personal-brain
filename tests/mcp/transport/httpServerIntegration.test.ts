@@ -4,7 +4,8 @@
  * Simple test to verify that the HTTP server can be instantiated.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+
 import { startMcpHttpServer } from '../../../src/mcp-http-server';
 
 describe('HTTP Server with HeartbeatSSETransport Integration', () => {

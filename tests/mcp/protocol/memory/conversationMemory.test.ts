@@ -1,9 +1,10 @@
-import { describe, test, expect, beforeEach, mock } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { v4 as uuidv4 } from 'uuid';
+
 import { ConversationMemory } from '@/mcp/protocol/memory/conversationMemory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import { v4 as uuidv4 } from 'uuid';
 
 describe('ConversationMemory', () => {
   let memory: ConversationMemory;

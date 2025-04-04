@@ -1,7 +1,8 @@
 #!/usr/bin/env bun
+import { eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { notes } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import logger from '@/utils/logger';
 
 async function deleteNoteById(id: string) {

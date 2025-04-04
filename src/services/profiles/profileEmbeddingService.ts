@@ -1,17 +1,19 @@
 /**
  * Service for managing profile embeddings
  */
-import { ProfileRepository } from './profileRepository';
-import type { Profile } from '@/models/profile';
-import logger from '@/utils/logger';
-import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
-
 import type {
   ProfileEducation,
   ProfileExperience,
-  ProfilePublication,
   ProfileProject,
+  ProfilePublication,
 } from '@/models/profile';
+import type { Profile } from '@/models/profile';
+import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import logger from '@/utils/logger';
+
+
+import { ProfileRepository } from './profileRepository';
+
 
 /**
  * Service for generating and managing profile embeddings

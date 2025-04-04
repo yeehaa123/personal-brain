@@ -1,12 +1,14 @@
 /**
  * Tests for BaseEmbeddingService
  */
-import { describe, test, expect, mock, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '../mocks';
 import { setupEmbeddingMocks } from '@test';
+
+import { mockLogger, restoreLogger } from '../mocks';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);

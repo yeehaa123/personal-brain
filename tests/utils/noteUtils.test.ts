@@ -1,9 +1,13 @@
-import { test, expect, describe, beforeEach, afterEach } from 'bun:test';
-import { displayNotes, formatNotePreview, getExcerpt } from '@utils/noteUtils';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+
 import type { Note } from '@models/note';
-import logger from '@utils/logger';
 import { createMockNotes, createTrackers, mockLogger, restoreLogger } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
+import logger from '@utils/logger';
+import { displayNotes, formatNotePreview, getExcerpt } from '@utils/noteUtils';
+
+
+
 
 describe('noteUtils', () => {
   let mockNotes: Note[];

@@ -3,10 +3,12 @@
  * This module handles formatting and displaying command results in Matrix
  */
 
-import type { CommandResult, CommandInfo } from './index';
 import type { Note } from '../models/note';
 import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
 import { formatNotePreview } from '../utils/noteUtils';
+
+import type { CommandInfo, CommandResult } from './index';
+
 
 /**
  * Render command results for Matrix

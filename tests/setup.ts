@@ -7,17 +7,19 @@
  */
 
 // Set the environment to test
-import { setTestEnv } from './utils/envUtils';
-import { setupEmbeddingMocks } from './utils/embeddingUtils';
-import { setupMockFetch } from './utils/fetchUtils';
-import { mock, beforeAll, beforeEach, afterEach, afterAll } from 'bun:test';
+import { afterAll, afterEach, beforeAll, beforeEach, mock } from 'bun:test';
+
 // Import singleton reset functions and mocks
-import { resetServiceRegistration } from '@/services/serviceRegistry';
-import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources/externalSourceContext';
 import { NoteContext } from '@/mcp/contexts/notes/noteContext';
 import { ProfileContext } from '@/mcp/contexts/profiles/profileContext';
-import { ExternalSourceContext } from '@/mcp/contexts/externalSources/externalSourceContext';
+import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import { resetServiceRegistration } from '@/services/serviceRegistry';
+
 import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
+import { setupEmbeddingMocks } from './utils/embeddingUtils';
+import { setTestEnv } from './utils/envUtils';
+import { setupMockFetch } from './utils/fetchUtils';
 
 // Set test environment
 setTestEnv('NODE_ENV', 'test');

@@ -4,7 +4,11 @@
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 import { createMockEmbedding } from '@test/utils/embeddingUtils';
+
 import { createMockNotes, createMockProfile } from './repositoryMocks';
+
+
+
 
 // Mock search services
 export class MockNoteSearchService {

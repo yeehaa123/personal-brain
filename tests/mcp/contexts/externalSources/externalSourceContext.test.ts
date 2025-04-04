@@ -1,8 +1,10 @@
-import { test, expect, describe, beforeEach, beforeAll, afterAll, mock } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { ExternalSourceContext } from '@/mcp';
-import { setMockEnv, clearMockEnv } from '@test/test-utils';
-import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/utils/mcpUtils';
 import { setupMcpServerMocks as createMockServerMock } from '@test/mcp/contexts/__mocks__/mcpMocks';
+import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/utils/mcpUtils';
+
 
 // Create a mock MCP server 
 // The global mock is used in the ExternalSourceContext

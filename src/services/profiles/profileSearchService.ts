@@ -1,16 +1,18 @@
 /**
  * Service for profile-related search functionality
  */
-import { ProfileRepository } from './profileRepository';
-import { ProfileTagService } from './profileTagService';
-import { ProfileEmbeddingService } from './profileEmbeddingService';
+import type { Profile } from '@/models/profile';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
-import type { Profile } from '@/models/profile';
-import { isNonEmptyString } from '@/utils/safeAccessUtils';
-import logger from '@/utils/logger';
-import { extractKeywords } from '@/utils/textUtils';
 import { ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { isNonEmptyString } from '@/utils/safeAccessUtils';
+import { extractKeywords } from '@/utils/textUtils';
+
+import { ProfileEmbeddingService } from './profileEmbeddingService';
+import { ProfileRepository } from './profileRepository';
+import { ProfileTagService } from './profileTagService';
+
 
 export type ProfileSearchOptions = BaseSearchOptions;
 

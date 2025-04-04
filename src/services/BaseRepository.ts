@@ -2,13 +2,15 @@
  * Base repository class for common database operations
  * Provides shared functionality for entity repositories
  */
-import { db } from '@/db';
 import { eq } from 'drizzle-orm';
-import { DatabaseError, ValidationError, safeExec, tryExec } from '@/utils/errorUtils';
-import { isNonEmptyString } from '@/utils/safeAccessUtils';
 import type { InferSelectModel } from 'drizzle-orm';
-import type { SQLiteTable, SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
+
+import { db } from '@/db';
+import { DatabaseError, safeExec, tryExec, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
+import { isNonEmptyString } from '@/utils/safeAccessUtils';
+
 import type { IRepository } from './interfaces/IRepository';
 
 /**

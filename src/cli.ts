@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+
 import { CommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
 import { CLIApp } from './interfaces/cli-app';
@@ -7,8 +8,8 @@ import { CLIInterface } from './utils/cliInterface';
 import logger from './utils/logger';
 
 async function main() {
-  // Initialize components
-  const brainProtocol = new BrainProtocol();
+  // Initialize components using the singleton pattern
+  const brainProtocol = BrainProtocol.getInstance({ interfaceType: 'cli' });
   const commandHandler = new CommandHandler(brainProtocol);
   const renderer = new CLIRenderer();
   

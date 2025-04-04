@@ -1,15 +1,17 @@
 /**
  * Service for searching notes using various strategies
  */
-import { NoteRepository } from './noteRepository';
-import { NoteEmbeddingService } from './noteEmbeddingService';
 import type { Note } from '@/models/note';
-import logger from '@/utils/logger';
-import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import { ValidationError } from '@/utils/errorUtils';
-import { extractKeywords } from '@/utils/textUtils';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
+import { ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
+import { extractKeywords } from '@/utils/textUtils';
+
+import { NoteEmbeddingService } from './noteEmbeddingService';
+import { NoteRepository } from './noteRepository';
+
 
 export type NoteSearchOptions = BaseSearchOptions;
 

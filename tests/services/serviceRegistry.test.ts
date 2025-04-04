@@ -1,23 +1,25 @@
 /**
  * Tests for service registry and dependency injection
  */
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { createContainer } from '@/utils/dependencyContainer';
-import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { beforeEach, describe, expect, test } from 'bun:test';
+
 
 // Import interfaces and concrete types
-import type { IRepository } from '@/services/interfaces/IRepository';
-import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
-import type { ISearchService } from '@/services/interfaces/ISearchService';
-import { NoteRepository } from '@/services/notes/noteRepository';
-import { ProfileRepository } from '@/services/profiles/profileRepository';
-import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
-import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService'; 
-import { NoteSearchService } from '@/services/notes/noteSearchService';
-import { ProfileSearchService } from '@/services/profiles/profileSearchService';
-import { ProfileTagService } from '@/services/profiles/profileTagService';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
+import type { IRepository } from '@/services/interfaces/IRepository';
+import type { ISearchService } from '@/services/interfaces/ISearchService';
+import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import { NoteRepository } from '@/services/notes/noteRepository';
+import { NoteSearchService } from '@/services/notes/noteSearchService';
+import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService'; 
+import { ProfileRepository } from '@/services/profiles/profileRepository';
+import { ProfileSearchService } from '@/services/profiles/profileSearchService';
+import { ProfileTagService } from '@/services/profiles/profileTagService';
+import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { createContainer } from '@/utils/dependencyContainer';
+
 
 describe('Service Registry', () => {
   beforeEach(() => {

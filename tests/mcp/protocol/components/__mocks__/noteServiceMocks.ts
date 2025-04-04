@@ -1,11 +1,14 @@
 /**
  * Mocks for NoteService tests
  */
-import type { Note } from '@models/note';
-import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
+
 import type { McpServer } from '@/mcp';
+import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import type { Note } from '@models/note';
 import { createMockEmbedding } from '@test/utils/embeddingUtils';
 import { setupMcpServerMocks } from '@test/utils/mcpUtils';
+
+
 
 // Create a mock note with specified properties
 export function createMockNote(id: string, title: string, tags: string[] = []): Note {

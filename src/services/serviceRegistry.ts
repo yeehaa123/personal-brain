@@ -2,33 +2,23 @@
  * Service registry for dependency injection
  * Centralized registration of all application services
  */
+import type { Note } from '@/models/note';
+import type { Profile } from '@/models/profile';
 import { container, DependencyContainer } from '@/utils/dependencyContainer';
 import type { ServiceFactory } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
-// Import interfaces
-import type { IRepository } from './interfaces/IRepository';
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
+import type { IRepository } from './interfaces/IRepository';
 import type { ISearchService } from './interfaces/ISearchService';
-
-// Import repositories
-import { NoteRepository } from './notes/noteRepository';
-import { ProfileRepository } from './profiles/profileRepository';
-
-// Import embedding services
 import { NoteEmbeddingService } from './notes/noteEmbeddingService';
-import { ProfileEmbeddingService } from './profiles/profileEmbeddingService';
-
-// Import search services
+import { NoteRepository } from './notes/noteRepository';
 import { NoteSearchService } from './notes/noteSearchService';
+import { ProfileEmbeddingService } from './profiles/profileEmbeddingService';
+import { ProfileRepository } from './profiles/profileRepository';
 import { ProfileSearchService } from './profiles/profileSearchService';
-
-// Import tag services
 import { ProfileTagService } from './profiles/profileTagService';
 
-// Import models
-import type { Note } from '@/models/note';
-import type { Profile } from '@/models/profile';
 
 /**
  * Service identifier constants for consistent naming
@@ -37,18 +27,28 @@ export const ServiceIdentifiers = {
   // Repositories
   NoteRepository: 'repositories.note',
   ProfileRepository: 'repositories.profile',
-  
+
   // Embedding Services
   NoteEmbeddingService: 'embedding.note',
   ProfileEmbeddingService: 'embedding.profile',
-  
+
   // Search Services
   NoteSearchService: 'search.note',
   ProfileSearchService: 'search.profile',
-  
+
   // Tag Services
   ProfileTagService: 'tag.profile',
 };
+
+// Track if services have been registered to avoid duplicate logs
+let servicesRegistered = false;
+
+/**
+ * Reset service registration state (for testing)
+ */
+export function resetServiceRegistration(): void {
+  servicesRegistered = false;
+}
 
 /**
  * Register all services with the DI container
@@ -56,11 +56,14 @@ export const ServiceIdentifiers = {
  * @param config Optional configuration for services
  */
 export function registerServices(
-  diContainer: DependencyContainer = container, 
+  diContainer: DependencyContainer = container,
   config: { apiKey?: string } = {},
 ): void {
-  logger.info('Registering services with dependency container');
-  
+  // Only log the first time services are registered
+  if (!servicesRegistered) {
+    logger.info('Registering services with dependency container');
+  }
+
   // Helper function to avoid duplicate registrations
   const registerIfNeeded = <T>(serviceId: string, factory: ServiceFactory<T>, singleton = true) => {
     // Only register if not already registered
@@ -68,35 +71,35 @@ export function registerServices(
       diContainer.register<T>(serviceId, factory, singleton);
     }
   };
-  
+
   // Register repositories
   registerIfNeeded<IRepository<Note>>(
     ServiceIdentifiers.NoteRepository,
     () => new NoteRepository(),
   );
-  
+
   registerIfNeeded<IRepository<Profile>>(
     ServiceIdentifiers.ProfileRepository,
     () => new ProfileRepository(),
   );
-  
+
   // Register embedding services
   registerIfNeeded<IEmbeddingService>(
     ServiceIdentifiers.NoteEmbeddingService,
     () => new NoteEmbeddingService(config.apiKey),
   );
-  
+
   registerIfNeeded<IEmbeddingService>(
     ServiceIdentifiers.ProfileEmbeddingService,
     () => new ProfileEmbeddingService(config.apiKey),
   );
-  
+
   // Register tag services
   registerIfNeeded(
     ServiceIdentifiers.ProfileTagService,
     () => new ProfileTagService(),
   );
-  
+
   // Register search services with dependencies
   registerIfNeeded<ISearchService<Note>>(
     ServiceIdentifiers.NoteSearchService,
@@ -104,12 +107,12 @@ export function registerServices(
       // Get dependencies from container
       const repository = container.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
       const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
-      
+
       // Create service with injected dependencies
       return new NoteSearchService(repository, embeddingService);
     },
   );
-  
+
   registerIfNeeded<ISearchService<Profile>>(
     ServiceIdentifiers.ProfileSearchService,
     (container) => {
@@ -117,13 +120,17 @@ export function registerServices(
       const repository = container.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
       const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
       const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-      
+
       // Create service with injected dependencies
       return new ProfileSearchService(repository, embeddingService, tagService);
     },
   );
-  
-  logger.info('Service registration complete');
+
+  // Only log the first time services are registered
+  if (!servicesRegistered) {
+    logger.info('Service registration complete');
+    servicesRegistered = true;
+  }
 }
 
 /**

@@ -9,8 +9,9 @@
  * - Error handling
  */
 
-import inquirer from 'inquirer';
 import chalk from 'chalk';
+import inquirer from 'inquirer';
+
 import { CommandHandler } from '../commands';
 import { CLIRenderer } from '../commands/cli-renderer';
 import { CLIInterface } from '../utils/cliInterface';

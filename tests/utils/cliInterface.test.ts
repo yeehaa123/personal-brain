@@ -1,7 +1,8 @@
-import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+
+import { mockLogger, restoreLogger } from '@test/mocks';
 import { CLIInterface } from '@utils/cliInterface';
 import logger from '@utils/logger';
-import { mockLogger, restoreLogger } from '@test/mocks';
 
 // Store the original logger methods
 let originalLogger: Record<string, unknown>;

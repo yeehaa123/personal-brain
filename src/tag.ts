@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
-import { batchProcessNoteTags } from '@/utils/tagExtractor';
 import { ProfileContext } from '@/mcp';
 import logger from '@/utils/logger';
+import { batchProcessNoteTags } from '@/utils/tagExtractor';
 
 const ENTITY_TYPES = ['profile', 'notes', 'all'] as const;
 type EntityType = typeof ENTITY_TYPES[number];

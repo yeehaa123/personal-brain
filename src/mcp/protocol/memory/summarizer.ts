@@ -2,9 +2,11 @@
  * Conversation Summarizer for Tiered Memory
  */
 import { v4 as uuidv4 } from 'uuid';
-import type { ConversationTurn, ConversationSummary } from '../schemas/conversationSchemas';
+
 import { ClaudeModel } from '@/mcp/model';
 import logger from '@utils/logger';
+
+import type { ConversationSummary, ConversationTurn } from '../schemas/conversationSchemas';
 
 /**
  * Service for summarizing conversation turns

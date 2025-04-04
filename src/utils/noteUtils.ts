@@ -1,6 +1,10 @@
+
 import type { Note } from '../models/note';
+
 import { CLIInterface } from './cliInterface';
 import logger from './logger';
+
+
 
 /**
  * Helper functions for displaying and formatting notes

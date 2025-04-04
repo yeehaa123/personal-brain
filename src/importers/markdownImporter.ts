@@ -1,13 +1,15 @@
 import { readdir, readFile } from 'fs/promises';
-import { join, basename, extname } from 'path';
+import { basename, extname, join } from 'path';
+
+import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+
 import { db } from '@/db';
 import { notes } from '@/db/schema';
-import { sql } from 'drizzle-orm';
 import { NoteContext } from '@/mcp';
 import { EmbeddingService } from '@/mcp/model/embeddings';
-import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
 import logger from '@/utils/logger';
+import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
 
 interface MarkdownMetadata {
   title?: string;

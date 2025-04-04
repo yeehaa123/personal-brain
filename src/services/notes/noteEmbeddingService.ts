@@ -1,13 +1,15 @@
 /**
  * Service for managing note embeddings and vector operations
  */
-import { NoteRepository } from './noteRepository';
-import type { Note } from '@/models/note';
-import logger from '@/utils/logger';
 import { textConfig } from '@/config';
-import { isDefined, isNonEmptyString, assertDefined } from '@/utils/safeAccessUtils';
-import { ApiError, ValidationError, tryExec } from '@/utils/errorUtils';
+import type { Note } from '@/models/note';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import { ApiError, tryExec, ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { assertDefined, isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
+
+import { NoteRepository } from './noteRepository';
+
 
 /**
  * Service for managing note embeddings

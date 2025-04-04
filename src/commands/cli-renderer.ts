@@ -3,12 +3,14 @@
  * This module handles formatting and displaying command results in the CLI
  */
 
-import type { CommandResult, CommandInfo } from './index';
 import type { Note } from '../models/note';
 import type { EnhancedProfile, ProfileExperience } from '../models/profile';
 import { CLIInterface } from '../utils/cliInterface';
-import { displayNotes } from '../utils/noteUtils';
 import logger from '../utils/logger';
+import { displayNotes } from '../utils/noteUtils';
+
+import type { CommandInfo, CommandResult } from './index';
+
 
 /**
  * Render command results for the CLI

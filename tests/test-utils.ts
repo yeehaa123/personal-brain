@@ -1,15 +1,17 @@
 /**
  * Test utilities for the personal-brain project
  */
-import { CLIInterface } from '@utils/cliInterface';
-import { createTrackers } from './utils/cliUtils';
+import { afterAll, beforeAll, mock } from 'bun:test';
+
 import { createContainer, useTestContainer } from '@/utils/dependencyContainer';
-import { mock, beforeAll, afterAll } from 'bun:test';
+import { CLIInterface } from '@utils/cliInterface';
+
+import { createTrackers } from './utils/cliUtils';
 import { 
-  setTestEnv, 
+  clearStandardTestEnv, 
   clearTestEnv, 
+  setTestEnv,
   setupStandardTestEnv,
-  clearStandardTestEnv,
 } from './utils/envUtils';
 
 // Re-export environment utilities with preferred names

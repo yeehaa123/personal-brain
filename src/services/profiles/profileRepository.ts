@@ -1,18 +1,19 @@
 /**
  * Repository for profile data operations
  */
+import { eq } from 'drizzle-orm';
+import { nanoid } from 'nanoid';
+
 import { db } from '@/db';
 import { profiles } from '@/db/schema';
-import { eq } from 'drizzle-orm';
 import {
-  type Profile,
   insertProfileSchema,
+  type Profile,
 } from '@/models/profile';
-import { nanoid } from 'nanoid';
-import { isDefined } from '@/utils/safeAccessUtils';
-import logger from '@/utils/logger';
-import { DatabaseError, ValidationError } from '@/utils/errorUtils';
 import { BaseRepository } from '@/services/BaseRepository';
+import { DatabaseError, ValidationError } from '@/utils/errorUtils';
+import logger from '@/utils/logger';
+import { isDefined } from '@/utils/safeAccessUtils';
 
 /**
  * Repository for profile data operations

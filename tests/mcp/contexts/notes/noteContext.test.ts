@@ -1,13 +1,14 @@
-import { test, expect, describe, beforeEach, mock, beforeAll, afterAll } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { NoteContext } from '@/mcp';
+import { ServiceIdentifiers } from '@/services/serviceRegistry';
 import {
-  setMockEnv,
   clearMockEnv,
+  createMockNotes,
+  setMockEnv,
   setupAnthropicMocks,
   setupMcpServerMocks,
-  createMockNotes,
 } from '@test';
-import { ServiceIdentifiers } from '@/services/serviceRegistry';
 
 // Create mock notes for testing
 const mockNotes = createMockNotes();

@@ -1,4 +1,5 @@
-import { test, expect, describe } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+
 import { NoteContext, ProfileContext } from '@/mcp';
 // Import directly from the implementation file for testing
 import { ExternalSourceContext } from '@/mcp/contexts/externalSources/externalSourceContext';

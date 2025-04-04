@@ -1,7 +1,9 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { NoteRepository } from '@/services/notes/noteRepository';
-import type { Note } from '@/models/note';
+import { beforeEach, describe, expect, test } from 'bun:test';
+
 import { notes } from '@/db/schema';
+import type { Note } from '@/models/note';
+import { NoteRepository } from '@/services/notes/noteRepository';
+
 
 // Define initial data for testing
 const initialNotes: Note[] = [

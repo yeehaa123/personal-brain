@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
+
 import {
-  safeArrayAccess,
-  safeObjectAccess,
-  safeIndexAccess,
-  safeNestedAccess,
   assertDefined,
   isDefined,
+  safeArrayAccess,
+  safeIndexAccess,
+  safeNestedAccess,
+  safeObjectAccess,
 } from '@/utils/safeAccessUtils';
 
 describe('safeAccessUtils', () => {

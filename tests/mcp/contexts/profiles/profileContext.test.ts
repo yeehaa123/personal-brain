@@ -1,13 +1,18 @@
-import { test, expect, describe, beforeEach, beforeAll, afterAll, mock } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { ProfileContext } from '@/mcp';
-import {
-  setMockEnv,
-  clearMockEnv,
-  setupMcpServerMocks,
-  setupAnthropicMocks,
-  createMockProfile,
-} from '@test';
 import type { Profile } from '@/models/profile';
+import {
+  clearMockEnv,
+  createMockProfile,
+  setMockEnv,
+  setupAnthropicMocks,
+  setupMcpServerMocks,
+} from '@test';
+import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
+
+
+// Import the mock server creator that doesn't take parameters
 
 // Create mock profile for testing
 const mockProfile = createMockProfile();
@@ -59,9 +64,6 @@ const mockProfileSearchService = {
     },
   ]),
 };
-
-// Import the mock server creator that doesn't take parameters
-import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
 
 // Setup MCP server mock globally
 const mockMcpServer = createMockMcpServer();

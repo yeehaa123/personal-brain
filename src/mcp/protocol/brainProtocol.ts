@@ -2,30 +2,29 @@
  * BrainProtocol orchestrates the interaction between models and context
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { 
-  NoteContext, 
-  ProfileContext, 
-  ExternalSourceContext,
+
+
+import { aiConfig, relevanceConfig } from '@/config';
+import {
   createUnifiedMcpServer,
+  ExternalSourceContext,
+  NoteContext,
+  ProfileContext,
 } from '@/mcp'; // Import all MCP implementations
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
 import { ConversationMemory } from '@/mcp/protocol/memory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
-import { relevanceConfig, aiConfig } from '@/config';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
 
-// Import component classes
-import { PromptFormatter } from './components/promptFormatter';
-import { SystemPromptGenerator } from './components/systemPromptGenerator';
-import { ProfileAnalyzer } from './components/profileAnalyzer';
 import { ExternalSourceService } from './components/externalSourceService';
 import { NoteService } from './components/noteService';
-
-// Import types
-import type { ProtocolResponse, ExternalCitation } from './types';
+import { ProfileAnalyzer } from './components/profileAnalyzer';
+import { PromptFormatter } from './components/promptFormatter';
+import { SystemPromptGenerator } from './components/systemPromptGenerator';
+import type { ExternalCitation, ProtocolResponse } from './types';
 
 /**
  * Interface for BrainProtocol constructor options
@@ -45,23 +44,23 @@ export class BrainProtocol {
   private profileContext: ProfileContext;
   private externalContext: ExternalSourceContext;
   private embeddingService: EmbeddingService;
-  
+
   // Unified MCP server
   private unifiedMcpServer: McpServer;
-  
+
   // Component classes
   private promptFormatter: PromptFormatter;
   private systemPromptGenerator: SystemPromptGenerator;
   private profileAnalyzer: ProfileAnalyzer;
   private externalSourceService: ExternalSourceService;
   private noteService: NoteService;
-  
+
   // State
   private profile: Profile | undefined;
   private useExternalSources: boolean = false;
   private interfaceType: 'cli' | 'matrix';
   private currentRoomId?: string;
-  
+
   // Conversation Memory
   private conversationMemory: ConversationMemory;
 
@@ -71,6 +70,29 @@ export class BrainProtocol {
    * @param newsApiKey Legacy news API key parameter
    * @param useExternalSources Legacy external sources flag
    */
+  // Singleton instance
+  private static instance: BrainProtocol | null = null;
+
+  /**
+   * Get singleton instance of BrainProtocol
+   * @param options Configuration options
+   * @param forceNew Create a new instance (for testing)
+   * @returns The BrainProtocol instance
+   */
+  public static getInstance(options?: BrainProtocolOptions, forceNew = false): BrainProtocol {
+    if (!BrainProtocol.instance || forceNew) {
+      BrainProtocol.instance = new BrainProtocol(options);
+    }
+    return BrainProtocol.instance;
+  }
+
+  /**
+   * Reset the singleton instance (for testing)
+   */
+  public static resetInstance(): void {
+    BrainProtocol.instance = null;
+  }
+
   constructor(
     optionsOrApiKey?: BrainProtocolOptions | string,
     newsApiKey?: string,
@@ -80,22 +102,22 @@ export class BrainProtocol {
     const options: BrainProtocolOptions = typeof optionsOrApiKey === 'string'
       ? { apiKey: optionsOrApiKey, newsApiKey, useExternalSources }
       : optionsOrApiKey || {};
-    
+
     // Extract values with defaults
     const apiKey = options.apiKey;
     const newsApiKeyValue = options.newsApiKey || newsApiKey;
     const useExternalSourcesValue = options.useExternalSources ?? useExternalSources;
-    
+
     // Set interface type (default to CLI if not specified)
     this.interfaceType = options.interfaceType || 'cli';
     this.currentRoomId = options.roomId;
-    
+
     // Initialize core services
     this.model = new ClaudeModel(apiKey);
-    
+
     // Get the singleton instance of EmbeddingService
     this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
-    
+
     // Create the unified MCP server
     this.unifiedMcpServer = createUnifiedMcpServer({
       apiKey,
@@ -104,12 +126,12 @@ export class BrainProtocol {
       version: '1.0.0',
       enableExternalSources: useExternalSourcesValue,
     });
-    
-    // Initialize context objects
-    this.context = new NoteContext(apiKey);
-    this.profileContext = new ProfileContext(apiKey);
-    this.externalContext = new ExternalSourceContext(apiKey, newsApiKeyValue);
-    
+
+    // Initialize context objects using singletons
+    this.context = NoteContext.getInstance(apiKey);
+    this.profileContext = ProfileContext.getInstance(apiKey);
+    this.externalContext = ExternalSourceContext.getInstance(apiKey, newsApiKeyValue);
+
     // Initialize component classes
     this.promptFormatter = new PromptFormatter();
     this.systemPromptGenerator = new SystemPromptGenerator();
@@ -120,17 +142,17 @@ export class BrainProtocol {
       this.promptFormatter,
     );
     this.noteService = new NoteService(this.context);
-    
+
     // Initialize conversation memory with the specified interface type
     this.conversationMemory = new ConversationMemory({
       interfaceType: this.interfaceType,
       storage: new InMemoryStorage(),
       apiKey, // Pass the API key for summarization
     });
-    
+
     // Set initial state
     this.useExternalSources = useExternalSourcesValue;
-    
+
     // Initialize conversation based on interface type
     this.initializeConversation();
 
@@ -170,7 +192,7 @@ export class BrainProtocol {
   getExternalSourceContext(): ExternalSourceContext {
     return this.externalContext;
   }
-  
+
   /**
    * Get the conversation memory instance to manage conversation history
    */
@@ -192,21 +214,21 @@ export class BrainProtocol {
   getUseExternalSources(): boolean {
     return this.useExternalSources;
   }
-  
+
   /**
    * Check if Anthropic API key is available
    */
   hasAnthropicApiKey(): boolean {
     return !!aiConfig.anthropic.apiKey;
   }
-  
+
   /**
    * Check if OpenAI API key is available
    */
   hasOpenAIApiKey(): boolean {
     return !!aiConfig.openAI.apiKey;
   }
-  
+
   /**
    * Initialize conversation based on interface type
    */
@@ -227,7 +249,7 @@ export class BrainProtocol {
       logger.error('Failed to initialize conversation:', error);
     }
   }
-  
+
   /**
    * Set the current Matrix room ID (for Matrix interface only)
    * @param roomId The Matrix room ID
@@ -236,7 +258,7 @@ export class BrainProtocol {
     if (this.interfaceType !== 'matrix') {
       throw new Error('Cannot set room ID for non-Matrix interface');
     }
-    
+
     this.currentRoomId = roomId;
     await this.conversationMemory.getOrCreateConversationForRoom(roomId);
     logger.debug(`Switched to Matrix room ${roomId}`);
@@ -248,7 +270,7 @@ export class BrainProtocol {
   private async loadProfile(): Promise<void> {
     try {
       const profileResult = await this.profileContext.getProfile();
-      
+
       if (isDefined(profileResult)) {
         // Set profile only if we got a valid result
         this.profile = profileResult;
@@ -275,7 +297,7 @@ export class BrainProtocol {
    * @returns A structured response with answer and contextual information
    */
   async processQuery(
-    query: string, 
+    query: string,
     options?: {
       userId?: string;
       userName?: string;
@@ -287,9 +309,9 @@ export class BrainProtocol {
       logger.warn('Empty query received, using default question');
       query = 'What information do you have in this brain?';
     }
-    
+
     logger.info(`Processing query: "${query}"`);
-    
+
     // If Matrix roomId is provided, ensure we're using the right conversation
     if (options?.roomId && this.interfaceType === 'matrix') {
       await this.setCurrentRoom(options.roomId);
@@ -299,7 +321,7 @@ export class BrainProtocol {
     if (!isDefined(this.profile)) {
       await this.loadProfile();
     }
-    
+
     // Ensure we have an active conversation
     if (!this.conversationMemory.currentConversation) {
       await this.initializeConversation();
@@ -343,20 +365,20 @@ export class BrainProtocol {
       if (shouldQueryExternal) {
         logger.info('Querying external sources for additional context');
         const fetchedResults = await this.externalSourceService.fetchExternalContext(query);
-        
+
         // Ensure results is an array
         externalResults = Array.isArray(fetchedResults) ? fetchedResults : [];
 
         if (externalResults.length > 0) {
           logger.info(`Found ${externalResults.length} relevant external sources`);
-          
+
           // Convert to citations format with safe access to properties
           externalCitations = externalResults.map(result => ({
             title: isNonEmptyString(result.title) ? result.title : 'Untitled Source',
             source: isNonEmptyString(result.source) ? result.source : 'Unknown Source',
             url: isNonEmptyString(result.url) ? result.url : '#',
             excerpt: this.promptFormatter.getExcerpt(
-              isNonEmptyString(result.content) ? result.content : 'No content available', 
+              isNonEmptyString(result.content) ? result.content : 'No content available',
               150,
             ),
           }));
@@ -375,7 +397,7 @@ export class BrainProtocol {
       logger.warn('Failed to get conversation history:', error);
       // Continue without history if there's an error
     }
-    
+
     // 5. Format the context and query for the model
     // For highly relevant profile queries, always include profile context
     const includeProfile = isProfileQuery || profileRelevance > relevanceConfig.profileInclusionThreshold;
@@ -396,21 +418,21 @@ export class BrainProtocol {
 
     // 7. Generate system prompt based on query analysis
     const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
-      isProfileQuery, 
-      profileRelevance, 
+      isProfileQuery,
+      profileRelevance,
       externalResults.length > 0,
     );
-    
+
     // 8. Query the LLM with the formatted prompt
     const modelResponse = await this.model.complete(systemPrompt, formattedPrompt);
-    const responseText = isNonEmptyString(modelResponse.response) 
-      ? modelResponse.response 
+    const responseText = isNonEmptyString(modelResponse.response)
+      ? modelResponse.response
       : 'I apologize, but I could not generate a response. Please try asking again.';
-    
+
     // 9. Save the conversation turn
     try {
       await this.conversationMemory.addTurn(
-        query, 
+        query,
         responseText,
         {
           userId: options?.userId,

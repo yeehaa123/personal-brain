@@ -2,17 +2,18 @@
  * In-memory implementation of the ConversationMemoryStorage interface
  */
 import { v4 as uuidv4 } from 'uuid';
-import type {
-  Conversation,
-  ConversationTurn,
-  ConversationSummary,
-} from '../schemas/conversationSchemas';
+
+import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 import { 
   ConversationSchema, 
-  ConversationTurnSchema,
   ConversationSummarySchema,
+  ConversationTurnSchema,
 } from '../schemas/conversationSchemas';
-import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
+import type {
+  Conversation,
+  ConversationSummary,
+  ConversationTurn,
+} from '../schemas/conversationSchemas';
 
 /**
  * In-memory storage adapter for tiered conversation memory

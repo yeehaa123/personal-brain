@@ -1,7 +1,7 @@
 /**
  * Storage interface for tiered conversation memory
  */
-import type { Conversation, ConversationTurn, ConversationSummary } from './conversationSchemas';
+import type { Conversation, ConversationSummary, ConversationTurn } from './conversationSchemas';
 
 /**
  * Interface for conversation storage adapters

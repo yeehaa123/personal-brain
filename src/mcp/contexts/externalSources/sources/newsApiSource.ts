@@ -2,11 +2,12 @@
  * NewsAPI external knowledge source implementation
  * Requires a NewsAPI key from https://newsapi.org/
  */
-import logger from '@/utils/logger';
-import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from './externalSourceInterface';
 import { EmbeddingService } from '@/mcp/model';
 import { getEnv } from '@/utils/configUtils';
+import logger from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
+
+import type { ExternalSearchOptions, ExternalSourceInterface, ExternalSourceResult } from './externalSourceInterface';
 
 // Define interfaces for NewsAPI response structures
 interface NewsApiSourceInfo {

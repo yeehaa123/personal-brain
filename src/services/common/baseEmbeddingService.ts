@@ -2,10 +2,11 @@
  * Base embedding service that provides shared functionality for entity-specific embedding services
  */
 import { EmbeddingService } from '@/mcp/model/embeddings';
+import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
+import { ApiError, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-import { ApiError, ValidationError } from '@/utils/errorUtils';
-import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
+
 
 /**
  * Base embedding service with common functionality
