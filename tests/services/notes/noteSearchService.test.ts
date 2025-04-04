@@ -4,7 +4,7 @@ import type { Note } from '@/models/note';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test';
+import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
 
 
 // Set up embedding service mocks
@@ -28,7 +28,7 @@ mock.module('@/utils/textUtils', () => ({
 
 // Create mock notes for testing
 const mockNotes = [
-  { 
+  createTestNote({ 
     id: 'note-1', 
     title: 'Test Note 1', 
     content: 'This is a test note about artificial intelligence and machine learning',
@@ -36,8 +36,9 @@ const mockNotes = [
     embedding: createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
-  },
-  { 
+    source: 'import',
+  }),
+  createTestNote({ 
     id: 'note-2', 
     title: 'Test Note 2', 
     content: 'This note is about programming languages like JavaScript and TypeScript',
@@ -45,8 +46,9 @@ const mockNotes = [
     embedding: createMockEmbedding('programming note'),
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
-  },
-  { 
+    source: 'import',
+  }),
+  createTestNote({ 
     id: 'note-3', 
     title: 'Test Note 3', 
     content: 'Notes about web development with frameworks like React and Vue',
@@ -54,7 +56,8 @@ const mockNotes = [
     embedding: createMockEmbedding('web dev note'),
     createdAt: new Date('2023-03-01'),
     updatedAt: new Date('2023-03-02'),
-  },
+    source: 'import',
+  }),
 ];
 
 // Create a mock repository
@@ -107,10 +110,23 @@ class MockNoteEmbeddingService {
   
   async searchSimilarNotes(_embedding: number[], limit: number = 5): Promise<Note[]> {
     // Return notes with a mock similarity score
-    return mockNotes.map(note => ({
+    const result = mockNotes.map(note => ({
       ...note,
       score: 0.85 - Math.random() * 0.2, // Random similarity between 0.65 and 0.85
     })).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, limit);
+    
+    // Make sure we return valid Note objects
+    return result.map(({ score: _score, ...rest }) => createTestNote({
+      ...rest,
+      // Extract only the Note fields we need
+      id: rest.id,
+      title: rest.title,
+      content: rest.content,
+      tags: rest.tags || [],
+      embedding: rest.embedding || undefined,
+      createdAt: rest.createdAt,
+      updatedAt: rest.updatedAt,
+    }));
   }
   
   async findRelatedNotes(noteId: string, maxResults: number = 5): Promise<Note[]> {
@@ -121,7 +137,7 @@ class MockNoteEmbeddingService {
     }
     
     // Return other notes with similarity scores
-    return mockNotes
+    const result = mockNotes
       .filter(n => n.id !== noteId)
       .map(n => ({
         ...n,
@@ -129,6 +145,17 @@ class MockNoteEmbeddingService {
       }))
       .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
       .slice(0, maxResults);
+      
+    // Make sure we return valid Note objects
+    return result.map(({ similarity: _similarity, ...rest }) => createTestNote({
+      id: rest.id,
+      title: rest.title,
+      content: rest.content,
+      tags: rest.tags || [],
+      embedding: rest.embedding || undefined,
+      createdAt: rest.createdAt,
+      updatedAt: rest.updatedAt,
+    }));
   }
 }
 

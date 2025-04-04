@@ -45,6 +45,10 @@ export function createMockNote(id: string, title: string, tags: string[] = []): 
     embedding: null,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-02'),
+    source: 'import',
+    confidence: null,
+    conversationMetadata: null,
+    verified: null,
   };
 }
 

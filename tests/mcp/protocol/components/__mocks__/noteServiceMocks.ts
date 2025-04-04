@@ -20,6 +20,10 @@ export function createMockNote(id: string, title: string, tags: string[] = []): 
     embedding: null,
     createdAt: new Date('2025-01-01'),
     updatedAt: new Date('2025-01-02'),
+    source: 'import',
+    confidence: null,
+    conversationMetadata: null,
+    verified: null,
   };
 }
 
@@ -52,14 +56,22 @@ export class MockNoteRepository {
   }
   
   async addNote(noteData: Partial<Note>): Promise<Note> {
+    const id = `note-${Date.now()}`;
+    const title = noteData.title || 'Untitled Note';
+    const tags = noteData.tags || [];
+    
+    // Create the base note using createMockNote
     const newNote: Note = {
-      id: `note-${Date.now()}`,
-      title: noteData.title || 'Untitled Note',
-      content: noteData.content || '',
-      tags: noteData.tags || [],
-      embedding: null,
+      ...createMockNote(id, title, tags),
+      // Override with any specific properties provided
+      content: noteData.content || `This is the content of ${title}`,
+      embedding: noteData.embedding || null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      source: noteData.source || 'import',
+      confidence: noteData.confidence !== undefined ? noteData.confidence : null,
+      conversationMetadata: noteData.conversationMetadata || null,
+      verified: noteData.verified !== undefined ? noteData.verified : null,
     };
     
     this.notes.push(newNote);

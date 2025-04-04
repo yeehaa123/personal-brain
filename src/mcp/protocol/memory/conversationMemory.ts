@@ -52,7 +52,7 @@ export class ConversationMemory {
     this.interfaceType = config.interfaceType;
     
     // Use provided storage or create in-memory storage as default
-    this.storage = config.storage || new InMemoryStorage();
+    this.storage = config.storage || InMemoryStorage.getInstance();
     
     // Parse and validate options with defaults from the schema
     this.options = ConversationMemoryOptionsSchema.parse(config.options || {});

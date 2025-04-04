@@ -5,7 +5,7 @@ import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/source
 import type { ProfileAnalyzer , PromptFormatter } from '@/mcp/protocol/components';
 import { ExternalSourceService  } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
-import { createMockEmbedding } from '@test/mocks';
+import { createMockEmbedding, createMockNote } from '@test';
 
 
 
@@ -38,16 +38,11 @@ describe('ExternalSourceService', () => {
   ];
 
   const sampleNotes: Note[] = [
-    {
-      id: 'note-1',
-      title: 'Quantum Computing Basics',
-      content: 'Quantum computing uses qubits instead of classical bits.',
-      tags: ['quantum', 'computing'],
-      embedding: createMockEmbedding('Quantum computing basics'),
-      createdAt: new Date('2025-01-01'),
-      updatedAt: new Date('2025-01-02'),
-    },
+    createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing']),
   ];
+  // Update the first note to have custom embedding
+  sampleNotes[0].embedding = createMockEmbedding('Quantum computing basics');
+  sampleNotes[0].content = 'Quantum computing uses qubits instead of classical bits.';
 
   // Mock the dependencies
   const mockExternalSourceContext = {

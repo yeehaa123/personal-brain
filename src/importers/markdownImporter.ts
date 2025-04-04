@@ -156,6 +156,10 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
       embedding,
       createdAt: now,
       updatedAt: now,
+      source: 'import' as const,
+      confidence: null,
+      conversationMetadata: null,
+      verified: false,
     };
     
     // Use the context's createNote method which handles chunking too

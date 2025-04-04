@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Note } from '@/models/note';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test';
+import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
 
 
 // Set up all necessary mocks for embedding services
@@ -10,7 +10,7 @@ setupEmbeddingMocks(mock);
 
 // Create mock notes for testing
 const mockNotes: Note[] = [
-  { 
+  createTestNote({ 
     id: 'note-1', 
     title: 'Test Note 1', 
     content: 'This is a test note about artificial intelligence.',
@@ -18,16 +18,24 @@ const mockNotes: Note[] = [
     embedding: createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
-  },
-  { 
+    source: 'import',
+    confidence: null,
+    conversationMetadata: null,
+    verified: false,
+  }),
+  createTestNote({ 
     id: 'note-2', 
     title: 'Test Note 2', 
     content: 'This note is about programming languages.',
     tags: ['programming', 'javascript', 'typescript'],
-    embedding: null,
+    embedding: undefined, // Use undefined instead of null for type compatibility
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
-  },
+    source: 'import',
+    confidence: null,
+    conversationMetadata: null,
+    verified: false,
+  }),
 ];
 
 // Mock the required repository methods

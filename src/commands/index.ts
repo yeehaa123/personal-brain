@@ -277,6 +277,10 @@ export class CommandHandler {
           tags: note.tags || null,
           createdAt: note.createdAt,
           updatedAt: note.updatedAt,
+          source: note.source || 'import',
+          confidence: note.confidence || null,
+          conversationMetadata: note.conversationMetadata || null,
+          verified: note.verified || false,
         })),
         matchType,
       };

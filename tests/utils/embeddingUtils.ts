@@ -7,13 +7,16 @@
  * 
  * Usage:
  * ```typescript
- * import { createMockEmbedding, setupEmbeddingMocks } from '@test';
+ * import { createMockEmbedding, setupEmbeddingMocks, createTestNote } from '@test';
  * 
  * // Create a deterministic embedding for testing
  * const embedding = createMockEmbedding('test input');
  * 
  * // Setup mocks for the embedding service
  * setupEmbeddingMocks(mock);
+ * 
+ * // Create a note with all required fields for testing
+ * const note = createTestNote({ title: 'Test', content: 'Content' });
  * ```
  */
 
@@ -43,6 +46,45 @@ export function createMockEmbedding(input: string, dimensions: number = 1536): n
 }
 
 // Setup embedding mocks for the embedding module
+/**
+ * Create a test note with all required fields for the new Note schema
+ * This is helpful for tests that need to work with the updated Note schema
+ * that includes source, conversationMetadata, confidence, and verified
+ */
+export function createTestNote(params: {
+  id?: string;
+  title: string;
+  content: string;
+  tags?: string[];
+  embedding?: number[];
+  createdAt?: Date;
+  updatedAt?: Date;
+  source?: 'import' | 'conversation' | 'user-created';
+  confidence?: number | null;
+  conversationMetadata?: {
+    conversationId: string;
+    timestamp: Date;
+    userName?: string;
+    promptSegment?: string;
+  } | null;
+  verified?: boolean | null;
+}) {
+  // Default values aligned with the updated Note schema
+  return {
+    id: params.id || `note-${Math.random().toString(36).substring(2, 10)}`,
+    title: params.title,
+    content: params.content,
+    tags: params.tags || [],
+    embedding: params.embedding || null,
+    createdAt: params.createdAt || new Date(),
+    updatedAt: params.updatedAt || new Date(),
+    source: params.source || 'import',
+    confidence: params.confidence !== undefined ? params.confidence : null,
+    conversationMetadata: params.conversationMetadata || null,
+    verified: params.verified !== undefined ? params.verified : null,
+  };
+}
+
 export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
   // Mock the embedding module
   mockFn.module('@/mcp/model/embeddings', () => {

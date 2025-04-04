@@ -15,6 +15,7 @@ import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/source
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
 import { ConversationMemory } from '@/mcp/protocol/memory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
@@ -35,6 +36,8 @@ export interface BrainProtocolOptions {
   useExternalSources?: boolean;
   interfaceType?: 'cli' | 'matrix';
   roomId?: string;
+  // Added for dependency injection - allows passing a custom storage implementation
+  memoryStorage?: ConversationMemoryStorage;
 }
 
 export class BrainProtocol {
@@ -144,9 +147,12 @@ export class BrainProtocol {
     this.noteService = new NoteService(this.context);
 
     // Initialize conversation memory with the specified interface type
+    // Use injected storage if provided, otherwise use singleton getInstance()
+    const memoryStorage = options.memoryStorage || InMemoryStorage.getInstance();
+    
     this.conversationMemory = new ConversationMemory({
       interfaceType: this.interfaceType,
-      storage: new InMemoryStorage(),
+      storage: memoryStorage,
       apiKey, // Pass the API key for summarization
     });
 

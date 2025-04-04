@@ -25,6 +25,16 @@ interface NoteWithSimilarity {
   similarity?: number;
   createdAt: Date;
   updatedAt: Date;
+  // Added fields to match the updated Note schema
+  source?: 'import' | 'conversation' | 'user-created';
+  confidence?: number | null;
+  conversationMetadata?: {
+    conversationId: string;
+    timestamp: Date;
+    userName?: string;
+    promptSegment?: string;
+  } | null;
+  verified?: boolean | null;
 }
 
 interface NoteContext {

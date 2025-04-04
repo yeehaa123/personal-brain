@@ -58,6 +58,26 @@ implements IRepository<TEntity, string> {
       );
     }
   }
+  
+  /**
+   * Insert an entity
+   * @param entity The entity to insert
+   * @returns The inserted entity
+   * @throws DatabaseError If there's an error accessing the database
+   */
+  async insert(entity: TEntity): Promise<TEntity> {
+    try {
+      // We need to use a more specific type that drizzle expects
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await db.insert(this.table).values(entity as any);
+      return entity;
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to insert ${this.entityName}`, 
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+  }
 
   /**
    * Delete an entity by ID

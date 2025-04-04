@@ -5,7 +5,7 @@ import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/source
 import { PromptFormatter } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import { createMockEmbedding } from '@test/mocks';
+import { createMockEmbedding, createMockNote } from '@test';
 
 
 
@@ -15,25 +15,20 @@ describe('PromptFormatter', () => {
 
   // Test data
   const sampleNotes: Note[] = [
-    {
-      id: 'note-1',
-      title: 'Quantum Computing Basics',
-      content: 'Quantum computing uses quantum bits or qubits which can exist in multiple states simultaneously.',
-      tags: ['quantum', 'computing', 'science'],
-      embedding: createMockEmbedding('Quantum computing basics'),
-      createdAt: new Date('2025-01-01'),
-      updatedAt: new Date('2025-01-02'),
-    },
-    {
-      id: 'note-2',
-      title: 'Quantum Entanglement',
-      content: 'Quantum entanglement is a physical phenomenon that occurs when a pair of particles interact in such a way that the quantum state of each particle cannot be described independently of the others.',
-      tags: ['quantum', 'physics'],
-      embedding: createMockEmbedding('Quantum entanglement'),
-      createdAt: new Date('2025-01-03'),
-      updatedAt: new Date('2025-01-04'),
-    },
+    createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing', 'science']),
+    createMockNote('note-2', 'Quantum Entanglement', ['quantum', 'physics']),
   ];
+  
+  // Customize the notes with specific contents and embeddings
+  sampleNotes[0].content = 'Quantum computing uses quantum bits or qubits which can exist in multiple states simultaneously.';
+  sampleNotes[0].embedding = createMockEmbedding('Quantum computing basics');
+  sampleNotes[0].createdAt = new Date('2025-01-01');
+  sampleNotes[0].updatedAt = new Date('2025-01-02');
+  
+  sampleNotes[1].content = 'Quantum entanglement is a physical phenomenon that occurs when a pair of particles interact in such a way that the quantum state of each particle cannot be described independently of the others.';
+  sampleNotes[1].embedding = createMockEmbedding('Quantum entanglement');
+  sampleNotes[1].createdAt = new Date('2025-01-03');
+  sampleNotes[1].updatedAt = new Date('2025-01-04');
 
   const sampleProfile: Profile = {
     id: 'profile-1',
@@ -175,15 +170,11 @@ describe('PromptFormatter', () => {
 
   test('should calculate content coverage correctly', () => {
     // Create a note with specific content for testing coverage
-    const testNote: Note = {
-      id: 'test-note',
-      title: 'Quantum Entanglement Explained',
-      content: 'Quantum entanglement occurs when particles become correlated in ways that cannot be explained by classical physics. Quantum states of entangled particles are dependent on each other regardless of distance. Einstein called this "spooky action at a distance".',
-      tags: ['quantum', 'physics'],
-      embedding: createMockEmbedding('Quantum entanglement test'),
-      createdAt: new Date('2025-01-03'),
-      updatedAt: new Date('2025-01-04'),
-    };
+    const testNote = createMockNote('test-note', 'Quantum Entanglement Explained', ['quantum', 'physics']);
+    testNote.content = 'Quantum entanglement occurs when particles become correlated in ways that cannot be explained by classical physics. Quantum states of entangled particles are dependent on each other regardless of distance. Einstein called this "spooky action at a distance".';
+    testNote.embedding = createMockEmbedding('Quantum entanglement test');
+    testNote.createdAt = new Date('2025-01-03');
+    testNote.updatedAt = new Date('2025-01-04');
     
     // Query with many overlapping terms
     const query = 'What is quantum entanglement and how does it work with particles at a distance?';

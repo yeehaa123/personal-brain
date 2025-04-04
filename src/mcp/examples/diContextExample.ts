@@ -202,6 +202,10 @@ export class NoteContextWithDI {
             tags: args.tags || null,
             createdAt: now,
             updatedAt: now,
+            source: 'user-created',
+            confidence: null,
+            conversationMetadata: null,
+            verified: true,
           });
 
           // Return in the format expected by MCP

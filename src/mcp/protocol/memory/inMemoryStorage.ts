@@ -18,10 +18,76 @@ import type {
 /**
  * In-memory storage adapter for tiered conversation memory
  * This implementation stores all data in memory and will be lost when the process ends
+ * 
+ * Uses the singleton pattern to ensure all components access the same conversation store
  */
 export class InMemoryStorage implements ConversationMemoryStorage {
-  private conversations: Map<string, Conversation> = new Map();
-  private roomIdIndex: Map<string, string> = new Map(); // Maps roomId -> conversationId
+  private conversations: Map<string, Conversation>;
+  private roomIdIndex: Map<string, string>; // Maps roomId -> conversationId
+  
+  // Singleton instance
+  private static instance: InMemoryStorage;
+  
+  constructor() {
+    // Initialize maps in constructor to ensure each instance has its own maps
+    this.conversations = new Map();
+    this.roomIdIndex = new Map();
+  }
+  
+  /**
+   * Get the singleton instance of InMemoryStorage
+   */
+  public static getInstance(): InMemoryStorage {
+    if (!InMemoryStorage.instance) {
+      InMemoryStorage.instance = new InMemoryStorage();
+    }
+    return InMemoryStorage.instance;
+  }
+  
+  /**
+   * Reset the storage state (for testing)
+   */
+  reset(): void {
+    this.conversations.clear();
+    this.roomIdIndex.clear();
+  }
+  
+  /**
+   * Static method to create a fresh instance (for testing)
+   * Ensures a completely isolated instance with no shared state
+   * 
+   * This method creates a completely isolated instance of InMemoryStorage
+   * with its own Maps, ensuring it won't share any state with the singleton
+   * or with other instances created via createFresh().
+   * 
+   * Each instance also gets a unique identifier to help with debugging.
+   * 
+   * IMPORTANT: This method should always be used in tests to ensure proper isolation.
+   * Tests should NEVER use getInstance() except for tests specifically testing the singleton pattern.
+   */
+  static createFresh(): InMemoryStorage {
+    // Create a new class to ensure 100% isolated prototype across all tests
+    class IsolatedInMemoryStorage extends InMemoryStorage {
+      constructor() {
+        super();
+        this.reset();
+      }
+    }
+    
+    // Create a completely new instance that doesn't use the singleton
+    const freshInstance = new IsolatedInMemoryStorage();
+    
+    // Assign a unique instance ID to help with debugging
+    // Using a property accessor to avoid TypeScript 'any' type warning
+    Object.defineProperty(freshInstance, '_instanceId', {
+      value: `fresh-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      writable: false,
+      enumerable: false,
+      configurable: false,
+    });
+    
+    return freshInstance;
+  }
 
   /**
    * Create a new conversation with generated ID and timestamps

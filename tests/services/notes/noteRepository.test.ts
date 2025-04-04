@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { notes } from '@/db/schema';
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
+import { createMockNote, createTestNote } from '@test';
 
 
 // Define initial data for testing
 const initialNotes: Note[] = [
-  { 
+  createTestNote({
     id: 'note-1', 
     title: 'Test Note 1', 
     content: 'This is the content of Test Note 1',
@@ -15,16 +16,18 @@ const initialNotes: Note[] = [
     embedding: [0.1, 0.2, 0.3],
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
-  },
-  { 
+    source: 'import',
+  }),
+  createTestNote({
     id: 'note-2', 
     title: 'Test Note 2', 
     content: 'This is the content of Test Note 2',
-    tags: null,
-    embedding: null,
+    tags: [], // Empty array instead of null
+    embedding: undefined, // Use undefined instead of null
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
-  },
+    source: 'import',
+  }),
 ];
 
 // Create a mock repository instead of mocking the database
@@ -38,6 +41,8 @@ export class MockNoteRepository extends NoteRepository {
     embedding: number[];
     chunkIndex: number;
   }[] = [];
+  
+  // Mock properties for conversation-to-notes feature (used in findBySource/findByConversationMetadata)
   
   constructor(initialNotes: Note[]) {
     super();
@@ -83,16 +88,26 @@ export class MockNoteRepository extends NoteRepository {
     createdAt?: Date;
     updatedAt?: Date;
     tags?: string[];
+    source?: 'import' | 'conversation' | 'user-created';
+    confidence?: number | null;
+    conversationMetadata?: { conversationId: string; timestamp: Date; userName?: string; promptSegment?: string; } | null;
+    verified?: boolean | null;
   }): Promise<string> {
     const id = noteData.id || 'new-note-id';
+    const tags = noteData.tags || [];
+    
+    // Use createMockNote as the base
     const newNote: Note = {
-      id,
-      title: noteData.title || 'Untitled',
+      ...createMockNote(id, noteData.title || 'Untitled', tags),
+      // Override with any specific properties provided
       content: noteData.content || '',
-      tags: noteData.tags || null,
       embedding: noteData.embedding || null,
       createdAt: noteData.createdAt || new Date(),
       updatedAt: noteData.updatedAt || new Date(),
+      source: noteData.source || 'import',
+      confidence: noteData.confidence !== undefined ? noteData.confidence : null,
+      conversationMetadata: noteData.conversationMetadata || null,
+      verified: noteData.verified !== undefined ? noteData.verified : null,
     };
     
     this.notes.push(newNote);
@@ -203,6 +218,22 @@ export class MockNoteRepository extends NoteRepository {
       this.notes.filter(note => note.id !== excludeNoteId && !!note.embedding),
     );
   }
+  
+  // Conversation-to-notes feature methods
+  override async findBySource(source: 'import' | 'conversation' | 'user-created', limit = 10, offset = 0): Promise<Note[]> {
+    const filtered = this.notes.filter(note => note.source === source);
+    return Promise.resolve(filtered.slice(offset, offset + limit));
+  }
+  
+  override async findByConversationMetadata(field: string, value: string): Promise<Note[]> {
+    return Promise.resolve(
+      this.notes.filter(note => {
+        if (!note.conversationMetadata) return false;
+        const metadata = note.conversationMetadata as Record<string, unknown>;
+        return metadata[field] === value;
+      }),
+    );
+  }
 }
 
 describe('NoteRepository', () => {
@@ -247,14 +278,10 @@ describe('NoteRepository', () => {
   });
   
   test('should insert a new note', async () => {
-    const newNote: Omit<Note, 'id'> & { id?: string } = {
+    const newNote = createTestNote({
       title: 'New Test Note',
       content: 'This is a new test note.',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      embedding: null,
-      tags: null,
-    };
+    });
     
     // Convert null to undefined for the API
     const noteDataForInsert = {

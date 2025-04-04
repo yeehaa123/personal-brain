@@ -6,6 +6,7 @@ import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
 import { NoteService } from '@/mcp/protocol/components/noteService';
 import type { Note } from '@/models/note';
 import {
+  createMockNote,
   createMockNotes,
 } from '@test';
 
@@ -48,16 +49,11 @@ class MockNoteContext implements Partial<NoteContext> {
       getNoteById: async (id: string) => mockNotes.find(note => note.id === id) || undefined,
       getRecentNotes: async (limit = 5) => mockNotes.slice(0, limit),
       addNote: async (note: Record<string, unknown>) => {
-        const newNote: Note = {
-          id: `note-${Date.now()}`,
-          title: note['title'] as string || 'Untitled',
-          content: note['content'] as string || '',
-          tags: note['tags'] as string[] || null,
-          embedding: null,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-        return newNote;
+        return createMockNote(
+          `note-${Date.now()}`,
+          note['title'] as string || 'Untitled',
+          note['tags'] as string[] || [],
+        );
       },
     };
 
@@ -155,15 +151,7 @@ describe('NoteService', () => {
 
   test('should get related notes for a given note', async () => {
     const relevantNotes = [
-      {
-        id: 'note-1',
-        title: 'Test Note 1',
-        content: 'Test content',
-        tags: null,
-        embedding: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+      createMockNote('note-1', 'Test Note 1', []),
     ];
 
     const relatedNotes = await noteService.getRelatedNotes(relevantNotes, 3);
@@ -216,15 +204,7 @@ describe('NoteService', () => {
         return [];
       } else if (tags) {
         return [
-          {
-            id: 'note-tags',
-            title: 'Tags Only Result',
-            content: 'Found by tags only',
-            tags: ['test'],
-            embedding: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          createMockNote('note-tags', 'Tags Only Result', ['test']),
         ];
       }
 
@@ -249,15 +229,7 @@ describe('NoteService', () => {
         return [];
       } else {
         return [
-          {
-            id: 'note-keyword',
-            title: 'Keyword Result',
-            content: 'Found by keyword',
-            tags: null,
-            embedding: null,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          },
+          createMockNote('note-keyword', 'Keyword Result'),
         ];
       }
     };
@@ -275,15 +247,7 @@ describe('NoteService', () => {
     const customContext = new MockNoteContext();
     customContext.searchNotes = async () => [];
     customContext.getRecentNotes = async (limit: number) => [
-      {
-        id: 'recent-note',
-        title: 'Recent Note',
-        content: 'This is a recent note',
-        tags: null,
-        embedding: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+      createMockNote('recent-note', 'Recent Note'),
     ].slice(0, limit);
 
     const service = new NoteService(customContext as unknown as NoteContext);

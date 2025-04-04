@@ -6,7 +6,7 @@ import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddi
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test';
+import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
 
 
 // Define interface for NoteContext
@@ -77,7 +77,7 @@ const mockProfile: Profile = {
 
 // Create mock notes for testing
 const mockNotes: Note[] = [
-  { 
+  createTestNote({
     id: 'note-1', 
     title: 'TypeScript Best Practices', 
     content: 'Guide to TypeScript development and best practices.',
@@ -85,8 +85,9 @@ const mockNotes: Note[] = [
     embedding: createMockEmbedding('typescript note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
-  },
-  { 
+    source: 'import',
+  }),
+  createTestNote({
     id: 'note-2', 
     title: 'React Component Design', 
     content: 'How to design effective React components.',
@@ -94,8 +95,9 @@ const mockNotes: Note[] = [
     embedding: createMockEmbedding('react note'),
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
-  },
-  { 
+    source: 'import',
+  }),
+  createTestNote({
     id: 'note-3', 
     title: 'Machine Learning Introduction', 
     content: 'Introduction to ML concepts and applications.',
@@ -103,7 +105,8 @@ const mockNotes: Note[] = [
     embedding: createMockEmbedding('ml note'),
     createdAt: new Date('2023-03-01'),
     updatedAt: new Date('2023-03-02'),
-  },
+    source: 'import',
+  }),
 ];
 
 // Create a mock repository

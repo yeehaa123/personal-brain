@@ -11,11 +11,31 @@ const baseSelectNoteSchema = createSelectSchema(notes);
 export const insertNoteSchema = baseInsertNoteSchema.extend({
   tags: z.array(z.string()).nullable().optional(),
   embedding: z.array(z.number()).nullable().optional(),
+  // New fields for conversation-to-notes feature
+  source: z.enum(['import', 'conversation', 'user-created']).default('import'),
+  conversationMetadata: z.object({
+    conversationId: z.string(),
+    timestamp: z.date(),
+    userName: z.string().optional(),
+    promptSegment: z.string().optional(),
+  }).optional(),
+  confidence: z.number().min(0).max(100).optional(),
+  verified: z.boolean().default(false),
 });
 
 export const selectNoteSchema = baseSelectNoteSchema.extend({
   tags: z.array(z.string()).nullable(),
   embedding: z.array(z.number()).nullable(),
+  // New fields for conversation-to-notes feature
+  source: z.enum(['import', 'conversation', 'user-created']).default('import'),
+  conversationMetadata: z.object({
+    conversationId: z.string(),
+    timestamp: z.date(),
+    userName: z.string().optional(),
+    promptSegment: z.string().optional(),
+  }).nullable(),
+  confidence: z.number().min(0).max(100).nullable(),
+  verified: z.boolean().nullable(),
 });
 
 // Type definitions based on the schemas

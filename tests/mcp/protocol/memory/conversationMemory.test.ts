@@ -587,10 +587,12 @@ describe('ConversationMemory', () => {
   });
 
   test('should handle real InMemoryStorage', async () => {
-    // Create ConversationMemory with real InMemoryStorage
+    // Create ConversationMemory with a completely isolated InMemoryStorage instance
+    // This ensures no state is shared with other tests, even in parallel execution
+    const isolatedStorage = InMemoryStorage.createFresh();
     const realMemory = new ConversationMemory({
       interfaceType: 'cli',
-      storage: new InMemoryStorage(),
+      storage: isolatedStorage,
     });
     
     // Test full lifecycle

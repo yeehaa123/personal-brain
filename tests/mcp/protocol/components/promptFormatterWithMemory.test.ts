@@ -17,8 +17,8 @@ describe('PromptFormatter with ConversationMemory', () => {
   // This test simulates how the PromptFormatter will be extended
   // to support conversation history
   test('should format prompt with conversation history', async () => {
-    // Set up conversation memory
-    const storage = new InMemoryStorage();
+    // Set up conversation memory with a fresh storage to avoid test interference
+    const storage = InMemoryStorage.createFresh();
     const memory = new ConversationMemory({
       interfaceType: 'cli',
       storage: storage,

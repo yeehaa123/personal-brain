@@ -26,6 +26,18 @@ describe('MCP HTTP Server', () => {
     server = Bun.serve({
       port: TEST_PORT,
       fetch: async (req) => {
+        // For OPTIONS requests, return 204 with CORS headers
+        if (req.method === 'OPTIONS') {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type',
+            },
+          });
+        }
+        
         // Add CORS headers
         const corsHeaders = {
           'Access-Control-Allow-Origin': '*',
@@ -65,6 +77,7 @@ describe('MCP HTTP Server', () => {
         if (url.pathname === '/messages' && req.method === 'POST') {
           const sessionId = url.searchParams.get('sessionId');
           
+          // Strict checking for sessionId - must be provided
           if (!sessionId) {
             return new Response(
               JSON.stringify({ error: 'No sessionId provided' }),
@@ -78,6 +91,7 @@ describe('MCP HTTP Server', () => {
             );
           }
           
+          // Must be an active session ID, not just any string
           if (!activeSessions.has(sessionId)) {
             return new Response(
               JSON.stringify({ error: 'No active transport found for this session' }),
@@ -163,7 +177,7 @@ describe('MCP HTTP Server', () => {
           );
         }
         
-        // Default response for other paths
+        // Handle unknown endpoints - always return 404 for paths not explicitly handled
         return new Response(
           JSON.stringify({ error: 'Endpoint not found' }), 
           { 
@@ -263,7 +277,9 @@ describe('MCP HTTP Server', () => {
     const defaultReader = defaultResponse.body!.getReader();
     const { value: defaultValue } = await defaultReader.read();
     const defaultText = new TextDecoder().decode(defaultValue);
-    const defaultData = JSON.parse(defaultText.replace('data: ', ''));
+    // Parse SSE format: "data: {json}\n\n"
+    const jsonStr = defaultText.split('\n\n')[0].replace('data: ', '');
+    const defaultData = JSON.parse(jsonStr);
     
     expect(defaultData).toHaveProperty('transportType');
     expect(defaultData).toHaveProperty('sessionId');
@@ -279,7 +295,9 @@ describe('MCP HTTP Server', () => {
     const customReader = customResponse.body!.getReader();
     const { value: customValue } = await customReader.read();
     const customText = new TextDecoder().decode(customValue);
-    const customData = JSON.parse(customText.replace('data: ', ''));
+    // Parse SSE format: "data: {json}\n\n"
+    const customJsonStr = customText.split('\n\n')[0].replace('data: ', '');
+    const customData = JSON.parse(customJsonStr);
     
     expect(customData).toHaveProperty('transportType');
     expect(customData.transportType).toBe('websocket');
@@ -296,13 +314,17 @@ describe('MCP HTTP Server', () => {
     // First message should be connection_ready
     const { value: value1 } = await reader.read();
     const text1 = new TextDecoder().decode(value1);
-    const data1 = JSON.parse(text1.replace('data: ', ''));
+    // Parse SSE format: "data: {json}\n\n"
+    const jsonStr1 = text1.split('\n\n')[0].replace('data: ', '');
+    const data1 = JSON.parse(jsonStr1);
     expect(data1.type).toBe('connection_ready');
     
     // Second message should be heartbeat (might need to wait)
     const { value: value2 } = await reader.read();
     const text2 = new TextDecoder().decode(value2);
-    const data2 = JSON.parse(text2.replace('data: ', ''));
+    // Parse SSE format: "data: {json}\n\n"
+    const jsonStr2 = text2.split('\n\n')[0].replace('data: ', '');
+    const data2 = JSON.parse(jsonStr2);
     expect(data2.type).toBe('heartbeat');
     
     // Clean up
@@ -356,7 +378,9 @@ describe('MCP HTTP Server', () => {
     // 2. Get connection_ready message with sessionId
     const { value } = await reader.read();
     const text = new TextDecoder().decode(value);
-    const connectionMessage = JSON.parse(text.replace('data: ', ''));
+    // SSE format expects "data: [JSON]" so we need to extract the JSON part
+    const jsonText = text.split('\n\n')[0].replace('data: ', '');
+    const connectionMessage = JSON.parse(jsonText);
     const sessionId = connectionMessage.sessionId;
     
     expect(connectionMessage.type).toBe('connection_ready');

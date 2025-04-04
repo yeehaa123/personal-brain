@@ -2,7 +2,7 @@
  * Repository for managing Note storage and retrieval
  * Centralizes database access for notes
  */
-import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, like, not, or, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
 import { db } from '@/db';
@@ -18,6 +18,72 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
  * Repository for accessing and managing notes in the database
  */
 export class NoteRepository extends BaseRepository<typeof notes, Note> {
+  // New methods for conversation-to-notes feature
+  
+  /**
+   * Find notes by source type
+   * @param source The source type to filter by ('import', 'conversation', 'user-created')
+   * @param limit Maximum number of notes to return
+   * @param offset Pagination offset
+   * @returns Array of notes with the specified source
+   */
+  async findBySource(source: 'import' | 'conversation' | 'user-created', limit = 10, offset = 0): Promise<Note[]> {
+    try {
+      // Note: We need to cast the return type to fix the TypeScript issue
+      // The actual records from the database should match the Note type
+      const results = await db
+        .select()
+        .from(notes)
+        .where(eq(notes.source, source))
+        .limit(limit)
+        .offset(offset)
+        .orderBy(desc(notes.createdAt));
+
+      // Cast the source field to the proper enum type - in the database it's TEXT
+      return results.map(note => ({
+        ...note,
+        // Force the source field to be one of the expected enum values
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
+    } catch (error) {
+      throw new DatabaseError(
+        `Error finding notes by source: ${error instanceof Error ? error.message : String(error)}`,
+        { source, limit, offset },
+      );
+    }
+  }
+
+  /**
+   * Find notes by metadata field value in conversationMetadata
+   * @param field The field name in the conversationMetadata to match
+   * @param value The value to search for
+   * @returns Array of notes with matching metadata
+   */
+  async findByConversationMetadata(field: string, value: string): Promise<Note[]> {
+    try {
+      // For SQLite with JSON storage, we need a json_extract function
+      // This is SQLite-specific implementation
+      // Since db.execute doesn't exist, we'll use a different approach with drizzle-orm
+      const results = await db
+        .select()
+        .from(notes)
+        .where(
+          sql`json_extract(${notes.conversationMetadata}, '$."${field}"') = ${value}`,
+        )
+        .orderBy(desc(notes.createdAt));
+      
+      // Cast the source field to the proper enum type
+      return results.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
+    } catch (error) {
+      throw new DatabaseError(
+        `Error finding notes by conversation metadata: ${error instanceof Error ? error.message : String(error)}`,
+        { field, value },
+      );
+    }
+  }
   /**
    * Get the table that this repository uses
    */
@@ -184,7 +250,12 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
         .limit(safeLimit);
       
       logger.debug(`Found ${recentNotes.length} recent notes`);
-      return recentNotes;
+      
+      // Apply consistent typing to source field
+      return recentNotes.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
     }, 'Error fetching recent notes');
   }
 
@@ -194,10 +265,16 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    */
   async getNotesWithoutEmbeddings(): Promise<Note[]> {
     try {
-      return await db
+      const results = await db
         .select()
         .from(notes)
         .where(isNull(notes.embedding));
+      
+      // Apply consistent typing to source field
+      return results.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
     } catch (error) {
       throw new DatabaseError(
         `Error finding notes without embeddings: ${error instanceof Error ? error.message : String(error)}`,
@@ -211,10 +288,16 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    */
   async getNotesWithEmbeddings(): Promise<Note[]> {
     try {
-      return await db
+      const results = await db
         .select()
         .from(notes)
         .where(not(isNull(notes.embedding)));
+        
+      // Apply consistent typing to source field
+      return results.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
     } catch (error) {
       throw new DatabaseError(
         `Error finding notes with embeddings: ${error instanceof Error ? error.message : String(error)}`,
@@ -229,7 +312,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    */
   async getOtherNotesWithEmbeddings(excludeNoteId: string): Promise<Note[]> {
     try {
-      return await db
+      const results = await db
         .select()
         .from(notes)
         .where(
@@ -238,6 +321,12 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
             not(isNull(notes.embedding)),
           ),
         );
+        
+      // Apply consistent typing to source field
+      return results.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
     } catch (error) {
       throw new DatabaseError(
         `Error finding other notes with embeddings: ${error instanceof Error ? error.message : String(error)}`,
@@ -332,22 +421,34 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
       if (conditions.length === 0) {
         logger.debug('No search conditions, returning recent notes');
         
-        return db
+        const results = await db
           .select()
           .from(notes)
           .orderBy(desc(notes.updatedAt))
           .limit(safeLimit)
           .offset(safeOffset);
+          
+        // Apply consistent typing to source field
+        return results.map(note => ({
+          ...note,
+          source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+        }));
       }
 
       // Execute search with conditions
-      return db
+      const results = await db
         .select()
         .from(notes)
         .where(and(...conditions))
         .orderBy(desc(notes.updatedAt))
         .limit(safeLimit)
         .offset(safeOffset);
+        
+      // Apply consistent typing to source field
+      return results.map(note => ({
+        ...note,
+        source: (note.source || 'import') as 'import' | 'conversation' | 'user-created',
+      }));
     } catch (error) {
       throw new DatabaseError(
         `Error in keyword search: ${error instanceof Error ? error.message : String(error)}`,

@@ -4,6 +4,7 @@
 import { describe, expect, mock, test } from 'bun:test';
 
 import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
+import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 
 // Create a partial mock of BrainProtocol for testing
 class MockBrainProtocol {
@@ -12,14 +13,19 @@ class MockBrainProtocol {
   private conversationMemory: ConversationMemory;
   private model: { complete: unknown };
 
-  constructor(options?: { interfaceType?: 'cli' | 'matrix'; roomId?: string }) {
+  constructor(options?: { 
+    interfaceType?: 'cli' | 'matrix'; 
+    roomId?: string;
+    storage?: ConversationMemoryStorage; // Added storage parameter
+  }) {
     this.interfaceType = options?.interfaceType || 'cli';
     this.currentRoomId = options?.roomId;
     
-    // Initialize conversation memory
+    // Initialize conversation memory - use provided storage or create fresh one
+    // Always use createFresh() for tests to ensure proper isolation
     this.conversationMemory = new ConversationMemory({
       interfaceType: this.interfaceType,
-      storage: new InMemoryStorage(),
+      storage: options?.storage || InMemoryStorage.createFresh(),
     });
     
     // Mock model

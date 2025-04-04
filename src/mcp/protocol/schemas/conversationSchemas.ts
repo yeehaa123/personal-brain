@@ -27,6 +27,17 @@ export const ConversationTurnSchema = z.object({
   
   // Optional metadata for this turn (citations, context used, etc.)
   metadata: z.record(z.unknown()).optional(),
+  
+  // New fields for conversation-to-notes feature
+  linkedNoteIds: z.array(z.string()).optional(),
+  highlightedSegments: z.array(
+    z.object({
+      text: z.string(),
+      startPos: z.number(),
+      endPos: z.number(),
+    }),
+  ).optional(),
+  savedAsNoteId: z.string().optional(),
 });
 
 /**

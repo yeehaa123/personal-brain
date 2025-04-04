@@ -20,7 +20,7 @@ mock.module('@/mcp/protocol/memory/summarizer', () => {
           return {
             id: 'mock-summary-id',
             timestamp: new Date(),
-            content: 'This is a mock summary of the conversation that discusses various topics including testing, summarization, and mocking APIs.',
+            content: 'Summary of 3 conversation turns about various topics.',
             startTurnIndex: 0,
             endTurnIndex: turns.length - 1,
             startTimestamp: turns[0].timestamp,
@@ -88,7 +88,7 @@ describe('ConversationSummarizer', () => {
     expect(summary).toHaveProperty('metadata');
     
     // Check content
-    expect(summary.content).toContain('mock summary');
+    expect(summary.content).toContain('Summary of 3 conversation turns');
     expect(summary.turnCount).toBe(3);
     
     // Check timestamps are consistent
