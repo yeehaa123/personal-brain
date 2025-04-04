@@ -1,7 +1,7 @@
 /**
  * Conversation Summarizer for Tiered Memory
  */
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 import { ClaudeModel } from '@/mcp/model';
 import logger from '@utils/logger';
@@ -55,7 +55,7 @@ export class ConversationSummarizer {
 
       // Create summary object
       const summary: ConversationSummary = {
-        id: uuidv4(),
+        id: `summ-${nanoid()}`,
         timestamp: new Date(),
         content: response.response.trim(),
         startTurnIndex: 0, // These will be set by the caller
@@ -133,7 +133,7 @@ Summary:`;
     const content = `This conversation contains ${turns.length} turns, starting with "${firstQuery}" and ending with "${lastQuery}". Topics include: ${topicsList || 'various subjects'}.`;
 
     return {
-      id: uuidv4(),
+      id: `summ-${nanoid()}`,
       timestamp: new Date(),
       content,
       startTurnIndex: 0,

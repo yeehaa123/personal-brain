@@ -2,7 +2,7 @@
  * Tests for the ConversationSummarizer
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 import { ConversationSummarizer } from '@/mcp/protocol/memory';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
@@ -47,7 +47,7 @@ describe('ConversationSummarizer', () => {
     const now = new Date();
     sampleTurns = [
       {
-        id: uuidv4(),
+        id: `turn-${nanoid()}`,
         timestamp: new Date(now.getTime() - 3000),
         query: 'What is conversation summarization?',
         response: 'Conversation summarization is the process of creating concise summaries of longer conversations to preserve context while reducing token usage.',
@@ -55,7 +55,7 @@ describe('ConversationSummarizer', () => {
         userName: 'Alice',
       },
       {
-        id: uuidv4(),
+        id: `turn-${nanoid()}`,
         timestamp: new Date(now.getTime() - 2000),
         query: 'Why is it useful?',
         response: 'It is useful for maintaining conversation context over longer sessions without exceeding token limits. It allows for more efficient use of the context window in language models.',
@@ -63,7 +63,7 @@ describe('ConversationSummarizer', () => {
         userName: 'Alice',
       },
       {
-        id: uuidv4(),
+        id: `turn-${nanoid()}`,
         timestamp: new Date(now.getTime() - 1000),
         query: 'How does the tiered memory system work?',
         response: 'The tiered memory system organizes conversation history into active, summary, and archive tiers. Recent turns stay in the active tier, older turns are summarized and moved to the summary tier, and original turns are archived for reference.',
@@ -116,7 +116,7 @@ describe('ConversationSummarizer', () => {
     const variedTurns = [
       ...sampleTurns,
       {
-        id: uuidv4(),
+        id: `turn-${nanoid()}`,
         timestamp: new Date(),
         query: 'Short?',
         response: 'Yes.',
@@ -124,7 +124,7 @@ describe('ConversationSummarizer', () => {
         userName: 'Alice',
       },
       {
-        id: uuidv4(),
+        id: `turn-${nanoid()}`,
         timestamp: new Date(),
         query: 'Tell me a long story about summarization.',
         response: 'Once upon a time, there was a language model that needed to remember very long conversations. ' +

@@ -1,7 +1,7 @@
 /**
  * In-memory implementation of the ConversationMemoryStorage interface
  */
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 import { 
@@ -80,7 +80,7 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     // Assign a unique instance ID to help with debugging
     // Using a property accessor to avoid TypeScript 'any' type warning
     Object.defineProperty(freshInstance, '_instanceId', {
-      value: `fresh-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      value: `fresh-${nanoid()}`,
       writable: false,
       enumerable: false,
       configurable: false,
@@ -97,7 +97,8 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     roomId?: string;
   }): Promise<Conversation> {
     const now = new Date();
-    const conversationId = uuidv4();
+    // Use nanoid with prefix for clarity and consistent length (21 chars)
+    const conversationId = `conv-${nanoid()}`;
     
     const conversation: Conversation = {
       id: conversationId,
@@ -156,7 +157,7 @@ export class InMemoryStorage implements ConversationMemoryStorage {
 
     const completeTurn: ConversationTurn = {
       ...turn,
-      id: uuidv4(),
+      id: `turn-${nanoid()}`,
     };
 
     // Validate the turn using Zod schema
@@ -190,7 +191,7 @@ export class InMemoryStorage implements ConversationMemoryStorage {
 
     const completeSummary: ConversationSummary = {
       ...summary,
-      id: uuidv4(),
+      id: `summ-${nanoid()}`,
     };
 
     // Validate the summary using Zod schema

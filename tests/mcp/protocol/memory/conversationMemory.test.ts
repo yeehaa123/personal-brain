@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 
 import { ConversationMemory } from '@/mcp/protocol/memory/conversationMemory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
@@ -12,7 +12,7 @@ describe('ConversationMemory', () => {
 
   // Helper to create a mock conversation
   const createMockConversation = (
-    id: string = uuidv4(), 
+    id: string = `conv-${nanoid()}`, 
     turns: number = 0,
     interfaceType: 'cli' | 'matrix' = 'cli',
     roomId?: string,
@@ -69,7 +69,7 @@ describe('ConversationMemory', () => {
         
         const newTurn = {
           ...turn,
-          id: uuidv4(),
+          id: `turn-${nanoid()}`,
         };
         
         return {
