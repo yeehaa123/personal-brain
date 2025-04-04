@@ -1,8 +1,9 @@
 import { describe, expect, mock, test } from 'bun:test';
 
-import { ExternalSourceContext } from '@/mcp';
+import type { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
-import { ExternalSourceService , ProfileAnalyzer , PromptFormatter } from '@/mcp/protocol/components';
+import type { ProfileAnalyzer , PromptFormatter } from '@/mcp/protocol/components';
+import { ExternalSourceService  } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import { createMockEmbedding } from '@test/mocks';
 

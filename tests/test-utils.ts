@@ -6,7 +6,7 @@ import { afterAll, beforeAll, mock } from 'bun:test';
 import { createContainer, useTestContainer } from '@/utils/dependencyContainer';
 import { CLIInterface } from '@utils/cliInterface';
 
-import { createTrackers } from './utils/cliUtils';
+import type { createTrackers } from './utils/cliUtils';
 import { 
   clearStandardTestEnv, 
   clearTestEnv, 

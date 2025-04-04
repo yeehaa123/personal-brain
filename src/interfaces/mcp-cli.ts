@@ -2,7 +2,7 @@
  * MCP CLI interface for the Personal Brain
  * This provides a standalone interface to interact with the MCP server
  */
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { createUnifiedMcpServer } from '@/mcp';

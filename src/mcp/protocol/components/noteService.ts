@@ -46,7 +46,7 @@ export class NoteService {
     const tags = tagMatches.map(match => match[1]);
 
     // Remove the tags from the query for better text matching
-    let cleanQuery = query.replace(tagRegex, '').trim();
+    const cleanQuery = query.replace(tagRegex, '').trim();
 
     // Check for specific topic mentions like "MCP", "Model-Context-Protocol"
     const topicRegex = /\b(MCP|Model[-\s]Context[-\s]Protocol|AI architecture)\b/i;

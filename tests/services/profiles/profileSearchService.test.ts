@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
-import { ProfileRepository } from '@/services/profiles/profileRepository';
+import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
+import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
-import { ProfileTagService } from '@/services/profiles/profileTagService';
+import type { ProfileTagService } from '@/services/profiles/profileTagService';
 import { createMockEmbedding, setupEmbeddingMocks } from '@test';
 
 

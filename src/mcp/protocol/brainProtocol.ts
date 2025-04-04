@@ -1,7 +1,7 @@
 /**
  * BrainProtocol orchestrates the interaction between models and context
  */
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 
 import { aiConfig, relevanceConfig } from '@/config';

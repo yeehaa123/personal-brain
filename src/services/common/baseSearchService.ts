@@ -5,8 +5,8 @@
 
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
 
-import { BaseRepository } from '@/services/BaseRepository';
-import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import type { BaseRepository } from '@/services/BaseRepository';
+import type { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import type { ISearchService, SearchOptions } from '@/services/interfaces/ISearchService';
 import { safeExec, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';

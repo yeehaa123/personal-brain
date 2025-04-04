@@ -18,7 +18,7 @@ const TEST_PORT = 8001;
 describe('MCP HTTP Server', () => {
   // Server instance for testing
   let server: ReturnType<typeof Bun.serve>;
-  let activeSessions: Set<string> = new Set();
+  const activeSessions: Set<string> = new Set();
   
   // Before all tests, start a test server
   beforeAll(() => {

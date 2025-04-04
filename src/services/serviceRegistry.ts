@@ -4,8 +4,8 @@
  */
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import { container, DependencyContainer } from '@/utils/dependencyContainer';
-import type { ServiceFactory } from '@/utils/dependencyContainer';
+import { container } from '@/utils/dependencyContainer';
+import type { DependencyContainer , ServiceFactory } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';

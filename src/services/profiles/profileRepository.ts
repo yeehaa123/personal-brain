@@ -103,7 +103,7 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
 
       const now = new Date();
       // Process profile data to handle experiences correctly
-      let processedData = { ...profileData, updatedAt: now };
+      const processedData = { ...profileData, updatedAt: now };
       
       // Use a safer approach with Object.assign to handle data
       // Create a safe shallow copy without type issues

@@ -3,7 +3,8 @@
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { createContainer, DependencyContainer } from '@/utils/dependencyContainer';
+import type { DependencyContainer } from '@/utils/dependencyContainer';
+import { createContainer } from '@/utils/dependencyContainer';
 
 // Test sample services
 interface Service1 {

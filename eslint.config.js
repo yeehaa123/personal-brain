@@ -73,11 +73,18 @@ export default [
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
+      // TypeScript-specific rules
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-unused-vars': ['warn', { 
         'argsIgnorePattern': '^_',
         'caughtErrorsIgnorePattern': '^_' 
       }],
+      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/consistent-type-imports': ['error', { 'prefer': 'type-imports' }],
+      
+      // Bug prevention
+      'no-var': 'error',
+      'prefer-const': 'error',
       // Import Rules - Start with just import ordering to fix first
       // Sort imports
       'sort-imports': ['error', {

@@ -15,7 +15,7 @@ import type {
   ProfilePublication,
   ProfileVolunteerWork,
 } from '@/models/profile';
-import {
+import type {
   ProfileEmbeddingService,
   ProfileRepository,
   ProfileSearchService,

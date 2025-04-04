@@ -7,7 +7,8 @@ import { z } from 'zod';
 
 import { EmbeddingService } from '@/mcp/model';
 import { getEnv } from '@/utils/configUtils';
-import { DependencyContainer, getContainer } from '@/utils/dependencyContainer';
+import type { DependencyContainer} from '@/utils/dependencyContainer';
+import { getContainer } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 import { 

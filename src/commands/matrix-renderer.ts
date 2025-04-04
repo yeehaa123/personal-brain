@@ -140,7 +140,7 @@ export class MatrixRenderer {
     }
 
     case 'ask': {
-      let askMessage = [
+      const askMessage = [
         '### Answer',
         '',
         result.answer,

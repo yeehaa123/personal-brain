@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import { textConfig } from '@/config';
 import type { Note } from '@/models/note';
-import {
+import type {
   NoteEmbeddingService,
   NoteRepository,
   NoteSearchService,

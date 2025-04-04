@@ -12,8 +12,8 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 
-import { CommandHandler } from '../commands';
-import { CLIRenderer } from '../commands/cli-renderer';
+import type { CommandHandler } from '../commands';
+import type { CLIRenderer } from '../commands/cli-renderer';
 import { CLIInterface } from '../utils/cliInterface';
 import logger from '../utils/logger';
 

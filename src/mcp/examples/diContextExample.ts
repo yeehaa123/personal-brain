@@ -8,9 +8,9 @@ import { z } from 'zod';
 
 import { textConfig } from '@/config';
 import type { Note } from '@/models/note';
-import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
-import { NoteRepository } from '@/services/notes/noteRepository';
-import { NoteSearchService } from '@/services/notes/noteSearchService';
+import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import type { NoteRepository } from '@/services/notes/noteRepository';
+import type { NoteSearchService } from '@/services/notes/noteSearchService';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
 import { getContainer, getService } from '@/utils/dependencyContainer';

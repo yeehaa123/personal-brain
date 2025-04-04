@@ -3,13 +3,13 @@
  */
 
 import { relevanceConfig } from '@/config';
-import { ExternalSourceContext } from '@/mcp';
+import type { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import logger from '@utils/logger';
 
-import { ProfileAnalyzer } from './profileAnalyzer';
-import { PromptFormatter } from './promptFormatter';
+import type { ProfileAnalyzer } from './profileAnalyzer';
+import type { PromptFormatter } from './promptFormatter';
 
 
 
