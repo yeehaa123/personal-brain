@@ -123,8 +123,9 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('✅ Note "What is ecosystem architecture?" saved successfully!');
-    expect(message).toContain('<strong>Note ID</strong>: `note-123`');
+    expect(message).toContain('### ✅ Note Saved Successfully!');
+    expect(message).toContain('**Title**: "What is ecosystem architecture?"');
+    expect(message).toContain('**Note ID**: `note-123`');
     expect(message).toContain('!brain note note-123');
   });
 

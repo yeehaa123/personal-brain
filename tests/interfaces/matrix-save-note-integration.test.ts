@@ -27,7 +27,7 @@ describeOrSkip('Matrix save-note integration', () => {
     // Create fresh BrainProtocol for Matrix interface
     brainProtocol = BrainProtocol.getInstance({ 
       interfaceType: 'matrix', 
-      roomId: roomId 
+      roomId: roomId, 
     });
     
     // Get the conversation memory for this test
@@ -45,8 +45,8 @@ describeOrSkip('Matrix save-note integration', () => {
       'Ecosystem architecture is a design approach that...', 
       {
         userId: 'user123',
-        userName: 'Test User'
-      }
+        userName: 'Test User',
+      },
     );
   });
 

@@ -350,7 +350,7 @@ export class MatrixRenderer {
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     
-    // Markdown formatted message with enhanced styling
+    // Element-compatible Markdown formatting
     const message = [
       '### 📝 Note Preview',
       '',
@@ -362,16 +362,15 @@ export class MatrixRenderer {
       previewContent,
       '```',
       '',
-      '<hr style="border: 1px solid #ccc; margin: 1em 0;">',
+      '---',
       '',
       '_This is a preview of the note that will be created from your conversation._',
       '',
-      '<div style="background-color: #f0f8ff; padding: 10px; border-left: 4px solid #0066cc; margin: 10px 0;">',
-      `To save this note: \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\`<br>`,
-      `To cancel: \`${this.commandPrefix} cancel\``,
-      '</div>',
+      '> 🔵 **Actions**',
+      `> • To save this note: \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\``,
+      `> • To cancel: \`${this.commandPrefix} cancel\``,
       '',
-      `<small><i>Conversation ID: ${result.conversationId}</i></small>`, // Include this for the Matrix interface to parse
+      `_Conversation ID: ${result.conversationId}_`, // Include this for the Matrix interface to parse
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -382,15 +381,13 @@ export class MatrixRenderer {
    */
   private renderSaveNoteConfirm(roomId: string, result: { noteId: string; title: string }): void {
     const message = [
-      '<div style="background-color: #e6ffe6; padding: 12px; border-radius: 4px; border-left: 4px solid #33cc33; margin: 10px 0;">',
-      `<h3>✅ Note "${result.title}" saved successfully!</h3>`,
-      '</div>',
+      '### ✅ Note Saved Successfully!',
       '',
-      `<strong>Note ID</strong>: \`${result.noteId}\``,
+      `**Title**: "${result.title}"`,
+      `**Note ID**: \`${result.noteId}\``,
       '',
-      '<div style="background-color: #f5f5f5; padding: 8px; border-radius: 4px; margin: 10px 0;">',
-      `To view the note, use: \`${this.commandPrefix} note ${result.noteId}\``,
-      '</div>',
+      '> 💡 **Tip**: To view the complete note, use:',
+      `> \`${this.commandPrefix} note ${result.noteId}\``,
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -401,22 +398,22 @@ export class MatrixRenderer {
    */
   private renderConversationNotes(roomId: string, result: { notes: Note[] }): void {
     if (result.notes.length === 0) {
-      this.sendMessageFn(roomId, '<div style="background-color: #fff8e6; padding: 12px; border-radius: 4px; border-left: 4px solid #ffcc00; margin: 10px 0;"><h3>⚠️ No conversation notes found.</h3></div>');
+      this.sendMessageFn(roomId, '### ⚠️ No conversation notes found.');
       return;
     }
     
-    // Create an enhanced presentation for notes
+    // Create a presentation for notes using Element-compatible Markdown
     const messageParts = [
-      '<h3>📚 Notes Created from Conversations</h3>',
-      '<hr style="border: 0; border-top: 1px solid #ccc; margin: 1em 0;">',
+      '### 📚 Notes Created from Conversations',
+      '---',
     ];
     
-    // Add each note as a card
+    // Add each note with proper Markdown formatting
     result.notes.forEach((note, index) => {
       // Extract tags and format them
       const tags = note.tags && note.tags.length > 0
-        ? note.tags.map(tag => `<code>${tag}</code>`).join(' ')
-        : '<em>No tags</em>';
+        ? note.tags.map(tag => `\`${tag}\``).join(' ')
+        : '_No tags_';
       
       // Format content preview
       const preview = getExcerpt(note.content, 120);
@@ -424,17 +421,18 @@ export class MatrixRenderer {
       // Format date
       const created = new Date(note.createdAt).toLocaleDateString();
       
-      // Create a card for each note
+      // Create a formatted note block
       messageParts.push(
-        '<div style="background-color: #f9f9f9; border-left: 4px solid #3f51b5; padding: 10px; margin: 12px 0; border-radius: 0 4px 4px 0;">',
-        `<h4>${index + 1}. ${note.title}</h4>`,
-        `<div><strong>ID:</strong> <code>${note.id}</code> • <strong>Created:</strong> ${created}</div>`,
-        `<div><strong>Tags:</strong> ${tags}</div>`,
-        '<div style="margin-top: 8px; font-style: italic;">',
-        preview,
-        '</div>',
-        `<div style="margin-top: 8px;"><small>View with: <code>${this.commandPrefix} note ${note.id}</code></small></div>`,
-        '</div>',
+        `#### ${index + 1}. ${note.title}`,
+        '',
+        `**ID**: \`${note.id}\` | **Created**: ${created}`,
+        `**Tags**: ${tags}`,
+        '',
+        `> ${preview}`,
+        '',
+        `💡 View with: \`${this.commandPrefix} note ${note.id}\``,
+        '',
+        '---'
       );
     });
     
