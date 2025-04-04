@@ -342,20 +342,34 @@ export class MatrixBrainInterface {
           if (content.msgtype === MsgType.Text) {
             const body = content['body'] as string;
             
-            // Look for the hidden conversation ID in the message - support both formats:
-            // 1. Old format: _Conversation ID: abc123_
-            // 2. New HTML format: <small><i>Conversation ID: abc123</i></small>
-            const match = body.match(/(?:_Conversation ID: ([a-zA-Z0-9-_]+)_)|(?:Conversation ID: ([a-zA-Z0-9-_]+))/);
-            if (match) {
-              // Take whichever group matched (either old or new format)
-              conversationId = match[1] || match[2];
+            // Look for the conversation ID marker in any of these formats:
+            // 1. New format (most reliable): CONVERSATION_ID=abc123
+            // 2. Old format: _Conversation ID: abc123_
+            // 3. HTML format: Conversation ID: abc123
+            const matchNew = body.match(/CONVERSATION_ID=([a-zA-Z0-9-_]+)/);
+            const matchOld = body.match(/(?:_Conversation ID: ([a-zA-Z0-9-_]+)_)|(?:Conversation ID: ([a-zA-Z0-9-_]+))/);
+            
+            if (matchNew) {
+              // New format (preferred)
+              conversationId = matchNew[1];
               
-              // Extract the title from the same message
-              const titleMatch = body.match(/\*\*Title\*\*: (.+)$/m);
-              if (titleMatch && titleMatch[1]) {
+              // Title is in the same message with new format
+              const titleMatch = body.match(/Title: (.+?)(?:\n|$)/);
+              if (titleMatch) {
                 title = titleMatch[1];
               }
+            } else if (matchOld) {
+              // Old format (for backward compatibility)
+              conversationId = matchOld[1] || matchOld[2];
               
+              // Try old title formats
+              const titleMatch = body.match(/(?:\*\*Title\*\*: (.+)$)|(?:Title: (.+)$)/m);
+              if (titleMatch) {
+                title = titleMatch[1] || titleMatch[2];
+              }
+            }
+              
+            if (matchNew || matchOld) {
               break;
             }
           }
@@ -400,8 +414,25 @@ export class MatrixBrainInterface {
       // Always convert markdown to HTML for better rendering in Element
       const htmlContent = await this.markdownToHtml(message);
       
+      // Create plain text version for extraction
+      // This version keeps important data like Conversation ID in plain text
+      // while removing HTML tags for better plain text display
+      const plainText = message
+        .replace(/<\/?h[1-6]>/g, '') // Remove heading tags
+        .replace(/<\/?p>/g, '')      // Remove paragraph tags
+        .replace(/<\/?strong>/g, '') // Remove strong tags
+        .replace(/<\/?em>/g, '')     // Remove em tags
+        .replace(/<\/?code>/g, '')   // Remove code tags
+        .replace(/<\/?blockquote>/g, '') // Remove blockquote tags
+        .replace(/<hr\/?>/g, '---')  // Replace HR with ---
+        .replace(/<br\/?>/g, '\n')   // Replace BR with newline
+        .replace(/<\/?pre>/g, '')    // Remove pre tags
+        .replace(/<\/?ul>/g, '')     // Remove ul tags
+        .replace(/<\/?li>/g, '- ')   // Replace li with -
+        .replace(/<.+?>/g, '');      // Remove any remaining tags
+      
       // Send both plain text and HTML versions
-      await this.client.sendHtmlMessage(roomId, message, htmlContent);
+      await this.client.sendHtmlMessage(roomId, plainText, htmlContent);
       logger.debug(`Sent HTML-formatted message to ${roomId}`);
     } catch (error) {
       logger.error(`Failed to send message to ${roomId}:`, error);
@@ -410,7 +441,7 @@ export class MatrixBrainInterface {
         // Fallback to plain text if HTML sending fails
         await this.client.sendMessage(roomId, {
           msgtype: MsgType.Text,
-          body: message,
+          body: message.replace(/<.+?>/g, ''), // Remove HTML tags for plain text
         });
         logger.debug(`Sent plain text fallback message to ${roomId}`);
       } catch (fallbackError) {

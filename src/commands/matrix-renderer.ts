@@ -48,7 +48,7 @@ export class MatrixRenderer {
         const usage = `<code>${this.commandPrefix} ${cmd.usage}</code>`;
         return `<li>${usage} - ${cmd.description}</li>`;
       }),
-      '</ul>'
+      '</ul>',
     ].join('\n');
 
     this.sendMessageFn(roomId, helpText);
@@ -351,6 +351,10 @@ export class MatrixRenderer {
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     
+    // Add a special marker that will appear in both plain text and HTML versions
+    // This must be included exactly as is for the Matrix interface to parse
+    const conversationMarker = `CONVERSATION_ID=${result.conversationId}`;
+    
     // HTML formatting that works well in Element
     const message = [
       '<h3>📝 Note Preview</h3>',
@@ -373,7 +377,7 @@ export class MatrixRenderer {
       `<p>• To cancel: <code>${this.commandPrefix} cancel</code></p>`,
       '</blockquote>',
       '',
-      `<p><em>Conversation ID: ${result.conversationId}</em></p>`, // Include this for the Matrix interface to parse
+      `<p><!-- ${conversationMarker} --><em>ID: ${result.conversationId}</em></p>`
     ].join('\n');
     
     this.sendMessageFn(roomId, message);

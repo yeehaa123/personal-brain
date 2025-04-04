@@ -107,7 +107,8 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(message).toContain('This is a sample note content');
     expect(message).toContain('!brain confirm');
     expect(message).toContain('!brain cancel');
-    expect(message).toContain('Conversation ID: conv123');
+    expect(message).toContain('CONVERSATION_ID=conv123');
+    expect(message).toContain('<em>ID: conv123</em>');
   });
 
   test('should render save-note-confirm correctly', () => {
@@ -210,7 +211,7 @@ describe('Matrix Interface Conversation Note Functionality', () => {
       {
         type: 'm.room.message',
         msgtype: 'm.text',
-        body: '### Note Preview\n\n**Title**: Test Title\n\nSome content\n\n_Conversation ID: conv123_',
+        body: '📝 Note Preview\n\nTitle: Test Title\n\nContent Preview:\nSome content\n\n<!-- CONVERSATION_ID=conv123 -->ID: conv123',
       },
     ]);
     
@@ -227,13 +228,13 @@ describe('Matrix Interface Conversation Note Functionality', () => {
         if (content['msgtype'] === 'm.text') {
           const body = content['body'] as string;
           
-          // Look for the hidden conversation ID in the message
-          const match = body.match(/_Conversation ID: ([a-zA-Z0-9-_]+)_/);
+          // Look for the new conversation ID marker
+          const match = body.match(/CONVERSATION_ID=([a-zA-Z0-9-_]+)/);
           if (match && match[1]) {
             conversationId = match[1];
             
             // Extract the title from the same message
-            const titleMatch = body.match(/\*\*Title\*\*: (.+)$/m);
+            const titleMatch = body.match(/Title: (.+?)(?:\n|$)/);
             if (titleMatch && titleMatch[1]) {
               title = titleMatch[1];
             }
