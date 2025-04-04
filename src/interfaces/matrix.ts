@@ -239,12 +239,10 @@ export class MatrixBrainInterface {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error(`Error processing command: ${errorMessage}`);
         
-        // Enhanced error message with better styling
+        // Format error message with simple HTML that Element can render well
         const formattedErrorMessage = [
-          '<div style="background-color: #ffe6e6; padding: 10px; border-left: 4px solid #cc0000; margin: 10px 0; border-radius: 0 4px 4px 0;">',
           '<h4>❌ Error Processing Command</h4>',
-          `<p>${errorMessage}</p>`,
-          '</div>',
+          `<p><strong>${errorMessage}</strong></p>`,
         ].join('\n');
         
         await this.sendMessage(room.roomId, formattedErrorMessage);
@@ -384,12 +382,10 @@ export class MatrixBrainInterface {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Error confirming save note: ${errorMessage}`);
       
-      // Enhanced error message with better styling
+      // Format error message with simple HTML that Element can render well
       const formattedErrorMessage = [
-        '<div style="background-color: #ffe6e6; padding: 10px; border-left: 4px solid #cc0000; margin: 10px 0; border-radius: 0 4px 4px 0;">',
         '<h4>❌ Error Saving Note</h4>',
-        `<p>${errorMessage}</p>`,
-        '</div>',
+        `<p><strong>${errorMessage}</strong></p>`,
       ].join('\n');
       
       await this.sendMessage(roomId, formattedErrorMessage);
@@ -401,24 +397,25 @@ export class MatrixBrainInterface {
    */
   private async sendMessage(roomId: string, message: string): Promise<void> {
     try {
-      // First try to send as plain text
-      await this.client.sendMessage(roomId, {
-        msgtype: MsgType.Text,
-        body: message,
-      });
+      // Always convert markdown to HTML for better rendering in Element
+      const htmlContent = await this.markdownToHtml(message);
       
-      logger.debug(`Sent plain text message to ${roomId}`);
+      // Send both plain text and HTML versions
+      await this.client.sendHtmlMessage(roomId, message, htmlContent);
+      logger.debug(`Sent HTML-formatted message to ${roomId}`);
     } catch (error) {
-      logger.warn(`Error sending plain message to ${roomId}, trying HTML fallback:`, error);
+      logger.error(`Failed to send message to ${roomId}:`, error);
       
       try {
-        // Fallback to HTML message
-        const htmlContent = await this.markdownToHtml(message);
-        await this.client.sendHtmlMessage(roomId, message, htmlContent);
-        logger.debug(`Sent HTML message to ${roomId}`);
-      } catch (htmlError) {
-        logger.error(`Failed to send message to ${roomId}:`, htmlError);
-        throw htmlError;
+        // Fallback to plain text if HTML sending fails
+        await this.client.sendMessage(roomId, {
+          msgtype: MsgType.Text,
+          body: message,
+        });
+        logger.debug(`Sent plain text fallback message to ${roomId}`);
+      } catch (fallbackError) {
+        logger.error(`Complete failure sending message to ${roomId}:`, fallbackError);
+        throw fallbackError;
       }
     }
   }

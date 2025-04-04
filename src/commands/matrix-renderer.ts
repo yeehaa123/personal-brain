@@ -41,13 +41,14 @@ export class MatrixRenderer {
    */
   renderHelp(roomId: string, commands: CommandInfo[]): void {
     const helpText = [
-      '### Personal Brain Commands',
-      '',
+      '<h3>Personal Brain Commands</h3>',
+      '<ul>',
       ...commands.map(cmd => {
-        // Format with consistent spacing
-        const usage = `\`${this.commandPrefix} ${cmd.usage}\``;
-        return `- ${usage.padEnd(30)} - ${cmd.description}`;
+        // Format with HTML for better rendering
+        const usage = `<code>${this.commandPrefix} ${cmd.usage}</code>`;
+        return `<li>${usage} - ${cmd.description}</li>`;
       }),
+      '</ul>'
     ].join('\n');
 
     this.sendMessageFn(roomId, helpText);
@@ -240,18 +241,18 @@ export class MatrixRenderer {
       .trim();
 
     const tags = note.tags && note.tags.length > 0
-      ? `Tags: ${(note.tags as string[]).map((tag: string) => `\`${tag}\``).join(', ')}`
+      ? `Tags: ${(note.tags as string[]).map((tag: string) => `<code>${tag}</code>`).join(', ')}`
       : 'No tags';
 
     const message = [
-      `## ${note.title}`,
+      `<h2>${note.title}</h2>`,
       '',
-      tags,
-      `ID: \`${note.id}\``,
-      `Created: ${new Date(note.createdAt).toLocaleString()}`,
-      `Updated: ${new Date(note.updatedAt).toLocaleString()}`,
+      `<p>${tags}</p>`,
+      `<p>ID: <code>${note.id}</code></p>`,
+      `<p>Created: ${new Date(note.createdAt).toLocaleString()}</p>`,
+      `<p>Updated: ${new Date(note.updatedAt).toLocaleString()}</p>`,
       '',
-      '---',
+      '<hr/>',
       '',
       formattedContent,
     ].join('\n');
@@ -350,27 +351,29 @@ export class MatrixRenderer {
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     
-    // Element-compatible Markdown formatting
+    // HTML formatting that works well in Element
     const message = [
-      '### 📝 Note Preview',
+      '<h3>📝 Note Preview</h3>',
       '',
-      `**Title**: ${result.title}`,
+      `<p><strong>Title</strong>: ${result.title}</p>`,
       '',
-      '**Content Preview**:',
+      '<p><strong>Content Preview</strong>:</p>',
       '',
-      '```',
+      '<pre>',
       previewContent,
-      '```',
+      '</pre>',
       '',
-      '---',
+      '<hr/>',
       '',
-      '_This is a preview of the note that will be created from your conversation._',
+      '<p><em>This is a preview of the note that will be created from your conversation.</em></p>',
       '',
-      '> 🔵 **Actions**',
-      `> • To save this note: \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\``,
-      `> • To cancel: \`${this.commandPrefix} cancel\``,
+      '<blockquote>',
+      '<p><strong>🔵 Actions</strong></p>',
+      `<p>• To save this note: <code>${this.commandPrefix} confirm</code> or <code>${this.commandPrefix} confirm "New Title"</code></p>`,
+      `<p>• To cancel: <code>${this.commandPrefix} cancel</code></p>`,
+      '</blockquote>',
       '',
-      `_Conversation ID: ${result.conversationId}_`, // Include this for the Matrix interface to parse
+      `<p><em>Conversation ID: ${result.conversationId}</em></p>`, // Include this for the Matrix interface to parse
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -381,13 +384,15 @@ export class MatrixRenderer {
    */
   private renderSaveNoteConfirm(roomId: string, result: { noteId: string; title: string }): void {
     const message = [
-      '### ✅ Note Saved Successfully!',
+      '<h3>✅ Note Saved Successfully!</h3>',
       '',
-      `**Title**: "${result.title}"`,
-      `**Note ID**: \`${result.noteId}\``,
+      `<p><strong>Title</strong>: "${result.title}"</p>`,
+      `<p><strong>Note ID</strong>: <code>${result.noteId}</code></p>`,
       '',
-      '> 💡 **Tip**: To view the complete note, use:',
-      `> \`${this.commandPrefix} note ${result.noteId}\``,
+      '<blockquote>',
+      '<p><strong>💡 Tip</strong>: To view the complete note, use:</p>',
+      `<p><code>${this.commandPrefix} note ${result.noteId}</code></p>`,
+      '</blockquote>',
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -398,22 +403,22 @@ export class MatrixRenderer {
    */
   private renderConversationNotes(roomId: string, result: { notes: Note[] }): void {
     if (result.notes.length === 0) {
-      this.sendMessageFn(roomId, '### ⚠️ No conversation notes found.');
+      this.sendMessageFn(roomId, '<h3>⚠️ No conversation notes found.</h3>');
       return;
     }
     
-    // Create a presentation for notes using Element-compatible Markdown
+    // Create a presentation for notes using HTML formatting
     const messageParts = [
-      '### 📚 Notes Created from Conversations',
-      '---',
+      '<h3>📚 Notes Created from Conversations</h3>',
+      '<hr/>',
     ];
     
-    // Add each note with proper Markdown formatting
+    // Add each note with HTML formatting
     result.notes.forEach((note, index) => {
       // Extract tags and format them
       const tags = note.tags && note.tags.length > 0
-        ? note.tags.map(tag => `\`${tag}\``).join(' ')
-        : '_No tags_';
+        ? note.tags.map(tag => `<code>${tag}</code>`).join(' ')
+        : '<em>No tags</em>';
       
       // Format content preview
       const preview = getExcerpt(note.content, 120);
@@ -423,16 +428,16 @@ export class MatrixRenderer {
       
       // Create a formatted note block
       messageParts.push(
-        `#### ${index + 1}. ${note.title}`,
+        `<h4>${index + 1}. ${note.title}</h4>`,
         '',
-        `**ID**: \`${note.id}\` | **Created**: ${created}`,
-        `**Tags**: ${tags}`,
+        `<p><strong>ID</strong>: <code>${note.id}</code> | <strong>Created</strong>: ${created}</p>`,
+        `<p><strong>Tags</strong>: ${tags}</p>`,
         '',
-        `> ${preview}`,
+        `<blockquote><p>${preview}</p></blockquote>`,
         '',
-        `💡 View with: \`${this.commandPrefix} note ${note.id}\``,
+        `<p>💡 View with: <code>${this.commandPrefix} note ${note.id}</code></p>`,
         '',
-        '---'
+        '<hr/>',
       );
     });
     
