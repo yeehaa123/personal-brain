@@ -6,8 +6,11 @@
 
 import type { ExternalCitation, ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
 import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
+import { DependencyContainer } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 /**
@@ -43,7 +46,10 @@ export type CommandResult =
       externalSources: Record<string, boolean>;
       externalSourcesEnabled: boolean;
     }
-  };
+  }
+  | { type: 'save-note-preview'; noteContent: string; title: string; conversationId: string }
+  | { type: 'save-note-confirm'; noteId: string; title: string }
+  | { type: 'conversation-notes'; notes: Note[] };
 
 /**
  * Command handler for processing commands and returning structured results
@@ -118,6 +124,18 @@ export class CommandHandler {
         usage: 'status',
         examples: ['status'],
       },
+      {
+        command: 'save-note',
+        description: 'Create a note from recent conversation',
+        usage: 'save-note [title]',
+        examples: ['save-note', 'save-note "Ecosystem Architecture Discussion"'],
+      },
+      {
+        command: 'conversation-notes',
+        description: 'List notes created from conversations',
+        usage: 'conversation-notes',
+        examples: ['conversation-notes'],
+      },
     ];
   }
 
@@ -143,6 +161,10 @@ export class CommandHandler {
         return await this.handleExternal(args);
       case 'status':
         return await this.handleStatus();
+      case 'save-note':
+        return await this.handleSaveNote(args);
+      case 'conversation-notes':
+        return await this.handleConversationNotes();
       default:
         return { type: 'error', message: `Unknown command: ${command}` };
       }
@@ -401,4 +423,144 @@ export class CommandHandler {
       },
     };
   }
+
+  /**
+   * Handle save-note command
+   */
+  private async handleSaveNote(title?: string): Promise<CommandResult> {
+    // Check if conversation memory is initialized
+    if (!this.brainProtocol.hasActiveConversation()) {
+      return { type: 'error', message: 'No active conversation. Start a conversation first.' };
+    }
+
+    // Get the current conversation and recent turns
+    const conversationId = this.brainProtocol.getCurrentConversationId();
+    if (!conversationId) {
+      return { type: 'error', message: 'No active conversation found.' };
+    }
+
+    // Get the conversation
+    const conversation = await this.brainProtocol.getConversation(conversationId);
+    if (!conversation) {
+      return { type: 'error', message: 'Conversation not found.' };
+    }
+
+    // Get all active turns from the conversation
+    const turns: ConversationTurn[] = conversation.activeTurns;
+    if (turns.length === 0) {
+      return { type: 'error', message: 'Conversation has no turns to save.' };
+    }
+
+    // Get or create the ConversationToNoteService
+    const serviceRegistry = DependencyContainer.getInstance();
+    let conversationToNoteService: ConversationToNoteService;
+    
+    if (serviceRegistry.isRegistered('conversationToNoteService')) {
+      conversationToNoteService = serviceRegistry.resolve('conversationToNoteService');
+    } else {
+      // Create the service with required dependencies
+      const noteRepository = this.noteContext.getNoteRepository();
+      const noteEmbeddingService = this.noteContext.getNoteEmbeddingService();
+      
+      // Create new service without explicitly passing memory storage,
+      // it will use the singleton instance internally
+      conversationToNoteService = new ConversationToNoteService(
+        noteRepository,
+        noteEmbeddingService,
+      );
+      
+      // Register for future use
+      serviceRegistry.register('conversationToNoteService', () => conversationToNoteService, true);
+    }
+
+    // In preview mode, just show the content that would be saved
+    const preview = await conversationToNoteService.prepareNotePreview(
+      conversation,
+      turns,
+      title,
+    );
+
+    // Return preview for confirmation
+    return {
+      type: 'save-note-preview',
+      noteContent: preview.content,
+      title: preview.title,
+      conversationId,
+    };
+  }
+
+  /**
+   * Handle the second part of save-note after user confirmation
+   */
+  async confirmSaveNote(conversationId: string, title?: string, userEdits?: string): Promise<CommandResult> {
+    // Get the conversation
+    const conversation = await this.brainProtocol.getConversation(conversationId);
+    if (!conversation) {
+      return { type: 'error', message: 'Conversation not found.' };
+    }
+
+    // Get all active turns from the conversation
+    const turns: ConversationTurn[] = conversation.activeTurns;
+    if (turns.length === 0) {
+      return { type: 'error', message: 'Conversation has no turns to save.' };
+    }
+
+    // Get the ConversationToNoteService
+    const serviceRegistry = DependencyContainer.getInstance();
+    const conversationToNoteService = serviceRegistry.resolve<ConversationToNoteService>('conversationToNoteService');
+
+    // Create the note
+    const note = await conversationToNoteService.createNoteFromConversation(
+      conversation,
+      turns,
+      title,
+      userEdits,
+    );
+
+    return {
+      type: 'save-note-confirm',
+      noteId: note.id,
+      title: note.title,
+    };
+  }
+
+  /**
+   * Handle conversation-notes command
+   */
+  private async handleConversationNotes(): Promise<CommandResult> {
+    // Get the ConversationToNoteService
+    const serviceRegistry = DependencyContainer.getInstance();
+    let conversationToNoteService: ConversationToNoteService;
+    
+    if (serviceRegistry.isRegistered('conversationToNoteService')) {
+      conversationToNoteService = serviceRegistry.resolve('conversationToNoteService');
+    } else {
+      // Create the service with required dependencies
+      const noteRepository = this.noteContext.getNoteRepository();
+      const noteEmbeddingService = this.noteContext.getNoteEmbeddingService();
+      
+      // Create new service without explicitly passing memory storage,
+      // it will use the singleton instance internally
+      conversationToNoteService = new ConversationToNoteService(
+        noteRepository,
+        noteEmbeddingService,
+      );
+      
+      // Register for future use
+      serviceRegistry.register('conversationToNoteService', () => conversationToNoteService, true);
+    }
+
+    // Get all notes created from conversations
+    const notes = await conversationToNoteService.findConversationNotes(10, 0);
+
+    if (notes.length === 0) {
+      return { type: 'error', message: 'No notes created from conversations found.' };
+    }
+
+    return {
+      type: 'conversation-notes',
+      notes,
+    };
+  }
+
 }

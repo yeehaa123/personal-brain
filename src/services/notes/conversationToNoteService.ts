@@ -20,7 +20,7 @@ export class ConversationToNoteService {
   constructor(
     noteRepository: NoteRepository, 
     embeddingService: NoteEmbeddingService,
-    memoryStorage?: InMemoryStorage
+    memoryStorage?: InMemoryStorage,
   ) {
     this.noteRepository = noteRepository;
     this.embeddingService = embeddingService;

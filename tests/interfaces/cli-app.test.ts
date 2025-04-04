@@ -72,6 +72,7 @@ describe('CLIApp', () => {
   const mockRenderer = {
     render: mockRender,
     renderHelp: mockRenderHelp,
+    setCommandHandler: mock(() => { }),
   } as unknown as CLIRenderer;
 
   beforeAll(() => {

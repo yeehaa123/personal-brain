@@ -86,6 +86,13 @@ export class ConversationMemory {
   get currentConversation(): string | null {
     return this.currentConversationId;
   }
+  
+  /**
+   * Access the storage directly
+   */
+  getConversationMemory(): { storage: ConversationMemoryStorage } {
+    return { storage: this.storage };
+  }
 
   /**
    * Start a new conversation

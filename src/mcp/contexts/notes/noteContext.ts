@@ -544,4 +544,18 @@ export class NoteContext {
   async getNoteCount(): Promise<number> {
     return this.repository.getNoteCount();
   }
+
+  /**
+   * Get the note repository instance
+   */
+  getNoteRepository(): NoteRepository {
+    return this.repository;
+  }
+  
+  /**
+   * Get the note embedding service instance
+   */
+  getNoteEmbeddingService(): NoteEmbeddingService {
+    return this.embeddingService;
+  }
 }

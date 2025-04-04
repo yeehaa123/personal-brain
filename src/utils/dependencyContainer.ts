@@ -23,6 +23,19 @@ export interface ServiceConfig<T = unknown> {
 export class DependencyContainer {
   private services = new Map<string, ServiceConfig<unknown>>();
   private instances = new Map<string, unknown>();
+  
+  // Singleton instance
+  private static instance: DependencyContainer | null = null;
+  
+  /**
+   * Get the singleton instance of DependencyContainer
+   */
+  public static getInstance(): DependencyContainer {
+    if (!DependencyContainer.instance) {
+      DependencyContainer.instance = getContainer();
+    }
+    return DependencyContainer.instance;
+  }
 
   /**
    * Register a service with the container
@@ -75,6 +88,15 @@ export class DependencyContainer {
    */
   has(name: string): boolean {
     return this.services.has(name);
+  }
+  
+  /**
+   * Check if a service is registered (alias for has)
+   * @param name Service identifier
+   * @returns True if service is registered
+   */
+  isRegistered(name: string): boolean {
+    return this.has(name);
   }
 
   /**

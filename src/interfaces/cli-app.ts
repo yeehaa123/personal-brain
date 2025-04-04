@@ -36,6 +36,8 @@ export class CLIApp {
   constructor(options: CLIAppOptions) {
     this.commandHandler = options.commandHandler;
     this.renderer = options.renderer;
+    // Connect the command handler to the renderer for interactive commands
+    this.renderer.setCommandHandler(this.commandHandler);
   }
 
   /**

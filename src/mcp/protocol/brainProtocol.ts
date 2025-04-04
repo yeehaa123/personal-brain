@@ -16,6 +16,7 @@ import { ClaudeModel, EmbeddingService } from '@/mcp/model';
 import { ConversationMemory } from '@/mcp/protocol/memory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
+import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
@@ -204,6 +205,34 @@ export class BrainProtocol {
    */
   getConversationMemory(): ConversationMemory {
     return this.conversationMemory;
+  }
+  
+  /**
+   * Check if there is an active conversation
+   */
+  hasActiveConversation(): boolean {
+    return !!this.conversationMemory.currentConversation;
+  }
+  
+  /**
+   * Get the current conversation ID
+   */
+  getCurrentConversationId(): string | null {
+    return this.conversationMemory.currentConversation;
+  }
+  
+  /**
+   * Get a conversation by ID
+   */
+  async getConversation(conversationId: string): Promise<Conversation | null> {
+    return await this.conversationMemory.getConversationMemory().storage.getConversation(conversationId);
+  }
+  
+  /**
+   * Get the memory storage instance
+   */
+  getMemoryStorage(): ConversationMemoryStorage {
+    return this.conversationMemory.getConversationMemory().storage;
   }
 
   /**

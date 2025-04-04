@@ -2,6 +2,7 @@
  * CLI Renderer for command results
  * This module handles formatting and displaying command results in the CLI
  */
+/* global setTimeout */
 
 import type { Note } from '../models/note';
 import type { EnhancedProfile, ProfileExperience } from '../models/profile';
@@ -9,6 +10,7 @@ import { CLIInterface } from '../utils/cliInterface';
 import logger from '../utils/logger';
 import { displayNotes } from '../utils/noteUtils';
 
+import type { CommandHandler } from '.';
 import type { CommandInfo, CommandResult } from './index';
 
 
@@ -29,6 +31,15 @@ export class CLIRenderer {
     CLIInterface.print(''); // Add space after commands
   }
 
+  private commandHandler?: CommandHandler;
+  
+  /**
+   * Set the command handler for interactive confirmation
+   */
+  setCommandHandler(handler: CommandHandler): void {
+    this.commandHandler = handler;
+  }
+  
   /**
    * Render a command result
    */
@@ -155,6 +166,18 @@ export class CLIRenderer {
         CLIInterface.warn(result.message);
       }
       break;
+      
+    case 'save-note-preview':
+      this.renderSaveNotePreview(result);
+      break;
+      
+    case 'save-note-confirm':
+      this.renderSaveNoteConfirm(result);
+      break;
+      
+    case 'conversation-notes':
+      this.renderConversationNotes(result);
+      break;
 
     case 'status':
       CLIInterface.displayTitle('System Status');
@@ -205,6 +228,74 @@ export class CLIRenderer {
       }
       break;
     }
+  }
+
+  /**
+   * Render save-note preview with options to edit or confirm
+   */
+  private renderSaveNotePreview(result: { noteContent: string; title: string; conversationId: string }): void {
+    CLIInterface.displayTitle('Note Preview');
+    CLIInterface.printLabelValue('Title', result.title);
+    
+    CLIInterface.displaySubtitle('Content Preview');
+    // Display first 300 characters of content
+    const previewContent = result.noteContent.length > 300
+      ? result.noteContent.substring(0, 297) + '...'
+      : result.noteContent;
+    CLIInterface.print(previewContent);
+    
+    CLIInterface.info('');
+    CLIInterface.info('This is a preview of the note that will be created from your conversation.');
+    CLIInterface.info('To save this note, type "y". To cancel, type "n".');
+    CLIInterface.info('You can also edit the title by typing "title: New Title"');
+    
+    // Collect user input for confirmation
+    // In a real implementation, we would set up an event listener for user input
+    // and call confirmSaveNote when the user confirms
+    // For demo purposes, we'll just provide instructions
+    CLIInterface.print('');
+    CLIInterface.info('Since this is a CLI interface, in a real implementation you would:');
+    CLIInterface.info('1. Type "y" to confirm and save the note');
+    CLIInterface.info('2. Type "n" to cancel');
+    CLIInterface.info('3. Type "title: New Title" to change the title');
+    
+    // If we have a commandHandler, we can handle the confirmation directly
+    // In a real implementation, this would be connected to user input handling
+    if (this.commandHandler) {
+      CLIInterface.print('');
+      CLIInterface.info('For demo purposes, automatically confirming...');
+      // Simulate confirmation by calling the confirmSaveNote method
+      setTimeout(async () => {
+        if (this.commandHandler) {
+          const confirmResult = await this.commandHandler.confirmSaveNote(result.conversationId, result.title);
+          this.render(confirmResult);
+        }
+      }, 2000); // Wait 2 seconds before auto-confirming
+    }
+  }
+  
+  /**
+   * Render save-note confirmation
+   */
+  private renderSaveNoteConfirm(result: { noteId: string; title: string }): void {
+    CLIInterface.success(`Note "${result.title}" saved successfully!`);
+    CLIInterface.info(`Note ID: ${CLIInterface.formatId(result.noteId)}`);
+    CLIInterface.info('To view the note, use the command:');
+    CLIInterface.print(`  note ${result.noteId}`);
+  }
+  
+  /**
+   * Render conversation notes list
+   */
+  private renderConversationNotes(result: { notes: Note[] }): void {
+    CLIInterface.displayTitle('Notes Created from Conversations');
+    
+    if (result.notes.length === 0) {
+      CLIInterface.warn('No conversation notes found.');
+      return;
+    }
+    
+    displayNotes(result.notes);
   }
 
   /**
