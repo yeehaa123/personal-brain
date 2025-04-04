@@ -6,6 +6,7 @@
 import type { Note } from '../models/note';
 import type { EnhancedProfile, Profile, ProfileExperience } from '../models/profile';
 import { formatNotePreview, getExcerpt } from '../utils/noteUtils';
+import logger from '../utils/logger';
 
 import type { CommandHandler } from '.';
 import type { CommandInfo, CommandResult } from './index';
@@ -355,6 +356,9 @@ export class MatrixRenderer {
     // This must be included exactly as is for the Matrix interface to parse
     const conversationMarker = `CONVERSATION_ID=${result.conversationId}`;
     
+    // Add debug logging to track conversation IDs
+    logger.debug(`Adding conversation marker: ${conversationMarker} to save-note preview`);
+    
     // HTML formatting that works well in Element
     const message = [
       '<h3>📝 Note Preview</h3>',
@@ -377,7 +381,7 @@ export class MatrixRenderer {
       `<p>• To cancel: <code>${this.commandPrefix} cancel</code></p>`,
       '</blockquote>',
       '',
-      `<p><!-- ${conversationMarker} --><em>ID: ${result.conversationId}</em></p>`
+      `<p><!-- ${conversationMarker} --><em>ID: ${result.conversationId}</em></p>`,
     ].join('\n');
     
     this.sendMessageFn(roomId, message);

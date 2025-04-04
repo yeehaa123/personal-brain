@@ -316,6 +316,12 @@ export class MatrixBrainInterface {
    */
   private async handleConfirmSaveNote(roomId: string, newTitle?: string): Promise<void> {
     try {
+      // Make sure we're using the correct room ID for this confirmation
+      // This is crucial for conversation memory to work properly
+      if (this.interfaceType === 'matrix') {
+        await this.brainProtocol.setCurrentRoom(roomId);
+      }
+      
       // Find the most recent save-note-preview message to extract the conversation ID
       const room = this.client.getRoom(roomId);
       if (!room) {
@@ -352,20 +358,24 @@ export class MatrixBrainInterface {
             if (matchNew) {
               // New format (preferred)
               conversationId = matchNew[1];
+              logger.debug(`Found new format conversation ID: ${conversationId}`);
               
               // Title is in the same message with new format
               const titleMatch = body.match(/Title: (.+?)(?:\n|$)/);
               if (titleMatch) {
                 title = titleMatch[1];
+                logger.debug(`Found title from new format: ${title}`);
               }
             } else if (matchOld) {
               // Old format (for backward compatibility)
               conversationId = matchOld[1] || matchOld[2];
+              logger.debug(`Found old format conversation ID: ${conversationId}`);
               
               // Try old title formats
               const titleMatch = body.match(/(?:\*\*Title\*\*: (.+)$)|(?:Title: (.+)$)/m);
               if (titleMatch) {
                 title = titleMatch[1] || titleMatch[2];
+                logger.debug(`Found title from old format: ${title}`);
               }
             }
               
@@ -387,11 +397,16 @@ export class MatrixBrainInterface {
         title = newTitle.trim().replace(/^"(.*)"$/, '$1');
       }
       
+      // Log the conversation ID and title for debugging
+      logger.debug(`Confirming save note with conversation ID: ${conversationId} and title: ${title || 'default title'}`);
+      
       // Confirm the save note using the command handler
       const result = await this.commandHandler.confirmSaveNote(conversationId, title || undefined);
       
       // Render the result
       await this.renderer.render(roomId, result);
+      
+      logger.debug('Save note confirmation successful');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error(`Error confirming save note: ${errorMessage}`);
