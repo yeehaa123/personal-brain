@@ -99,15 +99,51 @@ export class ConversationToNoteService {
       return this.addAttributionHeader(userEdits, turns);
     }
     
-    // Format the conversation as a note with attribution
-    const formattedContent = turns.map(turn => {
-      // We don't need userName here, just using turn role
+    // Group the turns into question-answer pairs for proper formatting
+    let formattedContent = '';
+    
+    // We need to go through the turns and correctly pair user questions with assistant answers
+    for (let i = 0; i < turns.length; i++) {
+      const turn = turns[i];
       const isUser = !turn.userId?.startsWith('assistant');
       
-      return isUser
-        ? `**Question**: ${turn.query}\n\n`
-        : `**Answer**: ${turn.response}\n\n`;
-    }).join('');
+      if (isUser) {
+        // This is a user question
+        formattedContent += `**Question**: ${turn.query}\n\n`;
+        
+        // Look for the next assistant response to pair with this question
+        // Skip past any other user messages to find the next assistant response
+        let foundAnswer = false;
+        for (let j = i + 1; j < turns.length; j++) {
+          const nextTurn = turns[j];
+          const isAssistant = nextTurn.userId?.startsWith('assistant');
+          
+          if (isAssistant) {
+            // Found an assistant turn
+            if (nextTurn.response) {
+              // Found the matching assistant response with content
+              formattedContent += `**Answer**: ${nextTurn.response}\n\n`;
+              foundAnswer = true;
+              break;
+            } else {
+              // Found an assistant turn but with empty response
+              formattedContent += `**Answer**: (No response)\n\n`;
+              foundAnswer = true;
+              break;
+            }
+          }
+        }
+        
+        // If we didn't find an answer at all, still add a placeholder
+        if (!foundAnswer) {
+          formattedContent += `**Answer**: (No response)\n\n`;
+        }
+      } else {
+        // This is an assistant response without a preceding user question
+        // Skip it - we only want to include assistant responses paired with user questions
+        continue;
+      }
+    }
     
     return this.addAttributionHeader(formattedContent, turns);
   }

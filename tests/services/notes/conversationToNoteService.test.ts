@@ -181,6 +181,10 @@ describe('ConversationToNoteService', () => {
     // Should contain formatted turns
     expect(result.content).toContain('**Question**: What is ecosystem architecture?');
     expect(result.content).toContain('**Answer**: Ecosystem architecture refers to...');
+
+    // Print the formatted content for debugging
+    console.log('Formatted conversation content:');
+    console.log(result.content);
   });
 
   test('should handle user-edited content', async () => {
@@ -313,5 +317,175 @@ describe('ConversationToNoteService', () => {
     // Use bracket notation to access dynamic properties
     expect(updatedConversation?.metadata?.['noteId']).toBeDefined();
     expect(updatedConversation?.metadata?.['noteCreatedAt']).toBeDefined();
+  });
+
+  test('should handle HTML content in responses correctly', async () => {
+    // Create a sample turn with HTML in the response - make sure user/assistant roles are correct
+    const htmlTurns: ConversationTurn[] = [
+      {
+        id: 'turn-html-1',
+        timestamp: new Date('2025-01-01T10:00:00Z'),
+        query: 'What is ecosystem architecture?',
+        response: '', // User turn has no response
+        userId: 'user-1', // This is a user turn
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-html-2',
+        timestamp: new Date('2025-01-01T10:01:00Z'),
+        query: '', // Assistant turn has no query
+        response: '<h3>Ecosystem Architecture</h3><p>Ecosystem architecture refers to an approach where systems are designed with interconnected components.</p>',
+        userId: 'assistant', // This is an assistant turn
+        userName: 'Assistant',
+      },
+      {
+        id: 'turn-html-3',
+        timestamp: new Date('2025-01-01T10:02:00Z'),
+        query: 'Can you give me examples?',
+        response: '',
+        userId: 'user-1',
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-html-4',
+        timestamp: new Date('2025-01-01T10:03:00Z'),
+        query: '',
+        response: '<ul><li>Cloud platforms like AWS</li><li>Open source ecosystems</li></ul>',
+        userId: 'assistant',
+        userName: 'Assistant',
+      },
+    ];
+
+    // Generate preview with HTML content
+    const preview = await service.prepareNotePreview(
+      sampleConversation,
+      htmlTurns
+    );
+
+    // Log the formatted content
+    console.log('HTML Conversation formatted as:');
+    console.log(preview.content);
+
+    // Expect both questions and answers with HTML
+    expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
+    expect(preview.content).toContain('**Answer**: <h3>Ecosystem Architecture</h3>');
+    expect(preview.content).toContain('**Question**: Can you give me examples?');
+    expect(preview.content).toContain('**Answer**: <ul><li>Cloud platforms like AWS</li>');
+    
+    // Now test the actual note creation
+    await service.createNoteFromConversation(sampleConversation, htmlTurns);
+    
+    expect(insertNoteCalls.length).toBe(1);
+    const insertCall = insertNoteCalls[0];
+    
+    // Check that HTML is preserved in the created note
+    expect(insertCall.content).toContain('**Answer**: <h3>Ecosystem Architecture</h3>');
+    expect(insertCall.content).toContain('**Answer**: <ul><li>Cloud platforms like AWS</li>');
+  });
+  
+  test('should handle missing or empty response values', async () => {
+    // Create sample turns with empty or missing responses - proper user/assistant role separation
+    const emptyResponseTurns: ConversationTurn[] = [
+      {
+        id: 'turn-empty-1',
+        timestamp: new Date('2025-01-01T10:00:00Z'),
+        query: 'What is ecosystem architecture?',
+        response: '', // Empty string response
+        userId: 'user-1',
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-empty-2',
+        timestamp: new Date('2025-01-01T10:01:00Z'),
+        query: '',
+        response: '', // Empty assistant response
+        userId: 'assistant',
+        userName: 'Assistant',
+      },
+      {
+        id: 'turn-empty-3',
+        timestamp: new Date('2025-01-01T10:02:00Z'),
+        query: 'Can you give me examples?',
+        response: '',
+        userId: 'user-1',
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-empty-4',
+        timestamp: new Date('2025-01-01T10:03:00Z'),
+        query: '',
+        response: 'Examples of ecosystem architecture include cloud platforms and open source communities.',
+        userId: 'assistant',
+        userName: 'Assistant',
+      },
+    ];
+    
+    // Generate preview with empty response
+    const preview = await service.prepareNotePreview(
+      sampleConversation,
+      emptyResponseTurns
+    );
+    
+    // Log the content with empty response
+    console.log('Empty response conversation formatted as:');
+    console.log(preview.content);
+    
+    // Verify that questions are shown and empty response is handled
+    expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
+    expect(preview.content).toContain('**Answer**: (No response)'); // Empty response should show placeholder
+    expect(preview.content).toContain('**Question**: Can you give me examples?');
+    expect(preview.content).toContain('**Answer**: Examples of ecosystem architecture');
+    
+    // Now create turns with undefined response - proper user/assistant role separation
+    const undefinedResponseTurns: ConversationTurn[] = [
+      {
+        id: 'turn-undef-1',
+        timestamp: new Date('2025-01-01T10:00:00Z'),
+        query: 'What is ecosystem architecture?',
+        response: undefined as unknown as string, // Undefined response
+        userId: 'user-1',
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-undef-2',
+        timestamp: new Date('2025-01-01T10:01:00Z'),
+        query: '',
+        response: undefined as unknown as string, // Undefined assistant response
+        userId: 'assistant',
+        userName: 'Assistant',
+      },
+      {
+        id: 'turn-undef-3',
+        timestamp: new Date('2025-01-01T10:02:00Z'),
+        query: 'Can you give me examples?',
+        response: undefined as unknown as string,
+        userId: 'user-1',
+        userName: 'Alice',
+      },
+      {
+        id: 'turn-undef-4',
+        timestamp: new Date('2025-01-01T10:03:00Z'),
+        query: '',
+        response: 'Examples include AWS, Kubernetes ecosystem, etc.',
+        userId: 'assistant',
+        userName: 'Assistant',
+      },
+    ];
+    
+    // Generate preview with undefined response
+    const previewUndef = await service.prepareNotePreview(
+      sampleConversation,
+      undefinedResponseTurns
+    );
+    
+    // Log the content with undefined response
+    console.log('Undefined response conversation formatted as:');
+    console.log(previewUndef.content);
+    
+    // Verify that questions are shown and undefined response is handled
+    expect(previewUndef.content).toContain('**Question**: What is ecosystem architecture?');
+    expect(previewUndef.content).toContain('**Answer**: (No response)'); // Should have a placeholder
+    expect(previewUndef.content).toContain('**Question**: Can you give me examples?');
+    expect(previewUndef.content).toContain('**Answer**: Examples include AWS');
   });
 });
