@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { marked } from 'marked';
 import * as sdk from 'matrix-js-sdk';
 import { ClientEvent } from 'matrix-js-sdk';
 import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
@@ -7,6 +8,7 @@ import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import { sanitizeHtml } from '@/utils/textUtils';
 
 import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
@@ -388,38 +390,27 @@ export class MatrixBrainInterface {
    */
   private async sendMessage(roomId: string, message: string): Promise<void> {
     try {
-      // IMPORTANT: We're now using plain markdown without HTML conversion
-      // This ensures we don't have HTML content in our messages that could
-      // get stored in conversation memory
-      logger.debug(`Sending markdown message to ${roomId}`);
+      // Convert markdown to HTML for better rendering
+      const htmlContent = this.markdownToHtml(message);
       
-      // Send as plain text (markdown)
-      await this.client.sendMessage(roomId, {
-        msgtype: MsgType.Text,
-        body: message,
-      });
+      // IMPORTANT: We store the original markdown in the message body
+      // This ensures the conversation memory has clean text, but the display is rich HTML
+      logger.debug(`Sending HTML-formatted message to ${roomId}`);
       
-      logger.debug(`Sent plain markdown message to ${roomId}`);
+      // Send both plain markdown and HTML versions
+      await this.client.sendHtmlMessage(roomId, message, htmlContent);
+      
+      logger.debug(`Sent HTML-formatted message to ${roomId}`);
     } catch (error) {
-      logger.error(`Failed to send message to ${roomId}:`, error);
+      logger.error(`Failed to send HTML message to ${roomId}:`, error);
       
+      // Fallback to plain text if HTML sending fails
       try {
-        // We're already using plain text, but try a simplified version as fallback
-        // Remove any markdown formatting that might be causing issues
-        const simplifiedMessage = message
-          .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
-          .replace(/\*(.*?)\*/g, '$1')      // Remove italic
-          .replace(/`(.*?)`/g, '$1')        // Remove code
-          .replace(/#### (.*?)$/gm, '$1')   // Remove h4
-          .replace(/### (.*?)$/gm, '$1')    // Remove h3
-          .replace(/## (.*?)$/gm, '$1')     // Remove h2
-          .replace(/# (.*?)$/gm, '$1');     // Remove h1
-          
         await this.client.sendMessage(roomId, {
           msgtype: MsgType.Text,
-          body: simplifiedMessage,
+          body: message,
         });
-        logger.debug(`Sent simplified fallback message to ${roomId}`);
+        logger.debug(`Sent plain text fallback message to ${roomId}`);
       } catch (fallbackError) {
         logger.error(`Complete failure sending message to ${roomId}:`, fallbackError);
         throw fallbackError;
@@ -427,7 +418,18 @@ export class MatrixBrainInterface {
     }
   }
 
-  // Note: markdownToHtml method is removed since we're using plain markdown now
+  /**
+   * Convert markdown to HTML for better rendering in Matrix clients
+   * This is specifically for message rendering and won't affect conversation storage
+   * @param markdown Markdown text to convert
+   * @returns HTML representation of the markdown
+   */
+  private markdownToHtml(markdown: string): string {
+    // Use the marked library to convert markdown to HTML
+    const html = marked.parse(markdown);
+    // Sanitize the HTML to prevent XSS
+    return sanitizeHtml(html.toString());
+  }
 }
 
 async function main() {

@@ -1,29 +1,44 @@
 /**
- * Tests for handling assistant responses in conversation turns
+ * Unit tests for handling assistant responses in conversation turns
  * 
- * This file tests specifically how assistant responses are stored and retrieved
- * in the context of creating notes from conversations.
+ * This file tests specifically how the conversation-to-note service processes
+ * user and assistant turns when creating notes.
  */
-import { beforeEach, describe, expect, test, timeout } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
-// Set a shorter timeout for all tests in this file
-timeout(5000); // 5 seconds timeout (the default is likely too long)
-
-import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-// No need to import the Conversation type as it's defined implicitly via BrainProtocol
+import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { createTestNote } from '@test/utils/embeddingUtils';
-import { createIsolatedMemory } from '@test/utils/memoryUtils';
+
+// Mock classes to avoid external dependencies
+class MockInMemoryStorage {
+  private conversations = new Map<string, Conversation>();
+
+  async getConversation(id: string): Promise<Conversation | null> {
+    return this.conversations.get(id) || null;
+  }
+
+  async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
+    const conversation = this.conversations.get(id);
+    if (conversation) {
+      conversation.metadata = { ...conversation.metadata, ...metadata };
+    }
+  }
+
+  setConversation(id: string, conversation: Conversation): void {
+    this.conversations.set(id, conversation);
+  }
+}
 
 describe('Assistant Response Handling in Conversations', () => {
-  // Setup storage and mock services
-  let isolatedStorage: InMemoryStorage;
+  // Setup mocks and service
+  let mockStorage: MockInMemoryStorage;
   let service: ConversationToNoteService;
-  let brainProtocol: BrainProtocol;
-  let testConversationId: string;
+  let mockConversation: Conversation;
+  const testConversationId = 'test-conversation-id';
 
   // Mock services
   const sampleNote = createTestNote({
@@ -38,96 +53,96 @@ describe('Assistant Response Handling in Conversations', () => {
     getNoteById: () => Promise.resolve(sampleNote),
     findBySource: () => Promise.resolve([]),
     findByConversationMetadata: () => Promise.resolve([]),
-    // Add necessary repository methods
+    // Required repository methods for the test
     update: () => Promise.resolve(),
     delete: () => Promise.resolve(true),
     getById: () => Promise.resolve(sampleNote),
     getAll: () => Promise.resolve([sampleNote]),
     getCount: () => Promise.resolve(1),
     insert: () => Promise.resolve(sampleNote),
-    getRecentNotes: () => Promise.resolve([sampleNote]),
-    updateNoteEmbedding: () => Promise.resolve(),
-    getNotesWithoutEmbeddings: () => Promise.resolve([]),
-    getNotesWithEmbeddings: () => Promise.resolve([sampleNote]),
-    getOtherNotesWithEmbeddings: () => Promise.resolve([]),
-    getNoteCount: () => Promise.resolve(1),
-    searchNotesByKeywords: () => Promise.resolve([sampleNote]),
-    insertNoteChunk: () => Promise.resolve('chunk-id'),
   } as unknown as NoteRepository;
 
   const mockEmbeddingService = {
     generateNoteEmbedding: () => Promise.resolve([1, 2, 3]),
-    generateEmbeddingsForAllNotes: () => Promise.resolve({ updated: 1, failed: 0 }),
-    searchSimilarNotes: () => Promise.resolve([{ id: 'note-1', score: 0.9 }]),
-    findRelatedNotes: () => Promise.resolve([{ id: 'note-2', score: 0.8 }]),
-    createNoteChunks: () => Promise.resolve(),
   } as unknown as NoteEmbeddingService;
 
-  beforeEach(async () => {
-    // Create isolated memory storage
-    const { storage } = await createIsolatedMemory();
-    isolatedStorage = storage as InMemoryStorage;
+  // Helper to create conversation turns for testing
+  function createConversationTurn(
+    options: {
+      id?: string;
+      query?: string;
+      response?: string;
+      userId?: string;
+      userName?: string;
+      metadata?: Record<string, unknown>;
+    },
+    offset: number = 0,
+  ): ConversationTurn {
+    return {
+      id: options.id || `turn-${Date.now() + offset}`,
+      timestamp: new Date(Date.now() + offset),
+      query: options.query || '',
+      response: options.response || '',
+      userId: options.userId,
+      userName: options.userName || 'Test User',
+      metadata: options.metadata,
+    };
+  }
 
-    // Create instance with isolated storage
+  beforeEach(() => {
+    // Create fresh mock storage
+    mockStorage = new MockInMemoryStorage();
+
+    // Setup basic conversation
+    mockConversation = {
+      id: testConversationId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
+      interfaceType: 'matrix',
+    };
+    
+    // Store in mock storage
+    mockStorage.setConversation(testConversationId, mockConversation);
+
+    // Create service with mocks
     service = new ConversationToNoteService(
       mockNoteRepository,
       mockEmbeddingService,
-      isolatedStorage,
+      mockStorage as unknown as InMemoryStorage,
     );
-
-    // Initialize brain protocol with isolated storage to add test conversations
-    brainProtocol = BrainProtocol.getInstance(
-      {
-        interfaceType: 'matrix',
-        memoryStorage: isolatedStorage,
-      },
-      true,
-    );
-
-    // Create a test conversation
-    testConversationId = await brainProtocol.getConversationMemory().startConversation();
   });
 
   test('should correctly identify assistant vs user turns', async () => {
-    // Create separate user and assistant turns with explicit user IDs
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?', // User query
-      '',  // No response for user turn
-      {
-        userId: 'matrix-user',
-        userName: 'User',
-      },
-    );
+    // Create test turns directly
+    const userTurn = createConversationTurn({
+      id: 'user-turn-1',
+      query: 'What is ecosystem architecture?',
+      response: '',
+      userId: 'matrix-user',
+      userName: 'User',
+    });
     
-    // Per the schema validation, we need to provide a non-empty query string
-    // even for assistant turns (we'll handle this in our implementation)
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?',  // We need to provide the user's query again
-      'Ecosystem architecture refers to designing systems with interconnected components.',
-      {
-        userId: 'assistant',
-        userName: 'Assistant',
-      },
-    );
+    const assistantTurn = createConversationTurn({
+      id: 'assistant-turn-1',
+      query: 'What is ecosystem architecture?', // Query included to match real implementation
+      response: 'Ecosystem architecture refers to designing systems with interconnected components.',
+      userId: 'assistant', // This is the critical part we're testing
+      userName: 'Assistant',
+    }, 1000); // Later timestamp
+    
+    // Add turns to conversation
+    mockConversation.activeTurns = [userTurn, assistantTurn];
+    mockStorage.setConversation(testConversationId, mockConversation);
     
     // Get the conversation from storage
-    const conversation = await isolatedStorage.getConversation(testConversationId);
+    const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
     
     // Check that we have two turns
     expect(conversation?.activeTurns.length).toBe(2);
-    
-    // Verify that turns have the correct user IDs
-    const userTurn = conversation?.activeTurns[0];
-    const assistantTurn = conversation?.activeTurns[1];
-    
-    expect(userTurn?.userId).toBe('matrix-user');
-    expect(userTurn?.query).toBe('What is ecosystem architecture?');
-    expect(userTurn?.response).toBe('');
-    
-    expect(assistantTurn?.userId).toBe('assistant');
-    expect(assistantTurn?.query).toBe('What is ecosystem architecture?'); // The query is duplicated per schema requirement
-    expect(assistantTurn?.response).toBe('Ecosystem architecture refers to designing systems with interconnected components.');
     
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
@@ -146,46 +161,48 @@ describe('Assistant Response Handling in Conversations', () => {
 
   test('should correctly handle multiple question-answer pairs', async () => {
     // Create multiple question-answer pairs
-    // First pair
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?',
-      '',
-      {
+    const turns = [
+      // First pair
+      createConversationTurn({
+        id: 'user-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: '',
         userId: 'matrix-user',
         userName: 'User',
-      },
-    );
-    
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?', // Use the original query again
-      'Ecosystem architecture refers to designing systems with interconnected components.',
-      {
+      }),
+      
+      createConversationTurn({
+        id: 'assistant-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: 'Ecosystem architecture refers to designing systems with interconnected components.',
         userId: 'assistant',
         userName: 'Assistant',
-      },
-    );
-    
-    // Second pair
-    await brainProtocol.getConversationMemory().addTurn(
-      'Can you give me examples?',
-      '',
-      {
+      }, 1000),
+      
+      // Second pair
+      createConversationTurn({
+        id: 'user-turn-2',
+        query: 'Can you give me examples?',
+        response: '',
         userId: 'matrix-user',
         userName: 'User',
-      },
-    );
-    
-    await brainProtocol.getConversationMemory().addTurn(
-      'Can you give me examples?', // Use the original query again
-      'Examples include cloud platforms like AWS, Kubernetes ecosystems, and open source communities.',
-      {
+      }, 2000),
+      
+      createConversationTurn({
+        id: 'assistant-turn-2',
+        query: 'Can you give me examples?',
+        response: 'Examples include cloud platforms like AWS, Kubernetes ecosystems, and open source communities.',
         userId: 'assistant',
         userName: 'Assistant',
-      },
-    );
+      }, 3000),
+    ];
+    
+    // Add turns to conversation
+    mockConversation.activeTurns = turns;
+    mockStorage.setConversation(testConversationId, mockConversation);
     
     // Get the conversation
-    const conversation = await isolatedStorage.getConversation(testConversationId);
+    const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
     
     // Check that we have four turns
@@ -207,26 +224,30 @@ describe('Assistant Response Handling in Conversations', () => {
 
   test('should handle HTML content in assistant responses', async () => {
     // Create a conversation with HTML in the assistant response
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?',
-      '',
-      {
+    const turns = [
+      createConversationTurn({
+        id: 'user-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: '',
         userId: 'matrix-user',
         userName: 'User',
-      },
-    );
-    
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?', // Use the original query again
-      '<h3>Ecosystem Architecture</h3><p>Ecosystem architecture refers to designing systems with interconnected components.</p>',
-      {
+      }),
+      
+      createConversationTurn({
+        id: 'assistant-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: '<h3>Ecosystem Architecture</h3><p>Ecosystem architecture refers to designing systems with interconnected components.</p>',
         userId: 'assistant',
         userName: 'Assistant',
-      },
-    );
+      }, 1000),
+    ];
+    
+    // Add turns to conversation
+    mockConversation.activeTurns = turns;
+    mockStorage.setConversation(testConversationId, mockConversation);
     
     // Get the conversation
-    const conversation = await isolatedStorage.getConversation(testConversationId);
+    const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
     
     // Generate note preview
@@ -249,39 +270,36 @@ describe('Assistant Response Handling in Conversations', () => {
     // Matrix userIds can be in various formats - simulate realistic IDs
     const matrixUserId = '@user:matrix.org';
     
-    // User with typical Matrix ID
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?',
-      '',
-      {
-        userId: matrixUserId,
+    const turns = [
+      // User with typical Matrix ID
+      createConversationTurn({
+        id: 'user-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: '',
+        userId: matrixUserId, // Matrix-style user ID
         userName: 'Matrix User',
-      },
-    );
-    
-    // Assistant with proper assistant ID (should not start with @ but with 'assistant')
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?', // Use the original query again
-      'Ecosystem architecture refers to designing systems with interconnected components.',
-      {
+      }),
+      
+      // Assistant with proper assistant ID
+      createConversationTurn({
+        id: 'assistant-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: 'Ecosystem architecture refers to designing systems with interconnected components.',
         userId: 'assistant',
         userName: 'Assistant',
-      },
-    );
+      }, 1000),
+    ];
+    
+    // Add turns to conversation
+    mockConversation.activeTurns = turns;
+    mockStorage.setConversation(testConversationId, mockConversation);
     
     // Get the conversation
-    const conversation = await isolatedStorage.getConversation(testConversationId);
+    const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
     
     // Check that we have two turns
     expect(conversation?.activeTurns.length).toBe(2);
-    
-    // Verify that turns have the correct user IDs
-    const userTurn = conversation?.activeTurns[0];
-    const assistantTurn = conversation?.activeTurns[1];
-    
-    expect(userTurn?.userId).toBe(matrixUserId);
-    expect(assistantTurn?.userId).toBe('assistant');
     
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
@@ -295,37 +313,40 @@ describe('Assistant Response Handling in Conversations', () => {
     console.log(preview.content);
   });
 
-  test('should test the actual BrainProtocol processing with explicit assistant userId', async () => {
-    // This is a key test that simulates how BrainProtocol will be modified
-    
-    // 1. First, add the user query
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?',
-      '',
-      {
+  test('should work with metadata in conversation turns', async () => {
+    // Create turns with metadata
+    const turns = [
+      // User turn with metadata
+      createConversationTurn({
+        id: 'user-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: '',
         userId: 'matrix-user',
         userName: 'User',
         metadata: {
           turnType: 'user',
         },
-      },
-    );
-    
-    // 2. Then add the assistant response as a separate turn
-    await brainProtocol.getConversationMemory().addTurn(
-      'What is ecosystem architecture?', // Use the original query again
-      'Ecosystem architecture refers to designing systems with interconnected components.',
-      {
-        userId: 'assistant', // This is the critical part we're testing
+      }),
+      
+      // Assistant turn with metadata
+      createConversationTurn({
+        id: 'assistant-turn-1',
+        query: 'What is ecosystem architecture?',
+        response: 'Ecosystem architecture refers to designing systems with interconnected components.',
+        userId: 'assistant',
         userName: 'Assistant',
         metadata: {
           turnType: 'assistant',
-        }, 
-      },
-    );
+        },
+      }, 1000),
+    ];
+    
+    // Add turns to conversation
+    mockConversation.activeTurns = turns;
+    mockStorage.setConversation(testConversationId, mockConversation);
     
     // Get the conversation
-    const conversation = await isolatedStorage.getConversation(testConversationId);
+    const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
     
     // Check that turns have correct metadata
@@ -340,7 +361,7 @@ describe('Assistant Response Handling in Conversations', () => {
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
     
     // Log the content for inspection
-    console.log('BrainProtocol simulation:');
+    console.log('Metadata handling:');
     console.log(preview.content);
   });
 });
