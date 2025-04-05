@@ -78,7 +78,9 @@ describeOrSkip('Matrix save-note integration', () => {
     expect(previewResult.type).toBe('save-note-preview');
     
     // Extract the conversation ID
-    const conversationId = (previewResult as any).conversationId;
+    const conversationId = previewResult.type === 'save-note-preview' 
+      ? previewResult.conversationId 
+      : '';
     
     // Now confirm note creation
     const confirmResult = await commandHandler.confirmSaveNote(conversationId);
@@ -94,7 +96,9 @@ describeOrSkip('Matrix save-note integration', () => {
   test('conversation-notes command should return note list after creation', async () => {
     // First create a note
     const previewResult = await commandHandler.processCommand('save-note', '');
-    const conversationId = (previewResult as any).conversationId;
+    const conversationId = previewResult.type === 'save-note-preview' 
+      ? previewResult.conversationId 
+      : '';
     await commandHandler.confirmSaveNote(conversationId);
     
     // Now get list of conversation notes

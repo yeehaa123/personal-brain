@@ -447,6 +447,24 @@ export class CommandHandler {
 
     // Get all active turns from the conversation
     const turns: ConversationTurn[] = conversation.activeTurns;
+    
+    // Log conversation data for debugging (keep this for now to help diagnose any issues)
+    logger.debug(`Conversation ID: ${conversationId}`);
+    logger.debug(`Interface type: ${conversation.interfaceType}`);
+    logger.debug(`Number of turns: ${turns.length}`);
+    if (turns.length > 0) {
+      logger.debug(`First turn query: ${turns[0].query.substring(0, 50)}...`);
+      logger.debug(`First turn response length: ${turns[0].response?.length || 0}`);
+      if (turns[0].response) {
+        // Log the beginning of the response to check for HTML
+        const responsePreview = turns[0].response.substring(0, 100);
+        logger.debug(`First turn response preview: ${responsePreview}`);
+        if (responsePreview.includes('<') && responsePreview.includes('>')) {
+          logger.warn(`Found potential HTML in response: ${responsePreview}`);
+        }
+      }
+    }
+    
     if (turns.length === 0) {
       return { type: 'error', message: 'Conversation has no turns to save.' };
     }

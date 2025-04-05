@@ -466,6 +466,8 @@ export class BrainProtocol {
 
     // 9. Save the conversation turn
     try {
+      // The model response is pure text, so we save it directly to memory
+      // No HTML formatting has been applied at this point
       await this.conversationMemory.addTurn(
         query,
         responseText,
@@ -481,7 +483,7 @@ export class BrainProtocol {
           },
         },
       );
-      logger.debug('Saved conversation turn to memory');
+      logger.debug('Saved raw conversation turn to memory');
     } catch (error) {
       logger.warn('Failed to save conversation turn:', error);
       // Continue even if saving fails
