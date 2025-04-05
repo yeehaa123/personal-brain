@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-// Import the InMemoryStorage class directly 
+// Import the InMemoryStorage class directly
+import { conversationConfig } from '@/config'; 
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
@@ -28,7 +29,10 @@ describe('InMemoryStorage', () => {
     expect(instance1).toBe(instance2);
     
     // Add data to the first instance
-    await instance1.createConversation({ interfaceType: 'cli' });
+    await instance1.createConversation({ 
+      interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
+    });
     
     // Both instances should share the same data
     const conversations = await instance2.getRecentConversations();
@@ -43,7 +47,7 @@ describe('InMemoryStorage', () => {
     expect(instance1).not.toBe(instance2);
     
     // Add data to first instance
-    await instance1.createConversation({ interfaceType: 'cli' });
+    await instance1.createConversation({ interfaceType: 'cli', roomId: conversationConfig.defaultCliRoomId });
     
     // Second instance should have no data
     const conversations = await instance2.getRecentConversations();
@@ -61,7 +65,7 @@ describe('InMemoryStorage', () => {
     singleton.reset();
     
     // Add data to singleton
-    await singleton.createConversation({ interfaceType: 'cli' });
+    await singleton.createConversation({ interfaceType: 'cli', roomId: conversationConfig.defaultCliRoomId });
     
     // Fresh instance should have no data
     const freshConversations = await fresh.getRecentConversations();
@@ -80,6 +84,7 @@ describe('InMemoryStorage', () => {
 
     const conversation = await storage.createConversation({
       interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
     });
 
     expect(conversation.id).toBeDefined();
@@ -96,6 +101,7 @@ describe('InMemoryStorage', () => {
     // Create a conversation first
     const created = await storage.createConversation({
       interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
     });
 
     // Retrieve it by ID
@@ -120,6 +126,7 @@ describe('InMemoryStorage', () => {
     // Create a conversation
     const conversation = await storage.createConversation({
       interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
     });
 
     // Add a turn
@@ -166,6 +173,7 @@ describe('InMemoryStorage', () => {
     // Create a CLI conversation
     const cliConv = await storage.createConversation({
       interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
     });
 
     // Test filtering
@@ -195,8 +203,8 @@ describe('InMemoryStorage', () => {
     const storage = InMemoryStorage.createFresh();
 
     // Create multiple conversations
-    await storage.createConversation({ interfaceType: 'cli' });
-    await storage.createConversation({ interfaceType: 'cli' });
+    await storage.createConversation({ interfaceType: 'cli', roomId: conversationConfig.defaultCliRoomId });
+    await storage.createConversation({ interfaceType: 'cli', roomId: conversationConfig.defaultCliRoomId });
 
     // Test with limit
     const limitedConversations = await storage.getRecentConversations({ limit: 1 });
@@ -209,7 +217,7 @@ describe('InMemoryStorage', () => {
     const testInstance = InMemoryStorage.createFresh();
     
     // Create one CLI conversation
-    const cliConv = await testInstance.createConversation({ interfaceType: 'cli' });
+    const cliConv = await testInstance.createConversation({ interfaceType: 'cli', roomId: conversationConfig.defaultCliRoomId });
     
     // Test retrieving by type
     const result = await testInstance.getRecentConversations({ interfaceType: 'cli' });
@@ -244,6 +252,7 @@ describe('InMemoryStorage', () => {
     // Create a conversation
     const conversation = await storage.createConversation({
       interfaceType: 'cli',
+      roomId: conversationConfig.defaultCliRoomId,
     });
 
     // Delete it

@@ -46,6 +46,7 @@ describe('Conversation Schema Validation', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       interfaceType: 'cli' as const,
+      roomId: 'cli-room-id', // Add required roomId field
       activeTurns: [
         {
           id: 'turn-1',

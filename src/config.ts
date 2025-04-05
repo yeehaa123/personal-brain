@@ -94,6 +94,12 @@ export const serverConfig = {
   mcpHttpPort: getEnvAsInt('MCP_PORT', 8080),
 };
 
+// Conversation memory configuration
+export const conversationConfig = {
+  // Default room ID for CLI conversations
+  defaultCliRoomId: getEnv('DEFAULT_CLI_ROOM_ID', 'cli-default-room'),
+};
+
 // Semantic relevance thresholds for query processing
 export const relevanceConfig = {
   // When profile relevance exceeds this threshold, consider it a profile-related query
@@ -139,5 +145,6 @@ export default {
   path: pathConfig,
   db: dbConfig,
   server: serverConfig,
+  conversation: conversationConfig,
   relevance: relevanceConfig,
 };

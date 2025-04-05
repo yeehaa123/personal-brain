@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { nanoid } from 'nanoid';
 
+import { conversationConfig } from '@/config';
 import { ConversationMemory } from '@/mcp/protocol/memory/conversationMemory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
@@ -15,7 +16,7 @@ describe('ConversationMemory', () => {
     id: string = `conv-${nanoid()}`, 
     turns: number = 0,
     interfaceType: 'cli' | 'matrix' = 'cli',
-    roomId?: string,
+    roomId: string = conversationConfig.defaultCliRoomId, // Default room ID for CLI
   ): Conversation => {
     const now = new Date();
     const mockTurns: ConversationTurn[] = [];
@@ -186,13 +187,14 @@ describe('ConversationMemory', () => {
   });
 
   test('should start a new conversation', async () => {
-    const id = await memory.startConversation();
+    const roomId = conversationConfig.defaultCliRoomId;
+    const id = await memory.startConversation(roomId);
     
     expect(id).toBe('mock-id');
     expect(memory.currentConversation).toBe('mock-id');
     expect(mockStorage.createConversation).toHaveBeenCalledWith({
       interfaceType: 'cli',
-      roomId: undefined,
+      roomId,
     });
   });
   
@@ -242,7 +244,7 @@ describe('ConversationMemory', () => {
 
   test('should add a turn to the current conversation with user attribution', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Add a turn with specific user information
     await memory.addTurn('Test query', 'Test response', {
@@ -262,7 +264,7 @@ describe('ConversationMemory', () => {
   
   test('should add a turn with default user values', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Add a turn without specifying user info
     await memory.addTurn('Default query', 'Default response');
@@ -283,7 +285,7 @@ describe('ConversationMemory', () => {
 
   test('should get conversation history', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Get history
     const history = await memory.getHistory();
@@ -293,7 +295,7 @@ describe('ConversationMemory', () => {
 
   test('should limit history by maxTurns', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Get history with custom limit
     const history = await memory.getHistory(2);
@@ -324,6 +326,7 @@ describe('ConversationMemory', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         interfaceType: 'cli' as const,
+        roomId: conversationConfig.defaultCliRoomId,
         activeTurns: [
           {
             id: 'turn-1',
@@ -360,12 +363,13 @@ describe('ConversationMemory', () => {
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
+        roomId: conversationConfig.defaultCliRoomId,
         activeTurns: [{...turn, id: 'new-turn-id'}],
         summaries: [],
         archivedTurns: [],
       })),
-      addSummary: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      moveTurnsToArchive: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      addSummary: mock(async (conversationId, summary) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [{ ...summary, id: 'summary-id' }], archivedTurns: [], interfaceType: 'cli' as const })),
+      moveTurnsToArchive: mock(async (conversationId, _turnIndices) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
       getRecentConversations: mock(async () => []),
       deleteConversation: mock(async () => true),
       updateMetadata: mock(async (id, metadata) => ({ 
@@ -373,6 +377,7 @@ describe('ConversationMemory', () => {
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
+        roomId: conversationConfig.defaultCliRoomId,
         activeTurns: [],
         summaries: [],
         archivedTurns: [],
@@ -391,7 +396,7 @@ describe('ConversationMemory', () => {
     });
     
     // Start a conversation
-    await formatMemory.startConversation();
+    await formatMemory.startConversation(conversationConfig.defaultCliRoomId);
     
     const formatted = await formatMemory.formatHistoryForPrompt();
     
@@ -417,7 +422,7 @@ describe('ConversationMemory', () => {
     mockStorage.getConversation = mock(async () => createMockConversation('empty-id', 0));
     
     // Start a conversation
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Format history
     const formatted = await memory.formatHistoryForPrompt();
@@ -460,7 +465,7 @@ describe('ConversationMemory', () => {
 
   test('should update metadata for current conversation', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Update metadata
     await memory.updateMetadata({ topic: 'Test Topic' });
@@ -475,7 +480,7 @@ describe('ConversationMemory', () => {
 
   test('should end current conversation', () => {
     // Start a conversation first
-    memory.startConversation();
+    memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // End it
     memory.endCurrentConversation();
@@ -485,7 +490,7 @@ describe('ConversationMemory', () => {
 
   test('should delete current conversation', async () => {
     // Start a conversation first
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Delete it
     const result = await memory.deleteConversation();
@@ -526,6 +531,7 @@ describe('ConversationMemory', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         interfaceType: 'cli' as const,
+        roomId: conversationConfig.defaultCliRoomId,
         activeTurns: [
           {
             id: 'turn-1',
@@ -557,9 +563,9 @@ describe('ConversationMemory', () => {
         summaries: [],
         archivedTurns: [],
       } : null),
-      addTurn: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      addSummary: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      moveTurnsToArchive: mock(async () => ({ id: 'test', createdAt: new Date(), updatedAt: new Date(), activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      addTurn: mock(async (conversationId, turn) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [{ ...turn, id: 'new-turn-id' }], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
+      addSummary: mock(async (conversationId, summary) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [{ ...summary, id: 'summary-id' }], archivedTurns: [], interfaceType: 'cli' as const })),
+      moveTurnsToArchive: mock(async (conversationId, _turnIndices) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
       getRecentConversations: mock(async () => []),
       deleteConversation: mock(async () => true),
       updateMetadata: mock(async (id, metadata) => ({ 
@@ -567,6 +573,7 @@ describe('ConversationMemory', () => {
         createdAt: new Date(), 
         updatedAt: new Date(), 
         interfaceType: 'cli' as const, 
+        roomId: conversationConfig.defaultCliRoomId,
         activeTurns: [],
         summaries: [],
         archivedTurns: [],
@@ -588,7 +595,7 @@ describe('ConversationMemory', () => {
     });
     
     // Start a conversation to get its history
-    await anchorTestMemory.startConversation();
+    await anchorTestMemory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Simple check for anchor recognition
     expect(anchorTestMemory.isAnchor('anchor-user-id')).toBe(true);
@@ -613,7 +620,7 @@ describe('ConversationMemory', () => {
     });
     
     // Test full lifecycle
-    const id = await realMemory.startConversation();
+    const id = await realMemory.startConversation(conversationConfig.defaultCliRoomId);
     expect(id).toBeDefined();
     
     await realMemory.addTurn('What is quantum computing?', 'Quantum computing uses quantum bits to perform calculations.');

@@ -95,8 +95,8 @@ export const ConversationSchema = z.object({
   // Archive tier: Older conversation turns kept for reference but not used in context
   archivedTurns: z.array(ConversationTurnSchema).default([]),
   
-  // Room identifier (for Matrix) or interface identifier (for CLI)
-  roomId: z.string().optional(),
+  // Room identifier (required for both CLI and Matrix)
+  roomId: z.string(),
   
   // Interface type ('cli' or 'matrix')
   interfaceType: z.enum(['cli', 'matrix']),

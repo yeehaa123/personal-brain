@@ -4,7 +4,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 
-import { aiConfig, relevanceConfig } from '@/config';
+import { aiConfig, conversationConfig, relevanceConfig } from '@/config';
 import {
   createUnifiedMcpServer,
   ExternalSourceContext,
@@ -36,7 +36,7 @@ export interface BrainProtocolOptions {
   newsApiKey?: string;
   useExternalSources?: boolean;
   interfaceType?: 'cli' | 'matrix';
-  roomId?: string;
+  roomId?: string; // Now expected for both CLI and Matrix
   // Added for dependency injection - allows passing a custom storage implementation
   memoryStorage?: ConversationMemoryStorage;
 }
@@ -269,16 +269,17 @@ export class BrainProtocol {
    */
   private async initializeConversation(): Promise<void> {
     try {
-      if (this.interfaceType === 'matrix' && this.currentRoomId) {
-        // For Matrix, get or create a conversation for the current room
-        await this.conversationMemory.getOrCreateConversationForRoom(this.currentRoomId);
-        logger.info(`Started Matrix conversation for room ${this.currentRoomId}`);
+      // Get the room ID - now required for both interfaces
+      const roomId = this.currentRoomId || conversationConfig.defaultCliRoomId;
+      
+      // Get or create a conversation for the room ID
+      await this.conversationMemory.getOrCreateConversationForRoom(roomId);
+      
+      // Log which room we're using
+      if (this.interfaceType === 'matrix') {
+        logger.info(`Started Matrix conversation for room ${roomId}`);
       } else {
-        // For CLI, start a new conversation if there's no current one
-        if (!this.conversationMemory.currentConversation) {
-          await this.conversationMemory.startConversation();
-          logger.info('Started default CLI conversation for memory');
-        }
+        logger.info(`Started CLI conversation for room ${roomId}`);
       }
     } catch (error) {
       logger.error('Failed to initialize conversation:', error);
@@ -286,17 +287,19 @@ export class BrainProtocol {
   }
 
   /**
-   * Set the current Matrix room ID (for Matrix interface only)
-   * @param roomId The Matrix room ID
+   * Set the current room ID (for any interface)
+   * @param roomId The room ID
    */
   async setCurrentRoom(roomId: string): Promise<void> {
-    if (this.interfaceType !== 'matrix') {
-      throw new Error('Cannot set room ID for non-Matrix interface');
-    }
-
     this.currentRoomId = roomId;
     await this.conversationMemory.getOrCreateConversationForRoom(roomId);
-    logger.debug(`Switched to Matrix room ${roomId}`);
+    
+    // Log with interface type for clarity
+    if (this.interfaceType === 'matrix') {
+      logger.debug(`Switched to Matrix room ${roomId}`);
+    } else {
+      logger.debug(`Switched to CLI room ${roomId}`);
+    }
   }
 
   /**
@@ -347,8 +350,8 @@ export class BrainProtocol {
 
     logger.info(`Processing query: "${query}"`);
 
-    // If Matrix roomId is provided, ensure we're using the right conversation
-    if (options?.roomId && this.interfaceType === 'matrix') {
+    // If roomId is provided, ensure we're using the right conversation
+    if (options?.roomId) {
       await this.setCurrentRoom(options.roomId);
     }
 

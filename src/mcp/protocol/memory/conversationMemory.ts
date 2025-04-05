@@ -95,11 +95,11 @@ export class ConversationMemory {
   }
 
   /**
-   * Start a new conversation
-   * @param roomId Optional room ID for Matrix conversations
+   * Start a new conversation with a specified room ID
+   * @param roomId Room ID (required for both CLI and Matrix)
    * @returns The ID of the new conversation
    */
-  async startConversation(roomId?: string): Promise<string> {
+  async startConversation(roomId: string): Promise<string> {
     const conversation = await this.storage.createConversation({
       interfaceType: this.interfaceType,
       roomId,
@@ -111,7 +111,8 @@ export class ConversationMemory {
 
   /**
    * Get or create a conversation for a specific room
-   * @param roomId The Matrix room ID
+   * This is now the primary method for both CLI and Matrix
+   * @param roomId The room ID (CLI or Matrix)
    * @returns The conversation ID
    */
   async getOrCreateConversationForRoom(roomId: string): Promise<string> {

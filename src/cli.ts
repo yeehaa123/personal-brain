@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { conversationConfig } from '@/config';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 
 import { CommandHandler } from './commands';
@@ -8,8 +9,12 @@ import { CLIInterface } from './utils/cliInterface';
 import logger from './utils/logger';
 
 async function main() {
-  // Initialize components using the singleton pattern
-  const brainProtocol = BrainProtocol.getInstance({ interfaceType: 'cli' });
+  // Initialize components using the singleton pattern with room ID
+  const brainProtocol = BrainProtocol.getInstance({
+    interfaceType: 'cli',
+    roomId: conversationConfig.defaultCliRoomId,
+  });
+  
   const commandHandler = new CommandHandler(brainProtocol);
   const renderer = new CLIRenderer();
   

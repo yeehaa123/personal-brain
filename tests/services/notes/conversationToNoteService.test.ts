@@ -3,6 +3,7 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import { conversationConfig } from '@/config';
 import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
@@ -94,6 +95,7 @@ describe('ConversationToNoteService', () => {
     summaries: [],
     archivedTurns: [],
     interfaceType: 'cli',
+    roomId: conversationConfig.defaultCliRoomId,
   };
 
   const sampleTurns: ConversationTurn[] = [
@@ -140,7 +142,7 @@ describe('ConversationToNoteService', () => {
       summaries: [],
       archivedTurns: [],
       interfaceType: 'cli' as const,
-      roomId: undefined,
+      roomId: conversationConfig.defaultCliRoomId,
     };
     
     // Add the conversation directly to the storage's conversations map

@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 
+import { conversationConfig } from '@/config';
 import { PromptFormatter } from '@/mcp/protocol/components';
 import { ConversationMemory } from '@/mcp/protocol/memory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
@@ -24,8 +25,8 @@ describe('PromptFormatter with ConversationMemory', () => {
       storage: storage,
     });
     
-    // Create a new conversation
-    await memory.startConversation();
+    // Create a new conversation with room ID
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
     
     // Add conversation turns
     await memory.addTurn(

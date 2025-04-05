@@ -5,6 +5,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 // Import directly to avoid shared global mock state
+import { conversationConfig } from '@/config';
 import { ConversationMemory } from '@/mcp/protocol/memory/conversationMemory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
@@ -52,12 +53,12 @@ class MockBrainProtocol {
   
   // Helper method to start a fresh conversation for testing
   private async startFreshConversation(): Promise<void> {
-    // Always start a new conversation to ensure we have an active one
-    await this.conversationMemory.startConversation();
-    
-    // If we're in matrix mode and have a room ID, set it up
     if (this.interfaceType === 'matrix' && this.currentRoomId) {
+      // If we're in matrix mode and have a room ID, use it
       await this.conversationMemory.getOrCreateConversationForRoom(this.currentRoomId);
+    } else {
+      // For CLI, use the default CLI room ID
+      await this.conversationMemory.startConversation(conversationConfig.defaultCliRoomId);
     }
   }
   

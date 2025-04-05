@@ -49,7 +49,9 @@ class MockBrainProtocol {
       if (this.interfaceType === 'matrix' && this.currentRoomId) {
         await this.conversationMemory.getOrCreateConversationForRoom(this.currentRoomId);
       } else if (!this.conversationMemory.currentConversation) {
-        await this.conversationMemory.startConversation();
+        // Use default CLI room ID or a test room ID
+        const roomId = this.currentRoomId || 'cli-test-room-id';
+        await this.conversationMemory.startConversation(roomId);
       }
     } catch (_error) {
       // Ignore errors in tests

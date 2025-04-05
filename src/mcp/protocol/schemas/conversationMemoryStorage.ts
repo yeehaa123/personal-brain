@@ -4,6 +4,12 @@
 import type { Conversation, ConversationSummary, ConversationTurn } from './conversationSchemas';
 
 /**
+ * Default CLI room ID constant
+ * This ensures we have a consistent "room" for CLI conversations
+ */
+export const DEFAULT_CLI_ROOM_ID = 'cli-default-room';
+
+/**
  * Interface for conversation storage adapters
  * Implementations must provide these methods for storing and retrieving conversations
  */
@@ -15,7 +21,7 @@ export interface ConversationMemoryStorage {
    */
   createConversation(options: {
     interfaceType: 'cli' | 'matrix';
-    roomId?: string;
+    roomId: string; // roomId is now required for all interfaces
   }): Promise<Conversation>;
 
   /**

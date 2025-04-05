@@ -102,6 +102,7 @@ describe('Assistant Response Handling in Conversations', () => {
       summaries: [],
       archivedTurns: [],
       interfaceType: 'matrix',
+      roomId: 'test-matrix-room',
     };
     
     // Store in mock storage

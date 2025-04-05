@@ -94,7 +94,7 @@ export class InMemoryStorage implements ConversationMemoryStorage {
    */
   async createConversation(options: {
     interfaceType: 'cli' | 'matrix';
-    roomId?: string;
+    roomId: string; // Now required
   }): Promise<Conversation> {
     const now = new Date();
     // Use nanoid with prefix for clarity and consistent length (21 chars)
@@ -117,10 +117,8 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     // Store the conversation
     this.conversations.set(conversationId, conversation);
     
-    // If roomId is provided, index it for faster lookup
-    if (options.roomId) {
-      this.roomIdIndex.set(options.roomId, conversationId);
-    }
+    // Always index by roomId for faster lookup (roomId is now required)
+    this.roomIdIndex.set(options.roomId, conversationId);
     
     return conversation;
   }

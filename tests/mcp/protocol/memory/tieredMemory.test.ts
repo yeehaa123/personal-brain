@@ -3,6 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import { conversationConfig } from '@/config';
 import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
 
 // Mock the summarizer
@@ -45,7 +46,7 @@ describe('Tiered Memory System', () => {
     });
 
     // Initialize by starting a conversation
-    await memory.startConversation();
+    await memory.startConversation(conversationConfig.defaultCliRoomId);
   });
 
   afterEach(() => {
