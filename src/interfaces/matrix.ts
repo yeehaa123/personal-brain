@@ -10,7 +10,8 @@ import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { sanitizeHtml } from '@/utils/textUtils';
 
-import { CommandHandler } from '../commands';
+import { createCommandHandler } from '../commands';
+import type { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
 import { getEnv } from '../utils/configUtils';
 import logger from '../utils/logger';
@@ -52,7 +53,7 @@ export class MatrixBrainInterface {
 
     // Initialize brain protocol and command handler using singleton pattern
     this.brainProtocol = BrainProtocol.getInstance({ interfaceType: 'matrix', roomId: this.config.roomIds[0] });
-    this.commandHandler = new CommandHandler(this.brainProtocol);
+    this.commandHandler = createCommandHandler(this.brainProtocol);
 
     // Initialize renderer with message sending function
     this.renderer = new MatrixRenderer(

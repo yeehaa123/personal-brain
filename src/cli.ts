@@ -2,7 +2,7 @@
 import { conversationConfig } from '@/config';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 
-import { CommandHandler } from './commands';
+import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
 import { CLIApp } from './interfaces/cli-app';
 import { CLIInterface } from './utils/cliInterface';
@@ -15,7 +15,7 @@ async function main() {
     roomId: conversationConfig.defaultCliRoomId,
   });
   
-  const commandHandler = new CommandHandler(brainProtocol);
+  const commandHandler = createCommandHandler(brainProtocol);
   const renderer = new CLIRenderer();
   
   // Create CLI application with dependencies
