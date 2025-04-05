@@ -287,6 +287,11 @@ export class MatrixBrainInterface {
         await this.sendMessage(roomId, `🤔 Thinking about: "${args}"...`);
       }
 
+      // Add debugging to make sure we have a proper userId before processing the command
+      // This ensures that assistant responses will be properly identified
+      const userId = this.config.userId || 'matrix-user';
+      logger.debug(`Processing command with userId: ${userId} (should not start with 'assistant')`);
+
       const result = await this.commandHandler.processCommand(command, args);
 
       // Special handling for save-note preview - store conversation ID for later confirmation

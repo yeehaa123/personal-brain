@@ -102,10 +102,20 @@ export class ConversationToNoteService {
     // Group the turns into question-answer pairs for proper formatting
     let formattedContent = '';
     
+    // Add debug information about all turns
+    logger.debug(`Processing ${turns.length} turns for note creation`);
+    turns.forEach((turn, idx) => {
+      logger.debug(`Turn ${idx}: userId=${turn.userId}, query=${turn.query ? 'present' : 'empty'}, response=${turn.response ? 'present' : 'empty'}`);
+    });
+    
     // We need to go through the turns and correctly pair user questions with assistant answers
     for (let i = 0; i < turns.length; i++) {
       const turn = turns[i];
-      const isUser = !turn.userId?.startsWith('assistant');
+      // Check if turn is from a user (userId is NOT 'assistant') or from the assistant (userId IS 'assistant')
+      const isUser = turn.userId !== 'assistant';
+      
+      // Add detailed debug logging for userId detection
+      logger.debug(`Turn ${i}: userId=${turn.userId}, isUser=${isUser}, has query=${!!turn.query}, has response=${!!turn.response}`);
       
       if (isUser) {
         // This is a user question
@@ -116,9 +126,13 @@ export class ConversationToNoteService {
         let foundAnswer = false;
         for (let j = i + 1; j < turns.length; j++) {
           const nextTurn = turns[j];
-          const isAssistant = nextTurn.userId?.startsWith('assistant');
+          // Use exact match instead of startsWith to ensure we only match 'assistant' exactly
+          const isAssistant = nextTurn.userId === 'assistant';
           
           if (isAssistant) {
+            // Add debug info about the matching assistant turn
+            logger.debug(`Found assistant turn at index ${j} with userId=${nextTurn.userId}`);
+            
             // Found an assistant turn
             if (nextTurn.response) {
               // Log debug info about the response
@@ -129,8 +143,10 @@ export class ConversationToNoteService {
               // Check if the response is empty
               const trimmedResponse = nextTurn.response.trim();
               if (trimmedResponse.length === 0) {
+                logger.debug(`Empty response found in assistant turn ${j}`);
                 formattedContent += '**Answer**: (No response)\n\n';
               } else {
+                logger.debug(`Found valid response in assistant turn ${j}: "${trimmedResponse.substring(0, 50)}..."`);
                 // Clean HTML from responses before adding to note content
                 const cleanResponse = this.sanitizeHtmlIfPresent(nextTurn.response);
                 formattedContent += `**Answer**: ${cleanResponse}\n\n`;
@@ -138,6 +154,7 @@ export class ConversationToNoteService {
               foundAnswer = true;
               break;
             } else {
+              logger.debug(`Assistant turn ${j} has undefined or null response`);
               // Found an assistant turn but with empty response
               formattedContent += '**Answer**: (No response)\n\n';
               foundAnswer = true;

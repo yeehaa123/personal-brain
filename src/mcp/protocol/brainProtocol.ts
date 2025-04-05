@@ -468,13 +468,33 @@ export class BrainProtocol {
     try {
       // The model response is pure text, so we save it directly to memory
       // No HTML formatting has been applied at this point
+      
+      // First, add the user's query with the provided userId
       await this.conversationMemory.addTurn(
         query,
+        '', // No response for user turn
+        {
+          userId: options?.userId || 'matrix-user', // Use provided userId or default
+          userName: options?.userName || 'User',
+          metadata: {
+            turnType: 'user',
+            hasProfile: !!this.profile,
+            isProfileQuery,
+            profileRelevance,
+          },
+        },
+      );
+      logger.debug(`Saved user turn with userId: ${options?.userId || 'matrix-user'}`);
+      
+      // Then, add the assistant's response with 'assistant' as userId
+      await this.conversationMemory.addTurn(
+        query, // We need to include the original query to satisfy schema validation
         responseText,
         {
-          userId: options?.userId,
-          userName: options?.userName,
+          userId: 'assistant', // CRITICAL: This ensures it's identified as an assistant turn
+          userName: 'Assistant',
           metadata: {
+            turnType: 'assistant',
             hasProfile: !!this.profile,
             isProfileQuery,
             profileRelevance,
@@ -483,7 +503,7 @@ export class BrainProtocol {
           },
         },
       );
-      logger.debug('Saved raw conversation turn to memory');
+      logger.debug('Saved assistant turn with userId: assistant');
     } catch (error) {
       logger.warn('Failed to save conversation turn:', error);
       // Continue even if saving fails
