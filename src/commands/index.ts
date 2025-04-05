@@ -329,6 +329,12 @@ export class CommandHandler {
 
     try {
       const result = await this.brainProtocol.processQuery(question);
+      
+      // DEBUG: Log the answer to check for HTML content
+      logger.debug(`[DEBUG ASK] Raw answer from processQuery: ${result.answer.substring(0, 100)}...`);
+      if (result.answer.includes('<') && result.answer.includes('>')) {
+        logger.warn(`[DEBUG ASK] Found HTML tags in answer: ${result.answer.substring(0, 200)}...`);
+      }
 
       return {
         type: 'ask',
@@ -448,22 +454,35 @@ export class CommandHandler {
     // Get all active turns from the conversation
     const turns: ConversationTurn[] = conversation.activeTurns;
     
-    // Log conversation data for debugging (keep this for now to help diagnose any issues)
+    // Enhanced debugging for conversation content
     logger.debug(`Conversation ID: ${conversationId}`);
     logger.debug(`Interface type: ${conversation.interfaceType}`);
     logger.debug(`Number of turns: ${turns.length}`);
-    if (turns.length > 0) {
-      logger.debug(`First turn query: ${turns[0].query.substring(0, 50)}...`);
-      logger.debug(`First turn response length: ${turns[0].response?.length || 0}`);
-      if (turns[0].response) {
-        // Log the beginning of the response to check for HTML
-        const responsePreview = turns[0].response.substring(0, 100);
-        logger.debug(`First turn response preview: ${responsePreview}`);
-        if (responsePreview.includes('<') && responsePreview.includes('>')) {
-          logger.warn(`Found potential HTML in response: ${responsePreview}`);
+    
+    // Log details about all turns to diagnose issues
+    turns.forEach((turn, index) => {
+      const isUser = !turn.userId?.startsWith('assistant');
+      const role = isUser ? 'User' : 'Assistant';
+      
+      logger.debug(`Turn ${index + 1} (${role}):`);
+      if (isUser) {
+        logger.debug(`  Query: ${turn.query.substring(0, 50)}...`);
+      } else {
+        logger.debug(`  Response length: ${turn.response?.length || 0}`);
+        
+        if (turn.response) {
+          // Check for HTML content
+          const responsePreview = turn.response.substring(0, 100);
+          logger.debug(`  Response preview: ${responsePreview}`);
+          
+          if (responsePreview.includes('<') && responsePreview.includes('>')) {
+            logger.warn(`  Found potential HTML in response: ${responsePreview}`);
+          }
+        } else {
+          logger.warn(`  Empty response in turn ${index + 1}`);
         }
       }
-    }
+    });
     
     if (turns.length === 0) {
       return { type: 'error', message: 'Conversation has no turns to save.' };

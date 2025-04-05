@@ -42,14 +42,13 @@ export class MatrixRenderer {
    */
   renderHelp(roomId: string, commands: CommandInfo[]): void {
     const helpText = [
-      '<h3>Personal Brain Commands</h3>',
-      '<ul>',
+      '### Personal Brain Commands',
+      '',
       ...commands.map(cmd => {
-        // Format with HTML for better rendering
-        const usage = `<code>${this.commandPrefix} ${cmd.usage}</code>`;
-        return `<li>${usage} - ${cmd.description}</li>`;
+        // Format with markdown for better rendering
+        const usage = `\`${this.commandPrefix} ${cmd.usage}\``;
+        return `- ${usage} - ${cmd.description}`;
       }),
-      '</ul>',
     ].join('\n');
 
     this.sendMessageFn(roomId, helpText);
@@ -156,6 +155,12 @@ export class MatrixRenderer {
     }
 
     case 'ask': {
+      // DEBUG: Log the raw answer from the command handler
+      logger.debug(`[DEBUG RENDERER] Received answer in renderer: ${result.answer.substring(0, 100)}...`);
+      if (result.answer.includes('<') && result.answer.includes('>')) {
+        logger.warn(`[DEBUG RENDERER] Found HTML in result.answer: ${result.answer.substring(0, 200)}...`);
+      }
+      
       const askMessage = [
         '### Answer',
         '',
@@ -176,7 +181,11 @@ export class MatrixRenderer {
         });
       }
 
-      this.sendMessageFn(roomId, askMessage.join('\n'));
+      // DEBUG: Log the formatted message
+      const formattedMessage = askMessage.join('\n');
+      logger.debug(`[DEBUG RENDERER] Formatted askMessage: ${formattedMessage.substring(0, 100)}...`);
+      
+      this.sendMessageFn(roomId, formattedMessage);
       break;
     }
 
@@ -352,37 +361,31 @@ export class MatrixRenderer {
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     
-    // Add a special marker that will appear in both plain text and HTML versions
-    // This must be included exactly as is for the Matrix interface to parse
-    const conversationMarker = `CONVERSATION_ID=${result.conversationId}`;
-    
     // Add debug logging to track conversation IDs
-    logger.debug(`Adding conversation marker: ${conversationMarker} to save-note preview`);
+    logger.debug(`Creating save-note preview for conversation: ${result.conversationId}`);
     
-    // HTML formatting that works well in Element
+    // Markdown formatting that works well in Element
     const message = [
-      '<h3>📝 Note Preview</h3>',
+      '### 📝 Note Preview',
       '',
-      `<p><strong>Title</strong>: ${result.title}</p>`,
+      `**Title**: ${result.title}`,
       '',
-      '<p><strong>Content Preview</strong>:</p>',
+      '**Content Preview**:',
       '',
-      '<pre>',
+      '```',
       previewContent,
-      '</pre>',
+      '```',
       '',
-      '<hr/>',
+      '---',
       '',
-      '<p><em>This is a preview of the note that will be created from your conversation.</em></p>',
+      '*This is a preview of the note that will be created from your conversation.*',
       '',
-      '<blockquote>',
-      '<p><strong>🔵 Actions</strong></p>',
-      `<p>• To save this note: <code>${this.commandPrefix} confirm</code> or <code>${this.commandPrefix} confirm "New Title"</code></p>`,
-      `<p>• To cancel: <code>${this.commandPrefix} cancel</code></p>`,
-      '</blockquote>',
+      '> **🔵 Actions**',
+      `> • To save this note: \`${this.commandPrefix} confirm\` or \`${this.commandPrefix} confirm "New Title"\``,
+      `> • To cancel: \`${this.commandPrefix} cancel\``,
       '',
       // Include conversation ID in a visible format (the map approach means this is now just for display)
-      `<p><em>Note ID: ${result.conversationId}</em></p>`,
+      `*Note ID: ${result.conversationId}*`,
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -393,15 +396,13 @@ export class MatrixRenderer {
    */
   private renderSaveNoteConfirm(roomId: string, result: { noteId: string; title: string }): void {
     const message = [
-      '<h3>✅ Note Saved Successfully!</h3>',
+      '### ✅ Note Saved Successfully!',
       '',
-      `<p><strong>Title</strong>: "${result.title}"</p>`,
-      `<p><strong>Note ID</strong>: <code>${result.noteId}</code></p>`,
+      `**Title**: "${result.title}"`,
+      `**Note ID**: \`${result.noteId}\``,
       '',
-      '<blockquote>',
-      '<p><strong>💡 Tip</strong>: To view the complete note, use:</p>',
-      `<p><code>${this.commandPrefix} note ${result.noteId}</code></p>`,
-      '</blockquote>',
+      '> **💡 Tip**: To view the complete note, use:',
+      `> \`${this.commandPrefix} note ${result.noteId}\``,
     ].join('\n');
     
     this.sendMessageFn(roomId, message);
@@ -412,22 +413,22 @@ export class MatrixRenderer {
    */
   private renderConversationNotes(roomId: string, result: { notes: Note[] }): void {
     if (result.notes.length === 0) {
-      this.sendMessageFn(roomId, '<h3>⚠️ No conversation notes found.</h3>');
+      this.sendMessageFn(roomId, '### ⚠️ No conversation notes found.');
       return;
     }
     
-    // Create a presentation for notes using HTML formatting
+    // Create a presentation for notes using Markdown formatting
     const messageParts = [
-      '<h3>📚 Notes Created from Conversations</h3>',
-      '<hr/>',
+      '### 📚 Notes Created from Conversations',
+      '---',
     ];
     
-    // Add each note with HTML formatting
+    // Add each note with Markdown formatting
     result.notes.forEach((note, index) => {
       // Extract tags and format them
       const tags = note.tags && note.tags.length > 0
-        ? note.tags.map(tag => `<code>${tag}</code>`).join(' ')
-        : '<em>No tags</em>';
+        ? note.tags.map(tag => `\`${tag}\``).join(' ')
+        : '*No tags*';
       
       // Format content preview
       const preview = getExcerpt(note.content, 120);
@@ -437,16 +438,16 @@ export class MatrixRenderer {
       
       // Create a formatted note block
       messageParts.push(
-        `<h4>${index + 1}. ${note.title}</h4>`,
+        `#### ${index + 1}. ${note.title}`,
         '',
-        `<p><strong>ID</strong>: <code>${note.id}</code> | <strong>Created</strong>: ${created}</p>`,
-        `<p><strong>Tags</strong>: ${tags}</p>`,
+        `**ID**: \`${note.id}\` | **Created**: ${created}`,
+        `**Tags**: ${tags}`,
         '',
-        `<blockquote><p>${preview}</p></blockquote>`,
+        `> ${preview}`,
         '',
-        `<p>💡 View with: <code>${this.commandPrefix} note ${note.id}</code></p>`,
+        `💡 View with: \`${this.commandPrefix} note ${note.id}\``,
         '',
-        '<hr/>',
+        '---',
       );
     });
     

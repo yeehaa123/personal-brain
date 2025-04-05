@@ -359,18 +359,20 @@ describe('ConversationToNoteService', () => {
     // Generate preview with HTML content
     const preview = await service.prepareNotePreview(
       sampleConversation,
-      htmlTurns
+      htmlTurns,
     );
 
     // Log the formatted content
     console.log('HTML Conversation formatted as:');
     console.log(preview.content);
 
-    // Expect both questions and answers with HTML
+    // Expect both questions and answers with HTML converted to markdown
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
-    expect(preview.content).toContain('**Answer**: <h3>Ecosystem Architecture</h3>');
+    expect(preview.content).toContain('**Answer**:');
+    expect(preview.content).toContain('**Ecosystem Architecture**');
     expect(preview.content).toContain('**Question**: Can you give me examples?');
-    expect(preview.content).toContain('**Answer**: <ul><li>Cloud platforms like AWS</li>');
+    expect(preview.content).toContain('**Answer**:');
+    expect(preview.content).toContain('- Cloud platforms like AWS');
     
     // Now test the actual note creation
     await service.createNoteFromConversation(sampleConversation, htmlTurns);
@@ -378,9 +380,9 @@ describe('ConversationToNoteService', () => {
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
     
-    // Check that HTML is preserved in the created note
-    expect(insertCall.content).toContain('**Answer**: <h3>Ecosystem Architecture</h3>');
-    expect(insertCall.content).toContain('**Answer**: <ul><li>Cloud platforms like AWS</li>');
+    // Check that HTML is sanitized and converted to markdown in the created note
+    expect(insertCall.content).toContain('**Ecosystem Architecture**');
+    expect(insertCall.content).toContain('- Cloud platforms like AWS');
   });
   
   test('should handle missing or empty response values', async () => {
@@ -423,7 +425,7 @@ describe('ConversationToNoteService', () => {
     // Generate preview with empty response
     const preview = await service.prepareNotePreview(
       sampleConversation,
-      emptyResponseTurns
+      emptyResponseTurns,
     );
     
     // Log the content with empty response
@@ -475,7 +477,7 @@ describe('ConversationToNoteService', () => {
     // Generate preview with undefined response
     const previewUndef = await service.prepareNotePreview(
       sampleConversation,
-      undefinedResponseTurns
+      undefinedResponseTurns,
     );
     
     // Log the content with undefined response

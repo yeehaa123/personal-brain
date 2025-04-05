@@ -121,13 +121,25 @@ export class ConversationToNoteService {
           if (isAssistant) {
             // Found an assistant turn
             if (nextTurn.response) {
-              // Found the matching assistant response with content
-              formattedContent += `**Answer**: ${nextTurn.response}\n\n`;
+              // Log debug info about the response
+              if (nextTurn.response.includes('<') && nextTurn.response.includes('>')) {
+                logger.debug(`HTML tags found in response: ${nextTurn.response.substring(0, 100)}...`);
+              }
+              
+              // Check if the response is empty
+              const trimmedResponse = nextTurn.response.trim();
+              if (trimmedResponse.length === 0) {
+                formattedContent += '**Answer**: (No response)\n\n';
+              } else {
+                // Clean HTML from responses before adding to note content
+                const cleanResponse = this.sanitizeHtmlIfPresent(nextTurn.response);
+                formattedContent += `**Answer**: ${cleanResponse}\n\n`;
+              }
               foundAnswer = true;
               break;
             } else {
               // Found an assistant turn but with empty response
-              formattedContent += `**Answer**: (No response)\n\n`;
+              formattedContent += '**Answer**: (No response)\n\n';
               foundAnswer = true;
               break;
             }
@@ -136,7 +148,7 @@ export class ConversationToNoteService {
         
         // If we didn't find an answer at all, still add a placeholder
         if (!foundAnswer) {
-          formattedContent += `**Answer**: (No response)\n\n`;
+          formattedContent += '**Answer**: (No response)\n\n';
         }
       } else {
         // This is an assistant response without a preceding user question
@@ -305,5 +317,33 @@ export class ConversationToNoteService {
     // This will be implemented when we have access to the conversation storage
     logger.debug(`Highlighting segment in conversation ${conversationId}, turn ${turnId}: ${text}`);
     return true; // Placeholder for successful operation
+  }
+  
+  /**
+   * Sanitize HTML content if present in the text
+   * This helps ensure we're storing clean text in notes without HTML tags
+   */
+  private sanitizeHtmlIfPresent(text: string): string {
+    // Check if the text contains HTML tags
+    if (text.includes('<') && text.includes('>') && /<\/?[a-z]/.test(text)) {
+      logger.debug('Sanitizing HTML from response for note content');
+      
+      // Replace HTML tags with appropriate markdown or text alternatives
+      return text
+        .replace(/<h[1-6]>(.*?)<\/h[1-6]>/g, '**$1**\n') // Convert headers to bold
+        .replace(/<p>(.*?)<\/p>/g, '$1\n\n')            // Extract paragraph content
+        .replace(/<strong>(.*?)<\/strong>/g, '**$1**')  // Convert strong to markdown bold
+        .replace(/<em>(.*?)<\/em>/g, '*$1*')            // Convert em to markdown italic
+        .replace(/<code>(.*?)<\/code>/g, '`$1`')        // Convert code to markdown code
+        .replace(/<blockquote>(.*?)<\/blockquote>/g, '> $1') // Convert blockquote
+        .replace(/<hr\/?>/g, '---')                     // Convert hr to markdown hr
+        .replace(/<br\/?>/g, '\n')                      // Convert br to newline
+        .replace(/<pre>(.*?)<\/pre>/g, '```\n$1\n```')  // Convert pre to code block
+        .replace(/<ul>(.*?)<\/ul>/gs, '$1')             // Extract ul content
+        .replace(/<li>(.*?)<\/li>/g, '- $1\n')          // Convert li to bullet points
+        .replace(/<.+?>/g, '');                         // Remove any remaining tags
+    }
+    
+    return text;
   }
 }

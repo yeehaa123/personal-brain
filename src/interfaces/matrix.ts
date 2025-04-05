@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import { marked } from 'marked';
 import * as sdk from 'matrix-js-sdk';
 import { ClientEvent } from 'matrix-js-sdk';
 import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
@@ -13,7 +12,6 @@ import { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
 import { getEnv } from '../utils/configUtils';
 import logger from '../utils/logger';
-import { sanitizeHtml } from '../utils/textUtils';
 
 
 
@@ -385,39 +383,38 @@ export class MatrixBrainInterface {
    */
   private async sendMessage(roomId: string, message: string): Promise<void> {
     try {
-      // Always convert markdown to HTML for better rendering in Element
-      const htmlContent = await this.markdownToHtml(message);
+      // IMPORTANT: We're now using plain markdown without HTML conversion
+      // This ensures we don't have HTML content in our messages that could
+      // get stored in conversation memory
+      logger.debug(`Sending markdown message to ${roomId}`);
       
-      // Create plain text version for extraction
-      // This version keeps important data like Conversation ID in plain text
-      // while removing HTML tags for better plain text display
-      const plainText = message
-        .replace(/<\/?h[1-6]>/g, '') // Remove heading tags
-        .replace(/<\/?p>/g, '')      // Remove paragraph tags
-        .replace(/<\/?strong>/g, '') // Remove strong tags
-        .replace(/<\/?em>/g, '')     // Remove em tags
-        .replace(/<\/?code>/g, '')   // Remove code tags
-        .replace(/<\/?blockquote>/g, '') // Remove blockquote tags
-        .replace(/<hr\/?>/g, '---')  // Replace HR with ---
-        .replace(/<br\/?>/g, '\n')   // Replace BR with newline
-        .replace(/<\/?pre>/g, '')    // Remove pre tags
-        .replace(/<\/?ul>/g, '')     // Remove ul tags
-        .replace(/<\/?li>/g, '- ')   // Replace li with -
-        .replace(/<.+?>/g, '');      // Remove any remaining tags
+      // Send as plain text (markdown)
+      await this.client.sendMessage(roomId, {
+        msgtype: MsgType.Text,
+        body: message,
+      });
       
-      // Send both plain text and HTML versions
-      await this.client.sendHtmlMessage(roomId, plainText, htmlContent);
-      logger.debug(`Sent HTML-formatted message to ${roomId}`);
+      logger.debug(`Sent plain markdown message to ${roomId}`);
     } catch (error) {
       logger.error(`Failed to send message to ${roomId}:`, error);
       
       try {
-        // Fallback to plain text if HTML sending fails
+        // We're already using plain text, but try a simplified version as fallback
+        // Remove any markdown formatting that might be causing issues
+        const simplifiedMessage = message
+          .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
+          .replace(/\*(.*?)\*/g, '$1')      // Remove italic
+          .replace(/`(.*?)`/g, '$1')        // Remove code
+          .replace(/#### (.*?)$/gm, '$1')   // Remove h4
+          .replace(/### (.*?)$/gm, '$1')    // Remove h3
+          .replace(/## (.*?)$/gm, '$1')     // Remove h2
+          .replace(/# (.*?)$/gm, '$1');     // Remove h1
+          
         await this.client.sendMessage(roomId, {
           msgtype: MsgType.Text,
-          body: message.replace(/<.+?>/g, ''), // Remove HTML tags for plain text
+          body: simplifiedMessage,
         });
-        logger.debug(`Sent plain text fallback message to ${roomId}`);
+        logger.debug(`Sent simplified fallback message to ${roomId}`);
       } catch (fallbackError) {
         logger.error(`Complete failure sending message to ${roomId}:`, fallbackError);
         throw fallbackError;
@@ -425,30 +422,7 @@ export class MatrixBrainInterface {
     }
   }
 
-  /**
-   * Convert markdown to HTML for Matrix messages
-   */
-  private async markdownToHtml(markdown: string): Promise<string> {
-    try {
-      // Use the marked library to convert markdown to HTML
-      const html = marked.parse(markdown);
-      // Sanitize the HTML to prevent XSS
-      return sanitizeHtml(html as string);
-    } catch (error) {
-      logger.error('Error converting markdown to HTML:', error);
-      
-      // Fallback to basic conversion if marked fails
-      return markdown
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/`(.*?)`/g, '<code>$1</code>')
-        .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-        .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-        .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-        .replace(/^- (.*?)$/gm, '<li>$1</li>')
-        .replace(/\n\n/g, '<br/><br/>');
-    }
-  }
+  // Note: markdownToHtml method is removed since we're using plain markdown now
 }
 
 async function main() {
