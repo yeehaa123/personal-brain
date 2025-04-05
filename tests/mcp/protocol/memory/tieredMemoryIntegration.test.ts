@@ -106,12 +106,9 @@ class MockBrainProtocol {
     return { answer: response.response };
   }
   
-  // Method to set Matrix room ID
+  // Method to set room ID (for any interface)
   async setCurrentRoom(roomId: string): Promise<void> {
-    if (this.interfaceType !== 'matrix') {
-      throw new Error('Cannot set room ID for non-Matrix interface');
-    }
-    
+    // No interface check - both CLI and Matrix support room IDs now
     this.currentRoomId = roomId;
     await this.conversationMemory.getOrCreateConversationForRoom(roomId);
   }
