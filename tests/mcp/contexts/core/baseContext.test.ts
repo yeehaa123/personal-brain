@@ -4,8 +4,8 @@
  * These tests validate that the base abstract class works correctly
  * and can be extended by concrete context implementations.
  */
-import { describe, expect, test } from 'bun:test';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { describe, expect, test } from 'bun:test';
 
 // No need to import ResourceDefinition as it's not used directly in tests
 
