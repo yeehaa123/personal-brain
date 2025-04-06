@@ -7,6 +7,7 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { nanoid } from 'nanoid';
+import { z } from 'zod';
 
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
@@ -453,7 +454,7 @@ export class ConversationContext {
               }],
             };
           }
-        }
+        },
       );
     });
   }
@@ -474,8 +475,7 @@ export class ConversationContext {
         return;
       }
       
-      // For this initial implementation, convert existing parameters to a simple schema format
-      // In the future, this should be updated to use proper Zod schemas directly
+      // Use proper Zod schemas based on the tool name
       const schema = this.getToolSchema(tool);
       
       targetServer.tool(
@@ -505,20 +505,66 @@ export class ConversationContext {
               isError: true,
             };
           }
-        }
+        },
       );
     });
   }
   
   /**
-   * Gets the schema for a tool
-   * @param _tool Tool definition with parameters
-   * @returns Schema object for parameters
+   * Gets the Zod schema for a tool based on its name
+   * @param tool Tool definition with parameters
+   * @returns Zod schema object for tool parameters
    */
-  private getToolSchema(_tool: ResourceDefinition): Record<string, any> {
-    // For now, use a simple empty schema for all tools
-    // In the future, this should be updated with proper schemas for each tool
-    return {}; 
+  private getToolSchema(tool: ResourceDefinition): Record<string, z.ZodTypeAny> {
+    // Return appropriate Zod schema based on tool name
+    switch (tool.name) {
+      case 'create_conversation':
+        return {
+          interfaceType: z.enum(['cli', 'matrix']).describe('Interface type of the conversation'),
+          roomId: z.string().describe('Room ID for the conversation'),
+        };
+        
+      case 'add_turn':
+        return {
+          conversationId: z.string().describe('ID of the conversation'),
+          query: z.string().min(1).describe('User query'),
+          response: z.string().optional().describe('Assistant response'),
+          userId: z.string().optional().describe('User ID (optional)'),
+          userName: z.string().optional().describe('User name (optional)'),
+          metadata: z.record(z.unknown()).optional().describe('Additional metadata (optional)'),
+        };
+        
+      case 'summarize_conversation':
+        return {
+          conversationId: z.string().describe('ID of the conversation to summarize'),
+        };
+        
+      case 'get_conversation_history':
+        return {
+          conversationId: z.string().describe('ID of the conversation'),
+          format: z.enum(['text', 'markdown', 'json', 'html']).optional()
+            .describe('Format of the output'),
+          maxTurns: z.number().optional().describe('Maximum number of turns to include'),
+          includeSummaries: z.boolean().optional().describe('Whether to include summaries'),
+          includeTimestamps: z.boolean().optional().describe('Whether to include timestamps'),
+          includeMetadata: z.boolean().optional().describe('Whether to include metadata'),
+        };
+        
+      case 'search_conversations':
+        return {
+          query: z.string().optional().describe('Search query'),
+          interfaceType: z.enum(['cli', 'matrix']).optional().describe('Interface type filter'),
+          roomId: z.string().optional().describe('Room ID filter'),
+          startDate: z.string().optional().describe('Start date filter (ISO format)'),
+          endDate: z.string().optional().describe('End date filter (ISO format)'),
+          limit: z.number().optional().describe('Maximum number of results'),
+        };
+        
+      default:
+        // For unknown tools, return an empty schema
+        logger.warn(`No schema defined for tool: ${tool.name || tool.path}`);
+        return {};
+    }
   }
 
   /**
