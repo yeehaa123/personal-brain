@@ -192,6 +192,7 @@ personal-brain/
 - [Architecture Overview](docs/ARCHITECTURE.md)
 - [BrainProtocol Documentation](docs/BRAIN_PROTOCOL_ARCHITECTURE.md)
 - [Tiered Memory System](docs/TIERED_MEMORY.md)
+- [Development Roadmap](docs/ROADMAP.md)
 - [Test Architecture](docs/TEST_ARCHITECTURE.md)
 - [Conversation to Notes Design](docs/CONVERSATION_TO_NOTES.md)
 - [MCP Implementation](src/mcp/README.md)
