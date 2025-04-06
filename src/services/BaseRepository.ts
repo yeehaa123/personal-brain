@@ -67,7 +67,9 @@ implements IRepository<TEntity, string> {
    */
   async insert(entity: TEntity): Promise<TEntity> {
     try {
-      // We need to use a more specific type that drizzle expects
+      // We need to use a type assertion here for Drizzle ORM
+      // This is a limitation of TypeScript with Drizzle's complex generic types
+      // The entity is validated at runtime by Drizzle against the schema
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await db.insert(this.table).values(entity as any);
       return entity;

@@ -51,7 +51,6 @@
  * ```
  */
 
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 /**
@@ -80,7 +79,7 @@ export async function createIsolatedMemory(options?: {
   // Create the memory with the isolated storage
   const memory = new ConversationMemory({
     interfaceType: options?.interfaceType || 'cli',
-    storage: storage as unknown as ConversationMemoryStorage,
+    storage: storage,
     options: options?.memoryOptions,
     apiKey: options?.apiKey,
   });

@@ -103,7 +103,9 @@ function validateEmbeddingResponse(response: unknown): OpenAIEmbeddingResponse {
         { itemIndex: i, foundType: typeof item['embedding'] });
     }
     
-    if ((item['embedding'] as unknown[]).some(val => typeof val !== 'number')) {
+    // Check if all embedding values are numbers
+    const embeddingArray = item['embedding'] as unknown[];
+    if (embeddingArray.some(val => typeof val !== 'number')) {
       throw new ValidationError(`Invalid embedding response: item ${i} has non-numeric values in embedding`, 
         { itemIndex: i });
     }

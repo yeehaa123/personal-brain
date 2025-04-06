@@ -3,8 +3,8 @@
  * Manages conversation history and persistence
  */
 import type { ConversationContext } from '@/mcp/contexts/conversations';
+import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
 import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
@@ -26,13 +26,13 @@ export class ConversationManager implements IConversationManager {
     // Use injected storage if provided, otherwise use singleton getInstance()
     // Note: memoryStorage is now stored directly in config rather than as a method
     const memoryStorage = 
-      (config.memoryStorage as InMemoryStorage) || 
+      (config.memoryStorage as ConversationStorage) || 
       InMemoryStorage.getInstance();
     
     // Initialize conversation memory with interface type
     this.conversationMemory = new ConversationMemory({
       interfaceType: config.interfaceType,
-      storage: memoryStorage as unknown as ConversationMemoryStorage,  // Type assertion for compatibility
+      storage: memoryStorage,
       apiKey: config.getApiKey(),
     });
     

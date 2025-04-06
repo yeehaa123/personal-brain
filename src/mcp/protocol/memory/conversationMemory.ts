@@ -1,13 +1,16 @@
 /**
  * Tiered ConversationMemory class for managing conversation history
  */
+import { nanoid } from 'nanoid';
+
+import type { 
+  ConversationSummary as ContextConversationSummary, 
+  ConversationStorage,
+} from '@/mcp/contexts/conversations/conversationStorage';
 import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 import { getEnv } from '@/utils/configUtils';
 import logger from '@utils/logger';
 
-
-// nanoid is used for ID generation across the application
-import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
 import { ConversationMemoryOptionsSchema } from '../schemas/conversationSchemas';
 import type {
   Conversation,
@@ -25,7 +28,7 @@ import { ConversationSummarizer } from './summarizer';
  */
 interface ConversationMemoryConfig {
   interfaceType: 'cli' | 'matrix';
-  storage?: ConversationMemoryStorage;
+  storage?: ConversationStorage;
   options?: Partial<ConversationMemoryOptions>;
   apiKey?: string;
 }
@@ -35,7 +38,7 @@ interface ConversationMemoryConfig {
  * active, summary, and archive tiers for efficient token usage
  */
 export class ConversationMemory {
-  private storage: ConversationMemoryStorage;
+  private storage: ConversationStorage;
   private options: ConversationMemoryOptions;
   private currentConversationId: string | null = null;
   private anchorId: string | null = null;
@@ -54,7 +57,7 @@ export class ConversationMemory {
     // Use provided storage or create in-memory storage as default
     // Note: In production, we use the singleton instance, but tests should use createFresh()
     // for proper isolation. This way we avoid test interference.
-    this.storage = config.storage || (InMemoryStorage.getInstance() as unknown as ConversationMemoryStorage);
+    this.storage = config.storage || InMemoryStorage.getInstance();
     
     // Parse and validate options with defaults from the schema
     this.options = ConversationMemoryOptionsSchema.parse(config.options || {});
@@ -90,7 +93,7 @@ export class ConversationMemory {
   /**
    * Access the storage directly
    */
-  getConversationMemory(): { storage: ConversationMemoryStorage } {
+  getConversationMemory(): { storage: ConversationStorage } {
     return { storage: this.storage };
   }
 
@@ -100,13 +103,15 @@ export class ConversationMemory {
    * @returns The ID of the new conversation
    */
   async startConversation(roomId: string): Promise<string> {
-    const conversation = await this.storage.createConversation({
+    const id = await this.storage.createConversation({
       interfaceType: this.interfaceType,
       roomId,
+      startedAt: new Date(),
+      updatedAt: new Date(),
     });
     
-    this.currentConversationId = conversation.id;
-    return conversation.id;
+    this.currentConversationId = id;
+    return id;
   }
 
   /**
@@ -117,11 +122,11 @@ export class ConversationMemory {
    */
   async getOrCreateConversationForRoom(roomId: string): Promise<string> {
     // Try to find existing conversation for this room
-    const existingConversation = await this.storage.getConversationByRoomId(roomId);
+    const existingConversationId = await this.storage.getConversationByRoom(roomId);
     
-    if (existingConversation) {
-      this.currentConversationId = existingConversation.id;
-      return existingConversation.id;
+    if (existingConversationId) {
+      this.currentConversationId = existingConversationId;
+      return existingConversationId;
     }
     
     // Create a new conversation for this room
@@ -174,7 +179,8 @@ export class ConversationMemory {
     const userId = options?.userId || this.options.defaultUserId;
     const userName = options?.userName || this.options.defaultUserName;
 
-    const turn: Omit<ConversationTurn, 'id'> = {
+    const turn: ConversationTurn = {
+      id: `turn-${nanoid()}`,
       timestamp: new Date(),
       query,
       response,
@@ -184,10 +190,14 @@ export class ConversationMemory {
     };
 
     // Add the turn to the active tier
-    const updatedConversation = await this.storage.addTurn(this.currentConversationId, turn);
+    await this.storage.addTurn(this.currentConversationId, turn);
     
-    // Check if we need to manage the memory tiers
-    await this.manageTiers(updatedConversation);
+    // Get updated conversation to manage tiers
+    const conversation = await this.storage.getConversation(this.currentConversationId);
+    if (conversation) {
+      // Check if we need to manage the memory tiers
+      await this.manageTiers(conversation);
+    }
   }
 
   /**
@@ -254,18 +264,42 @@ export class ConversationMemory {
         return;
       }
       
+      // Get all turns for this conversation
+      const allTurns = await this.storage.getTurns(this.currentConversationId);
+      
       // Get the oldest turns to summarize
-      const turnsToProcess = conversation.activeTurns.slice(0, turnsToSummarize);
+      const turnsToProcess = allTurns.slice(0, turnsToSummarize);
       
       // Create a summary
-      const summary = await this.summarizer.summarizeTurns(turnsToProcess);
+      const summaryData = await this.summarizer.summarizeTurns(turnsToProcess);
+      
+      // Adapt the summary to the required format
+      const contextSummary: ContextConversationSummary = {
+        id: `summary-${nanoid()}`,
+        conversationId: this.currentConversationId,
+        content: summaryData.content,
+        createdAt: new Date(),
+        metadata: summaryData.metadata,
+        turnCount: summaryData.turnCount,
+        startTurnId: turnsToProcess[0]?.id,
+        endTurnId: turnsToProcess[turnsToSummarize - 1]?.id,
+      };
       
       // Add the summary to the summary tier
-      await this.storage.addSummary(this.currentConversationId, summary);
+      await this.storage.addSummary(this.currentConversationId, contextSummary);
       
-      // Move the turns from active to archive
-      const turnIndices = Array.from({ length: turnsToSummarize }, (_, i) => i);
-      await this.storage.moveTurnsToArchive(this.currentConversationId, turnIndices);
+      // Mark turns as archived via metadata
+      for (let i = 0; i < turnsToSummarize; i++) {
+        const turn = turnsToProcess[i];
+        if (turn && turn.id) {
+          await this.storage.updateTurn(turn.id, {
+            metadata: { 
+              ...(turn.metadata || {}),
+              isArchived: true, 
+            },
+          });
+        }
+      }
       
       logger.debug(`Summarized ${turnsToSummarize} turns into memory tier: summary`);
     } catch (error) {
@@ -297,11 +331,21 @@ export class ConversationMemory {
     // Apply the maxTurns limit to active turns (either from parameters or from options)
     const limit = maxActiveTurns || this.options.maxActiveTurns;
     
+    // Get turns from storage
+    const allTurns = await this.storage.getTurns(this.currentConversationId);
+    
+    // Get summaries
+    const summaries = await this.storage.getSummaries(this.currentConversationId);
+    
+    // Separate active and archived turns based on metadata
+    const activeTurns = allTurns.filter(turn => !(turn.metadata && turn.metadata['isArchived'] === true));
+    const archivedTurns = allTurns.filter(turn => turn.metadata && turn.metadata['isArchived'] === true);
+    
     // Return most recent active turns, with the most recent at the end
     return {
-      activeTurns: conversation.activeTurns.slice(-limit),
-      summaries: conversation.summaries,
-      archivedTurns: conversation.archivedTurns,
+      activeTurns: activeTurns.slice(-limit),
+      summaries: summaries,
+      archivedTurns: archivedTurns,
     };
   }
 
@@ -324,8 +368,14 @@ export class ConversationMemory {
     // Apply the maxTurns limit (either from parameters or from options)
     const limit = maxTurns || this.options.maxActiveTurns;
     
+    // Get all turns
+    const allTurns = await this.storage.getTurns(this.currentConversationId);
+    
+    // Filter to non-archived turns only
+    const activeTurns = allTurns.filter(turn => !(turn.metadata && turn.metadata['isArchived'] === true));
+    
     // Return most recent turns, with the most recent at the end
-    return conversation.activeTurns.slice(-limit);
+    return activeTurns.slice(-limit);
   }
 
   /**
@@ -396,10 +446,33 @@ export class ConversationMemory {
    * @param interfaceType Optional filter by interface type
    */
   async getRecentConversations(limit?: number, interfaceType?: 'cli' | 'matrix'): Promise<Conversation[]> {
-    return this.storage.getRecentConversations({ 
-      limit,
-      interfaceType: interfaceType || this.interfaceType,
-    });
+    // Get conversation info objects
+    const recentInfos = await this.storage.getRecentConversations(limit, interfaceType || this.interfaceType);
+    
+    // Convert to Conversation objects
+    const conversations: Conversation[] = [];
+    
+    for (const info of recentInfos) {
+      const conversation = await this.storage.getConversation(info.id);
+      if (conversation) {
+        // Adapt to the Conversation interface
+        const turns = await this.storage.getTurns(info.id);
+        const summaries = await this.storage.getSummaries(info.id);
+        
+        // Separate active and archived turns
+        const activeTurns = turns.filter(turn => !(turn.metadata && turn.metadata['isArchived'] === true));
+        const archivedTurns = turns.filter(turn => turn.metadata && turn.metadata['isArchived'] === true);
+        
+        conversations.push({
+          ...conversation,
+          activeTurns: activeTurns,
+          summaries: summaries,
+          archivedTurns: archivedTurns,
+        });
+      }
+    }
+    
+    return conversations;
   }
 
   /**
@@ -453,33 +526,55 @@ export class ConversationMemory {
       throw new Error('No active conversation. Call startConversation first.');
     }
     
-    const conversation = await this.storage.getConversation(this.currentConversationId);
-    if (!conversation) {
-      throw new Error(`Current conversation with ID ${this.currentConversationId} not found`);
-    }
+    // Get all turns
+    const allTurns = await this.storage.getTurns(this.currentConversationId);
     
-    if (conversation.activeTurns.length < 2) {
+    // Filter to active (non-archived) turns
+    const activeTurns = allTurns.filter(turn => !(turn.metadata && turn.metadata['isArchived'] === true));
+    
+    if (activeTurns.length < 2) {
       throw new Error('Need at least 2 turns to create a summary');
     }
     
     // Take the oldest half of active turns to summarize
-    const turnsToSummarize = Math.max(2, Math.floor(conversation.activeTurns.length / 2));
-    const turnsToProcess = conversation.activeTurns.slice(0, turnsToSummarize);
+    const turnsToSummarize = Math.max(2, Math.floor(activeTurns.length / 2));
+    const turnsToProcess = activeTurns.slice(0, turnsToSummarize);
     
     try {
       // Create a summary
-      const summary = await this.summarizer.summarizeTurns(turnsToProcess);
+      const summaryData = await this.summarizer.summarizeTurns(turnsToProcess);
+      
+      // Adapt the summary to the required format
+      const contextSummary: ContextConversationSummary = {
+        id: `summary-${nanoid()}`,
+        conversationId: this.currentConversationId,
+        content: summaryData.content,
+        createdAt: new Date(),
+        metadata: summaryData.metadata,
+        turnCount: summaryData.turnCount,
+        startTurnId: turnsToProcess[0]?.id,
+        endTurnId: turnsToProcess[turnsToSummarize - 1]?.id,
+      };
       
       // Add the summary to the summary tier
-      await this.storage.addSummary(this.currentConversationId, summary);
+      await this.storage.addSummary(this.currentConversationId, contextSummary);
       
-      // Move the turns from active to archive
-      const turnIndices = Array.from({ length: turnsToSummarize }, (_, i) => i);
-      await this.storage.moveTurnsToArchive(this.currentConversationId, turnIndices);
+      // Mark turns as archived via metadata
+      for (let i = 0; i < turnsToSummarize; i++) {
+        const turn = turnsToProcess[i];
+        if (turn && turn.id) {
+          await this.storage.updateTurn(turn.id, {
+            metadata: { 
+              ...(turn.metadata || {}),
+              isArchived: true, 
+            },
+          });
+        }
+      }
       
       logger.info(`Manually summarized ${turnsToSummarize} turns into the summary tier`);
       
-      return summary;
+      return summaryData;
     } catch (error) {
       logger.error('Error during manual summarization:', error);
       return null;
