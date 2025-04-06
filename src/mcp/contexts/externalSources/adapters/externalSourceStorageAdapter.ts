@@ -10,7 +10,7 @@ import { getContainer } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
-import type { 
+import type {
   ExternalSearchOptions,
   ExternalSourceInterface,
   ExternalSourceResult,
@@ -37,22 +37,22 @@ export interface ExternalSourceStorageConfig {
    * List of enabled source names
    */
   enabledSources?: string[];
-  
+
   /**
    * Maximum results to return per search
    */
   maxResults?: number;
-  
+
   /**
    * Cache time to live in milliseconds
    */
   cacheTtl?: number;
-  
+
   /**
    * API key for embedding service
    */
   apiKey?: string;
-  
+
   /**
    * NewsAPI key
    */
@@ -66,12 +66,12 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
   private sources: Map<string, ExternalSourceInterface> = new Map();
   private sourceCache: Map<string, CacheItem> = new Map();
   private diContainer: ReturnType<typeof getContainer>;
-  
+
   /**
    * Options with defaults
    */
   private options: Required<ExternalSourceStorageConfig>;
-  
+
   /**
    * Create a new ExternalSourceStorageAdapter
    * @param config Configuration options
@@ -85,49 +85,49 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       apiKey: config.apiKey || '',
       newsApiKey: config.newsApiKey || getEnv('NEWSAPI_KEY') || '',
     };
-    
+
     // Set up DI container
     this.diContainer = getContainer();
-    
+
     // Helper function to avoid duplicate registrations
     const registerIfNeeded = (
-      serviceId: string, 
-      factory: () => unknown, 
-      singleton = true
+      serviceId: string,
+      factory: () => unknown,
+      singleton = true,
     ) => {
       // Only register if not already registered
       if (!this.diContainer.has(serviceId)) {
         this.diContainer.register(serviceId, () => factory(), singleton);
       }
     };
-    
+
     // Register Wikipedia source
     registerIfNeeded(
       SERVICE_WIKIPEDIA,
       () => new WikipediaSource(this.options.apiKey),
     );
-    
+
     // Register NewsAPI source if key is provided
     if (this.options.newsApiKey) {
       registerIfNeeded(
         SERVICE_NEWSAPI,
         () => new NewsApiSource(this.options.newsApiKey, this.options.apiKey),
       );
-      
+
       if (!this.diContainer.has(SERVICE_NEWSAPI)) {
         logger.debug('NewsAPI source registered in container', { context: 'ExternalSourceStorage' });
       }
     }
-    
+
     // Register available sources from container
     this.registerSource(this.diContainer.resolve(SERVICE_WIKIPEDIA) as ExternalSourceInterface);
-    
+
     // Register NewsAPI source if available
     if (this.diContainer.has(SERVICE_NEWSAPI)) {
       this.registerSource(this.diContainer.resolve(SERVICE_NEWSAPI) as ExternalSourceInterface);
     }
   }
-  
+
   /**
    * Register a new external source
    * @param source The source to register
@@ -136,7 +136,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     this.sources.set(source.name, source);
     logger.debug(`Registered external source: ${source.name}`, { context: 'ExternalSourceStorage' });
   }
-  
+
   /**
    * Get the available sources that are enabled
    * @returns Array of enabled external sources
@@ -145,12 +145,12 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     if (!this.options.enabledSources || this.options.enabledSources.length === 0) {
       return Array.from(this.sources.values());
     }
-    
+
     return this.options.enabledSources
       .map(name => this.sources.get(name))
       .filter(source => source !== undefined) as ExternalSourceInterface[];
   }
-  
+
   /**
    * Create method (not applicable for external sources)
    * @returns Empty string since creating items is not supported
@@ -159,7 +159,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     // External sources are read-only, so this is a no-op
     return '';
   }
-  
+
   /**
    * Read a specific result by ID
    * @param id The ID to look for
@@ -167,17 +167,17 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    */
   async read(id: string): Promise<ExternalSourceResult | null> {
     // Check cache first for any items with this ID
-    for (const [_, cached] of this.sourceCache.entries()) {
+    for (const [_entry, cached] of this.sourceCache.entries()) {
       // External source results don't reliably have IDs, but we use title as a unique identifier
-      const item = cached.data.find(result => 
-        'id' in result && (result as {id: string}).id === id);
+      const item = cached.data.find(result =>
+        'id' in result && (result as { id: string }).id === id);
       if (item) return item;
     }
-    
+
     // No result found
     return null;
   }
-  
+
   /**
    * Update is not supported for external sources
    */
@@ -185,7 +185,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     // External sources are read-only, so this is a no-op
     return false;
   }
-  
+
   /**
    * Delete is not supported for external sources
    */
@@ -193,7 +193,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     // External sources are read-only, so this is a no-op
     return false;
   }
-  
+
   /**
    * Search across all enabled external sources
    * @param criteria Search criteria including query and options
@@ -204,16 +204,16 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     if (!query) {
       return [];
     }
-    
+
     // Map criteria to source-specific options
     const options: ExternalSearchOptions = {
       query,
       limit: (criteria['limit'] as number) || Math.ceil(this.options.maxResults / Math.max(1, this.getEnabledSources().length)),
       addEmbeddings: (criteria['addEmbeddings'] as boolean) || false,
     };
-    
+
     logger.info(`Searching external sources for: "${query}"`, { context: 'ExternalSourceStorage' });
-    
+
     // Check cache first
     const cacheKey = this.getCacheKey(query, options);
     const cachedResults = this.getCachedResults(cacheKey);
@@ -221,37 +221,37 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       logger.debug(`Using cached results for: "${query}"`, { context: 'ExternalSourceStorage' });
       return cachedResults;
     }
-    
+
     const enabledSources = this.getEnabledSources();
     if (enabledSources.length === 0) {
       logger.warn('No enabled external sources found', { context: 'ExternalSourceStorage' });
       return [];
     }
-    
+
     // Search all enabled sources in parallel
-    const searchPromises = enabledSources.map(source => 
+    const searchPromises = enabledSources.map(source =>
       source.search(options)
         .catch(error => {
           logger.error(`Error searching ${source.name}`, { error, context: 'ExternalSourceStorage' });
           return [] as ExternalSourceResult[];
         }),
     );
-    
+
     const results = await Promise.all(searchPromises);
     const allResults = results.flat();
-    
+
     // Sort by confidence and limit total results
     const sortedResults = allResults
       .sort((a, b) => b.confidence - a.confidence)
       .slice(0, this.options.maxResults);
-      
+
     // Cache results
     this.cacheResults(cacheKey, sortedResults);
-    
+
     logger.info(`Found ${sortedResults.length} results from external sources`, { context: 'ExternalSourceStorage' });
     return sortedResults;
   }
-  
+
   /**
    * List external source results (returns recent cache entries)
    * @param options Options for listing results
@@ -262,10 +262,10 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     if (this.sourceCache.size > 0) {
       // Get most recent cache entries
       const entries = Array.from(this.sourceCache.entries());
-      
+
       // Sort by timestamp (newest first)
       entries.sort((a, b) => b[1].timestamp - a[1].timestamp);
-      
+
       // Get the most recent entry
       const recentEntry = entries[0];
       if (recentEntry) {
@@ -273,10 +273,10 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
         return recentEntry[1].data.slice(0, limit);
       }
     }
-    
+
     return [];
   }
-  
+
   /**
    * Count external source results (based on enabled sources)
    * @returns Promise that resolves to the count
@@ -284,22 +284,22 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
   async count(): Promise<number> {
     return this.getEnabledSources().length;
   }
-  
+
   /**
    * Check availability of all sources
    * @returns Map of source names to availability status
    */
   async checkSourcesAvailability(): Promise<Record<string, boolean>> {
     const availabilityMap: Record<string, boolean> = {};
-    
+
     // If no sources, return empty object
     if (this.sources.size === 0) {
       return availabilityMap;
     }
-    
+
     // Check each source in parallel
     const checkPromises: Promise<void>[] = [];
-    
+
     for (const [name, source] of this.sources.entries()) {
       checkPromises.push(
         source.checkAvailability()
@@ -311,37 +311,37 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
           }),
       );
     }
-    
+
     await Promise.all(checkPromises);
     return availabilityMap;
   }
-  
+
   /**
    * Create a cache key for a query and options
    */
   private getCacheKey(query: string, options: Partial<ExternalSearchOptions>): string {
     return `${query}:${JSON.stringify(options)}`;
   }
-  
+
   /**
    * Get cached results if they exist and are not expired
    */
   private getCachedResults(cacheKey: string): ExternalSourceResult[] | null {
     const cached = this.sourceCache.get(cacheKey);
-    
+
     if (!cached) return null;
-    
+
     const now = Date.now();
     const isExpired = now - cached.timestamp > this.options.cacheTtl;
-    
+
     if (isExpired) {
       this.sourceCache.delete(cacheKey);
       return null;
     }
-    
+
     return cached.data;
   }
-  
+
   /**
    * Cache search results
    */
@@ -350,23 +350,23 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       data: results,
       timestamp: Date.now(),
     });
-    
+
     // Prune cache if it gets too large
     if (this.sourceCache.size > 100) {
       this.pruneCache();
     }
   }
-  
+
   /**
    * Remove oldest items from cache
    */
   private pruneCache(): void {
     // Get entries from cache
     const entries = Array.from(this.sourceCache.entries());
-    
+
     // Sort by age (oldest first)
     entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-    
+
     // Remove oldest 20% of entries
     const removeCount = Math.ceil(entries.length * 0.2);
     for (let i = 0; i < removeCount; i++) {
@@ -374,7 +374,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
         this.sourceCache.delete(entries[i][0]);
       }
     }
-    
+
     logger.debug(`Pruned ${removeCount} items from external source cache`, { context: 'ExternalSourceStorage' });
   }
 }

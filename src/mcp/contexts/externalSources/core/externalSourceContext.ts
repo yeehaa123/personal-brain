@@ -12,15 +12,15 @@ import type { StorageInterface } from '@/mcp/contexts/core/storageInterface';
 import { EmbeddingService } from '@/mcp/model';
 import logger from '@/utils/logger';
 
+import { 
+  ExternalSourceStorageAdapter, 
+  type ExternalSourceStorageConfig, 
+} from '../adapters/externalSourceStorageAdapter';
 import type { 
   ExternalSearchOptions, 
   ExternalSourceInterface,
-  ExternalSourceResult 
+  ExternalSourceResult, 
 } from '../sources';
-import { 
-  ExternalSourceStorageAdapter, 
-  type ExternalSourceStorageConfig 
-} from '../adapters/externalSourceStorageAdapter';
 
 /**
  * Configuration for the ExternalSourceContext
@@ -329,7 +329,7 @@ export class ExternalSourceContext extends BaseContext {
    */
   async search(
     query: string, 
-    options: Partial<ExternalSearchOptions> = {}
+    options: Partial<ExternalSearchOptions> = {},
   ): Promise<ExternalSourceResult[]> {
     return this.storage.search({
       query,

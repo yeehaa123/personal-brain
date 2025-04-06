@@ -135,7 +135,7 @@ export class BrainProtocol {
     this.profileContext = ProfileContext.getInstance({ apiKey });
     this.externalContext = ExternalSourceContext.getInstance({ 
       apiKey, 
-      newsApiKey: newsApiKeyValue 
+      newsApiKey: newsApiKeyValue, 
     });
     this.conversationContext = ConversationContext.getInstance({
       // Pass any needed configuration

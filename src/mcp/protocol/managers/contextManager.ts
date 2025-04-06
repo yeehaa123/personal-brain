@@ -53,7 +53,7 @@ export class ContextManager implements IContextManager {
       this.profileContext = ProfileContext.getInstance({ apiKey });
       this.externalSourceContext = ExternalSourceContext.getInstance({ 
         apiKey, 
-        newsApiKey 
+        newsApiKey, 
       });
       this.conversationContext = ConversationContext.getInstance({
         // Pass any configuration needed for conversation context

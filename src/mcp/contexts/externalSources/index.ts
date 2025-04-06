@@ -10,10 +10,10 @@ export type { ExternalSourceContextConfig } from './core/externalSourceContext';
 
 // Export storage adapter
 export { 
-  ExternalSourceStorageAdapter 
+  ExternalSourceStorageAdapter, 
 } from './adapters/externalSourceStorageAdapter';
 export type { 
-  ExternalSourceStorageConfig 
+  ExternalSourceStorageConfig, 
 } from './adapters/externalSourceStorageAdapter';
 
 // Export sources

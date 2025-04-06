@@ -35,7 +35,7 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
     // Create a new context with mock API keys for each test
     externalSourceContext = new ExternalSourceContext({
       apiKey: 'mock-api-key',
-      newsApiKey: 'mock-newsapi-key'
+      newsApiKey: 'mock-newsapi-key',
     });
   });
   
