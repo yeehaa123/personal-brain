@@ -167,7 +167,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    */
   async read(id: string): Promise<ExternalSourceResult | null> {
     // Check cache first for any items with this ID
-    for (const [_entry, cached] of this.sourceCache.entries()) {
+    for (const cached of this.sourceCache.values()) {
       // External source results don't reliably have IDs, but we use title as a unique identifier
       const item = cached.data.find(result =>
         'id' in result && (result as { id: string }).id === id);
