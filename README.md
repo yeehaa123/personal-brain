@@ -195,6 +195,7 @@ personal-brain/
 - [Development Roadmap](docs/ROADMAP.md)
 - [Test Architecture](docs/TEST_ARCHITECTURE.md)
 - [Conversation to Notes Design](docs/CONVERSATION_TO_NOTES.md)
+- [Conversation Context Design](docs/CONVERSATION_CONTEXT_DESIGN.md)
 - [MCP Implementation](src/mcp/README.md)
 - [Protocol Components](src/mcp/protocol/README.md)
 
