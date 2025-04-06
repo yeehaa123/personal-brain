@@ -149,12 +149,29 @@ export interface TurnOptions {
 
 /**
  * Interface for ContextManager
+ * Defines the contract for managing access to various contexts (notes, profile, external sources)
  */
 export interface IContextManager {
+  /** Get access to the note context for data operations */
   getNoteContext(): NoteContext;
+  
+  /** Get access to the profile context for user profile operations */
   getProfileContext(): ProfileContext;
+  
+  /** Get access to the external source context for external knowledge */
   getExternalSourceContext(): ExternalSourceContext;
+  
+  /** Enable or disable external sources functionality */
   setExternalSourcesEnabled(enabled: boolean): void;
+  
+  /** Check if external sources are currently enabled */
+  getExternalSourcesEnabled(): boolean;
+  
+  /** Check if all contexts are properly initialized and ready for use */
+  areContextsReady(): boolean;
+  
+  /** Initialize links between contexts (if needed after initialization) */
+  initializeContextLinks(): void;
 }
 
 /**
