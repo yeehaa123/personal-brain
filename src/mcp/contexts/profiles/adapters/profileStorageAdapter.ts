@@ -8,7 +8,7 @@
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contexts/core/storageInterface';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-import { logError } from '@/utils/logger';
+import logger from '@/utils/logger';
 
 /**
  * Adapter to provide StorageInterface for Profile entities
@@ -31,7 +31,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       const profile = this.prepareProfileForCreate(item);
       return await this.repository.insertProfile(profile);
     } catch (error) {
-      logError('Failed to create profile in adapter', error, 'ProfileStorageAdapter');
+      logger.error('Failed to create profile in adapter', { error, context: 'ProfileStorageAdapter' });
       throw error;
     }
   }
@@ -53,7 +53,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return null;
     } catch (error) {
-      logError(`Failed to read profile with ID ${id}`, error, 'ProfileStorageAdapter');
+      logger.error(`Failed to read profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return null;
     }
   }
@@ -68,7 +68,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
     try {
       return await this.repository.updateProfile(id, updates);
     } catch (error) {
-      logError(`Failed to update profile with ID ${id}`, error, 'ProfileStorageAdapter');
+      logger.error(`Failed to update profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return false;
     }
   }
@@ -82,7 +82,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
     try {
       return await this.repository.deleteProfile(id);
     } catch (error) {
-      logError(`Failed to delete profile with ID ${id}`, error, 'ProfileStorageAdapter');
+      logger.error(`Failed to delete profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return false;
     }
   }
@@ -116,7 +116,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return matches ? [profile] : [];
     } catch (error) {
-      logError('Failed to search profiles', error, 'ProfileStorageAdapter');
+      logger.error('Failed to search profiles', { error, context: 'ProfileStorageAdapter' });
       return [];
     }
   }
@@ -140,7 +140,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return [profile];
     } catch (error) {
-      logError('Failed to list profiles', error, 'ProfileStorageAdapter');
+      logger.error('Failed to list profiles', { error, context: 'ProfileStorageAdapter' });
       return [];
     }
   }
@@ -171,7 +171,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return matches ? 1 : 0;
     } catch (error) {
-      logError('Failed to count profiles', error, 'ProfileStorageAdapter');
+      logger.error('Failed to count profiles', { error, context: 'ProfileStorageAdapter' });
       return 0;
     }
   }

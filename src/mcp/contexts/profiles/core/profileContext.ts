@@ -18,7 +18,7 @@ import type {
 } from '@/services/profiles';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
 import { getContainer, getService } from '@/utils/dependencyContainer';
-import { logDebug, logError } from '@/utils/logger';
+import logger from '@/utils/logger';
 
 
 import { ProfileStorageAdapter } from '../adapters/profileStorageAdapter';
@@ -119,7 +119,7 @@ export class ProfileContext extends BaseContext {
     // Initialize formatter
     this.formatter = new ProfileFormatter();
     
-    logDebug('ProfileContext initialized with BaseContext architecture', { context: 'ProfileContext' });
+    logger.debug('ProfileContext initialized with BaseContext architecture', { context: 'ProfileContext' });
   }
 
   /**
@@ -245,7 +245,7 @@ export class ProfileContext extends BaseContext {
       // Use the adapter's getProfile method as a convenience
       return await (this.storage as ProfileStorageAdapter).getProfile();
     } catch (error) {
-      logError('Failed to retrieve profile', error, 'ProfileContext');
+      logger.error('Failed to retrieve profile', { error, context: 'ProfileContext' });
       return undefined;
     }
   }
@@ -299,7 +299,7 @@ export class ProfileContext extends BaseContext {
         return this.storage.create(newProfile);
       }
     } catch (error) {
-      logError('Failed to save profile', error, 'ProfileContext');
+      logger.error('Failed to save profile', { error, context: 'ProfileContext' });
       throw error;
     }
   }

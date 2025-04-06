@@ -7,7 +7,7 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { logError } from '@/utils/logger';
+import logger from '@/utils/logger';
 
 import type { 
   ContextInterface, 
@@ -68,7 +68,7 @@ export abstract class BaseContext implements ContextInterface {
       this.readyState = true;
       return true;
     } catch (error) {
-      logError(`Error initializing ${this.getContextName()}`, error, { context: 'BaseContext' });
+      logger.error(`Error initializing ${this.getContextName()}`, { error, context: 'BaseContext' });
       this.readyState = false;
       return false;
     }
@@ -107,7 +107,7 @@ export abstract class BaseContext implements ContextInterface {
       this.registerMcpTools(server);
       return true;
     } catch (error) {
-      logError(`Error registering ${this.getContextName()} on server`, error, { context: 'BaseContext' });
+      logger.error(`Error registering ${this.getContextName()} on server`, { error, context: 'BaseContext' });
       return false;
     }
   }
