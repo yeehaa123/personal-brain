@@ -1,8 +1,8 @@
 /**
  * Core interfaces for the MCP context architecture
  * 
- * This module exports the base interfaces that define the standard contracts
- * for all context components in the system.
+ * This module exports the base interfaces and abstract classes that define 
+ * the standard contracts for all context components in the system.
  */
 
 export type {
@@ -21,3 +21,5 @@ export type {
   FormatterInterface,
   FormattingOptions,
 } from './formatterInterface';
+
+export { BaseContext } from './baseContext';
