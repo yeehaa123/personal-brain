@@ -14,15 +14,31 @@ This approach optimizes token usage while preserving context by keeping recent c
 
 ## Architecture
 
-The tiered memory system is implemented through the following key components:
+The tiered memory system is implemented through the following key components, all located in `src/mcp/contexts/conversations`:
+
+### ConversationContext
+
+The main facade class for conversation management following the MCP architecture pattern. It:
+- Provides public API for conversation operations
+- Coordinates between storage, tiered memory, and formatters
+- Implements MCP resources and tools for external access
+- Follows singleton pattern with getInstance() method
 
 ### ConversationMemory
 
-The main class responsible for managing conversation history. It handles:
+The class responsible for managing conversation memory. It handles:
 - Adding new conversation turns
 - Maintaining tier thresholds
 - Triggering summarization of older turns
 - Formatting conversation history for inclusion in prompts
+
+### TieredMemoryManager
+
+Specialized class that manages the tiered memory system. It:
+- Coordinates between active, summary, and archive tiers
+- Triggers summarization when thresholds are reached
+- Formats conversation history for prompts
+- Provides configuration management
 
 ### ConversationSummarizer
 
@@ -31,12 +47,12 @@ Responsible for creating summaries of conversation segments. It:
 - Includes a fallback system for when AI summarization fails
 - Maintains metadata about the original turns being summarized
 
-### ConversationMemoryStorage
+### ConversationStorage
 
 An interface defining the contract for storage implementations, with methods for:
 - Storing conversations, turns, and summaries
 - Retrieving and querying conversation history
-- Moving turns between tiers
+- Managing metadata and search operations
 
 ### InMemoryStorage
 
@@ -79,34 +95,31 @@ The tiered memory system can be configured with the following options:
 
 ## Example Usage
 
-### Basic Usage
+### Basic Usage with ConversationContext
 
 ```typescript
-// Initialize conversation memory with tiered approach
-const memory = new ConversationMemory({
-  interfaceType: 'cli',
-  storage: new InMemoryStorage(),
-  options: {
-    maxActiveTurns: 10,
-    summaryTurnCount: 5,
-    maxSummaries: 3,
-    maxArchivedTurns: 50,
-  },
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Get the singleton instance of ConversationContext
+const context = ConversationContext.getInstance();
 
-// Start a new conversation
-await memory.startConversation();
+// Create a new conversation
+const conversationId = await context.createConversation('cli', 'room-123');
 
 // Add turns to the conversation
-await memory.addTurn(
+await context.addTurn(
+  conversationId,
   "What is the capital of France?",
   "The capital of France is Paris.",
   { userId: "user1", userName: "User" }
 );
 
 // Get formatted history for prompt inclusion
-const promptHistory = await memory.formatHistoryForPrompt();
+const promptHistory = await context.formatHistoryForPrompt(conversationId);
+
+// Get formatted conversation history
+const history = await context.getConversationHistory(conversationId, {
+  format: 'markdown',
+  includeSummaries: true
+});
 ```
 
 ### Forcing Summarization
@@ -114,8 +127,8 @@ const promptHistory = await memory.formatHistoryForPrompt();
 For testing or manual management, you can force summarization of turns:
 
 ```typescript
-// Force summarize the oldest active turns
-await memory.forceSummarizeActiveTurns();
+// Force summarize the conversation
+await context.forceSummarize(conversationId);
 ```
 
 ### Getting Tiered History
@@ -123,7 +136,7 @@ await memory.forceSummarizeActiveTurns();
 To access the full tiered history:
 
 ```typescript
-const { activeTurns, summaries, archivedTurns } = await memory.getTieredHistory();
+const { activeTurns, summaries, archivedTurns } = await context.getTieredHistory(conversationId);
 
 console.log(`Active turns: ${activeTurns.length}`);
 console.log(`Summaries: ${summaries.length}`);
@@ -148,24 +161,38 @@ If AI summarization fails (e.g., due to API issues), the system uses a local fal
 
 ## Integration with BrainProtocol
 
-The tiered memory system is integrated with the BrainProtocol class:
+The tiered memory system is integrated with the BrainProtocol via the ContextManager:
 
 ```typescript
-// Initialize conversation memory with the specified interface type
-this.conversationMemory = new ConversationMemory({
-  interfaceType: this.interfaceType,
-  storage: new InMemoryStorage(),
-  apiKey, // Pass the API key for summarization
-});
+// In ContextManager
+export class ContextManager implements IContextManager {
+  private conversationContext: ConversationContext;
+  
+  constructor() {
+    // Initialize ConversationContext
+    this.conversationContext = ConversationContext.getInstance();
+  }
+  
+  getConversationContext(): ConversationContext {
+    return this.conversationContext;
+  }
+}
 ```
 
 During query processing, the conversation history is retrieved and included in the prompt:
 
 ```typescript
-// Get conversation history
+// In QueryProcessor
+// Get conversation context from the context manager
+const conversationContext = this.contextManager.getConversationContext();
+
+// Get conversation history from the current conversation
 let conversationHistory = '';
 try {
-  conversationHistory = await this.conversationMemory.formatHistoryForPrompt();
+  const conversationId = await conversationContext.getConversationIdByRoom(roomId);
+  if (conversationId) {
+    conversationHistory = await conversationContext.formatHistoryForPrompt(conversationId);
+  }
 } catch (error) {
   logger.warn('Failed to get conversation history:', error);
 }

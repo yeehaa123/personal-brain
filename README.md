@@ -127,10 +127,12 @@ Personal Brain uses a modular, service-oriented architecture based on the Model-
 
 Key architectural patterns:
 - **MCP Architecture**: Orchestrates model, context, and protocol components ([details](docs/BRAIN_PROTOCOL_ARCHITECTURE.md))
+- **Context Pattern**: Specialized contexts (notes, profile, conversation) with well-defined interfaces
 - **Tiered Memory**: Optimizes conversation context with active, summary, and archive tiers ([details](docs/TIERED_MEMORY.md))
 - **Facade Pattern**: Context classes as lightweight facades over specialized services
 - **Repository Pattern**: Data access through focused repositories
 - **Service Layer**: Single-responsibility business logic components
+- **Interface-First Design**: Define interfaces before implementations for better modularity
 
 ## Development
 
@@ -165,14 +167,17 @@ personal-brain/
 │   ├── db/                 # Database connection and schema
 │   ├── interfaces/         # User interfaces (CLI, Matrix)
 │   ├── mcp/                # Model-Context-Protocol implementation
-│   │   ├── contexts/       # Context providers (notes, profile, external)
+│   │   ├── contexts/       # Context providers (notes, profile, conversations, external)
+│   │   │   ├── conversations/ # Conversation storage and memory management
+│   │   │   ├── externalSources/ # External knowledge sources
+│   │   │   ├── notes/      # Note management
+│   │   │   └── profiles/   # Profile management
 │   │   ├── model/          # AI model integration (Claude, embeddings)
 │   │   └── protocol/       # Protocol orchestration
 │   │       ├── components/ # Specialized service components
 │   │       ├── config/     # Configuration management
 │   │       ├── core/       # Core orchestration layer
 │   │       ├── managers/   # Specialized context managers
-│   │       ├── memory/     # Conversation memory system
 │   │       ├── pipeline/   # Query processing pipeline
 │   │       └── types/      # Interface and type definitions
 │   ├── models/             # Data models and validation

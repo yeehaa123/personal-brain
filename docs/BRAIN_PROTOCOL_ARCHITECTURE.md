@@ -11,19 +11,25 @@ The BrainProtocol architecture follows a modular, service-oriented approach with
                                  │  BrainProtocol  │
                                  └────────┬────────┘
                                           │
-         ┌──────────┬──────────┬─────────┼──────────┬──────────┐
-         │          │          │         │          │          │
-         ▼          ▼          ▼         ▼          ▼          ▼
-┌─────────────┐ ┌────────┐ ┌────────┐ ┌─────┐ ┌──────────┐ ┌────────┐
-│ContextManager│ │Profile │ │External│ │Query│ │Conversation│ │Config  │
-│             │ │Manager │ │Source  │ │Proc.│ │Manager    │ │Manager │
-└─────────────┘ └────────┘ └────────┘ └─────┘ └──────────┘ └────────┘
-    │  │  │         │          │         │         │
-    │  │  │         │          │         │         │
-    ▼  ▼  ▼         ▼          ▼         ▼         ▼
+         ┌──────────┬──────────┬─────────┼──────────┐
+         │          │          │         │          │
+         ▼          ▼          ▼         ▼          ▼
+┌─────────────┐ ┌────────┐ ┌────────┐ ┌─────┐ ┌────────┐
+│ContextManager│ │Profile │ │External│ │Query│ │Config  │
+│             │ │Manager │ │Source  │ │Proc.│ │Manager │
+└─────────────┘ └────────┘ └────────┘ └─────┘ └────────┘
+    │  │  │  │      │          │         │     
+    │  │  │  │      │          │         │     
+    ▼  ▼  ▼  ▼      ▼          ▼         ▼     
 ┌─────────────────────────────────────────────────────────┐
 │                   Services & Resources                   │
 └─────────────────────────────────────────────────────────┘
+      │       │        │          │
+      ▼       ▼        ▼          ▼
+┌─────────┐ ┌─────┐ ┌─────────┐ ┌───────────┐
+│ Notes   │ │Prof.│ │External │ │Conversation│
+│ Context │ │Cntxt│ │ Context │ │ Context   │
+└─────────┘ └─────┘ └─────────┘ └───────────┘
 ```
 
 ## Core Components and Responsibilities
@@ -54,11 +60,11 @@ The main orchestration class that:
 - Determines when to query external sources
 - Processes and formats external results
 
-#### ConversationManager
-- Manages conversation memory across sessions
-- Handles room-based conversations
-- Implements tiered memory with summarization
-- Formats conversation history for prompts
+#### ContextManager (Conversation Access)
+- Provides access to ConversationContext
+- Initializes and coordinates all context objects
+- Ensures conversation data is accessible to query processor
+- Manages context dependencies and readiness
 
 #### QueryProcessor
 - Implements the full query processing pipeline

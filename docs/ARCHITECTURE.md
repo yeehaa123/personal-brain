@@ -25,7 +25,7 @@ The central orchestration component that coordinates all interactions between AI
 Key responsibilities:
 - Orchestrates interactions between all components
 - Manages the query processing pipeline
-- Handles conversation memory and context
+- Coordinates between different contexts
 - Provides the public API for client interfaces
 
 ### Tiered Memory System
@@ -47,6 +47,7 @@ Context components provide access to different types of information:
 - **NoteContext** - Access to notes and semantic search
 - **ProfileContext** - Access to user profile information
 - **ExternalSourceContext** - Access to external knowledge sources
+- **ConversationContext** - Management of conversations and tiered memory
 
 Each context follows the facade pattern and delegates to specialized services.
 
