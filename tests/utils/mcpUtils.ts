@@ -11,9 +11,9 @@ import type { McpServer } from '@/mcp';
  */
 export function setMockEnv(): void {
   // Set environment variables for testing
-  process.env.ANTHROPIC_API_KEY = 'mock-api-key';
-  process.env.OPENAI_API_KEY = 'mock-openai-key';
-  process.env.NEWS_API_KEY = 'mock-news-api-key';
+  process.env['ANTHROPIC_API_KEY'] = 'mock-api-key';
+  process.env['OPENAI_API_KEY'] = 'mock-openai-key';
+  process.env['NEWS_API_KEY'] = 'mock-news-api-key';
 }
 
 /**
@@ -21,9 +21,9 @@ export function setMockEnv(): void {
  */
 export function clearMockEnv(): void {
   // Clean up environment variables
-  delete process.env.ANTHROPIC_API_KEY;
-  delete process.env.OPENAI_API_KEY;
-  delete process.env.NEWS_API_KEY;
+  delete process.env['ANTHROPIC_API_KEY'];
+  delete process.env['OPENAI_API_KEY'];
+  delete process.env['NEWS_API_KEY'];
 }
 
 

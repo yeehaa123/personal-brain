@@ -1,7 +1,7 @@
 /**
  * Integration tests for ConversationContext MCP functionality
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
 import { ConversationContext } from '@/mcp/contexts/conversations';
 import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';

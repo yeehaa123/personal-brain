@@ -13,6 +13,7 @@ import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conv
 import logger from '@/utils/logger';
 
 import { ConversationFormatter, type FormattingOptions } from './conversationFormatter';
+import { ConversationMcpFormatter, type McpFormattingOptions } from './conversationMcpFormatter';
 import type { 
   ConversationInfo, 
   ConversationStorage,
@@ -74,6 +75,7 @@ export class ConversationContext {
   private storage: ConversationStorage;
   private tieredMemoryManager: TieredMemoryManager;
   private formatter: ConversationFormatter;
+  private mcpFormatter: ConversationMcpFormatter;
   private options: Required<ConversationContextOptions>;
   private mcpServer: McpServer;
   
@@ -100,6 +102,7 @@ export class ConversationContext {
     this.storage = this.options.storage;
     this.tieredMemoryManager = new TieredMemoryManager(this.storage, this.options.tieredMemoryConfig);
     this.formatter = new ConversationFormatter();
+    this.mcpFormatter = new ConversationMcpFormatter();
     
     // Initialize MCP server
     this.mcpServer = new McpServer({
@@ -608,6 +611,16 @@ export class ConversationContext {
         endDate: z.string().optional().describe('End date filter (ISO format)'),
         limit: z.number().optional().describe('Maximum number of results'),
       };
+      
+    case 'export_conversation':
+      return {
+        conversationId: z.string().describe('ID of the conversation to export'),
+        format: z.enum(['text', 'markdown', 'json', 'html']).optional()
+          .describe('Export format'),
+        includeMetadata: z.boolean().optional().describe('Whether to include metadata'),
+        includeTimestamps: z.boolean().optional().describe('Whether to include timestamps'),
+        includeSummaries: z.boolean().optional().describe('Whether to include summaries'),
+      };
         
     default:
       // For unknown tools, return an empty schema
@@ -688,6 +701,34 @@ export class ConversationContext {
     this.tieredMemoryManager = new TieredMemoryManager(
       this.storage,
       this.options.tieredMemoryConfig,
+    );
+  }
+  
+  /**
+   * Get formatted conversation data for MCP responses
+   * @param conversationId The conversation ID
+   * @param options MCP formatting options
+   */
+  async getFormattedConversationForMcp(
+    conversationId: string,
+    options: McpFormattingOptions = {},
+  ): Promise<Record<string, unknown> | null> {
+    // Get conversation
+    const conversation = await this.storage.getConversation(conversationId);
+    if (!conversation) {
+      return null;
+    }
+
+    // Get turns and summaries
+    const turns = await this.storage.getTurns(conversationId);
+    const summaries = await this.storage.getSummaries(conversationId);
+
+    // Format them with MCP formatter
+    return this.mcpFormatter.formatConversationForMcp(
+      conversation,
+      turns,
+      summaries,
+      options,
     );
   }
   
@@ -778,11 +819,16 @@ export class ConversationContext {
           const turns = await this.storage.getTurns(conversationId);
           const summaries = await this.storage.getSummaries(conversationId);
           
-          return {
-            ...conversation,
+          // Format the response using the MCP formatter for better structure
+          return this.mcpFormatter.formatConversationForMcp(
+            conversation,
             turns,
             summaries,
-          };
+            {
+              includeFullTurns: true,
+              includeFullMetadata: false,
+            },
+          );
         },
       },
       
@@ -799,7 +845,7 @@ export class ConversationContext {
           const limit = query['limit'] !== undefined ? String(query['limit']) : undefined;
           const offset = query['offset'] !== undefined ? String(query['offset']) : undefined;
           
-          return this.storage.findConversations({
+          const conversations = await this.storage.findConversations({
             query: q,
             interfaceType: interfaceType as 'cli' | 'matrix' | undefined,
             roomId,
@@ -808,6 +854,20 @@ export class ConversationContext {
             limit: limit ? parseInt(limit, 10) : undefined,
             offset: offset ? parseInt(offset, 10) : undefined,
           });
+          
+          // Enhance the results with some basic statistics
+          return {
+            results: conversations,
+            count: conversations.length,
+            query: {
+              text: q,
+              interfaceType,
+              roomId,
+              startDate,
+              endDate,
+              limit: limit ? parseInt(limit, 10) : undefined,
+            },
+          };
         },
       },
       
@@ -838,6 +898,58 @@ export class ConversationContext {
           return this.getRecentConversations(
             limit ? parseInt(limit, 10) : undefined,
             interfaceType as 'cli' | 'matrix' | undefined,
+          );
+        },
+      },
+      
+      // conversations://turns/:id
+      {
+        protocol: 'conversations',
+        path: 'turns/:id',
+        handler: async (params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
+          const conversationId = params['id'] ? String(params['id']) : '';
+          const limit = query['limit'] !== undefined ? String(query['limit']) : undefined;
+          const offset = query['offset'] !== undefined ? String(query['offset']) : undefined;
+          const includeMetadata = query['metadata'] === 'true';
+          
+          if (!conversationId) {
+            throw new Error('Conversation ID is required');
+          }
+          
+          const turns = await this.storage.getTurns(
+            conversationId,
+            limit ? parseInt(limit, 10) : undefined,
+            offset ? parseInt(offset, 10) : undefined,
+          );
+          
+          // Format using the MCP formatter
+          return this.mcpFormatter.formatTurnsForMcp(
+            conversationId,
+            turns,
+            { includeFullMetadata: includeMetadata },
+          );
+        },
+      },
+      
+      // conversations://summaries/:id
+      {
+        protocol: 'conversations',
+        path: 'summaries/:id',
+        handler: async (params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
+          const conversationId = params['id'] ? String(params['id']) : '';
+          const includeMetadata = query['metadata'] === 'true';
+          
+          if (!conversationId) {
+            throw new Error('Conversation ID is required');
+          }
+          
+          const summaries = await this.storage.getSummaries(conversationId);
+          
+          // Format using the MCP formatter
+          return this.mcpFormatter.formatSummariesForMcp(
+            conversationId,
+            summaries,
+            { includeFullMetadata: includeMetadata },
           );
         },
       },
@@ -1071,6 +1183,85 @@ export class ConversationContext {
           });
           
           return { results };
+        },
+      },
+      
+      // export_conversation
+      {
+        protocol: 'conversations',
+        path: 'export_conversation',
+        name: 'export_conversation',
+        description: 'Exports a conversation in various formats',
+        parameters: {
+          type: 'object',
+          properties: {
+            conversationId: {
+              type: 'string',
+              description: 'ID of the conversation to export',
+            },
+            format: {
+              type: 'string',
+              enum: ['text', 'markdown', 'json', 'html'],
+              description: 'Export format',
+            },
+            includeMetadata: {
+              type: 'boolean',
+              description: 'Whether to include metadata in the export',
+            },
+            includeTimestamps: {
+              type: 'boolean',
+              description: 'Whether to include timestamps in the export',
+            },
+            includeSummaries: {
+              type: 'boolean',
+              description: 'Whether to include summaries in the export',
+            },
+          },
+          required: ['conversationId'],
+        },
+        handler: async (params: Record<string, unknown>) => {
+          const conversationId = params['conversationId'] ? String(params['conversationId']) : '';
+          const format = params['format'] ? String(params['format']) : 'text';
+          const includeMetadata = !!params['includeMetadata'];
+          const includeTimestamps = !!params['includeTimestamps'];
+          const includeSummaries = !!params['includeSummaries'];
+          
+          // Get conversation data
+          const conversation = await this.storage.getConversation(conversationId);
+          if (!conversation) {
+            throw new Error(`Conversation with ID ${conversationId} not found`);
+          }
+          
+          // Get turns and possibly summaries
+          const turns = await this.storage.getTurns(conversationId);
+          let summaries: ConversationSummary[] = [];
+          if (includeSummaries) {
+            summaries = await this.storage.getSummaries(conversationId);
+          }
+          
+          // Format options
+          const options: FormattingOptions = {
+            format: format as 'text' | 'markdown' | 'json' | 'html',
+            includeMetadata,
+            includeTimestamps,
+            anchorName: this.options.anchorName,
+            anchorId: this.options.anchorId,
+            highlightAnchor: true,
+          };
+          
+          // Format conversation
+          const formatted = this.formatter.formatConversation(turns, summaries, options);
+          
+          return {
+            conversationId,
+            content: formatted,
+            metadata: {
+              format,
+              turnCount: turns.length,
+              summaryCount: summaries.length,
+              exportedAt: new Date().toISOString(),
+            },
+          };
         },
       },
     ];
