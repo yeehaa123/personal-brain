@@ -72,48 +72,64 @@ export class BrainProtocol {
     newsApiKey?: string,
     useExternalSources: boolean = false,
   ) {
-    // Initialize configuration
-    this.config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
-    
-    // Create the unified MCP server using config
-    this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
-    
-    // Initialize managers
-    this.contextManager = new ContextManager(this.config);
-    this.conversationManager = new ConversationManager(this.config);
-    
-    // Initialize profile manager with profile context
-    this.profileManager = new ProfileManager(
-      this.contextManager.getProfileContext(),
-      this.config.getApiKey(),
-    );
-    
-    // Initialize prompt formatter and profile analyzer for external source manager
-    const promptFormatter = new PromptFormatter();
-    const embeddingService = EmbeddingService.getInstance(
-      this.config.getApiKey() ? { apiKey: this.config.getApiKey() } : undefined,
-    );
-    const profileAnalyzer = new ProfileAnalyzer(embeddingService);
-    
-    // Initialize external source manager
-    this.externalSourceManager = new ExternalSourceManager(
-      this.contextManager.getExternalSourceContext(),
-      profileAnalyzer,
-      promptFormatter,
-      this.config.useExternalSources,
-    );
-    
-    // Initialize query processor
-    this.queryProcessor = new QueryProcessor(
-      this.contextManager,
-      this.conversationManager,
-      this.profileManager,
-      this.externalSourceManager,
-      this.config.getApiKey(),
-    );
-    
-    logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
-    logger.info(`Using interface type: ${this.config.interfaceType}`);
+    try {
+      // Initialize configuration
+      this.config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
+      
+      // Create the unified MCP server using config
+      this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
+      
+      // Initialize managers with proper error handling
+      this.contextManager = new ContextManager(this.config);
+      
+      // Ensure contexts are ready before proceeding
+      if (!this.contextManager.areContextsReady()) {
+        throw new Error('Context manager initialization failed: contexts not ready');
+      }
+      
+      // Initialize context links
+      this.contextManager.initializeContextLinks();
+      
+      // Initialize conversation manager
+      this.conversationManager = new ConversationManager(this.config);
+      
+      // Initialize profile manager with profile context
+      this.profileManager = new ProfileManager(
+        this.contextManager.getProfileContext(),
+        this.config.getApiKey(),
+      );
+      
+      // Initialize prompt formatter and profile analyzer for external source manager
+      const promptFormatter = new PromptFormatter();
+      const embeddingService = EmbeddingService.getInstance(
+        this.config.getApiKey() ? { apiKey: this.config.getApiKey() } : undefined,
+      );
+      const profileAnalyzer = new ProfileAnalyzer(embeddingService);
+      
+      // Initialize external source manager
+      this.externalSourceManager = new ExternalSourceManager(
+        this.contextManager.getExternalSourceContext(),
+        profileAnalyzer,
+        promptFormatter,
+        this.config.useExternalSources,
+      );
+      
+      // Initialize query processor
+      this.queryProcessor = new QueryProcessor(
+        this.contextManager,
+        this.conversationManager,
+        this.profileManager,
+        this.externalSourceManager,
+        this.config.getApiKey(),
+      );
+      
+      logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
+      logger.info(`Using interface type: ${this.config.interfaceType}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to initialize BrainProtocol: ${errorMessage}`);
+      throw new Error(`BrainProtocol initialization failed: ${errorMessage}`);
+    }
   }
 
   /**
@@ -194,7 +210,12 @@ export class BrainProtocol {
    * @param enabled Whether to enable external sources
    */
   setUseExternalSources(enabled: boolean): void {
+    // Update both the context manager and external source manager
+    this.contextManager.setExternalSourcesEnabled(enabled);
     this.externalSourceManager.setEnabled(enabled);
+    
+    // This ensures both components stay in sync
+    logger.debug('External sources setting updated in both managers');
   }
 
   /**
@@ -202,6 +223,8 @@ export class BrainProtocol {
    * @returns Whether external sources are enabled
    */
   getUseExternalSources(): boolean {
+    // We get this from the external source manager as it's responsible for
+    // processing external source requests
     return this.externalSourceManager.isEnabled();
   }
 
@@ -222,12 +245,44 @@ export class BrainProtocol {
   }
 
   /**
+   * Check if all components of the BrainProtocol are ready
+   * @returns Whether all components are ready
+   */
+  isReady(): boolean {
+    return (
+      this.contextManager.areContextsReady() && 
+      this.hasActiveConversation() && 
+      !!this.unifiedMcpServer
+    );
+  }
+
+  /**
+   * Get an object describing the status of all components
+   * @returns Status object
+   */
+  getStatus(): Record<string, boolean> {
+    return {
+      contextManager: this.contextManager.areContextsReady(),
+      conversationManager: this.hasActiveConversation(),
+      mcpServer: !!this.unifiedMcpServer,
+      externalSources: this.getUseExternalSources(),
+      anthropicApiKey: this.hasAnthropicApiKey(),
+      openaiApiKey: this.hasOpenAIApiKey(),
+    };
+  }
+
+  /**
    * Process a query through the full pipeline
    * @param query User query
    * @param options Query options
    * @returns Query result
    */
   async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
+    // Check that contexts are ready before processing
+    if (!this.contextManager.areContextsReady()) {
+      throw new Error('Cannot process query: contexts not ready');
+    }
+    
     return await this.queryProcessor.processQuery(query, options);
   }
 }
