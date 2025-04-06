@@ -9,7 +9,6 @@ import { setTestEnv } from './envUtils';
 mock.module('ai', () => {
   return {
     generateObject: async ({ prompt, schema: _schema }: { prompt: string, schema: unknown }) => {
-      console.log('Mock generateObject called with prompt:', prompt.substring(0, 50) + '...');
       
       // Return different tags based on the test being run - checking content more precisely
       if (prompt.toLowerCase().includes('education should focus')) {

@@ -8,10 +8,10 @@ import { z } from 'zod';
  */
 export const ConversationTurnSchema = z.object({
   // Unique identifier for this turn
-  id: z.string(),
+  id: z.string().optional(),
   
   // Timestamp when this turn was created
-  timestamp: z.date(),
+  timestamp: z.date().optional(),
   
   // User's query
   query: z.string().min(1),
@@ -45,24 +45,24 @@ export const ConversationTurnSchema = z.object({
  */
 export const ConversationSummarySchema = z.object({
   // Unique identifier for this summary
-  id: z.string(),
+  id: z.string().optional(),
   
   // Timestamp when this summary was created
-  timestamp: z.date(),
+  timestamp: z.date().optional(),
   
   // Text summary of multiple conversation turns
   content: z.string(),
   
   // Start and end indices of the summarized turns
-  startTurnIndex: z.number().int().min(0),
-  endTurnIndex: z.number().int().min(0),
+  startTurnIndex: z.number().int().min(0).optional(),
+  endTurnIndex: z.number().int().min(0).optional(),
   
   // Start and end timestamps of the summarized period
-  startTimestamp: z.date(),
-  endTimestamp: z.date(),
+  startTimestamp: z.date().optional(),
+  endTimestamp: z.date().optional(),
   
   // Number of turns summarized
-  turnCount: z.number().int().positive(),
+  turnCount: z.number().int().positive().optional(),
   
   // Optional metadata for this summary
   metadata: z.record(z.unknown()).optional(),

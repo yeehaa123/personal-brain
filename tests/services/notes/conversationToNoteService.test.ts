@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
+import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
 import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
@@ -151,10 +152,11 @@ describe('ConversationToNoteService', () => {
     });
 
     // Create service instance with isolated storage
+    // We're using type assertion here as the test only needs a subset of the methods
     service = new ConversationToNoteService(
       mockNoteRepository,
       mockEmbeddingService,
-      isolatedStorage,
+      isolatedStorage as unknown as ConversationStorage, // Using type assertion for test simplicity
     );
   });
 
@@ -184,9 +186,6 @@ describe('ConversationToNoteService', () => {
     expect(result.content).toContain('**Question**: What is ecosystem architecture?');
     expect(result.content).toContain('**Answer**: Ecosystem architecture refers to...');
 
-    // Print the formatted content for debugging
-    console.log('Formatted conversation content:');
-    console.log(result.content);
   });
 
   test('should handle user-edited content', async () => {
@@ -364,9 +363,6 @@ describe('ConversationToNoteService', () => {
       htmlTurns,
     );
 
-    // Log the formatted content
-    console.log('HTML Conversation formatted as:');
-    console.log(preview.content);
 
     // Expect both questions and answers with HTML converted to markdown
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
@@ -430,9 +426,6 @@ describe('ConversationToNoteService', () => {
       emptyResponseTurns,
     );
     
-    // Log the content with empty response
-    console.log('Empty response conversation formatted as:');
-    console.log(preview.content);
     
     // Verify that questions are shown and empty response is handled
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
@@ -482,9 +475,6 @@ describe('ConversationToNoteService', () => {
       undefinedResponseTurns,
     );
     
-    // Log the content with undefined response
-    console.log('Undefined response conversation formatted as:');
-    console.log(previewUndef.content);
     
     // Verify that questions are shown and undefined response is handled
     expect(previewUndef.content).toContain('**Question**: What is ecosystem architecture?');

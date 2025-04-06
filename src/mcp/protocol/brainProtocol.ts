@@ -6,6 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { aiConfig, conversationConfig, relevanceConfig } from '@/config';
 import {
+  ConversationContext,
   createUnifiedMcpServer,
   ExternalSourceContext,
   NoteContext,
@@ -13,9 +14,6 @@ import {
 } from '@/mcp'; // Import all MCP implementations
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
-import { ConversationMemory } from '@/mcp/protocol/memory';
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Profile } from '@models/profile';
 import logger from '@utils/logger';
@@ -26,7 +24,7 @@ import { NoteService } from './components/noteService';
 import { ProfileAnalyzer } from './components/profileAnalyzer';
 import { PromptFormatter } from './components/promptFormatter';
 import { SystemPromptGenerator } from './components/systemPromptGenerator';
-import type { ExternalCitation, ProtocolResponse } from './types';
+import type { ExternalCitation, IConversationManager, ProtocolResponse } from './types';
 
 /**
  * Interface for BrainProtocol constructor options
@@ -37,8 +35,8 @@ export interface BrainProtocolOptions {
   useExternalSources?: boolean;
   interfaceType?: 'cli' | 'matrix';
   roomId?: string; // Now expected for both CLI and Matrix
-  // Added for dependency injection - allows passing a custom storage implementation
-  memoryStorage?: ConversationMemoryStorage;
+  anchorName?: string; // Name for the anchor user in conversations
+  anchorId?: string; // ID for the anchor user in conversations
 }
 
 export class BrainProtocol {
@@ -47,6 +45,7 @@ export class BrainProtocol {
   private context: NoteContext;
   private profileContext: ProfileContext;
   private externalContext: ExternalSourceContext;
+  private conversationContext: ConversationContext; // New conversation context
   private embeddingService: EmbeddingService;
 
   // Unified MCP server
@@ -65,8 +64,8 @@ export class BrainProtocol {
   private interfaceType: 'cli' | 'matrix';
   private currentRoomId?: string;
 
-  // Conversation Memory
-  private conversationMemory: ConversationMemory;
+  // Current conversation id for the active room
+  private currentConversationId: string | null = null;
 
   /**
    * Creates a new instance of the BrainProtocol
@@ -135,6 +134,11 @@ export class BrainProtocol {
     this.context = NoteContext.getInstance(apiKey);
     this.profileContext = ProfileContext.getInstance(apiKey);
     this.externalContext = ExternalSourceContext.getInstance(apiKey, newsApiKeyValue);
+    this.conversationContext = ConversationContext.getInstance({
+      // Pass any needed configuration
+      anchorName: options.anchorName || 'Host',
+      anchorId: options.anchorId,
+    });
 
     // Initialize component classes
     this.promptFormatter = new PromptFormatter();
@@ -147,15 +151,9 @@ export class BrainProtocol {
     );
     this.noteService = new NoteService(this.context);
 
-    // Initialize conversation memory with the specified interface type
-    // Use injected storage if provided, otherwise use singleton getInstance()
-    const memoryStorage = options.memoryStorage || InMemoryStorage.getInstance();
-    
-    this.conversationMemory = new ConversationMemory({
-      interfaceType: this.interfaceType,
-      storage: memoryStorage,
-      apiKey, // Pass the API key for summarization
-    });
+    // Initialize the conversation context
+    // The conversation context is already initialized earlier in this constructor
+    // We'll configure the current conversation when initializeConversation is called
 
     // Set initial state
     this.useExternalSources = useExternalSourcesValue;
@@ -199,40 +197,81 @@ export class BrainProtocol {
   getExternalSourceContext(): ExternalSourceContext {
     return this.externalContext;
   }
-
+  
   /**
-   * Get the conversation memory instance to manage conversation history
+   * Get the conversation context to allow access to conversation operations
    */
-  getConversationMemory(): ConversationMemory {
-    return this.conversationMemory;
+  getConversationContext(): ConversationContext {
+    return this.conversationContext;
   }
   
+  /**
+   * Get the conversation manager (implements compatibility interface)
+   * @returns This instance, which implements the required interface methods
+   */
+  getConversationManager(): IConversationManager {
+    return this as unknown as IConversationManager;
+  }
+
   /**
    * Check if there is an active conversation
    */
   hasActiveConversation(): boolean {
-    return !!this.conversationMemory.currentConversation;
+    return !!this.currentConversationId;
   }
   
   /**
    * Get the current conversation ID
    */
   getCurrentConversationId(): string | null {
-    return this.conversationMemory.currentConversation;
+    return this.currentConversationId;
   }
   
   /**
    * Get a conversation by ID
    */
   async getConversation(conversationId: string): Promise<Conversation | null> {
-    return await this.conversationMemory.getConversationMemory().storage.getConversation(conversationId);
+    return await this.conversationContext.getConversation(conversationId);
   }
   
   /**
-   * Get the memory storage instance
+   * Save a turn to the conversation
+   * @param query The user's query
+   * @param response The assistant's response
+   * @param options Turn options like user ID
    */
-  getMemoryStorage(): ConversationMemoryStorage {
-    return this.conversationMemory.getConversationMemory().storage;
+  async saveTurn(query: string, response: string, options?: { userId?: string; userName?: string; metadata?: Record<string, unknown> }): Promise<void> {
+    if (!this.currentConversationId) {
+      await this.initializeConversation();
+      if (!this.currentConversationId) {
+        throw new Error('Failed to initialize conversation');
+      }
+    }
+    
+    // Add the turn to the conversation
+    await this.conversationContext.addTurn(
+      this.currentConversationId,
+      query,
+      response,
+      options,
+    );
+  }
+  
+  /**
+   * Get formatted conversation history
+   * @param conversationId Optional conversation ID (defaults to current)
+   * @returns Formatted conversation history string
+   */
+  async getConversationHistory(conversationId?: string): Promise<string> {
+    const id = conversationId || this.currentConversationId;
+    if (!id) {
+      return '';
+    }
+    
+    return await this.conversationContext.getConversationHistory(id, {
+      includeSummaries: true,
+      format: 'text',
+    });
   }
 
   /**
@@ -272,14 +311,17 @@ export class BrainProtocol {
       // Get the room ID - now required for both interfaces
       const roomId = this.currentRoomId || conversationConfig.defaultCliRoomId;
       
-      // Get or create a conversation for the room ID
-      await this.conversationMemory.getOrCreateConversationForRoom(roomId);
+      // Initialize conversation in the ConversationContext
+      this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
+        roomId, 
+        this.interfaceType,
+      );
       
       // Log which room we're using
       if (this.interfaceType === 'matrix') {
-        logger.info(`Started Matrix conversation for room ${roomId}`);
+        logger.info(`Started Matrix conversation for room ${roomId}: ${this.currentConversationId}`);
       } else {
-        logger.info(`Started CLI conversation for room ${roomId}`);
+        logger.info(`Started CLI conversation for room ${roomId}: ${this.currentConversationId}`);
       }
     } catch (error) {
       logger.error('Failed to initialize conversation:', error);
@@ -292,13 +334,18 @@ export class BrainProtocol {
    */
   async setCurrentRoom(roomId: string): Promise<void> {
     this.currentRoomId = roomId;
-    await this.conversationMemory.getOrCreateConversationForRoom(roomId);
+    
+    // Get or create conversation in ConversationContext
+    this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
+      roomId, 
+      this.interfaceType,
+    );
     
     // Log with interface type for clarity
     if (this.interfaceType === 'matrix') {
-      logger.debug(`Switched to Matrix room ${roomId}`);
+      logger.debug(`Switched to Matrix room ${roomId}: ${this.currentConversationId}`);
     } else {
-      logger.debug(`Switched to CLI room ${roomId}`);
+      logger.debug(`Switched to CLI room ${roomId}: ${this.currentConversationId}`);
     }
   }
 
@@ -361,7 +408,7 @@ export class BrainProtocol {
     }
 
     // Ensure we have an active conversation
-    if (!this.conversationMemory.currentConversation) {
+    if (!this.getConversationManager().hasActiveConversation()) {
       await this.initializeConversation();
     }
 
@@ -427,9 +474,13 @@ export class BrainProtocol {
     // 4. Get conversation history if available
     let conversationHistory = '';
     try {
-      conversationHistory = await this.conversationMemory.formatHistoryForPrompt();
-      if (conversationHistory.length > 0) {
-        logger.debug('Including conversation history in prompt');
+      if (this.currentConversationId) {
+        conversationHistory = await this.conversationContext.formatHistoryForPrompt(this.currentConversationId);
+        if (conversationHistory.length > 0) {
+          logger.debug('Including conversation history in prompt');
+        }
+      } else {
+        logger.debug('No active conversation, continuing without history');
       }
     } catch (error) {
       logger.warn('Failed to get conversation history:', error);
@@ -472,41 +523,61 @@ export class BrainProtocol {
       // The model response is pure text, so we save it directly to memory
       // No HTML formatting has been applied at this point
       
-      // First, add the user's query with the provided userId
-      await this.conversationMemory.addTurn(
+      // Ensure we have an active conversation
+      if (!this.currentConversationId) {
+        await this.initializeConversation();
+        if (!this.currentConversationId) {
+          throw new Error('Failed to initialize conversation');
+        }
+      }
+      
+      // Set up the user turn options
+      const userTurnOptions = {
+        userId: options?.userId || 'matrix-user',
+        userName: options?.userName || 'User',
+        metadata: {
+          turnType: 'user',
+          hasProfile: !!this.profile,
+          isProfileQuery,
+          profileRelevance,
+        },
+      };
+      
+      // Set up the assistant turn options
+      const assistantTurnOptions = {
+        userId: 'assistant', // CRITICAL: This ensures it's identified as an assistant turn
+        userName: 'Assistant',
+        metadata: {
+          turnType: 'assistant',
+          hasProfile: !!this.profile,
+          isProfileQuery,
+          profileRelevance,
+          notesUsed: relevantNotes.length,
+          externalSourcesUsed: externalResults.length,
+        },
+      };
+      
+      // Add user query turn
+      await this.conversationContext.addTurn(
+        this.currentConversationId,
         query,
         '', // No response for user turn
-        {
-          userId: options?.userId || 'matrix-user', // Use provided userId or default
-          userName: options?.userName || 'User',
-          metadata: {
-            turnType: 'user',
-            hasProfile: !!this.profile,
-            isProfileQuery,
-            profileRelevance,
-          },
-        },
+        userTurnOptions,
       );
       logger.debug(`Saved user turn with userId: ${options?.userId || 'matrix-user'}`);
       
-      // Then, add the assistant's response with 'assistant' as userId
-      await this.conversationMemory.addTurn(
-        query, // We need to include the original query to satisfy schema validation
+      // Add assistant response turn
+      await this.conversationContext.addTurn(
+        this.currentConversationId,
+        query, // We include the original query for context
         responseText,
-        {
-          userId: 'assistant', // CRITICAL: This ensures it's identified as an assistant turn
-          userName: 'Assistant',
-          metadata: {
-            turnType: 'assistant',
-            hasProfile: !!this.profile,
-            isProfileQuery,
-            profileRelevance,
-            notesUsed: relevantNotes.length,
-            externalSourcesUsed: externalResults.length,
-          },
-        },
+        assistantTurnOptions,
       );
       logger.debug('Saved assistant turn with userId: assistant');
+      
+      // Check if we should summarize
+      await this.conversationContext.forceSummarize(this.currentConversationId);
+      
     } catch (error) {
       logger.warn('Failed to save conversation turn:', error);
       // Continue even if saving fails

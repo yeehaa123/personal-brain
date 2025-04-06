@@ -30,17 +30,27 @@ describeOrSkip('Matrix save-note integration', () => {
       roomId: roomId, 
     });
     
-    // Get the conversation memory for this test
-    const conversationMemory = brainProtocol.getConversationMemory();
+    // Access conversation context directly from the brainProtocol
+    
+    // Get the conversation context
+    const conversationContext = brainProtocol.getConversationContext();
     
     // Create command handler
     commandHandler = new CommandHandler(brainProtocol);
     
     // Start a test conversation for the Matrix room
-    await conversationMemory.getOrCreateConversationForRoom(roomId);
+    await conversationContext.getOrCreateConversationForRoom(roomId, 'matrix');
     
-    // Add a turn to the conversation
-    await conversationMemory.addTurn(
+    // Add a turn to the conversation - get the conversation ID first
+    const conversationId = await conversationContext.getConversationIdByRoom(roomId, 'matrix');
+    
+    if (!conversationId) {
+      throw new Error('Failed to get conversation ID');
+    }
+    
+    // Add a turn to the conversation using the context API
+    await conversationContext.addTurn(
+      conversationId,
       'What is ecosystem architecture?', 
       'Ecosystem architecture is a design approach that...', 
       {

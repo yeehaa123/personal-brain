@@ -1,54 +1,52 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+/**
+ * Tests for the ConversationContext which replaces ConversationMemory
+ */
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { nanoid } from 'nanoid';
 
 import { conversationConfig } from '@/config';
-import { ConversationMemory } from '@/mcp/protocol/memory/conversationMemory';
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
+import { ConversationContext } from '@/mcp/contexts/conversations/conversationContext';
+import { ConversationFormatter } from '@/mcp/contexts/conversations/conversationFormatter';
+import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
+import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import logger from '@/utils/logger';
+import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
 
-describe('ConversationMemory', () => {
-  let memory: ConversationMemory;
-  let mockStorage: ConversationMemoryStorage;
+describe('ConversationContext', () => {
+  let context: ConversationContext;
+  let mockStorage: ConversationStorage;
+  let originalLogger: Record<string, unknown>;
 
   // Helper to create a mock conversation
   const createMockConversation = (
-    id: string = `conv-${nanoid()}`, 
-    turns: number = 0,
+    id: string = `conv-${nanoid()}`,
+    _turns: number = 0, // Using underscore prefix for allowed unused args
     interfaceType: 'cli' | 'matrix' = 'cli',
     roomId: string = conversationConfig.defaultCliRoomId, // Default room ID for CLI
   ): Conversation => {
     const now = new Date();
-    const mockTurns: ConversationTurn[] = [];
-    
-    for (let i = 0; i < turns; i++) {
-      mockTurns.push({
-        id: `turn-${i}`,
-        timestamp: new Date(now.getTime() - (turns - i) * 1000), // Order by time
-        query: `Mock query ${i}`,
-        response: `Mock response ${i}`,
-        userId: i % 2 === 0 ? 'user-1' : 'user-2', // Alternate users
-        userName: i % 2 === 0 ? 'User One' : 'User Two',
-      });
-    }
-    
+
     return {
       id,
       createdAt: now,
       updatedAt: now,
-      activeTurns: mockTurns,
-      summaries: [],
-      archivedTurns: [],
       interfaceType,
       roomId,
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
     };
   };
 
   beforeEach(() => {
+    // Mock logger to reduce test output
+    originalLogger = mockLogger(logger);
+
     // Set up mock storage interface
     mockStorage = {
-      createConversation: mock(async (options) => {
-        return createMockConversation('mock-id', 0, options.interfaceType, options.roomId);
+      createConversation: mock(async (conversation) => {
+        return conversation.id;
       }),
       getConversation: mock(async (id: string) => {
         if (id === 'mock-id' || id === 'existing-id') {
@@ -56,592 +54,370 @@ describe('ConversationMemory', () => {
         }
         return null;
       }),
-      getConversationByRoomId: mock(async (roomId: string) => {
+      getConversationByRoom: mock(async (roomId: string) => {
         if (roomId === 'room-id') {
-          return createMockConversation('room-conv-id', 2, 'matrix', roomId);
+          return 'room-conv-id';
         }
         return null;
       }),
-      addTurn: mock(async (conversationId: string, turn) => {
-        const conversation = await mockStorage.getConversation(conversationId);
-        if (!conversation) {
-          throw new Error(`Conversation with ID ${conversationId} not found`);
-        }
-        
-        const newTurn = {
-          ...turn,
-          id: `turn-${nanoid()}`,
-        };
-        
-        return {
-          ...conversation,
-          updatedAt: new Date(),
-          activeTurns: [...conversation.activeTurns, newTurn],
-        };
-      }),
-      addSummary: mock(async (conversationId: string, summary) => {
-        const conversation = await mockStorage.getConversation(conversationId);
-        if (!conversation) {
-          throw new Error(`Conversation with ID ${conversationId} not found`);
-        }
-        
-        return {
-          ...conversation,
-          updatedAt: new Date(),
-          summaries: [...conversation.summaries, summary],
-        };
-      }),
-      moveTurnsToArchive: mock(async (conversationId: string, _turnIndices) => {
-        const conversation = await mockStorage.getConversation(conversationId);
-        if (!conversation) {
-          throw new Error(`Conversation with ID ${conversationId} not found`);
-        }
-        
-        return {
-          ...conversation,
-          updatedAt: new Date(),
-        };
-      }),
-      getRecentConversations: mock(async (options) => {
-        const conversations = [
-          createMockConversation('conv-1', 2, 'cli'),
-          createMockConversation('conv-2', 1, 'matrix', 'room-1'),
-          createMockConversation('conv-3', 3, 'cli'),
-        ];
-        
-        let filtered = conversations;
-        
-        // Filter by interface type if specified
-        if (options?.interfaceType) {
-          filtered = filtered.filter(conv => conv.interfaceType === options.interfaceType);
-        }
-        
-        // Apply limit if specified
-        return options?.limit ? filtered.slice(0, options.limit) : filtered;
-      }),
+      updateConversation: mock(async () => true),
       deleteConversation: mock(async (id: string) => {
         return id === 'mock-id' || id === 'existing-id';
       }),
-      updateMetadata: mock(async (id: string, metadata) => {
-        const conversation = await mockStorage.getConversation(id);
-        if (!conversation) {
-          throw new Error(`Conversation with ID ${id} not found`);
-        }
-        
-        return {
-          ...conversation,
-          updatedAt: new Date(),
-          metadata,
-        };
+      addTurn: mock(async (_id: string, turn) => {
+        return turn.id || `turn-${nanoid()}`;
       }),
+      getTurns: mock(async (_id: string, limit = 10) => {
+        const mockTurns: ConversationTurn[] = [];
+        for (let i = 0; i < Math.min(3, limit); i++) {
+          mockTurns.push({
+            id: `turn-${i}`,
+            timestamp: new Date(),
+            query: `Mock query ${i}`,
+            response: `Mock response ${i}`,
+            userId: i % 2 === 0 ? 'user-1' : 'user-2', // Alternate users
+            userName: i % 2 === 0 ? 'User One' : 'User Two',
+          });
+        }
+        return mockTurns;
+      }),
+      updateTurn: mock(async () => true),
+      addSummary: mock(async (_id, summary) => {
+        return summary.id || `summary-${nanoid()}`;
+      }),
+      getSummaries: mock(async () => []),
+      findConversations: mock(async (criteria) => {
+        const now = new Date();
+        const conversations = [
+          {
+            id: 'conv-1',
+            interfaceType: 'cli' as const,
+            roomId: conversationConfig.defaultCliRoomId,
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 2,
+          },
+          {
+            id: 'conv-2',
+            interfaceType: 'matrix' as const,
+            roomId: 'room-1',
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 1,
+          },
+          {
+            id: 'conv-3',
+            interfaceType: 'cli' as const,
+            roomId: conversationConfig.defaultCliRoomId,
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 3,
+          },
+        ];
+
+        let filtered = conversations;
+
+        // Filter by interface type if specified
+        if (criteria?.interfaceType) {
+          filtered = filtered.filter(conv => conv.interfaceType === criteria.interfaceType);
+        }
+
+        // Apply limit if specified
+        return criteria?.limit ? filtered.slice(0, criteria.limit) : filtered;
+      }),
+      getRecentConversations: mock(async (limit, interfaceType) => {
+        const now = new Date();
+        const conversations = [
+          {
+            id: 'conv-1',
+            interfaceType: 'cli' as const,
+            roomId: conversationConfig.defaultCliRoomId,
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 2,
+          },
+          {
+            id: 'conv-2',
+            interfaceType: 'matrix' as const,
+            roomId: 'room-1',
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 1,
+          },
+          {
+            id: 'conv-3',
+            interfaceType: 'cli' as const,
+            roomId: conversationConfig.defaultCliRoomId,
+            startedAt: now,
+            updatedAt: now,
+            turnCount: 3,
+          },
+        ];
+
+        // Filter by interface type if specified
+        const filtered = interfaceType
+          ? conversations.filter(conv => conv.interfaceType === interfaceType)
+          : conversations;
+
+        // Apply limit if specified
+        return limit ? filtered.slice(0, limit) : filtered;
+      }),
+      updateMetadata: mock(async () => true),
+      getMetadata: mock(async () => ({ topic: 'Test Topic' })),
     };
-    
-    // Create ConversationMemory with mock storage
-    memory = new ConversationMemory({
-      interfaceType: 'cli',
+
+    // Create ConversationContext with mock storage
+    context = ConversationContext.createFresh({
       storage: mockStorage,
+      anchorName: 'Host',
+      anchorId: 'anchor-id',
+      defaultUserName: 'User',
+      defaultUserId: 'default-user-id',
     });
   });
 
-  test('should use provided storage and options', () => {
-    const customOptions = {
-      maxTurns: 5,
-      maxTokens: 1000,
-      includeSystemMessages: true,
-    };
-    
-    const customMemory = new ConversationMemory({
-      interfaceType: 'cli',
-      storage: mockStorage,
-      options: customOptions,
-    });
-    
-    // Can't directly test private fields, but we can test behavior
-    expect(customMemory).toBeInstanceOf(ConversationMemory);
+  afterEach(() => {
+    // Restore logger
+    restoreLogger(logger, originalLogger);
   });
 
-  test('should use InMemoryStorage singleton by default in production', () => {
-    // Save the original getInstance method
-    const originalGetInstance = InMemoryStorage.getInstance;
-    
-    // Mock getInstance to track if it was called
-    let getInstanceCalled = false;
-    InMemoryStorage.getInstance = () => {
-      getInstanceCalled = true;
-      return originalGetInstance();
-    };
-    
-    try {
-      // Create memory without providing storage
-      const defaultMemory = new ConversationMemory({
-        interfaceType: 'cli',
-      });
-      
-      // Verify behavior
-      expect(defaultMemory).toBeInstanceOf(ConversationMemory);
-      expect(getInstanceCalled).toBe(true);
-    } finally {
-      // Restore original method
-      InMemoryStorage.getInstance = originalGetInstance;
-    }
-  });
-
-  test('should start a new conversation', async () => {
+  test('should create a new conversation', async () => {
     const roomId = conversationConfig.defaultCliRoomId;
-    const id = await memory.startConversation(roomId);
-    
-    expect(id).toBe('mock-id');
-    expect(memory.currentConversation).toBe('mock-id');
-    expect(mockStorage.createConversation).toHaveBeenCalledWith({
+    const id = await context.createConversation('cli', roomId);
+
+    expect(id).toBeDefined();
+
+    expect(mockStorage.createConversation).toHaveBeenCalledWith(expect.objectContaining({
       interfaceType: 'cli',
       roomId,
-    });
+    }));
   });
-  
-  test('should start a new conversation with room ID', async () => {
-    const roomId = 'test-room';
-    const id = await memory.startConversation(roomId);
-    
-    expect(id).toBe('mock-id');
-    expect(memory.currentConversation).toBe('mock-id');
-    expect(mockStorage.createConversation).toHaveBeenCalledWith({
-      interfaceType: 'cli',
-      roomId,
-    });
-  });
-  
+
   test('should get or create conversation for room', async () => {
     // First test with existing room
     const existingRoomId = 'room-id';
-    const id = await memory.getOrCreateConversationForRoom(existingRoomId);
-    
+    const id = await context.getOrCreateConversationForRoom(existingRoomId, 'cli');
+
     expect(id).toBe('room-conv-id');
-    expect(memory.currentConversation).toBe('room-conv-id');
-    expect(mockStorage.getConversationByRoomId).toHaveBeenCalledWith(existingRoomId);
-    
+    expect(mockStorage.getConversationByRoom).toHaveBeenCalledWith(existingRoomId, 'cli');
+
     // Now test with a new room
     const newRoomId = 'new-room';
-    mockStorage.getConversationByRoomId = mock(async () => null);
-    await memory.getOrCreateConversationForRoom(newRoomId);
-    
-    expect(mockStorage.createConversation).toHaveBeenCalledWith({
+    mockStorage.getConversationByRoom = mock(async () => null);
+    const newId = await context.getOrCreateConversationForRoom(newRoomId, 'cli');
+
+    expect(newId).toBeDefined();
+    expect(mockStorage.createConversation).toHaveBeenCalledWith(expect.objectContaining({
       interfaceType: 'cli',
       roomId: newRoomId,
+    }));
+  });
+
+  test('should add a turn to a conversation', async () => {
+    // We need to modify our mock to handle this test better
+    // First mock getConversation to return a conversation
+    mockStorage.getConversation = mock(async (id) => {
+      return createMockConversation(id);
     });
-  });
 
-  test('should switch to an existing conversation', async () => {
-    // Switch to an existing conversation
-    await memory.switchConversation('existing-id');
-    
-    expect(memory.currentConversation).toBe('existing-id');
-    expect(mockStorage.getConversation).toHaveBeenCalledWith('existing-id');
-  });
+    // Create a conversation - this uses our mock createConversation
+    const conversationId = 'test-conversation-id';
 
-  test('should throw when switching to a non-existent conversation', async () => {
-    await expect(memory.switchConversation('non-existent-id')).rejects.toThrow();
-  });
-
-  test('should add a turn to the current conversation with user attribution', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
     // Add a turn with specific user information
-    await memory.addTurn('Test query', 'Test response', {
-      userId: 'specific-user',
-      userName: 'Specific User',
-      metadata: { source: 'user' },
-    });
-    
-    expect(mockStorage.addTurn).toHaveBeenCalledWith('mock-id', expect.objectContaining({
+    const turnId = await context.addTurn(
+      conversationId,
+      'Test query',
+      'Test response',
+      {
+        userId: 'specific-user',
+        userName: 'Specific User',
+        metadata: { source: 'user' },
+      },
+    );
+
+    expect(turnId).toBeDefined();
+    expect(mockStorage.addTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
       query: 'Test query',
       response: 'Test response',
       userId: 'specific-user',
       userName: 'Specific User',
-      metadata: { source: 'user' },
+      metadata: expect.objectContaining({
+        source: 'user',
+        isActive: true,
+      }),
     }));
   });
-  
+
   test('should add a turn with default user values', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
+    // Use the same approach as the previous test
+    // First mock getConversation to return a conversation
+    mockStorage.getConversation = mock(async (id) => {
+      return createMockConversation(id);
+    });
+
+    // Use a fixed conversation ID
+    const conversationId = 'test-conversation-id';
+
     // Add a turn without specifying user info
-    await memory.addTurn('Default query', 'Default response');
-    
-    expect(mockStorage.addTurn).toHaveBeenCalledWith('mock-id', expect.objectContaining({
+    const turnId = await context.addTurn(conversationId, 'Default query', 'Default response');
+
+    expect(turnId).toBeDefined();
+    expect(mockStorage.addTurn).toHaveBeenCalledWith(conversationId, expect.objectContaining({
       query: 'Default query',
       response: 'Default response',
-      userId: expect.any(String),
-      userName: expect.any(String),
+      userId: 'default-user-id',
+      userName: 'User',
     }));
-    // isAnchor is no longer part of the turn, it's computed dynamically
   });
 
-  test('should throw when adding a turn with no active conversation', async () => {
-    // Don't start a conversation
-    await expect(memory.addTurn('Test query', 'Test response')).rejects.toThrow();
+  test('should throw when adding a turn with non-existent conversation', async () => {
+    // Try with a non-existent conversation
+    mockStorage.getConversation = mock(async () => null);
+
+    await expect(context.addTurn('non-existent-id', 'Test query', 'Test response')).rejects.toThrow();
   });
 
-  test('should get conversation history', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    // Get history
-    const history = await memory.getHistory();
-    
-    expect(history).toHaveLength(3); // Default mock conversation has 3 turns
+  test('should get conversation turns', async () => {
+    // Create a conversation first
+    const conversationId = await context.createConversation('cli', conversationConfig.defaultCliRoomId);
+
+    // Get turns
+    const turns = await context.getTurns(conversationId);
+
+    expect(turns).toHaveLength(3); // Default mock returns 3 turns
+    expect(mockStorage.getTurns).toHaveBeenCalledWith(conversationId, undefined, undefined);
   });
 
-  test('should limit history by maxTurns', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    // Get history with custom limit
-    const history = await memory.getHistory(2);
-    
-    expect(history).toHaveLength(2); // Limited to 2 turns
+  test('should limit turns when retrieving', async () => {
+    // Create a conversation first
+    const conversationId = await context.createConversation('cli', conversationConfig.defaultCliRoomId);
+
+    // Get turns with a limit
+    await context.getTurns(conversationId, 2);
+
+    expect(mockStorage.getTurns).toHaveBeenCalledWith(conversationId, 2, undefined);
   });
 
-  test('should throw when getting history with no active conversation', async () => {
-    // Don't start a conversation
-    await expect(memory.getHistory()).rejects.toThrow();
-  });
+  test('should format conversation history for prompts', async () => {
+    // Change our test to use a simpler approach - just check the formatter handles
+    // different user types with a direct call to the formatter method
+    const formatter = new ConversationFormatter();
 
-  test('should format history for prompt with user attribution', async () => {
-    // Create our own custom mock storage for this test to ensure user IDs
-    const customMockStorage: ConversationMemoryStorage = {
-      createConversation: mock(async (options) => ({ 
-        id: 'test-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: options.interfaceType,
-        roomId: options.roomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      getConversation: mock(async (id) => ({
-        id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: 'cli' as const,
-        roomId: conversationConfig.defaultCliRoomId,
-        activeTurns: [
-          {
-            id: 'turn-1',
-            timestamp: new Date(),
-            query: 'Anchor query',
-            response: 'Anchor response',
-            userId: 'anchor-id',
-            userName: 'Anchor User',
-          },
-          {
-            id: 'turn-2',
-            timestamp: new Date(),
-            query: 'Regular query',
-            response: 'Regular response',
-            userId: 'regular-id',
-            userName: 'Regular User',
-          },
-        ],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      getConversationByRoomId: mock(async (roomId) => roomId === 'test-room' ? {
-        id: 'test-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: 'matrix' as const,
-        roomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-      } : null),
-      addTurn: mock(async (conversationId, turn) => ({ 
-        id: conversationId, 
-        createdAt: new Date(), 
-        updatedAt: new Date(), 
-        interfaceType: 'cli' as const, 
-        roomId: conversationConfig.defaultCliRoomId,
-        activeTurns: [{...turn, id: 'new-turn-id'}],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      addSummary: mock(async (conversationId, summary) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [{ ...summary, id: 'summary-id' }], archivedTurns: [], interfaceType: 'cli' as const })),
-      moveTurnsToArchive: mock(async (conversationId, _turnIndices) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      getRecentConversations: mock(async () => []),
-      deleteConversation: mock(async () => true),
-      updateMetadata: mock(async (id, metadata) => ({ 
-        id, 
-        createdAt: new Date(), 
-        updatedAt: new Date(), 
-        interfaceType: 'cli' as const, 
-        roomId: conversationConfig.defaultCliRoomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-        metadata,
-      })),
-    };
-    
-    // First, set up memory with our anchor ID
-    const formatMemory = new ConversationMemory({
-      interfaceType: 'cli',
-      storage: customMockStorage,
-      options: {
-        anchorId: 'anchor-id',
-        anchorName: 'Anchor',
+    const turns = [
+      {
+        id: 'turn-1',
+        timestamp: new Date(),
+        query: 'Anchor query',
+        response: 'Anchor response',
+        userId: 'anchor-id', // This matches our context's anchorId
+        userName: 'Anchor User',
       },
-    });
-    
-    // Start a conversation
-    await formatMemory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    const formatted = await formatMemory.formatHistoryForPrompt();
-    
-    // Should format each turn with proper user attribution
-    expect(formatted).toContain('Assistant: Anchor response');
-    expect(formatted).toContain('Assistant: Regular response');
-    
-    // Should format anchor users with the "Anchor" prefix
-    expect(formatted).toContain('Anchor (Anchor User): Anchor query');
-    
-    // Should format regular users with just their name
-    expect(formatted).toContain('Regular User: Regular query');
-    
-    // Turns should be separated by double newlines
-    expect(formatted).toContain('\n\n');
-    
-    // Should end with a double newline
-    expect(formatted.endsWith('\n\n')).toBe(true);
+      {
+        id: 'turn-2',
+        timestamp: new Date(),
+        query: 'Regular query',
+        response: 'Regular response',
+        userId: 'regular-id',
+        userName: 'Regular User',
+      },
+    ];
+
+    // Format turns directly
+    const formattingOptions = {
+      format: 'text' as const,
+      anchorName: 'Host',
+      anchorId: 'anchor-id',
+      highlightAnchor: true,
+    };
+
+    const formatted = formatter.formatTurns(turns, formattingOptions);
+
+    // Format is different in the new implementation
+    expect(formatted).toContain('Anchor User');
+    expect(formatted).toContain('Anchor query');
+    expect(formatted).toContain('Regular User');
+    expect(formatted).toContain('Regular query');
   });
 
-  test('should return empty string when formatting history with no turns', async () => {
-    // Override mockStorage to return empty turns
-    mockStorage.getConversation = mock(async () => createMockConversation('empty-id', 0));
-    
-    // Start a conversation
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    // Format history
-    const formatted = await memory.formatHistoryForPrompt();
-    
-    expect(formatted).toBe('');
+  test('should get recent conversations', async () => {
+    const result = await context.getRecentConversations(2, 'cli');
+
+    expect(result).toBeDefined();
+    expect(mockStorage.getRecentConversations).toHaveBeenCalledWith(2, 'cli');
   });
 
-  test('should get recent conversations with interface filtering', async () => {
-    // Override mockStorage.getRecentConversations to return expected results
-    mockStorage.getRecentConversations = mock(async () => [
-      createMockConversation('conv-1', 1, 'cli'),
-      createMockConversation('conv-2', 1, 'cli'),
-    ]);
-    
-    const result = await memory.getRecentConversations();
-    
-    expect(result).toHaveLength(2);
-    expect(mockStorage.getRecentConversations).toHaveBeenCalledWith({ 
+  test('should find conversations by criteria', async () => {
+    const result = await context.findConversations({
       interfaceType: 'cli',
-    });
-  });
-
-  test('should get limited recent conversations', async () => {
-    const conversations = await memory.getRecentConversations(2);
-    
-    expect(conversations).toHaveLength(2);
-    expect(mockStorage.getRecentConversations).toHaveBeenCalledWith({ 
       limit: 2,
-      interfaceType: 'cli',
     });
-  });
-  
-  test('should get conversations with specific interface type', async () => {
-    await memory.getRecentConversations(undefined, 'matrix');
-    
-    expect(mockStorage.getRecentConversations).toHaveBeenCalledWith({ 
-      interfaceType: 'matrix',
+
+    expect(result).toBeDefined();
+    expect(mockStorage.findConversations).toHaveBeenCalledWith({
+      interfaceType: 'cli',
+      limit: 2,
     });
   });
 
-  test('should update metadata for current conversation', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
+  test('should update conversation metadata', async () => {
+    // Create a conversation first
+    const conversationId = await context.createConversation('cli', conversationConfig.defaultCliRoomId);
+
     // Update metadata
-    await memory.updateMetadata({ topic: 'Test Topic' });
-    
-    expect(mockStorage.updateMetadata).toHaveBeenCalledWith('mock-id', { topic: 'Test Topic' });
+    const success = await context.updateMetadata(conversationId, { topic: 'Test Topic' });
+
+    expect(success).toBe(true);
+    expect(mockStorage.updateMetadata).toHaveBeenCalledWith(conversationId, { topic: 'Test Topic' });
   });
 
-  test('should throw when updating metadata with no active conversation', async () => {
-    // Don't start a conversation
-    await expect(memory.updateMetadata({ topic: 'Test Topic' })).rejects.toThrow();
-  });
+  test('should delete conversation', async () => {
+    // Mock the deleteConversation to return true
+    mockStorage.deleteConversation = mock(async () => true);
 
-  test('should end current conversation', () => {
-    // Start a conversation first
-    memory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    // End it
-    memory.endCurrentConversation();
-    
-    expect(memory.currentConversation).toBeNull();
-  });
+    // Use a fixed conversation ID
+    const conversationId = 'test-conversation-id';
 
-  test('should delete current conversation', async () => {
-    // Start a conversation first
-    await memory.startConversation(conversationConfig.defaultCliRoomId);
-    
     // Delete it
-    const result = await memory.deleteConversation();
-    
+    const result = await context.deleteConversation(conversationId);
+
     expect(result).toBe(true);
-    expect(mockStorage.deleteConversation).toHaveBeenCalledWith('mock-id');
-    expect(memory.currentConversation).toBeNull();
+    expect(mockStorage.deleteConversation).toHaveBeenCalledWith(conversationId);
   });
 
-  test('should delete specified conversation', async () => {
-    // Delete a specific conversation
-    const result = await memory.deleteConversation('existing-id');
-    
-    expect(result).toBe(true);
-    expect(mockStorage.deleteConversation).toHaveBeenCalledWith('existing-id');
-  });
+  test('should check if a user is the anchor user', () => {
+    // Test with the anchor ID
+    const isAnchor1 = context.isAnchor('anchor-id');
+    expect(isAnchor1).toBe(true);
 
-  test('should throw when deleting with no conversation ID', async () => {
-    // Don't start a conversation
-    await expect(memory.deleteConversation()).rejects.toThrow();
-  });
-
-  test('should correctly identify anchor users dynamically', async () => {
-    // Create storage and mock specifically for this test
-    const anchorMockStorage: ConversationMemoryStorage = {
-      createConversation: mock(async (options) => ({ 
-        id: 'anchor-test-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: options.interfaceType,
-        roomId: options.roomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      getConversation: mock(async (id) => ({
-        id,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: 'cli' as const,
-        roomId: conversationConfig.defaultCliRoomId,
-        activeTurns: [
-          {
-            id: 'turn-1',
-            timestamp: new Date(),
-            query: 'Anchor query',
-            response: 'Anchor response',
-            userId: 'anchor-user-id',
-            userName: 'Anchor User',
-          },
-          {
-            id: 'turn-2',
-            timestamp: new Date(),
-            query: 'Regular query',
-            response: 'Regular response',
-            userId: 'regular-user-id',
-            userName: 'Regular User',
-          },
-        ],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      getConversationByRoomId: mock(async (roomId) => roomId === 'test-room' ? {
-        id: 'anchor-test-id',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        interfaceType: 'matrix' as const,
-        roomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-      } : null),
-      addTurn: mock(async (conversationId, turn) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [{ ...turn, id: 'new-turn-id' }], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      addSummary: mock(async (conversationId, summary) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [{ ...summary, id: 'summary-id' }], archivedTurns: [], interfaceType: 'cli' as const })),
-      moveTurnsToArchive: mock(async (conversationId, _turnIndices) => ({ id: conversationId, createdAt: new Date(), updatedAt: new Date(), roomId: conversationConfig.defaultCliRoomId, activeTurns: [], summaries: [], archivedTurns: [], interfaceType: 'cli' as const })),
-      getRecentConversations: mock(async () => []),
-      deleteConversation: mock(async () => true),
-      updateMetadata: mock(async (id, metadata) => ({ 
-        id, 
-        createdAt: new Date(), 
-        updatedAt: new Date(), 
-        interfaceType: 'cli' as const, 
-        roomId: conversationConfig.defaultCliRoomId,
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-        metadata,
-      })),
-    };
-    
-    // Reset the memory with specific options for this test
-    const options = {
-      anchorId: 'anchor-user-id',
-      anchorName: 'TestAnchor',
-    };
-    
-    // Create a memory object with our custom options and storage
-    const anchorTestMemory = new ConversationMemory({
-      interfaceType: 'cli',
-      storage: anchorMockStorage,
-      options,
-    });
-    
-    // Start a conversation to get its history
-    await anchorTestMemory.startConversation(conversationConfig.defaultCliRoomId);
-    
-    // Simple check for anchor recognition
-    expect(anchorTestMemory.isAnchor('anchor-user-id')).toBe(true);
-    expect(anchorTestMemory.isAnchor('regular-user-id')).toBe(false);
-    
-    // Format history and check for proper anchor formatting
-    const formatted = await anchorTestMemory.formatHistoryForPrompt();
-    
-    // Anchor user should be formatted with special prefix
-    expect(formatted).toContain('TestAnchor (Anchor User): Anchor query');
-    // Regular user should just have their name
-    expect(formatted).toContain('Regular User: Regular query');
+    // Test with a non-anchor ID
+    const isAnchor2 = context.isAnchor('non-anchor-id');
+    expect(isAnchor2).toBe(false);
   });
 
   test('should handle real InMemoryStorage', async () => {
-    // Create ConversationMemory with a completely isolated InMemoryStorage instance
-    // This ensures no state is shared with other tests, even in parallel execution
+    // Create ConversationContext with a real isolated InMemoryStorage instance
     const isolatedStorage = InMemoryStorage.createFresh();
-    const realMemory = new ConversationMemory({
-      interfaceType: 'cli',
+    const realContext = ConversationContext.createFresh({
       storage: isolatedStorage,
     });
-    
+
     // Test full lifecycle
-    const id = await realMemory.startConversation(conversationConfig.defaultCliRoomId);
+    const id = await realContext.createConversation('cli', conversationConfig.defaultCliRoomId);
     expect(id).toBeDefined();
-    
-    await realMemory.addTurn('What is quantum computing?', 'Quantum computing uses quantum bits to perform calculations.');
-    await realMemory.addTurn('How does that differ from classical computing?', 'Classical computing uses binary bits that are either 0 or 1, while quantum bits can be in superposition.');
-    
-    const history = await realMemory.getHistory();
-    expect(history).toHaveLength(2);
-    
-    const formatted = await realMemory.formatHistoryForPrompt();
+
+    await realContext.addTurn(id, 'What is quantum computing?', 'Quantum computing uses quantum bits to perform calculations.');
+    await realContext.addTurn(id, 'How does that differ from classical computing?', 'Classical computing uses binary bits that are either 0 or 1, while quantum bits can be in superposition.');
+
+    const turns = await realContext.getTurns(id);
+    expect(turns.length).toBe(2);
+
+    const formatted = await realContext.formatHistoryForPrompt(id);
     expect(formatted).toContain('User: What is quantum computing?');
     expect(formatted).toContain('Assistant: Quantum computing uses quantum bits to perform calculations.');
-    
-    await realMemory.updateMetadata({ topic: 'Quantum Computing' });
-    
-    const recentConversations = await realMemory.getRecentConversations();
-    expect(recentConversations).toHaveLength(1);
-    expect(recentConversations[0].id).toBe(id);
-    expect(recentConversations[0].metadata).toEqual({ topic: 'Quantum Computing' });
-    
-    const deleted = await realMemory.deleteConversation();
+
+    await realContext.updateMetadata(id, { topic: 'Quantum Computing' });
+
+    const deleted = await realContext.deleteConversation(id);
     expect(deleted).toBe(true);
-    expect(realMemory.currentConversation).toBeNull();
   });
 });

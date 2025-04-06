@@ -90,14 +90,12 @@ export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: ()
   mockFn.module('@/mcp/model/embeddings', () => {
     return {
       getEmbedding: async (text: string) => {
-        console.log('Using mocked getEmbedding');
         return {
           embedding: createMockEmbedding(text),
           truncated: false,
         };
       },
       getBatchEmbeddings: async (texts: string[]) => {
-        console.log('Using mocked getBatchEmbeddings');
         return texts.map(text => ({
           embedding: createMockEmbedding(text),
           truncated: false,
@@ -130,7 +128,6 @@ export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: ()
         constructor() {}
         embeddings = {
           create: async ({ input }: { input: string | string[] }) => {
-            console.log('Using mocked OpenAI embeddings.create');
             if (Array.isArray(input)) {
               return {
                 data: input.map(text => ({

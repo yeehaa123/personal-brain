@@ -3,7 +3,7 @@
  */
 import { nanoid } from 'nanoid';
 
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import { ConversationContext, type ConversationStorage } from '@/mcp/contexts/conversations';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { NewNote, Note } from '@/models/note';
 import logger from '@/utils/logger';
@@ -15,19 +15,20 @@ import type { NoteRepository } from './noteRepository';
 export class ConversationToNoteService {
   private noteRepository: NoteRepository;
   private embeddingService: NoteEmbeddingService;
-  private memoryStorage: InMemoryStorage;
+  private conversationStorage: ConversationStorage;
 
   constructor(
     noteRepository: NoteRepository, 
     embeddingService: NoteEmbeddingService,
-    memoryStorage?: InMemoryStorage,
+    conversationStorage?: ConversationStorage,
   ) {
     this.noteRepository = noteRepository;
     this.embeddingService = embeddingService;
     
-    // Use provided storage or get singleton instance
-    // Note: In tests, always use createFresh() and pass it explicitly for proper isolation
-    this.memoryStorage = memoryStorage || InMemoryStorage.getInstance();
+    // Use provided storage or get from ConversationContext
+    // Note: In tests, always pass explicit storage for proper isolation
+    this.conversationStorage = conversationStorage || 
+      ConversationContext.getInstance().getStorage();
   }
 
   /**
@@ -183,7 +184,9 @@ export class ConversationToNoteService {
   private addAttributionHeader(content: string, turns: ConversationTurn[]): string {
     const firstTurn = turns[0];
     // We don't need lastTurn for now
-    const dateStr = firstTurn.timestamp.toISOString().split('T')[0];
+    const dateStr = firstTurn.timestamp ? 
+      firstTurn.timestamp.toISOString().split('T')[0] : 
+      new Date().toISOString().split('T')[0];
     
     const header = `> **Note**: This content was derived from a conversation on ${dateStr}.
 > **Source**: Conversation with AI assistant
@@ -274,7 +277,7 @@ export class ConversationToNoteService {
   ): Promise<void> {
     try {
       // Get the conversation from storage
-      const conversation = await this.memoryStorage.getConversation(conversationId);
+      const conversation = await this.conversationStorage.getConversation(conversationId);
       
       if (!conversation) {
         logger.warn(`Cannot link note: Conversation ${conversationId} not found`);
@@ -282,7 +285,7 @@ export class ConversationToNoteService {
       }
       
       // Update the conversation metadata to include the note ID
-      await this.memoryStorage.updateMetadata(conversationId, {
+      await this.conversationStorage.updateMetadata(conversationId, {
         noteId,
         noteCreatedAt: new Date(),
       });

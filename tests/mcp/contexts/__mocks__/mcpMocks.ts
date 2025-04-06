@@ -21,7 +21,6 @@ export function setupMcpServerMocks(mockFn: { module: (name: string, factory: ()
         
         constructor() {
           // Default constructor
-          console.log('Mock BrainProtocol constructor called');
         }
         
         static getInstance(_options?: Record<string, unknown>, forceNew = false) {

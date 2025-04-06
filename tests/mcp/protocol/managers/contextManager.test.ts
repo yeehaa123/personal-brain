@@ -97,7 +97,7 @@ describe('ContextManager', () => {
           throw new Error(
             this.initializationError
               ? `Contexts not ready: ${this.initializationError.message}`
-              : 'Contexts not ready: Initialization incomplete'
+              : 'Contexts not ready: Initialization incomplete',
           );
         }
       }

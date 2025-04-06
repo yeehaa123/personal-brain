@@ -33,9 +33,11 @@ export class ConversationSummarizer {
     }
 
     // Sort turns by timestamp to ensure chronological order
-    const sortedTurns = [...turns].sort((a, b) => 
-      a.timestamp.getTime() - b.timestamp.getTime(),
-    );
+    const sortedTurns = [...turns].sort((a, b) => {
+      const aTime = a.timestamp ? a.timestamp.getTime() : 0;
+      const bTime = b.timestamp ? b.timestamp.getTime() : 0;
+      return aTime - bTime;
+    });
 
     const turnTexts = sortedTurns.map(turn => {
       const userPrefix = turn.userName || 'User';

@@ -349,7 +349,11 @@ export class ConversationMemory {
         
         // Sort summaries by timestamp (oldest first)
         const sortedSummaries = [...summaries].sort(
-          (a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
+          (a, b) => {
+            const aTime = a.timestamp ? a.timestamp.getTime() : 0;
+            const bTime = b.timestamp ? b.timestamp.getTime() : 0;
+            return aTime - bTime;
+          },
         );
         
         sortedSummaries.forEach((summary, index) => {

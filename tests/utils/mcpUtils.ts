@@ -94,7 +94,6 @@ export function setupAnthropicMocks(mock: typeof viMock = viMock) {
   mock.module('@ai-sdk/anthropic', () => {
     return {
       anthropic: () => {
-        console.log('Using mocked anthropic model');
         return {
           id: 'claude-3-sonnet-20240229',
           provider: 'anthropic',
@@ -118,7 +117,6 @@ export function setupAnthropicMocks(mock: typeof viMock = viMock) {
     return {
       ExternalSourceContext: class MockExternalSourceContext {
         constructor() {
-          console.log('Mock ExternalSourceContext initialized');
         }
         
         search() { 

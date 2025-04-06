@@ -1,21 +1,20 @@
 // Use a separate test file to avoid conflicts with other tests
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
+import { ConversationContext } from '@/mcp/contexts/conversations';
 
 // Create a custom mock for BrainProtocol directly in this test file
 class MockBrainProtocol {
   private static _instance: MockBrainProtocol | null = null;
   private _useExternalSources = false;
-  private _memoryStorage: ConversationMemoryStorage;
+  private _conversationContext: ConversationContext;
   
-  constructor(options?: { memoryStorage?: ConversationMemoryStorage }) {
-    // Use provided storage or create a fresh isolated instance
-    this._memoryStorage = options?.memoryStorage || InMemoryStorage.createFresh();
+  constructor(options?: { conversationContext?: ConversationContext }) {
+    // Use provided context or create a fresh isolated instance
+    this._conversationContext = options?.conversationContext || ConversationContext.createFresh();
   }
   
-  static getInstance(options?: { memoryStorage?: ConversationMemoryStorage }) {
+  static getInstance(options?: { conversationContext?: ConversationContext }) {
     if (!MockBrainProtocol._instance) {
       MockBrainProtocol._instance = new MockBrainProtocol(options);
     }
@@ -41,8 +40,8 @@ class MockBrainProtocol {
     };
   }
   
-  getMemoryStorage() {
-    return this._memoryStorage;
+  getConversationContext() {
+    return this._conversationContext;
   }
 }
 
@@ -83,43 +82,43 @@ describe('BrainProtocol API', () => {
     expect(externalContext).toBeDefined();
   });
   
-  test('should use injected memory storage when provided', () => {
-    // Create a custom storage instance
-    const customStorage = InMemoryStorage.createFresh();
+  test('should use injected conversation context when provided', () => {
+    // Create a custom context instance
+    const customContext = ConversationContext.createFresh();
     
-    // Create protocol with injected storage
+    // Create protocol with injected context
     const protocol = new MockBrainProtocol({
-      memoryStorage: customStorage,
+      conversationContext: customContext,
     });
     
-    // Verify the storage was used
-    expect(protocol.getMemoryStorage()).toBe(customStorage);
+    // Verify the context was used
+    expect(protocol.getConversationContext()).toBe(customContext);
   });
   
-  test('should create fresh memory storage when not provided', () => {
-    // Create protocol without injected storage
+  test('should create fresh conversation context when not provided', () => {
+    // Create protocol without injected context
     const protocol = new MockBrainProtocol();
     
-    // Verify a storage was created
-    expect(protocol.getMemoryStorage()).toBeDefined();
-    expect(protocol.getMemoryStorage()).toBeInstanceOf(InMemoryStorage);
+    // Verify a context was created
+    expect(protocol.getConversationContext()).toBeDefined();
+    expect(protocol.getConversationContext()).toBeInstanceOf(ConversationContext);
   });
   
-  test('getInstance should respect injected memory storage', () => {
-    // Create a custom storage instance
-    const customStorage = InMemoryStorage.createFresh();
+  test('getInstance should respect injected conversation context', () => {
+    // Create a custom context instance
+    const customContext = ConversationContext.createFresh();
     
-    // Get singleton instance with injected storage
+    // Get singleton instance with injected context
     const protocol = MockBrainProtocol.getInstance({ 
-      memoryStorage: customStorage, 
+      conversationContext: customContext, 
     });
     
-    // Verify the storage was used
-    expect(protocol.getMemoryStorage()).toBe(customStorage);
+    // Verify the context was used
+    expect(protocol.getConversationContext()).toBe(customContext);
     
-    // Second call to getInstance should return same instance with same storage
+    // Second call to getInstance should return same instance with same context
     const protocol2 = MockBrainProtocol.getInstance();
     expect(protocol2).toBe(protocol);
-    expect(protocol2.getMemoryStorage()).toBe(customStorage);
+    expect(protocol2.getConversationContext()).toBe(customContext);
   });
 });

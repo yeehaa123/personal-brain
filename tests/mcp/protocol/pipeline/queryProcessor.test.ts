@@ -5,14 +5,13 @@
  */
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
-import { QueryProcessor } from '@/mcp/protocol/pipeline/queryProcessor';
-import { NoteService } from '@/mcp/protocol/components/noteService';
+import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
+import type { ConversationContext } from '@/mcp/contexts/conversations';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel } from '@/mcp/model';
-import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '../../../utils/loggerUtils';
-import { createMockNote, createMockProfile } from '../../../mocks';
-
-// Import types
+import type { ModelResponse } from '@/mcp/model/claude';
+import { NoteService } from '@/mcp/protocol/components/noteService';
+import { QueryProcessor } from '@/mcp/protocol/pipeline/queryProcessor';
 import type {
   IContextManager,
   IConversationManager,
@@ -20,10 +19,13 @@ import type {
   IProfileManager,
   ProfileAnalysisResult,
 } from '@/mcp/protocol/types';
-import type { ModelResponse } from '@/mcp/model/claude';
-import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
-import type { NoteContext } from '@/mcp';
+import logger from '@/utils/logger';
+
+import { createMockNote, createMockProfile } from '../../../mocks';
+import { mockLogger, restoreLogger } from '../../../utils/loggerUtils';
+
+// Import types
 
 // Sample data for tests
 const sampleNote = createMockNote('note-1', 'Ecosystem Architecture', ['ecosystem', 'architecture']);
@@ -70,13 +72,13 @@ describe('QueryProcessor', () => {
           return [sampleNote];
         }
         return [];
-      }
+      },
     );
     
     spyOn(NoteService.prototype, 'getRelatedNotes').mockImplementation(
       async (): Promise<Note[]> => {
         return [sampleRelatedNote];
-      }
+      },
     );
     
     // Mock the ClaudeModel complete method with correct signature
@@ -85,22 +87,22 @@ describe('QueryProcessor', () => {
         if (userPrompt.includes('ecosystem')) {
           return { 
             response: 'Ecosystem architecture involves designing interconnected components that work together.',
-            usage: { inputTokens: 100, outputTokens: 20 }
+            usage: { inputTokens: 100, outputTokens: 20 },
           };
         }
         
         if (userPrompt.includes('profile')) {
           return { 
             response: 'Your profile shows expertise in software development and architecture.',
-            usage: { inputTokens: 150, outputTokens: 25 }
+            usage: { inputTokens: 150, outputTokens: 25 },
           };
         }
         
         return { 
           response: 'I don\'t have specific information about that in my knowledge base.',
-          usage: { inputTokens: 50, outputTokens: 15 }
+          usage: { inputTokens: 50, outputTokens: 15 },
         };
-      }
+      },
     );
   });
   
@@ -110,8 +112,9 @@ describe('QueryProcessor', () => {
   const createMockContextManager = (): IContextManager => {
     return {
       getNoteContext: () => new MockNoteContext() as unknown as NoteContext,
-      getProfileContext: () => ({} as any),
-      getExternalSourceContext: () => ({} as any),
+      getProfileContext: () => ({} as unknown as ProfileContext),
+      getExternalSourceContext: () => ({} as unknown as ExternalSourceContext),
+      getConversationContext: () => ({} as unknown as ConversationContext),
       setExternalSourcesEnabled: () => {},
       getExternalSourcesEnabled: () => true,
       areContextsReady: () => true,
@@ -124,7 +127,7 @@ describe('QueryProcessor', () => {
     let hasActive = true;
     
     return {
-      getConversationMemory: () => ({} as any),
+      getConversationContext: () => ({} as unknown as ConversationContext),
       setCurrentRoom: async () => {},
       initializeConversation: async () => { hasActive = true; },
       hasActiveConversation: () => hasActive,
@@ -185,7 +188,7 @@ describe('QueryProcessor', () => {
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key'
+      'mock-api-key',
     );
     
     // Act
@@ -221,7 +224,7 @@ describe('QueryProcessor', () => {
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key'
+      'mock-api-key',
     );
     
     // Act
@@ -256,14 +259,14 @@ describe('QueryProcessor', () => {
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key'
+      'mock-api-key',
     );
     
     // Act
     await processor.processQuery('What is ecosystem architecture?', { 
       roomId: 'room-123',
       userId: 'user-123',
-      userName: 'Test User'
+      userName: 'Test User',
     });
     
     // Assert
@@ -284,7 +287,7 @@ describe('QueryProcessor', () => {
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key'
+      'mock-api-key',
     );
     
     // Act
@@ -322,7 +325,7 @@ describe('QueryProcessor', () => {
         conversationManager,
         profileManager,
         externalSourceManager,
-        'mock-api-key'
+        'mock-api-key',
       );
       
       // Act
@@ -362,7 +365,7 @@ describe('QueryProcessor', () => {
         conversationManager,
         profileManager,
         externalSourceManager,
-        'mock-api-key'
+        'mock-api-key',
       );
       
       // Act - Should not throw despite the saveTurn error
@@ -396,7 +399,7 @@ describe('QueryProcessor', () => {
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key'
+      'mock-api-key',
     );
     
     // Act

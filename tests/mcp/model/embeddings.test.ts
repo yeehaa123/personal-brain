@@ -76,7 +76,6 @@ mock.module('@/mcp/model', () => {
       }
       
       async getEmbedding(text: string) {
-        console.log('Using mocked getEmbedding');
         const embedding = createMockEmbedding(text);
         return {
           embedding,
@@ -85,7 +84,6 @@ mock.module('@/mcp/model', () => {
       }
       
       async getBatchEmbeddings(texts: string[]) {
-        console.log('Using mocked getBatchEmbeddings');
         return texts.map(text => ({
           embedding: createMockEmbedding(text),
           truncated: false,

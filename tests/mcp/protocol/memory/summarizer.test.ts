@@ -92,8 +92,12 @@ describe('ConversationSummarizer', () => {
     expect(summary.turnCount).toBe(3);
     
     // Check timestamps are consistent
-    expect(summary.startTimestamp).toEqual(sampleTurns[0].timestamp);
-    expect(summary.endTimestamp).toEqual(sampleTurns[2].timestamp);
+    // Ensure timestamps exist for the test
+    const firstTimestamp = sampleTurns[0].timestamp || new Date();
+    const lastTimestamp = sampleTurns[2].timestamp || new Date();
+    
+    expect(summary.startTimestamp).toEqual(firstTimestamp);
+    expect(summary.endTimestamp).toEqual(lastTimestamp);
     
     // Check metadata contains original turn IDs
     expect(summary.metadata && summary.metadata['originalTurnIds']).toHaveLength(3);

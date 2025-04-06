@@ -1,8 +1,9 @@
 /**
  * Context Manager for BrainProtocol
- * Manages access to note, profile, and external source contexts
+ * Manages access to note, profile, conversation, and external source contexts
  */
 import {
+  ConversationContext,
   ExternalSourceContext,
   NoteContext,
   ProfileContext,
@@ -28,6 +29,7 @@ export class ContextManager implements IContextManager {
   private readonly noteContext: NoteContext;
   private readonly profileContext: ProfileContext;
   private readonly externalSourceContext: ExternalSourceContext;
+  private readonly conversationContext: ConversationContext;
   
   // State
   private useExternalSources: boolean;
@@ -41,6 +43,8 @@ export class ContextManager implements IContextManager {
   constructor(config: BrainProtocolConfig) {
     const apiKey = config.getApiKey();
     const newsApiKey = config.newsApiKey;
+    const interfaceType = config.interfaceType || 'cli';
+    const roomId = config.roomId;
     
     // Initialize the contexts with singletons
     // This ensures we're using the same context instances throughout the application
@@ -48,12 +52,28 @@ export class ContextManager implements IContextManager {
       this.noteContext = NoteContext.getInstance(apiKey);
       this.profileContext = ProfileContext.getInstance(apiKey);
       this.externalSourceContext = ExternalSourceContext.getInstance(apiKey, newsApiKey);
+      this.conversationContext = ConversationContext.getInstance({
+        // Pass any configuration needed for conversation context
+        anchorName: config.anchorName || 'Host',
+        anchorId: config.anchorId,
+      });
       
       // Connect NoteContext to ProfileContext for related note operations
       this.profileContext.setNoteContext(this.noteContext);
       
       // Set initial state
       this.useExternalSources = config.useExternalSources;
+      
+      // Initialize conversation if roomId is provided
+      if (roomId) {
+        this.conversationContext.getOrCreateConversationForRoom(roomId, interfaceType)
+          .then(conversationId => {
+            logger.debug(`Initialized conversation for room ${roomId}: ${conversationId}`);
+          })
+          .catch(error => {
+            logger.warn(`Failed to initialize conversation for room ${roomId}:`, error);
+          });
+      }
       
       // Mark as successfully initialized
       this.initialized = true;
@@ -64,7 +84,7 @@ export class ContextManager implements IContextManager {
       logger.error('Failed to initialize one or more contexts:', error);
       throw new ValidationError(
         'Context manager failed to initialize',
-        { apiKey: !!apiKey, newsApiKey: !!newsApiKey, error },
+        { apiKey: !!apiKey, newsApiKey: !!newsApiKey, interfaceType, error },
       );
     }
   }
@@ -98,6 +118,16 @@ export class ContextManager implements IContextManager {
     this.ensureContextsReady();
     return this.externalSourceContext;
   }
+  
+  /**
+   * Get the conversation context for conversation management
+   * @returns The conversation context instance
+   * @throws Error if context is not properly initialized
+   */
+  getConversationContext(): ConversationContext {
+    this.ensureContextsReady();
+    return this.conversationContext;
+  }
 
   /**
    * Enable or disable external sources functionality
@@ -127,7 +157,8 @@ export class ContextManager implements IContextManager {
     return this.initialized &&
            isDefined(this.noteContext) && 
            isDefined(this.profileContext) && 
-           isDefined(this.externalSourceContext);
+           isDefined(this.externalSourceContext) &&
+           isDefined(this.conversationContext);
   }
 
   /**
@@ -139,7 +170,7 @@ export class ContextManager implements IContextManager {
       throw new Error(
         this.initializationError
           ? `Contexts not ready: ${this.initializationError.message}`
-          : 'Contexts not ready: Initialization incomplete'
+          : 'Contexts not ready: Initialization incomplete',
       );
     }
   }
@@ -166,6 +197,12 @@ export class ContextManager implements IContextManager {
     NoteContext.resetInstance();
     ProfileContext.resetInstance();
     ExternalSourceContext.resetInstance();
+    // Reset the conversation context as well
+    if (ConversationContext.resetInstance) {
+      ConversationContext.resetInstance();
+    } else {
+      logger.warn('ConversationContext does not support resetInstance');
+    }
     logger.debug('All context singletons have been reset');
   }
 }

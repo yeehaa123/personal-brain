@@ -8,9 +8,8 @@ import { MockProfileRepository } from '@test';
 // Mock the tag extractor module
 mock.module('@/utils/tagExtractor', () => {
   return {
-    extractTags: async (content: string, _existingTags: string[] = [], _maxTags: number = 10) => {
-      console.log('Mock extractTags called with prompt:', content.substring(0, 50) + '...');
-      // Return predictable tags based on content
+    extractTags: async (_input: string, _existingTags: string[] = [], _maxTags: number = 10) => {
+      // Return predictable tags regardless of content
       return ['software-development', 'typescript', 'react', 'engineering'];
     },
   };

@@ -4,40 +4,80 @@
  * This file tests specifically how the conversation-to-note service processes
  * user and assistant turns when creating notes.
  */
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import type { ConversationInfo, ConversationStorage, ConversationSummary, SearchCriteria } from '@/mcp/contexts/conversations';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import logger from '@/utils/logger';
 import { createTestNote } from '@test/utils/embeddingUtils';
+import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
 
 // Mock classes to avoid external dependencies
-class MockInMemoryStorage {
+class MockConversationStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();
 
   async getConversation(id: string): Promise<Conversation | null> {
     return this.conversations.get(id) || null;
   }
 
-  async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<void> {
+  async updateMetadata(id: string, metadata: Record<string, unknown>): Promise<boolean> {
     const conversation = this.conversations.get(id);
     if (conversation) {
       conversation.metadata = { ...conversation.metadata, ...metadata };
+      return true;
     }
+    return false;
   }
 
   setConversation(id: string, conversation: Conversation): void {
     this.conversations.set(id, conversation);
   }
+
+  // Add required stub methods for ConversationStorage interface
+  async createConversation(): Promise<string> { return ''; }
+  async getConversationByRoom(): Promise<string | null> { return null; }
+  async updateConversation(): Promise<boolean> { return false; }
+  async deleteConversation(): Promise<boolean> { return false; }
+  async addTurn(): Promise<string> { return ''; }
+  async getTurns(): Promise<ConversationTurn[]> { return []; }
+  async updateTurn(): Promise<boolean> { return false; } 
+  async addSummary(): Promise<string> { return ''; }
+  async getSummaries(): Promise<ConversationSummary[]> { return []; }
+  async findConversations(_criteria: SearchCriteria): Promise<ConversationInfo[]> {
+    const now = new Date();
+    return [{ 
+      id: 'mock-conv-1', 
+      interfaceType: 'cli', 
+      roomId: 'mock-room-1',
+      startedAt: now, 
+      updatedAt: now, 
+      turnCount: 2,
+    }];
+  }
+  
+  async getRecentConversations(_limit?: number, _interfaceType?: 'cli' | 'matrix'): Promise<ConversationInfo[]> {
+    const now = new Date();
+    return [{ 
+      id: 'mock-conv-1', 
+      interfaceType: 'cli', 
+      roomId: 'mock-room-1',
+      startedAt: now, 
+      updatedAt: now, 
+      turnCount: 2,
+    }];
+  }
+  async getMetadata(): Promise<Record<string, unknown> | null> { return null; }
 }
 
 describe('Assistant Response Handling in Conversations', () => {
   // Setup mocks and service
-  let mockStorage: MockInMemoryStorage;
+  let mockStorage: MockConversationStorage;
   let service: ConversationToNoteService;
   let mockConversation: Conversation;
+  let originalLogger: Record<string, unknown>;
   const testConversationId = 'test-conversation-id';
 
   // Mock services
@@ -90,8 +130,11 @@ describe('Assistant Response Handling in Conversations', () => {
   }
 
   beforeEach(() => {
+    // Mock the logger
+    originalLogger = mockLogger(logger);
+    
     // Create fresh mock storage
-    mockStorage = new MockInMemoryStorage();
+    mockStorage = new MockConversationStorage();
 
     // Setup basic conversation
     mockConversation = {
@@ -112,8 +155,13 @@ describe('Assistant Response Handling in Conversations', () => {
     service = new ConversationToNoteService(
       mockNoteRepository,
       mockEmbeddingService,
-      mockStorage as unknown as InMemoryStorage,
+      mockStorage,
     );
+  });
+  
+  afterEach(() => {
+    // Restore the original logger
+    restoreLogger(logger, originalLogger);
   });
 
   test('should correctly identify assistant vs user turns', async () => {
@@ -155,9 +203,7 @@ describe('Assistant Response Handling in Conversations', () => {
     // It should not contain empty answers or questions
     expect(preview.content).not.toContain('**Answer**: (No response)');
     
-    // Log the content for inspection
-    console.log('Note preview content:');
-    console.log(preview.content);
+    // Note: We're no longer logging the preview content to keep test output clean
   });
 
   test('should correctly handle multiple question-answer pairs', async () => {
@@ -217,10 +263,6 @@ describe('Assistant Response Handling in Conversations', () => {
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
     expect(preview.content).toContain('**Question**: Can you give me examples?');
     expect(preview.content).toContain('**Answer**: Examples include cloud platforms like AWS');
-    
-    // Log the content for inspection
-    console.log('Multiple Q&A pairs content:');
-    console.log(preview.content);
   });
 
   test('should handle HTML content in assistant responses', async () => {
@@ -261,10 +303,6 @@ describe('Assistant Response Handling in Conversations', () => {
     expect(preview.content).toContain('Ecosystem architecture refers to designing systems with interconnected components.');
     expect(preview.content).not.toContain('<h3>');
     expect(preview.content).not.toContain('<p>');
-    
-    // Log the content for inspection
-    console.log('HTML content converted:');
-    console.log(preview.content);
   });
 
   test('should correctly handle different Matrix userId formats', async () => {
@@ -308,10 +346,6 @@ describe('Assistant Response Handling in Conversations', () => {
     // Check that the note contains the question-answer pair
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
-    
-    // Log the content for inspection
-    console.log('Matrix userId format handling:');
-    console.log(preview.content);
   });
 
   test('should work with metadata in conversation turns', async () => {
@@ -360,9 +394,5 @@ describe('Assistant Response Handling in Conversations', () => {
     // Verify the content has proper question-answer format
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
-    
-    // Log the content for inspection
-    console.log('Metadata handling:');
-    console.log(preview.content);
   });
 });

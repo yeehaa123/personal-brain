@@ -2,6 +2,7 @@
  * Conversation Manager for BrainProtocol
  * Manages conversation history and persistence
  */
+import type { ConversationContext } from '@/mcp/contexts/conversations';
 import { ConversationMemory } from '@/mcp/protocol/memory';
 import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
@@ -23,7 +24,10 @@ export class ConversationManager implements IConversationManager {
    */
   constructor(config: BrainProtocolConfig) {
     // Use injected storage if provided, otherwise use singleton getInstance()
-    const memoryStorage = config.memoryStorage || InMemoryStorage.getInstance();
+    // Note: memoryStorage is now stored directly in config rather than as a method
+    const memoryStorage = 
+      (config.memoryStorage as InMemoryStorage) || 
+      InMemoryStorage.getInstance();
     
     // Initialize conversation memory with interface type
     this.conversationMemory = new ConversationMemory({
@@ -47,6 +51,15 @@ export class ConversationManager implements IConversationManager {
    */
   getConversationMemory(): ConversationMemory {
     return this.conversationMemory;
+  }
+  
+  /**
+   * Get the conversation context (required by IConversationManager interface)
+   * @returns The conversation context
+   */
+  getConversationContext(): ConversationContext {
+    // This is a temporary stub until ConversationContext is fully integrated
+    throw new Error('ConversationContext is not yet implemented in this implementation');
   }
 
   /**

@@ -3,8 +3,8 @@
  * All types are exported for use by components
  */
 import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
+import type { ConversationContext } from '@/mcp/contexts/conversations';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
-import type { ConversationMemory } from '@/mcp/protocol/memory';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
@@ -26,6 +26,10 @@ export interface BrainProtocolOptions {
   roomId?: string;
   /** Memory storage implementation for conversation memory */
   memoryStorage?: ConversationMemoryStorage;
+  /** Anchor name for conversation context (usually "Host") */
+  anchorName?: string;
+  /** Anchor ID for conversation context (user identifier) */
+  anchorId?: string;
 }
 
 /**
@@ -161,6 +165,9 @@ export interface IContextManager {
   /** Get access to the external source context for external knowledge */
   getExternalSourceContext(): ExternalSourceContext;
   
+  /** Get access to the conversation context for conversation management */
+  getConversationContext(): ConversationContext;
+  
   /** Enable or disable external sources functionality */
   setExternalSourcesEnabled(enabled: boolean): void;
   
@@ -178,14 +185,14 @@ export interface IContextManager {
  * Interface for ConversationManager
  */
 export interface IConversationManager {
-  getConversationMemory(): ConversationMemory;
+  getConversationContext(): ConversationContext;
   setCurrentRoom(roomId: string): Promise<void>;
   initializeConversation(): Promise<void>;
   hasActiveConversation(): boolean;
   getCurrentConversationId(): string | null;
   getConversation(conversationId: string): Promise<Conversation | null>;
   saveTurn(query: string, response: string, options?: TurnOptions): Promise<void>;
-  getConversationHistory(): Promise<string>;
+  getConversationHistory(conversationId?: string): Promise<string>;
 }
 
 /**

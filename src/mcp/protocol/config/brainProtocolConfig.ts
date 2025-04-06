@@ -2,10 +2,9 @@
  * Configuration management for BrainProtocol
  */
 import { aiConfig, conversationConfig } from '@/config';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
+import { ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
-import { ValidationError } from '@/utils/errorUtils';
 
 import type { BrainProtocolOptions } from '../types';
 
@@ -28,8 +27,16 @@ export class BrainProtocolConfig {
   /** API key for news services */
   readonly newsApiKey?: string;
   
-  /** Memory storage implementation for conversation memory */
-  readonly memoryStorage?: ConversationMemoryStorage;
+  /** 
+   * Memory storage for conversations (backward compatibility)
+   */
+  readonly memoryStorage?: unknown;
+
+  /** Anchor name for conversation context */
+  readonly anchorName?: string;
+
+  /** Anchor ID for conversation context */
+  readonly anchorId?: string;
 
   /** Version of the protocol */
   readonly version: string = '1.0.0';
@@ -65,7 +72,9 @@ export class BrainProtocolConfig {
     this.roomId = options.roomId || 
       (this.interfaceType === 'cli' ? conversationConfig.defaultCliRoomId : undefined);
     
-    // Set memory storage
+    // Set conversation context properties
+    this.anchorName = options.anchorName;
+    this.anchorId = options.anchorId;
     this.memoryStorage = options.memoryStorage;
 
     // Validate the configuration
@@ -86,7 +95,7 @@ export class BrainProtocolConfig {
     if (this.interfaceType === 'cli' && !isNonEmptyString(this.roomId)) {
       throw new ValidationError(
         'BrainProtocol configuration is invalid: Room ID is required for CLI interface',
-        { interfaceType: this.interfaceType, roomId: this.roomId }
+        { interfaceType: this.interfaceType, roomId: this.roomId },
       );
     }
 
@@ -150,7 +159,7 @@ export class BrainProtocolConfig {
     name: string;
     version: string;
     enableExternalSources: boolean;
-  } {
+    } {
     return {
       apiKey: this.getApiKey(),
       newsApiKey: this.newsApiKey,
