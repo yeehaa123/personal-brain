@@ -287,13 +287,13 @@ personal-brain/
 
 ## Architecture
 
-The project uses a service-oriented architecture following the Single Responsibility Principle:
+The project uses a service-oriented architecture following the Single Responsibility Principle. For comprehensive technical architecture documentation, see [ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 1. **Facade Pattern**: The Context classes serve as facades over specialized services
 2. **Repository Pattern**: Data access is abstracted through repository classes
 3. **Service Layer**: Business logic is contained in focused service classes
-4. **MCP Architecture**: The overall system uses Model-Context-Protocol architecture
-5. **Tiered Memory Pattern**: Conversation history uses active, summary, and archive tiers
+4. **MCP Architecture**: The overall system uses Model-Context-Protocol architecture ([detailed documentation](docs/BRAIN_PROTOCOL_ARCHITECTURE.md))
+5. **Tiered Memory Pattern**: Conversation history uses active, summary, and archive tiers ([detailed documentation](docs/TIERED_MEMORY.md))
 
 ### Recent Architectural Improvements
 
@@ -310,7 +310,6 @@ The codebase has been significantly enhanced with new architectural patterns:
   - **Archive Tier**: Preserves original turns that have been summarized
   - **Automatic Summarization**: Uses AI to condense older conversations to optimize token usage
   - **Memory Management**: Configurable thresholds for tier transitions
-  - [Detailed documentation](docs/TIERED_MEMORY.md) available
 
 ## Development
 
