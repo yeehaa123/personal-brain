@@ -4,13 +4,15 @@
  * Exports all components of the profiles module for easy access
  */
 
-// Export the main context class
-export { ProfileContext } from './profileContext';
+// Export the main context class using the new standardized implementation
+export { ProfileContext } from './core/profileContext';
+export type { ProfileContextConfig } from './core/profileContext';
 
-// Export subcomponents
+// Export standardized adapters
+export { ProfileStorageAdapter } from './adapters/profileStorageAdapter';
+
+// Export formatters
 export { ProfileFormatter } from './formatters/profileFormatter';
-export { ProfileMcpResources } from './mcp/profileMcpResources';
-export { ProfileMcpTools } from './mcp/profileMcpTools';
 
 // Export types
 export type { 

@@ -55,7 +55,7 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
   
   // Use singleton instances of all contexts
   const noteContext = NoteContext.getInstance(config.apiKey);
-  const profileContext = ProfileContext.getInstance(config.apiKey);
+  const profileContext = ProfileContext.getInstance({ apiKey: config.apiKey });
   const externalSourceContext = ExternalSourceContext.getInstance(
     config.apiKey, 
     config.newsApiKey,

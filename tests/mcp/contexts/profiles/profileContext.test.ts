@@ -148,7 +148,7 @@ describe('ProfileContext MCP SDK Implementation', () => {
   
   beforeEach(() => {
     // Create a new context with a mock API key for each test
-    profileContext = new ProfileContext('mock-api-key');
+    profileContext = new ProfileContext({ apiKey: 'mock-api-key' });
     
     // Also make sure the MCPServer is set properly
     Object.defineProperty(profileContext, 'mcpServer', {

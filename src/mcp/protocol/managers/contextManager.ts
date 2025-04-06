@@ -50,7 +50,7 @@ export class ContextManager implements IContextManager {
     // This ensures we're using the same context instances throughout the application
     try {
       this.noteContext = NoteContext.getInstance(apiKey);
-      this.profileContext = ProfileContext.getInstance(apiKey);
+      this.profileContext = ProfileContext.getInstance({ apiKey });
       this.externalSourceContext = ExternalSourceContext.getInstance(apiKey, newsApiKey);
       this.conversationContext = ConversationContext.getInstance({
         // Pass any configuration needed for conversation context

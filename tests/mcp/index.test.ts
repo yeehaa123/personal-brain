@@ -12,7 +12,7 @@ describe('MCP SDK', () => {
   });
   
   test('ProfileContext can be imported and instantiated', () => {
-    const profileContext = new ProfileContext('mock-api-key');
+    const profileContext = new ProfileContext({ apiKey: 'mock-api-key' });
     expect(profileContext).toBeDefined();
     expect(profileContext).toBeInstanceOf(ProfileContext);
   });
@@ -25,7 +25,7 @@ describe('MCP SDK', () => {
   
   test('All contexts return MCP servers', () => {
     const noteContext = new NoteContext('mock-api-key');
-    const profileContext = new ProfileContext('mock-api-key');
+    const profileContext = new ProfileContext({ apiKey: 'mock-api-key' });
     const externalSourceContext = new ExternalSourceContext('mock-api-key', 'mock-newsapi-key');
     
     const noteMcpServer = noteContext.getMcpServer();
