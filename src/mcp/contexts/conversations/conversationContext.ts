@@ -13,7 +13,11 @@ import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conv
 import logger from '@/utils/logger';
 
 import { ConversationFormatter, type FormattingOptions } from './conversationFormatter';
-import { ConversationMcpFormatter, type McpFormattingOptions } from './conversationMcpFormatter';
+import { 
+  ConversationMcpFormatter, 
+  type McpFormattedConversation,
+  type McpFormattingOptions, 
+} from './conversationMcpFormatter';
 import type { 
   ConversationInfo, 
   ConversationStorage,
@@ -712,7 +716,7 @@ export class ConversationContext {
   async getFormattedConversationForMcp(
     conversationId: string,
     options: McpFormattingOptions = {},
-  ): Promise<Record<string, unknown> | null> {
+  ): Promise<McpFormattedConversation | null> {
     // Get conversation
     const conversation = await this.storage.getConversation(conversationId);
     if (!conversation) {

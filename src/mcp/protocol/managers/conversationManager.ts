@@ -3,8 +3,8 @@
  * Manages conversation history and persistence
  */
 import type { ConversationContext } from '@/mcp/contexts/conversations';
-import { ConversationMemory } from '@/mcp/protocol/memory';
-import { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
+import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
@@ -32,7 +32,7 @@ export class ConversationManager implements IConversationManager {
     // Initialize conversation memory with interface type
     this.conversationMemory = new ConversationMemory({
       interfaceType: config.interfaceType,
-      storage: memoryStorage,
+      storage: memoryStorage as unknown as ConversationMemoryStorage,  // Type assertion for compatibility
       apiKey: config.getApiKey(),
     });
     

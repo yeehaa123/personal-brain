@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
-import type { InMemoryStorage } from '@/mcp/protocol/memory/inMemoryStorage';
+import type { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';

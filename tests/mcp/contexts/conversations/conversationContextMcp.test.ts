@@ -3,6 +3,7 @@
  */
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
+import type { McpServer } from '@/mcp';
 import { ConversationContext } from '@/mcp/contexts/conversations';
 import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 import {
@@ -68,7 +69,8 @@ describe('ConversationContext MCP Integration', () => {
   });
   
   test('registerOnServer returns false with undefined server', () => {
-    const result = conversationContext.registerOnServer(undefined as any);
+    // Passing undefined to test error handling
+    const result = conversationContext.registerOnServer(undefined as unknown as McpServer);
     expect(result).toBe(false);
   });
   
@@ -146,37 +148,42 @@ describe('ConversationContext MCP Integration', () => {
     const createTool = tools.find(t => t.name === 'create_conversation');
     expect(createTool).toBeDefined();
     if (createTool?.parameters) {
-      const params = createTool.parameters as any;
-      expect(params.properties.interfaceType).toBeDefined();
-      expect(params.properties.roomId).toBeDefined();
+      // Using unknown type and asserting properties for type safety
+      const params = createTool.parameters as Record<string, unknown>;
+      const properties = params['properties'] as Record<string, unknown>;
+      expect(properties?.['interfaceType']).toBeDefined();
+      expect(properties?.['roomId']).toBeDefined();
     }
     
     const addTurnTool = tools.find(t => t.name === 'add_turn');
     expect(addTurnTool).toBeDefined();
     if (addTurnTool?.parameters) {
-      const params = addTurnTool.parameters as any;
-      expect(params.properties.conversationId).toBeDefined();
-      expect(params.properties.query).toBeDefined();
-      expect(params.properties.response).toBeDefined();
+      // Using unknown type and asserting properties for type safety
+      const params = addTurnTool.parameters as Record<string, unknown>;
+      const properties = params['properties'] as Record<string, unknown>;
+      expect(properties?.['conversationId']).toBeDefined();
+      expect(properties?.['query']).toBeDefined();
+      expect(properties?.['response']).toBeDefined();
     }
   });
   
   test('Zod schemas are used for tool validation', () => {
-    // Get access to getToolSchema method
-    // This is a bit of a hack for testing private methods
-    const context = conversationContext as any;
+    // Get access to getToolSchema method for testing private methods
+    const context = conversationContext as unknown as { 
+      getToolSchema: (tool: { name: string }) => Record<string, unknown> 
+    };
     const getToolSchema = context.getToolSchema.bind(context);
     
     // Check create_conversation schema
     const createSchema = getToolSchema({ name: 'create_conversation' });
-    expect(createSchema.interfaceType).toBeDefined();
-    expect(createSchema.roomId).toBeDefined();
+    expect(createSchema['interfaceType']).toBeDefined();
+    expect(createSchema['roomId']).toBeDefined();
     
     // Check add_turn schema
     const addTurnSchema = getToolSchema({ name: 'add_turn' });
-    expect(addTurnSchema.conversationId).toBeDefined();
-    expect(addTurnSchema.query).toBeDefined();
-    expect(addTurnSchema.response).toBeDefined();
+    expect(addTurnSchema['conversationId']).toBeDefined();
+    expect(addTurnSchema['query']).toBeDefined();
+    expect(addTurnSchema['response']).toBeDefined();
     
     // Check unknown tool returns empty schema
     const unknownSchema = getToolSchema({ name: 'unknown_tool' });
@@ -184,19 +191,20 @@ describe('ConversationContext MCP Integration', () => {
   });
   
   test('extractPathParams correctly extracts parameters from URL paths', () => {
-    // Get access to extractPathParams method
-    // This is a bit of a hack for testing private methods
-    const context = conversationContext as any;
+    // Get access to extractPathParams method for testing private methods
+    const context = conversationContext as unknown as { 
+      extractPathParams: (path: string, pattern: string) => Record<string, string> 
+    };
     const extractPathParams = context.extractPathParams.bind(context);
     
     // Test with basic path
     const params1 = extractPathParams('/conversations/123', 'conversations/:id');
-    expect(params1.id).toBe('123');
+    expect(params1['id']).toBe('123');
     
     // Test with multiple parameters
     const params2 = extractPathParams('/users/123/posts/456', 'users/:userId/posts/:postId');
-    expect(params2.userId).toBe('123');
-    expect(params2.postId).toBe('456');
+    expect(params2['userId']).toBe('123');
+    expect(params2['postId']).toBe('456');
     
     // Test with no parameters
     const params3 = extractPathParams('/about', 'about');
@@ -204,6 +212,6 @@ describe('ConversationContext MCP Integration', () => {
     
     // Test with partial match
     const params4 = extractPathParams('/users/123/profile', 'users/:userId');
-    expect(params4.userId).toBe('123');
+    expect(params4['userId']).toBe('123');
   });
 });

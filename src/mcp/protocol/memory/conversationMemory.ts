@@ -1,6 +1,7 @@
 /**
  * Tiered ConversationMemory class for managing conversation history
  */
+import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 import { getEnv } from '@/utils/configUtils';
 import logger from '@utils/logger';
 
@@ -15,7 +16,6 @@ import type {
   ConversationTurn,
 } from '../schemas/conversationSchemas';
 
-import { InMemoryStorage } from './inMemoryStorage';
 import { ConversationSummarizer } from './summarizer';
 
 
@@ -54,7 +54,7 @@ export class ConversationMemory {
     // Use provided storage or create in-memory storage as default
     // Note: In production, we use the singleton instance, but tests should use createFresh()
     // for proper isolation. This way we avoid test interference.
-    this.storage = config.storage || InMemoryStorage.getInstance();
+    this.storage = config.storage || (InMemoryStorage.getInstance() as unknown as ConversationMemoryStorage);
     
     // Parse and validate options with defaults from the schema
     this.options = ConversationMemoryOptionsSchema.parse(config.options || {});

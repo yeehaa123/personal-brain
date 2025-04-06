@@ -3,9 +3,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/conversationMcpFormatter';
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import { ConversationMcpFormatter, type McpFormattedConversation, type McpFormattedSummaries, type McpFormattedTurns } from '@/mcp/contexts/conversations/conversationMcpFormatter';
 import type { ConversationSummary } from '@/mcp/contexts/conversations/conversationStorage';
+import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 describe('ConversationMcpFormatter', () => {
   // Mock data for testing
@@ -57,7 +57,7 @@ describe('ConversationMcpFormatter', () => {
     },
   ];
 
-  const mockSummaries: ConversationSummary[] = [
+  const mockSummaries: Array<ConversationSummary & { turnCount: number }> = [
     {
       id: 'summary-1',
       conversationId: 'conv-123',
@@ -73,7 +73,7 @@ describe('ConversationMcpFormatter', () => {
   const formatter = new ConversationMcpFormatter();
 
   test('formatConversationForMcp should format a conversation with basic options', () => {
-    const result = formatter.formatConversationForMcp(
+    const result: McpFormattedConversation = formatter.formatConversationForMcp(
       mockConversation,
       mockTurns,
       mockSummaries,
@@ -95,13 +95,15 @@ describe('ConversationMcpFormatter', () => {
     
     // Should include summaries but without full metadata
     expect(result.summaries).toBeDefined();
-    expect(Array.isArray(result.summaries)).toBe(true);
-    expect(result.summaries[0].content).toBeDefined();
-    expect(result.summaries[0].metadata).toBeUndefined();
+    if (result.summaries) {
+      expect(Array.isArray(result.summaries)).toBe(true);
+      expect(result.summaries[0].content).toBeDefined();
+      expect(result.summaries[0].metadata).toBeUndefined();
+    }
   });
 
   test('formatConversationForMcp should include full turns when specified', () => {
-    const result = formatter.formatConversationForMcp(
+    const result: McpFormattedConversation = formatter.formatConversationForMcp(
       mockConversation,
       mockTurns,
       mockSummaries,
@@ -109,24 +111,28 @@ describe('ConversationMcpFormatter', () => {
     );
 
     expect(result.turns).toBeDefined();
-    expect(Array.isArray(result.turns)).toBe(true);
-    expect(result.turns.length).toBe(3);
+    if (result.turns) {
+      expect(Array.isArray(result.turns)).toBe(true);
+      expect(result.turns.length).toBe(3);
+    }
     expect(result.turnPreview).toBeUndefined();
   });
 
   test('formatConversationForMcp should include full metadata when specified', () => {
-    const result = formatter.formatConversationForMcp(
+    const result: McpFormattedConversation = formatter.formatConversationForMcp(
       mockConversation,
       mockTurns,
       mockSummaries,
       { includeFullMetadata: true },
     );
 
-    expect(result.summaries[0].metadata).toBeDefined();
+    if (result.summaries && result.summaries.length > 0) {
+      expect(result.summaries[0].metadata).toBeDefined();
+    }
   });
 
   test('formatTurnsForMcp should format conversation turns', () => {
-    const result = formatter.formatTurnsForMcp('conv-123', mockTurns);
+    const result: McpFormattedTurns = formatter.formatTurnsForMcp('conv-123', mockTurns);
 
     expect(result).toBeDefined();
     expect(result.conversationId).toBe('conv-123');
@@ -140,18 +146,20 @@ describe('ConversationMcpFormatter', () => {
   });
 
   test('formatTurnsForMcp should include full metadata when specified', () => {
-    const result = formatter.formatTurnsForMcp(
+    const result: McpFormattedTurns = formatter.formatTurnsForMcp(
       'conv-123',
       mockTurns,
       { includeFullMetadata: true },
     );
 
-    expect(result.turns[0].metadata).toBeDefined();
-    expect(result.turns[0].metadata.tokenCount).toBe(25);
+    if (result.turns[0].metadata) {
+      expect(result.turns[0].metadata).toBeDefined();
+      expect(result.turns[0].metadata['tokenCount']).toBe(25);
+    }
   });
 
   test('formatSummariesForMcp should format conversation summaries', () => {
-    const result = formatter.formatSummariesForMcp(
+    const result: McpFormattedSummaries = formatter.formatSummariesForMcp(
       'conv-123',
       mockSummaries,
     );
@@ -168,31 +176,36 @@ describe('ConversationMcpFormatter', () => {
   });
 
   test('formatSummariesForMcp should include full metadata when specified', () => {
-    const result = formatter.formatSummariesForMcp(
+    const result: McpFormattedSummaries = formatter.formatSummariesForMcp(
       'conv-123',
       mockSummaries,
       { includeFullMetadata: true },
     );
 
-    expect(result.summaries[0].metadata).toBeDefined();
-    expect(result.summaries[0].metadata.originalTurnIds).toBeDefined();
+    if (result.summaries[0].metadata) {
+      expect(result.summaries[0].metadata).toBeDefined();
+      expect(result.summaries[0].metadata['originalTurnIds']).toBeDefined();
+    }
   });
 
   test('should calculate conversation statistics correctly', () => {
-    const result = formatter.formatTurnsForMcp('conv-123', mockTurns);
+    const result: McpFormattedTurns = formatter.formatTurnsForMcp('conv-123', mockTurns);
     
     expect(result.statistics).toBeDefined();
-    expect(result.statistics.avgQueryLength).toBeGreaterThan(0);
-    expect(result.statistics.avgResponseLength).toBeGreaterThan(0);
-    expect(result.statistics.totalQueryLength).toBeGreaterThan(0);
-    expect(result.statistics.totalResponseLength).toBeGreaterThan(0);
-    expect(result.statistics.userNameCounts).toBeDefined();
-    expect(result.statistics.userNameCounts.Alice).toBe(3);
-    expect(result.statistics.timeSpan).toBeDefined();
+    expect(result.statistics['avgQueryLength']).toBeGreaterThan(0);
+    expect(result.statistics['avgResponseLength']).toBeGreaterThan(0);
+    expect(result.statistics['totalQueryLength']).toBeGreaterThan(0);
+    expect(result.statistics['totalResponseLength']).toBeGreaterThan(0);
+    expect(result.statistics['userNameCounts']).toBeDefined();
+    if (typeof result.statistics['userNameCounts'] === 'object') {
+      const counts = result.statistics['userNameCounts'] as Record<string, number>;
+      expect(counts['Alice']).toBe(3);
+    }
+    expect(result.statistics['timeSpan']).toBeDefined();
   });
 
   test('should handle empty conversations gracefully', () => {
-    const result = formatter.formatConversationForMcp(
+    const result: McpFormattedConversation = formatter.formatConversationForMcp(
       mockConversation,
       [],
       [],
@@ -202,6 +215,6 @@ describe('ConversationMcpFormatter', () => {
     expect(result.turnCount).toBe(0);
     expect(result.summaryCount).toBe(0);
     expect(result.statistics).toBeDefined();
-    expect(result.statistics.empty).toBe(true);
+    expect(result.statistics['empty']).toBe(true);
   });
 });

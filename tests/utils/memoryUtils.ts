@@ -51,6 +51,7 @@
  * ```
  */
 
+import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 /**
@@ -69,11 +70,9 @@ export async function createIsolatedMemory(options?: {
 }) {
   // Import dynamically to avoid circular dependencies
   // Using dynamic imports instead of require() to satisfy linting rules
-  const InMemoryStorageModule = await import('@/mcp/protocol/memory/inMemoryStorage');
-  const ConversationMemoryModule = await import('@/mcp/protocol/memory/conversationMemory');
+  const Module = await import('@/mcp/protocol/memory');
   
-  const { InMemoryStorage } = InMemoryStorageModule;
-  const { ConversationMemory } = ConversationMemoryModule;
+  const { InMemoryStorage, ConversationMemory } = Module;
   
   // Always create a fresh isolated storage instance
   const storage = InMemoryStorage.createFresh();
@@ -81,7 +80,7 @@ export async function createIsolatedMemory(options?: {
   // Create the memory with the isolated storage
   const memory = new ConversationMemory({
     interfaceType: options?.interfaceType || 'cli',
-    storage,
+    storage: storage as unknown as ConversationMemoryStorage,
     options: options?.memoryOptions,
     apiKey: options?.apiKey,
   });

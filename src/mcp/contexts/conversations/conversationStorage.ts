@@ -28,6 +28,7 @@ export interface ConversationSummary {
   endTurnId?: string;
   createdAt: Date;
   metadata?: Record<string, unknown>;
+  turnCount?: number; // Number of turns this summary represents
 }
 
 /**

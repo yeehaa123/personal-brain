@@ -1,41 +1,31 @@
 /**
- * In-memory implementation of the ConversationMemoryStorage interface
+ * InMemoryStorage adapter for ConversationMemoryStorage compatibility
+ * 
+ * This file provides a compatibility layer that adapts the current InMemoryStorage
+ * from contexts/conversations to the older ConversationMemoryStorage interface.
  */
-import { nanoid } from 'nanoid';
+import type { ConversationSummary as ContextConversationSummary } from '@/mcp/contexts/conversations/conversationStorage';
+import { InMemoryStorage as ContextInMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
 
 import type { ConversationMemoryStorage } from '../schemas/conversationMemoryStorage';
-import { 
-  ConversationSchema, 
-  ConversationSummarySchema,
-  ConversationTurnSchema,
-} from '../schemas/conversationSchemas';
-import type {
-  Conversation,
-  ConversationSummary,
-  ConversationTurn,
-} from '../schemas/conversationSchemas';
+import type { Conversation, ConversationSummary, ConversationTurn } from '../schemas/conversationSchemas';
 
 /**
- * In-memory storage adapter for tiered conversation memory
- * This implementation stores all data in memory and will be lost when the process ends
- * 
- * Uses the singleton pattern to ensure all components access the same conversation store
+ * Adapter class that wraps the new InMemoryStorage to implement the ConversationMemoryStorage interface
  */
 export class InMemoryStorage implements ConversationMemoryStorage {
-  private conversations: Map<string, Conversation>;
-  private roomIdIndex: Map<string, string>; // Maps roomId -> conversationId
-  
-  // Singleton instance
-  private static instance: InMemoryStorage;
-  
-  constructor() {
-    // Initialize maps in constructor to ensure each instance has its own maps
-    this.conversations = new Map();
-    this.roomIdIndex = new Map();
-  }
-  
+  private storage: ContextInMemoryStorage;
+  private static instance: InMemoryStorage | null = null;
+
   /**
-   * Get the singleton instance of InMemoryStorage
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor(storage?: ContextInMemoryStorage) {
+    this.storage = storage || ContextInMemoryStorage.getInstance();
+  }
+
+  /**
+   * Get the singleton instance
    */
   public static getInstance(): InMemoryStorage {
     if (!InMemoryStorage.instance) {
@@ -43,170 +33,155 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     }
     return InMemoryStorage.instance;
   }
-  
+
+  /**
+   * Create a fresh instance for testing
+   */
+  public static createFresh(): InMemoryStorage {
+    return new InMemoryStorage(ContextInMemoryStorage.createFresh());
+  }
+
   /**
    * Reset the storage state (for testing)
    */
   reset(): void {
-    this.conversations.clear();
-    this.roomIdIndex.clear();
-  }
-  
-  /**
-   * Static method to create a fresh instance (for testing)
-   * Ensures a completely isolated instance with no shared state
-   * 
-   * This method creates a completely isolated instance of InMemoryStorage
-   * with its own Maps, ensuring it won't share any state with the singleton
-   * or with other instances created via createFresh().
-   * 
-   * Each instance also gets a unique identifier to help with debugging.
-   * 
-   * IMPORTANT: This method should always be used in tests to ensure proper isolation.
-   * Tests should NEVER use getInstance() except for tests specifically testing the singleton pattern.
-   */
-  static createFresh(): InMemoryStorage {
-    // Create a new class to ensure 100% isolated prototype across all tests
-    class IsolatedInMemoryStorage extends InMemoryStorage {
-      constructor() {
-        super();
-        this.reset();
-      }
-    }
-    
-    // Create a completely new instance that doesn't use the singleton
-    const freshInstance = new IsolatedInMemoryStorage();
-    
-    // Assign a unique instance ID to help with debugging
-    // Using a property accessor to avoid TypeScript 'any' type warning
-    Object.defineProperty(freshInstance, '_instanceId', {
-      value: `fresh-${nanoid()}`,
-      writable: false,
-      enumerable: false,
-      configurable: false,
-    });
-    
-    return freshInstance;
+    this.storage.clear();
   }
 
   /**
-   * Create a new conversation with generated ID and timestamps
+   * Create a new conversation
    */
   async createConversation(options: {
     interfaceType: 'cli' | 'matrix';
-    roomId: string; // Now required
+    roomId: string;
   }): Promise<Conversation> {
-    const now = new Date();
-    // Use nanoid with prefix for clarity and consistent length (21 chars)
-    const conversationId = `conv-${nanoid()}`;
-    
-    const conversation: Conversation = {
-      id: conversationId,
-      createdAt: now,
-      updatedAt: now,
+    const id = await this.storage.createConversation({
+      interfaceType: options.interfaceType,
+      roomId: options.roomId,
+      startedAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // Create a basic Conversation object compatible with ConversationMemoryStorage interface
+    return {
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      interfaceType: options.interfaceType,
+      roomId: options.roomId,
       activeTurns: [],
       summaries: [],
       archivedTurns: [],
-      interfaceType: options.interfaceType,
-      roomId: options.roomId,
+      metadata: {},
     };
-
-    // Validate the conversation using Zod schema
-    ConversationSchema.parse(conversation);
-
-    // Store the conversation
-    this.conversations.set(conversationId, conversation);
-    
-    // Always index by roomId for faster lookup (roomId is now required)
-    this.roomIdIndex.set(options.roomId, conversationId);
-    
-    return conversation;
   }
 
   /**
    * Get a conversation by ID
    */
   async getConversation(id: string): Promise<Conversation | null> {
-    return this.conversations.get(id) || null;
+    const conv = await this.storage.getConversation(id);
+    if (!conv) return null;
+    
+    // Convert to the expected Conversation format
+    return {
+      id: conv.id,
+      createdAt: conv.createdAt || new Date(),
+      updatedAt: conv.updatedAt,
+      interfaceType: conv.interfaceType,
+      roomId: conv.roomId,
+      activeTurns: [], // Will be populated if needed elsewhere
+      summaries: [],   // Will be populated if needed elsewhere
+      archivedTurns: [],
+      metadata: conv.metadata || {},
+    };
   }
 
   /**
    * Get a conversation by room ID
    */
   async getConversationByRoomId(roomId: string): Promise<Conversation | null> {
-    const conversationId = this.roomIdIndex.get(roomId);
+    const conversationId = await this.storage.getConversationByRoom(roomId);
     if (!conversationId) {
       return null;
     }
-    return this.conversations.get(conversationId) || null;
+    return this.getConversation(conversationId);
   }
 
   /**
-   * Add a new turn to an existing conversation (active tier)
+   * Add a turn to a conversation
    */
   async addTurn(
     conversationId: string,
     turn: Omit<ConversationTurn, 'id'>,
   ): Promise<Conversation> {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation) {
-      throw new Error(`Conversation with ID ${conversationId} not found`);
+    // Cast to ConversationTurn as the storage expects the id property
+    await this.storage.addTurn(conversationId, turn as ConversationTurn);
+    
+    // Get the updated conversation
+    const conv = await this.storage.getConversation(conversationId);
+    if (!conv) {
+      throw new Error(`Conversation with ID ${conversationId} not found after adding turn`);
     }
-
-    const completeTurn: ConversationTurn = {
-      ...turn,
-      id: `turn-${nanoid()}`,
+    
+    // Get the turns
+    const turns = await this.storage.getTurns(conversationId);
+    
+    // Create a result compatible with the ConversationMemoryStorage interface
+    return {
+      id: conv.id,
+      createdAt: conv.createdAt || new Date(),
+      updatedAt: conv.updatedAt,
+      interfaceType: conv.interfaceType,
+      roomId: conv.roomId,
+      activeTurns: turns,
+      summaries: [],
+      archivedTurns: [],
+      metadata: conv.metadata || {},
     };
-
-    // Validate the turn using Zod schema
-    ConversationTurnSchema.parse(completeTurn);
-
-    // Update the conversation with the new turn in the active tier
-    const updatedConversation: Conversation = {
-      ...conversation,
-      updatedAt: new Date(),
-      activeTurns: [...conversation.activeTurns, completeTurn],
-    };
-
-    // Validate the updated conversation
-    ConversationSchema.parse(updatedConversation);
-
-    this.conversations.set(conversationId, updatedConversation);
-    return updatedConversation;
   }
 
   /**
-   * Add a summary to the conversation (summary tier)
+   * Add a summary to a conversation
    */
   async addSummary(
     conversationId: string,
     summary: Omit<ConversationSummary, 'id'>,
   ): Promise<Conversation> {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation) {
-      throw new Error(`Conversation with ID ${conversationId} not found`);
+    // Adapt the ConversationSummary to ContextConversationSummary
+    const adaptedSummary: ContextConversationSummary = {
+      id: `summary-${Date.now()}`,
+      conversationId,
+      content: summary.content,
+      createdAt: new Date(),
+      metadata: summary.metadata,
+      turnCount: summary.turnCount,
+    };
+    
+    await this.storage.addSummary(conversationId, adaptedSummary);
+    
+    // Get the updated conversation
+    const conv = await this.storage.getConversation(conversationId);
+    if (!conv) {
+      throw new Error(`Conversation with ID ${conversationId} not found after adding summary`);
     }
-
-    const completeSummary: ConversationSummary = {
-      ...summary,
-      id: `summ-${nanoid()}`,
+    
+    // Get turns and summaries
+    const turns = await this.storage.getTurns(conversationId);
+    const summaries = await this.storage.getSummaries(conversationId);
+    
+    // Create a result compatible with the ConversationMemoryStorage interface
+    return {
+      id: conv.id,
+      createdAt: conv.createdAt || new Date(),
+      updatedAt: conv.updatedAt,
+      interfaceType: conv.interfaceType,
+      roomId: conv.roomId,
+      activeTurns: turns,
+      summaries: summaries,
+      archivedTurns: [],
+      metadata: conv.metadata || {},
     };
-
-    // Validate the summary using Zod schema
-    ConversationSummarySchema.parse(completeSummary);
-
-    // Update the conversation with the new summary
-    const updatedConversation: Conversation = {
-      ...conversation,
-      updatedAt: new Date(),
-      summaries: [...conversation.summaries, completeSummary],
-    };
-
-    // Validate the updated conversation
-    ConversationSchema.parse(updatedConversation);
-
-    this.conversations.set(conversationId, updatedConversation);
-    return updatedConversation;
   }
 
   /**
@@ -216,79 +191,88 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     conversationId: string,
     turnIndices: number[],
   ): Promise<Conversation> {
-    const conversation = this.conversations.get(conversationId);
-    if (!conversation) {
-      throw new Error(`Conversation with ID ${conversationId} not found`);
-    }
-
-    // Sort indices in descending order to avoid issues when removing items
-    const sortedIndices = [...turnIndices].sort((a, b) => b - a);
+    const turns = await this.storage.getTurns(conversationId);
     
-    // Create a copy of the active turns
-    const activeTurns = [...conversation.activeTurns];
-    const turnsToArchive: ConversationTurn[] = [];
-    
-    // Remove turns from active and add to archive
-    for (const index of sortedIndices) {
-      if (index >= 0 && index < activeTurns.length) {
-        const [turn] = activeTurns.splice(index, 1);
-        turnsToArchive.push(turn);
+    // Mark turns as archived using metadata
+    for (const index of turnIndices) {
+      if (index >= 0 && index < turns.length) {
+        const turn = turns[index];
+        if (turn.id) {
+          await this.storage.updateTurn(turn.id, {
+            metadata: {
+              ...(turn.metadata || {}),
+              isActive: false,
+            },
+          });
+        }
       }
     }
     
-    // Update the conversation
-    const updatedConversation: Conversation = {
-      ...conversation,
-      updatedAt: new Date(),
-      activeTurns,
-      archivedTurns: [...conversation.archivedTurns, ...turnsToArchive.reverse()],
+    // Get the updated conversation
+    const conv = await this.storage.getConversation(conversationId);
+    if (!conv) {
+      throw new Error(`Conversation with ID ${conversationId} not found after archiving turns`);
+    }
+    
+    // Get the updated turns and summaries
+    const updatedTurns = await this.storage.getTurns(conversationId);
+    const summaries = await this.storage.getSummaries(conversationId);
+    
+    // Separate active and archived turns
+    const activeTurns = updatedTurns.filter(t => !(t.metadata && t.metadata['isActive'] === false));
+    const archivedTurns = updatedTurns.filter(t => t.metadata && t.metadata['isActive'] === false);
+    
+    // Create a result compatible with the ConversationMemoryStorage interface
+    return {
+      id: conv.id,
+      createdAt: conv.createdAt || new Date(),
+      updatedAt: conv.updatedAt,
+      interfaceType: conv.interfaceType,
+      roomId: conv.roomId,
+      activeTurns: activeTurns,
+      summaries: summaries,
+      archivedTurns: archivedTurns,
+      metadata: conv.metadata || {},
     };
-
-    // Validate the updated conversation
-    ConversationSchema.parse(updatedConversation);
-
-    this.conversations.set(conversationId, updatedConversation);
-    return updatedConversation;
   }
 
   /**
-   * Get recent conversations, sorted by updatedAt (newest first)
-   * Optionally filtered by interface type
+   * Get recent conversations
    */
   async getRecentConversations(options?: {
     limit?: number;
     interfaceType?: 'cli' | 'matrix';
   }): Promise<Conversation[]> {
-    let allConversations = Array.from(this.conversations.values());
+    const limit = options?.limit;
+    const interfaceType = options?.interfaceType;
     
-    // Filter by interface type if specified
-    if (options?.interfaceType) {
-      allConversations = allConversations.filter(
-        conv => conv.interfaceType === options.interfaceType,
-      );
+    const infos = await this.storage.getRecentConversations(limit, interfaceType);
+    
+    // Convert to the expected Conversation format
+    const result: Conversation[] = [];
+    
+    for (const info of infos) {
+      result.push({
+        id: info.id,
+        createdAt: info.startedAt,
+        updatedAt: info.updatedAt,
+        interfaceType: info.interfaceType,
+        roomId: info.roomId,
+        activeTurns: [],  // Will be populated if needed elsewhere
+        summaries: [],    // Will be populated if needed elsewhere
+        archivedTurns: [],
+        metadata: info.metadata || {},
+      });
     }
     
-    // Sort by updatedAt (newest first)
-    const sortedConversations = allConversations.sort(
-      (a, b) => b.updatedAt.getTime() - a.updatedAt.getTime(),
-    );
-
-    // Apply limit if specified
-    return options?.limit ? sortedConversations.slice(0, options.limit) : sortedConversations;
+    return result;
   }
 
   /**
-   * Delete a conversation by ID
+   * Delete a conversation
    */
   async deleteConversation(id: string): Promise<boolean> {
-    const conversation = this.conversations.get(id);
-    
-    if (conversation && conversation.roomId) {
-      // Also remove from roomId index
-      this.roomIdIndex.delete(conversation.roomId);
-    }
-    
-    return this.conversations.delete(id);
+    return this.storage.deleteConversation(id);
   }
 
   /**
@@ -298,25 +282,28 @@ export class InMemoryStorage implements ConversationMemoryStorage {
     id: string,
     metadata: Record<string, unknown>,
   ): Promise<Conversation> {
-    const conversation = this.conversations.get(id);
-    if (!conversation) {
-      throw new Error(`Conversation with ID ${id} not found`);
+    const success = await this.storage.updateMetadata(id, metadata);
+    if (!success) {
+      throw new Error(`Failed to update metadata for conversation with ID ${id}`);
     }
-
-    // Merge the existing metadata with the new metadata
-    const updatedConversation: Conversation = {
-      ...conversation,
-      updatedAt: new Date(),
-      metadata: {
-        ...conversation.metadata,
-        ...metadata,
-      },
+    
+    // Get the updated conversation
+    const conv = await this.storage.getConversation(id);
+    if (!conv) {
+      throw new Error(`Conversation with ID ${id} not found after updating metadata`);
+    }
+    
+    // Create a result compatible with the ConversationMemoryStorage interface
+    return {
+      id: conv.id,
+      createdAt: conv.createdAt || new Date(),
+      updatedAt: conv.updatedAt,
+      interfaceType: conv.interfaceType,
+      roomId: conv.roomId,
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
+      metadata: conv.metadata || {},
     };
-
-    // Validate the updated conversation
-    ConversationSchema.parse(updatedConversation);
-
-    this.conversations.set(id, updatedConversation);
-    return updatedConversation;
   }
 }

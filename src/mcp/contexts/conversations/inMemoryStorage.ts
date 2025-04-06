@@ -516,4 +516,5 @@ export class InMemoryStorage implements ConversationStorage {
     this.roomIndex.clear();
     logger.debug('Cleared all data from InMemoryStorage');
   }
+
 }

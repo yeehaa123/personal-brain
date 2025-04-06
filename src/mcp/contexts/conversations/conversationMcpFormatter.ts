@@ -5,6 +5,41 @@ import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conv
 
 import type { ConversationSummary } from './conversationStorage';
 
+// Interface for MCP-formatted conversation response
+export interface McpFormattedConversation {
+  id: string;
+  interfaceType: 'cli' | 'matrix';
+  roomId: string;
+  createdAt: Date;
+  updatedAt: Date;
+  turnCount: number;
+  summaryCount: number;
+  statistics: Record<string, unknown>;
+  turns?: ConversationTurn[];
+  turnPreview?: ConversationTurn[];
+  summaries?: Array<Partial<ConversationSummary & { turnCount?: number }>>;
+  raw?: Record<string, unknown>;
+}
+
+// Interface for MCP-formatted turns response
+export interface McpFormattedTurns {
+  conversationId: string;
+  turnCount: number;
+  statistics: Record<string, unknown>;
+  turns: Array<Partial<ConversationTurn>>;
+}
+
+// Interface for MCP-formatted summaries response
+export interface McpFormattedSummaries {
+  conversationId: string;
+  summaryCount: number;
+  timeline: {
+    points: Array<Record<string, unknown>>;
+    count: number;
+  };
+  summaries: Array<Partial<ConversationSummary & { turnCount?: number }>>;
+}
+
 /**
  * MCP-specific formatting options
  */
@@ -31,9 +66,9 @@ export class ConversationMcpFormatter {
     turns: ConversationTurn[],
     summaries: ConversationSummary[],
     options: McpFormattingOptions = {},
-  ): Record<string, unknown> {
+  ): McpFormattedConversation {
     // Base conversation data
-    const formatted: Record<string, unknown> = {
+    const formatted: McpFormattedConversation = {
       id: conversation.id,
       interfaceType: conversation.interfaceType,
       roomId: conversation.roomId,
@@ -41,29 +76,26 @@ export class ConversationMcpFormatter {
       updatedAt: conversation.updatedAt,
       turnCount: turns.length,
       summaryCount: summaries.length,
+      statistics: this.calculateConversationStats(turns),
     };
-
-    // Add statistics
-    const stats = this.calculateConversationStats(turns);
-    formatted.statistics = stats;
 
     // Add turns if requested (or add a limited preview)
     if (options.includeFullTurns) {
       formatted.turns = turns;
     } else {
       // Include just a preview of the first and last few turns
-      const preview = this.createTurnPreview(turns);
-      formatted.turnPreview = preview;
+      formatted.turnPreview = this.createTurnPreview(turns);
     }
 
     // Add summaries if they exist
     if (summaries.length > 0) {
       formatted.summaries = options.includeFullMetadata
-        ? summaries
+        ? summaries.map(s => ({...s, turnCount: s.turnCount || 0}))
         : summaries.map((s) => ({
           id: s.id,
           content: s.content,
           createdAt: s.createdAt,
+          turnCount: s.turnCount || 0,
         }));
     }
 
@@ -89,7 +121,7 @@ export class ConversationMcpFormatter {
     conversationId: string,
     turns: ConversationTurn[],
     options: McpFormattingOptions = {},
-  ): Record<string, unknown> {
+  ): McpFormattedTurns {
     // Sort turns by timestamp
     const sortedTurns = [...turns].sort((a, b) => {
       const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
@@ -97,14 +129,12 @@ export class ConversationMcpFormatter {
       return aTime - bTime;
     });
 
-    // Calculate turn statistics
-    const stats = this.calculateConversationStats(turns);
-
     // Create the formatted response
-    const formatted: Record<string, unknown> = {
+    const formatted: McpFormattedTurns = {
       conversationId,
       turnCount: turns.length,
-      statistics: stats,
+      statistics: this.calculateConversationStats(turns),
+      turns: [], // Will be populated below
     };
 
     // Add turns with appropriate level of detail
@@ -135,7 +165,7 @@ export class ConversationMcpFormatter {
     conversationId: string,
     summaries: ConversationSummary[],
     options: McpFormattingOptions = {},
-  ): Record<string, unknown> {
+  ): McpFormattedSummaries {
     // Sort summaries by creation date
     const sortedSummaries = [...summaries].sort((a, b) => {
       const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -144,22 +174,23 @@ export class ConversationMcpFormatter {
     });
 
     // Create the formatted response
-    const formatted: Record<string, unknown> = {
+    const formatted: McpFormattedSummaries = {
       conversationId,
       summaryCount: summaries.length,
       timeline: this.createSummaryTimeline(sortedSummaries),
+      summaries: [], // Will be populated below
     };
 
     // Add summaries with appropriate level of detail
     if (options.includeFullMetadata) {
-      formatted.summaries = sortedSummaries;
+      formatted.summaries = sortedSummaries.map(s => ({...s, turnCount: s.turnCount || 0}));
     } else {
       // Remove detailed metadata for a more concise response
       formatted.summaries = sortedSummaries.map((summary) => ({
         id: summary.id,
         content: summary.content,
         createdAt: summary.createdAt,
-        turnCount: summary.turnCount,
+        turnCount: summary.turnCount || 0,
       }));
     }
 
@@ -250,11 +281,14 @@ export class ConversationMcpFormatter {
    * @param summaries Sorted summaries
    * @returns Timeline object with key points
    */
-  private createSummaryTimeline(summaries: ConversationSummary[]): Record<string, unknown> {
+  private createSummaryTimeline(summaries: ConversationSummary[]): {
+    points: Array<Record<string, unknown>>;
+    count: number;
+  } {
     const timePoints = summaries.map((summary) => ({
       id: summary.id,
       time: summary.createdAt,
-      turnCount: summary.turnCount,
+      turnCount: summary.turnCount || 0,
       textPreview: summary.content.substring(0, 100) + (summary.content.length > 100 ? '...' : ''),
     }));
 

@@ -18,7 +18,7 @@ import type {
   IExternalSourceManager,
   IProfileManager,
   ProfileAnalysisResult,
-} from '@/mcp/protocol/types';
+} from '@/mcp/protocol/types/index';
 import type { Note } from '@/models/note';
 import logger from '@/utils/logger';
 
