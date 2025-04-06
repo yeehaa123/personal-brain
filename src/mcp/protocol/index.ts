@@ -4,7 +4,25 @@
  */
 export { BrainProtocol } from './brainProtocol';
 export * from './types';
+export * from './types/index';
 export * from './components';
 
-// Common protocol types for easier access
-export type { ProtocolResponse, ExternalCitation } from './types';
+// For backward compatibility
+export type { 
+  ProtocolResponse, 
+  ExternalCitation,
+  BrainProtocolOptions,
+  QueryOptions,
+  QueryResult,
+  Citation,
+  ContextResult,
+  ModelResponse,
+  ProfileAnalysisResult,
+  TurnMetadata,
+  TurnOptions,
+  IContextManager,
+  IConversationManager,
+  IProfileManager,
+  IExternalSourceManager,
+  IQueryProcessor,
+} from './types/index';
