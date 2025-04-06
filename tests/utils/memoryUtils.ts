@@ -69,7 +69,7 @@ export async function createIsolatedMemory(options?: {
 }) {
   // Import dynamically to avoid circular dependencies
   // Using dynamic imports instead of require() to satisfy linting rules
-  const Module = await import('@/mcp/protocol/memory');
+  const Module = await import('@/mcp/contexts/conversations');
   
   const { InMemoryStorage, ConversationMemory } = Module;
   
@@ -95,7 +95,7 @@ export function setupMemoryMocks(mockFn: { module: (name: string, factory: () =>
   // Instead, we'll ensure the storage and summarizer work properly
   
   // Mock the ConversationSummarizer to return consistent results and avoid API calls
-  mockFn.module('@/mcp/protocol/memory/summarizer', () => {
+  mockFn.module('@/mcp/contexts/conversations/summarizer', () => {
     return {
       ConversationSummarizer: class MockConversationSummarizer {
         constructor() {

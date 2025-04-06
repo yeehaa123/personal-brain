@@ -6,10 +6,10 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { createUnifiedMcpServer } from '@/mcp';
 import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
+import type { ConversationMemory } from '@/mcp/contexts/conversations';
 import { EmbeddingService } from '@/mcp/model';
 import { ProfileAnalyzer } from '@/mcp/protocol/components/profileAnalyzer';
 import { PromptFormatter } from '@/mcp/protocol/components/promptFormatter';
-import type { ConversationMemory } from '@/mcp/protocol/memory';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 

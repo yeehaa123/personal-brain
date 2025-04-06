@@ -20,6 +20,10 @@ export type {
 } from './conversationStorage';
 export { InMemoryStorage } from './inMemoryStorage';
 
+// Export memory management components
+export { ConversationMemory } from './conversationMemory';
+export { ConversationSummarizer } from './summarizer';
+
 // Export tiered memory components
 export { TieredMemoryManager } from './tieredMemoryManager';
 export type { TieredMemoryConfig, TieredHistory } from './tieredMemoryManager';

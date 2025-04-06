@@ -3,25 +3,22 @@
  */
 import { nanoid } from 'nanoid';
 
-import type { 
-  ConversationSummary as ContextConversationSummary, 
-  ConversationStorage,
-} from '@/mcp/contexts/conversations/conversationStorage';
-import { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
-import { getEnv } from '@/utils/configUtils';
-import logger from '@utils/logger';
-
-import { ConversationMemoryOptionsSchema } from '../schemas/conversationSchemas';
+import { ConversationMemoryOptionsSchema } from '@/mcp/protocol/schemas/conversationSchemas';
 import type {
   Conversation,
   ConversationMemoryOptions,
   ConversationSummary,
   ConversationTurn,
-} from '../schemas/conversationSchemas';
+} from '@/mcp/protocol/schemas/conversationSchemas';
+import { getEnv } from '@/utils/configUtils';
+import logger from '@utils/logger';
 
+import type { 
+  ConversationSummary as ContextConversationSummary, 
+  ConversationStorage,
+} from './conversationStorage';
+import { InMemoryStorage } from './inMemoryStorage';
 import { ConversationSummarizer } from './summarizer';
-
-
 
 /**
  * Configuration options for ConversationMemory constructor

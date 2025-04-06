@@ -3,7 +3,6 @@
  */
 import { nanoid } from 'nanoid';
 
-import { ConversationSummarizer } from '@/mcp/protocol/memory/summarizer';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
@@ -11,6 +10,7 @@ import type {
   ConversationStorage, 
   ConversationSummary, 
 } from './conversationStorage';
+import { ConversationSummarizer } from './summarizer';
 
 
 /**

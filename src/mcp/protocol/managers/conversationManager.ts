@@ -3,8 +3,8 @@
  * Manages conversation history and persistence
  */
 import type { ConversationContext } from '@/mcp/contexts/conversations';
+import { ConversationMemory, InMemoryStorage } from '@/mcp/contexts/conversations';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
-import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 

@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
+import { ConversationMemory, InMemoryStorage } from '@/mcp/contexts/conversations';
 import { PromptFormatter } from '@/mcp/protocol/components';
-import { ConversationMemory, InMemoryStorage } from '@/mcp/protocol/memory';
 import type { Note } from '@models/note';
 import { createMockNote } from '@test/mocks';
 

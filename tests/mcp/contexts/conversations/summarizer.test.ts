@@ -4,11 +4,11 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import { ConversationSummarizer } from '@/mcp/protocol/memory';
+import { ConversationSummarizer } from '@/mcp/contexts/conversations';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 // Manual mock for the ConversationSummarizer class
-mock.module('@/mcp/protocol/memory/summarizer', () => {
+mock.module('@/mcp/contexts/conversations/summarizer', () => {
   return {
     ConversationSummarizer: function() {
       return {
