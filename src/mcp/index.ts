@@ -70,8 +70,7 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
   noteContext.registerOnServer(mcpServer);
   profileContext.registerOnServer(mcpServer);
   externalSourceContext.registerOnServer(mcpServer);
-  // Cast to unknown to avoid type issues during the transition period
-  conversationContext.registerWithMcpServer(mcpServer);
+  conversationContext.registerOnServer(mcpServer);
   
   return mcpServer;
 }

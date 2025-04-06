@@ -5,6 +5,7 @@
  * to the MCP architecture pattern. There are some type issues and TODOs
  * that will be addressed in the next refactoring phase.
  */
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { nanoid } from 'nanoid';
 
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
@@ -73,6 +74,7 @@ export class ConversationContext {
   private tieredMemoryManager: TieredMemoryManager;
   private formatter: ConversationFormatter;
   private options: Required<ConversationContextOptions>;
+  private mcpServer: McpServer;
   
   // MCP Server elements
   private conversationResources: ResourceDefinition[] = [];
@@ -98,9 +100,20 @@ export class ConversationContext {
     this.tieredMemoryManager = new TieredMemoryManager(this.storage, this.options.tieredMemoryConfig);
     this.formatter = new ConversationFormatter();
     
-    // Initialize MCP resources and tools
-    this.initializeMcpResources();
-    this.initializeMcpTools();
+    // Initialize MCP server
+    this.mcpServer = new McpServer({
+      name: 'ConversationBrain',
+      version: '1.0.0',
+    });
+    
+    // Initialize MCP components (resources and tools)
+    this.initializeMcpComponents();
+    
+    // Register them on our internal server
+    this.registerMcpResources(this.mcpServer);
+    this.registerMcpTools(this.mcpServer);
+    
+    logger.debug('ConversationContext initialized with resources and tools');
   }
   
   /**
@@ -382,14 +395,171 @@ export class ConversationContext {
   }
   
   /**
-   * Register with an MCP server
-   * @param _server MCP server to register with
+   * Register all conversation resources and tools on an external MCP server
+   * @param server The MCP server to register with
    */
-  registerWithMcpServer(_server: unknown): void {
-    logger.info('ConversationContext MCP resources and tools registration is disabled');
-    // Will be implemented in a future version when needed
+  registerOnServer(server: McpServer): void {
+    if (!server) {
+      logger.warn('Cannot register ConversationContext on undefined server');
+      return;
+    }
+    
+    // Register resources and tools on the external server
+    this.registerMcpResources(server);
+    this.registerMcpTools(server);
+    
+    logger.debug('ConversationContext registered on external MCP server');
   }
   
+  /**
+   * Register all conversation resources on the specified MCP server
+   * This method is also used to define resources and register them on the server
+   * @param server The server to register resources on
+   */
+  private registerMcpResources(server: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
+    
+    // Register each resource in our collection
+    this.conversationResources.forEach(resource => {
+      targetServer.resource(
+        resource.name || resource.path,
+        `${resource.protocol}://${resource.path}`,
+        async (uri) => {
+          try {
+            // Extract path parameters from URI
+            const pathParams = this.extractPathParams(uri.pathname, resource.path);
+            // Parse query parameters
+            const queryParams = Object.fromEntries(new URLSearchParams(uri.search));
+            // Execute the handler with path parameters and query
+            const result = await resource.handler(pathParams, queryParams);
+            
+            // Format result according to MCP requirements
+            return {
+              contents: [{
+                uri: uri.toString(),
+                text: typeof result === 'string' 
+                  ? result 
+                  : JSON.stringify(result, null, 2),
+              }],
+            };
+          } catch (error) {
+            logger.error(`Error in ${resource.protocol}://${resource.path} resource:`, 
+              error instanceof Error ? error.message : String(error));
+            return {
+              contents: [{
+                uri: uri.toString(),
+                text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+              }],
+            };
+          }
+        }
+      );
+    });
+  }
+  
+  /**
+   * Register all conversation tools on the specified MCP server
+   * This method is also used to define tools and register them on the server
+   * @param server The server to register tools on
+   */
+  private registerMcpTools(server: McpServer): void {
+    // Use provided server or internal server
+    const targetServer = server || this.mcpServer;
+    
+    // Register each tool in our collection
+    this.conversationTools.forEach(tool => {
+      if (!tool.name) {
+        logger.warn(`Cannot register tool without name: ${tool.path}`);
+        return;
+      }
+      
+      // For this initial implementation, convert existing parameters to a simple schema format
+      // In the future, this should be updated to use proper Zod schemas directly
+      const schema = this.getToolSchema(tool);
+      
+      targetServer.tool(
+        tool.name,
+        tool.description || `Tool for ${tool.path}`,
+        schema,
+        async (args) => {
+          try {
+            // Execute the handler with the arguments
+            const result = await tool.handler(args);
+            return {
+              content: [{
+                type: 'text',
+                text: typeof result === 'string' 
+                  ? result 
+                  : JSON.stringify(result, null, 2),
+              }],
+            };
+          } catch (error) {
+            logger.error(`Error executing tool ${tool.name}: ${
+              error instanceof Error ? error.message : String(error)}`);
+            return {
+              content: [{
+                type: 'text',
+                text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+              }],
+              isError: true,
+            };
+          }
+        }
+      );
+    });
+  }
+  
+  /**
+   * Gets the schema for a tool
+   * @param _tool Tool definition with parameters
+   * @returns Schema object for parameters
+   */
+  private getToolSchema(_tool: ResourceDefinition): Record<string, any> {
+    // For now, use a simple empty schema for all tools
+    // In the future, this should be updated with proper schemas for each tool
+    return {}; 
+  }
+
+  /**
+   * Extract path parameters from a URL path based on a pattern
+   * @param urlPath Actual URL path
+   * @param pattern Pattern with parameter placeholders (:paramName)
+   * @returns Object with extracted parameters
+   */
+  private extractPathParams(urlPath: string, pattern: string): Record<string, unknown> {
+    const params: Record<string, unknown> = {};
+    
+    // Remove leading slash from both
+    const normalizedPath = urlPath.startsWith('/') ? urlPath.substring(1) : urlPath;
+    const normalizedPattern = pattern.startsWith('/') ? pattern.substring(1) : pattern;
+    
+    // Split path and pattern into segments
+    const pathSegments = normalizedPath.split('/');
+    const patternSegments = normalizedPattern.split('/');
+    
+    // Match each segment
+    for (let i = 0; i < patternSegments.length; i++) {
+      if (i >= pathSegments.length) break;
+      
+      // If pattern segment starts with ':', it's a parameter
+      if (patternSegments[i].startsWith(':')) {
+        const paramName = patternSegments[i].substring(1);
+        params[paramName] = pathSegments[i];
+      }
+    }
+    
+    return params;
+  }
+  
+  /**
+   * Get the MCP server instance
+   * @returns The MCP server
+   */
+  getMcpServer(): McpServer {
+    return this.mcpServer;
+  }
+
   /**
    * Get MCP resources
    * @returns Array of MCP resources
@@ -472,9 +642,11 @@ export class ConversationContext {
   }
   
   /**
-   * Initialize MCP resources
+   * Initialize resources and tools during construction
+   * Called by the constructor to setup MCP integration
    */
-  private initializeMcpResources(): void {
+  private initializeMcpComponents(): void {
+    // Define all conversation resources
     this.conversationResources = [
       // conversations://list
       {
@@ -575,12 +747,8 @@ export class ConversationContext {
         },
       },
     ];
-  }
-  
-  /**
-   * Initialize MCP tools
-   */
-  private initializeMcpTools(): void {
+    
+    // Define all conversation tools
     this.conversationTools = [
       // create_conversation
       {
