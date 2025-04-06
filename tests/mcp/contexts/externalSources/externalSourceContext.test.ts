@@ -33,7 +33,10 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
   
   beforeEach(() => {
     // Create a new context with mock API keys for each test
-    externalSourceContext = new ExternalSourceContext('mock-api-key', 'mock-newsapi-key');
+    externalSourceContext = new ExternalSourceContext({
+      apiKey: 'mock-api-key',
+      newsApiKey: 'mock-newsapi-key'
+    });
   });
   
   test('ExternalSourceContext properly initializes with MCP SDK', () => {
@@ -55,7 +58,9 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
   
   test('should allow registering custom sources', () => {
     // Create a new ExternalSourceContext with custom options
-    const customContext = new ExternalSourceContext('mock-api-key', 'mock-newsapi-key', {
+    const customContext = new ExternalSourceContext({
+      apiKey: 'mock-api-key',
+      newsApiKey: 'mock-newsapi-key',
       enabledSources: [], // Start with no enabled sources
     });
     
@@ -116,10 +121,10 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
   test('should check sources availability', async () => {
     // Create a test-specific isolated context to avoid state sharing
     // with a unique timestamp to ensure isolation
-    const testContext = new ExternalSourceContext(
-      'isolated-api-key-' + Date.now(), 
-      'isolated-newsapi-key-' + Date.now(),
-    );
+    const testContext = new ExternalSourceContext({
+      apiKey: 'isolated-api-key-' + Date.now(),
+      newsApiKey: 'isolated-newsapi-key-' + Date.now(),
+    });
     
     // Use the mock availability implementation from our mock
     const availability = await testContext.checkSourcesAvailability();

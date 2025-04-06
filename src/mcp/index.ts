@@ -56,14 +56,12 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
   // Use singleton instances of all contexts
   const noteContext = NoteContext.getInstance(config.apiKey);
   const profileContext = ProfileContext.getInstance({ apiKey: config.apiKey });
-  const externalSourceContext = ExternalSourceContext.getInstance(
-    config.apiKey, 
-    config.newsApiKey,
-    { 
-      // Initialize external sources as enabled or disabled based on config
-      enabledSources: config.enableExternalSources === false ? [] : undefined,
-    },
-  );
+  const externalSourceContext = ExternalSourceContext.getInstance({ 
+    apiKey: config.apiKey, 
+    newsApiKey: config.newsApiKey,
+    // Initialize external sources as enabled or disabled based on config
+    enabledSources: config.enableExternalSources === false ? [] : undefined,
+  });
   const conversationContext = ConversationContext.getInstance();
   
   // Register all contexts on the unified server

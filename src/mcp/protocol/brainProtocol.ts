@@ -133,7 +133,10 @@ export class BrainProtocol {
     // Initialize context objects using singletons
     this.context = NoteContext.getInstance(apiKey);
     this.profileContext = ProfileContext.getInstance({ apiKey });
-    this.externalContext = ExternalSourceContext.getInstance(apiKey, newsApiKeyValue);
+    this.externalContext = ExternalSourceContext.getInstance({ 
+      apiKey, 
+      newsApiKey: newsApiKeyValue 
+    });
     this.conversationContext = ConversationContext.getInstance({
       // Pass any needed configuration
       anchorName: options.anchorName || 'Host',
