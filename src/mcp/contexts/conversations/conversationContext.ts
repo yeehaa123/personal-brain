@@ -398,18 +398,26 @@ export class ConversationContext {
   /**
    * Register all conversation resources and tools on an external MCP server
    * @param server The MCP server to register with
+   * @returns True if registration was successful, false otherwise
    */
-  registerOnServer(server: McpServer): void {
-    if (!server) {
-      logger.warn('Cannot register ConversationContext on undefined server');
-      return;
+  registerOnServer(server: McpServer): boolean {
+    try {
+      if (!server) {
+        logger.warn('Cannot register ConversationContext on undefined server');
+        return false;
+      }
+      
+      // Register resources and tools on the external server
+      const resourceCount = this.registerMcpResources(server);
+      const toolCount = this.registerMcpTools(server);
+      
+      logger.debug(`ConversationContext registered on external MCP server: ${resourceCount} resources, ${toolCount} tools`);
+      return true;
+    } catch (error) {
+      logger.error(`Error registering ConversationContext on MCP server: ${
+        error instanceof Error ? error.message : String(error)}`);
+      return false;
     }
-    
-    // Register resources and tools on the external server
-    this.registerMcpResources(server);
-    this.registerMcpTools(server);
-    
-    logger.debug('ConversationContext registered on external MCP server');
   }
   
   /**
@@ -417,13 +425,25 @@ export class ConversationContext {
    * This method is also used to define resources and register them on the server
    * @param server The server to register resources on
    */
-  private registerMcpResources(server: McpServer): void {
+  private registerMcpResources(server: McpServer): number {
     // Use provided server or internal server
     const targetServer = server || this.mcpServer;
+    let successCount = 0;
     
     // Register each resource in our collection
-    this.conversationResources.forEach(resource => {
-      targetServer.resource(
+    for (const resource of this.conversationResources) {
+      try {
+        // Validate resource has required properties
+        if (!resource.path || !resource.protocol || !resource.handler) {
+          logger.warn(`Skipping invalid resource: ${resource.name || resource.path}`);
+          continue;
+        }
+        
+        // Create the resource URI
+        const resourceUri = `${resource.protocol}://${resource.path}`;
+        
+        // Register the resource
+        targetServer.resource(
         resource.name || resource.path,
         `${resource.protocol}://${resource.path}`,
         async (uri) => {
@@ -445,7 +465,7 @@ export class ConversationContext {
               }],
             };
           } catch (error) {
-            logger.error(`Error in ${resource.protocol}://${resource.path} resource:`, 
+            logger.error(`Error in ${resourceUri} resource:`, 
               error instanceof Error ? error.message : String(error));
             return {
               contents: [{
@@ -456,27 +476,46 @@ export class ConversationContext {
           }
         },
       );
-    });
+      
+      successCount++;
+      logger.debug(`Registered resource: ${resourceUri}`);
+    } catch (error) {
+      logger.error(`Failed to register resource ${resource.name || resource.path}: ${
+        error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  logger.info(`Successfully registered ${successCount} of ${this.conversationResources.length} resources`);
+  return successCount;
   }
   
   /**
    * Register all conversation tools on the specified MCP server
    * This method is also used to define tools and register them on the server
    * @param server The server to register tools on
+   * @returns Number of successfully registered tools
    */
-  private registerMcpTools(server: McpServer): void {
+  private registerMcpTools(server: McpServer): number {
     // Use provided server or internal server
     const targetServer = server || this.mcpServer;
+    let successCount = 0;
     
     // Register each tool in our collection
-    this.conversationTools.forEach(tool => {
-      if (!tool.name) {
-        logger.warn(`Cannot register tool without name: ${tool.path}`);
-        return;
-      }
-      
-      // Use proper Zod schemas based on the tool name
-      const schema = this.getToolSchema(tool);
+    for (const tool of this.conversationTools) {
+      try {
+        // Validate the tool
+        if (!tool.name) {
+          logger.warn(`Cannot register tool without name: ${tool.path}`);
+          continue;
+        }
+        
+        if (!tool.handler) {
+          logger.warn(`Cannot register tool without handler: ${tool.name}`);
+          continue;
+        }
+        
+        // Use proper Zod schemas based on the tool name
+        const schema = this.getToolSchema(tool);
       
       targetServer.tool(
         tool.name,
@@ -507,7 +546,17 @@ export class ConversationContext {
           }
         },
       );
-    });
+      
+      successCount++;
+      logger.debug(`Registered tool: ${tool.name}`);
+    } catch (error) {
+      logger.error(`Failed to register tool ${tool.name}: ${
+        error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  logger.info(`Successfully registered ${successCount} of ${this.conversationTools.length} tools`);
+  return successCount;
   }
   
   /**
@@ -518,52 +567,52 @@ export class ConversationContext {
   private getToolSchema(tool: ResourceDefinition): Record<string, z.ZodTypeAny> {
     // Return appropriate Zod schema based on tool name
     switch (tool.name) {
-      case 'create_conversation':
-        return {
-          interfaceType: z.enum(['cli', 'matrix']).describe('Interface type of the conversation'),
-          roomId: z.string().describe('Room ID for the conversation'),
-        };
+    case 'create_conversation':
+      return {
+        interfaceType: z.enum(['cli', 'matrix']).describe('Interface type of the conversation'),
+        roomId: z.string().describe('Room ID for the conversation'),
+      };
         
-      case 'add_turn':
-        return {
-          conversationId: z.string().describe('ID of the conversation'),
-          query: z.string().min(1).describe('User query'),
-          response: z.string().optional().describe('Assistant response'),
-          userId: z.string().optional().describe('User ID (optional)'),
-          userName: z.string().optional().describe('User name (optional)'),
-          metadata: z.record(z.unknown()).optional().describe('Additional metadata (optional)'),
-        };
+    case 'add_turn':
+      return {
+        conversationId: z.string().describe('ID of the conversation'),
+        query: z.string().min(1).describe('User query'),
+        response: z.string().optional().describe('Assistant response'),
+        userId: z.string().optional().describe('User ID (optional)'),
+        userName: z.string().optional().describe('User name (optional)'),
+        metadata: z.record(z.unknown()).optional().describe('Additional metadata (optional)'),
+      };
         
-      case 'summarize_conversation':
-        return {
-          conversationId: z.string().describe('ID of the conversation to summarize'),
-        };
+    case 'summarize_conversation':
+      return {
+        conversationId: z.string().describe('ID of the conversation to summarize'),
+      };
         
-      case 'get_conversation_history':
-        return {
-          conversationId: z.string().describe('ID of the conversation'),
-          format: z.enum(['text', 'markdown', 'json', 'html']).optional()
-            .describe('Format of the output'),
-          maxTurns: z.number().optional().describe('Maximum number of turns to include'),
-          includeSummaries: z.boolean().optional().describe('Whether to include summaries'),
-          includeTimestamps: z.boolean().optional().describe('Whether to include timestamps'),
-          includeMetadata: z.boolean().optional().describe('Whether to include metadata'),
-        };
+    case 'get_conversation_history':
+      return {
+        conversationId: z.string().describe('ID of the conversation'),
+        format: z.enum(['text', 'markdown', 'json', 'html']).optional()
+          .describe('Format of the output'),
+        maxTurns: z.number().optional().describe('Maximum number of turns to include'),
+        includeSummaries: z.boolean().optional().describe('Whether to include summaries'),
+        includeTimestamps: z.boolean().optional().describe('Whether to include timestamps'),
+        includeMetadata: z.boolean().optional().describe('Whether to include metadata'),
+      };
         
-      case 'search_conversations':
-        return {
-          query: z.string().optional().describe('Search query'),
-          interfaceType: z.enum(['cli', 'matrix']).optional().describe('Interface type filter'),
-          roomId: z.string().optional().describe('Room ID filter'),
-          startDate: z.string().optional().describe('Start date filter (ISO format)'),
-          endDate: z.string().optional().describe('End date filter (ISO format)'),
-          limit: z.number().optional().describe('Maximum number of results'),
-        };
+    case 'search_conversations':
+      return {
+        query: z.string().optional().describe('Search query'),
+        interfaceType: z.enum(['cli', 'matrix']).optional().describe('Interface type filter'),
+        roomId: z.string().optional().describe('Room ID filter'),
+        startDate: z.string().optional().describe('Start date filter (ISO format)'),
+        endDate: z.string().optional().describe('End date filter (ISO format)'),
+        limit: z.number().optional().describe('Maximum number of results'),
+      };
         
-      default:
-        // For unknown tools, return an empty schema
-        logger.warn(`No schema defined for tool: ${tool.name || tool.path}`);
-        return {};
+    default:
+      // For unknown tools, return an empty schema
+      logger.warn(`No schema defined for tool: ${tool.name || tool.path}`);
+      return {};
     }
   }
 
