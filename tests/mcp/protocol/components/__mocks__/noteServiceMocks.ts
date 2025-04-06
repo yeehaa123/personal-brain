@@ -3,7 +3,7 @@
  */
 
 import type { McpServer } from '@/mcp';
-import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import type { NoteContext } from '@/mcp/contexts/notes';
 import type { Note } from '@models/note';
 import { createMockEmbedding } from '@test/utils/embeddingUtils';
 import { setupMcpServerMocks } from '@test/utils/mcpUtils';

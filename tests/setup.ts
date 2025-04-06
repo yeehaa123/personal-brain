@@ -11,7 +11,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, mock } from 'bun:test';
 
 // Import singleton reset functions and mocks
 import { ExternalSourceContext } from '@/mcp/contexts/externalSources/externalSourceContext';
-import { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import { NoteContext } from '@/mcp/contexts/notes';
 import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';

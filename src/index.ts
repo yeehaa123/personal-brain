@@ -1,4 +1,4 @@
-import { NoteContext } from '@mcp/contexts/notes/noteContext';
+import { NoteContext } from '@mcp/contexts/notes';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 
 import { getEnv } from './utils/configUtils';

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 
 
 import type { McpServer } from '@/mcp';
-import type { NoteContext } from '@/mcp/contexts/notes/noteContext';
+import type { NoteContext } from '@/mcp/contexts/notes';
 import { NoteService } from '@/mcp/protocol/components/noteService';
 import type { Note } from '@/models/note';
 import {
@@ -97,7 +97,7 @@ class MockNoteContext implements Partial<NoteContext> {
   getMcpServer(): McpServer {
     return this.mcpServer;
   }
-  registerOnServer() { }
+  registerOnServer() { return true; }
 
   // Core API methods
   async getNoteById(id: string) {
