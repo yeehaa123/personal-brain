@@ -444,49 +444,49 @@ export class ConversationContext {
         
         // Register the resource
         targetServer.resource(
-        resource.name || resource.path,
-        `${resource.protocol}://${resource.path}`,
-        async (uri) => {
-          try {
+          resource.name || resource.path,
+          `${resource.protocol}://${resource.path}`,
+          async (uri) => {
+            try {
             // Extract path parameters from URI
-            const pathParams = this.extractPathParams(uri.pathname, resource.path);
-            // Parse query parameters
-            const queryParams = Object.fromEntries(new URLSearchParams(uri.search));
-            // Execute the handler with path parameters and query
-            const result = await resource.handler(pathParams, queryParams);
+              const pathParams = this.extractPathParams(uri.pathname, resource.path);
+              // Parse query parameters
+              const queryParams = Object.fromEntries(new URLSearchParams(uri.search));
+              // Execute the handler with path parameters and query
+              const result = await resource.handler(pathParams, queryParams);
             
-            // Format result according to MCP requirements
-            return {
-              contents: [{
-                uri: uri.toString(),
-                text: typeof result === 'string' 
-                  ? result 
-                  : JSON.stringify(result, null, 2),
-              }],
-            };
-          } catch (error) {
-            logger.error(`Error in ${resourceUri} resource:`, 
-              error instanceof Error ? error.message : String(error));
-            return {
-              contents: [{
-                uri: uri.toString(),
-                text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-              }],
-            };
-          }
-        },
-      );
+              // Format result according to MCP requirements
+              return {
+                contents: [{
+                  uri: uri.toString(),
+                  text: typeof result === 'string' 
+                    ? result 
+                    : JSON.stringify(result, null, 2),
+                }],
+              };
+            } catch (error) {
+              logger.error(`Error in ${resourceUri} resource:`, 
+                error instanceof Error ? error.message : String(error));
+              return {
+                contents: [{
+                  uri: uri.toString(),
+                  text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                }],
+              };
+            }
+          },
+        );
       
-      successCount++;
-      logger.debug(`Registered resource: ${resourceUri}`);
-    } catch (error) {
-      logger.error(`Failed to register resource ${resource.name || resource.path}: ${
-        error instanceof Error ? error.message : String(error)}`);
+        successCount++;
+        logger.debug(`Registered resource: ${resourceUri}`);
+      } catch (error) {
+        logger.error(`Failed to register resource ${resource.name || resource.path}: ${
+          error instanceof Error ? error.message : String(error)}`);
+      }
     }
-  }
   
-  logger.info(`Successfully registered ${successCount} of ${this.conversationResources.length} resources`);
-  return successCount;
+    logger.info(`Successfully registered ${successCount} of ${this.conversationResources.length} resources`);
+    return successCount;
   }
   
   /**
@@ -517,46 +517,46 @@ export class ConversationContext {
         // Use proper Zod schemas based on the tool name
         const schema = this.getToolSchema(tool);
       
-      targetServer.tool(
-        tool.name,
-        tool.description || `Tool for ${tool.path}`,
-        schema,
-        async (args) => {
-          try {
+        targetServer.tool(
+          tool.name,
+          tool.description || `Tool for ${tool.path}`,
+          schema,
+          async (args) => {
+            try {
             // Execute the handler with the arguments
-            const result = await tool.handler(args);
-            return {
-              content: [{
-                type: 'text',
-                text: typeof result === 'string' 
-                  ? result 
-                  : JSON.stringify(result, null, 2),
-              }],
-            };
-          } catch (error) {
-            logger.error(`Error executing tool ${tool.name}: ${
-              error instanceof Error ? error.message : String(error)}`);
-            return {
-              content: [{
-                type: 'text',
-                text: `Error: ${error instanceof Error ? error.message : String(error)}`,
-              }],
-              isError: true,
-            };
-          }
-        },
-      );
+              const result = await tool.handler(args);
+              return {
+                content: [{
+                  type: 'text',
+                  text: typeof result === 'string' 
+                    ? result 
+                    : JSON.stringify(result, null, 2),
+                }],
+              };
+            } catch (error) {
+              logger.error(`Error executing tool ${tool.name}: ${
+                error instanceof Error ? error.message : String(error)}`);
+              return {
+                content: [{
+                  type: 'text',
+                  text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                }],
+                isError: true,
+              };
+            }
+          },
+        );
       
-      successCount++;
-      logger.debug(`Registered tool: ${tool.name}`);
-    } catch (error) {
-      logger.error(`Failed to register tool ${tool.name}: ${
-        error instanceof Error ? error.message : String(error)}`);
+        successCount++;
+        logger.debug(`Registered tool: ${tool.name}`);
+      } catch (error) {
+        logger.error(`Failed to register tool ${tool.name}: ${
+          error instanceof Error ? error.message : String(error)}`);
+      }
     }
-  }
   
-  logger.info(`Successfully registered ${successCount} of ${this.conversationTools.length} tools`);
-  return successCount;
+    logger.info(`Successfully registered ${successCount} of ${this.conversationTools.length} tools`);
+    return successCount;
   }
   
   /**

@@ -6,6 +6,25 @@ import { mock as viMock } from 'bun:test';
 
 import type { McpServer } from '@/mcp';
 
+/**
+ * Set up mock environment for MCP tests
+ */
+export function setMockEnv(): void {
+  // Set environment variables for testing
+  process.env.ANTHROPIC_API_KEY = 'mock-api-key';
+  process.env.OPENAI_API_KEY = 'mock-openai-key';
+  process.env.NEWS_API_KEY = 'mock-news-api-key';
+}
+
+/**
+ * Clear mock environment after tests
+ */
+export function clearMockEnv(): void {
+  // Clean up environment variables
+  delete process.env.ANTHROPIC_API_KEY;
+  delete process.env.OPENAI_API_KEY;
+  delete process.env.NEWS_API_KEY;
+}
 
 
 // We're not using this function but keeping it commented out for future reference

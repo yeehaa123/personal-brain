@@ -504,4 +504,16 @@ export class InMemoryStorage implements ConversationStorage {
   private getRoomKey(roomId: string, interfaceType: 'cli' | 'matrix'): string {
     return `${interfaceType}:${roomId}`;
   }
+  
+  /**
+   * Clear all data from this storage instance
+   * Primarily used for testing
+   */
+  clear(): void {
+    this.conversations.clear();
+    this.turns.clear();
+    this.summaries.clear();
+    this.roomIndex.clear();
+    logger.debug('Cleared all data from InMemoryStorage');
+  }
 }
