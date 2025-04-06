@@ -75,14 +75,8 @@ export class BrainProtocol {
     // Initialize configuration
     this.config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
     
-    // Create the unified MCP server
-    this.unifiedMcpServer = createUnifiedMcpServer({
-      apiKey: this.config.getApiKey(),
-      newsApiKey: this.config.newsApiKey,
-      name: 'BrainProtocol',
-      version: '1.0.0',
-      enableExternalSources: this.config.useExternalSources,
-    });
+    // Create the unified MCP server using config
+    this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
     
     // Initialize managers
     this.contextManager = new ContextManager(this.config);

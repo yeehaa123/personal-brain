@@ -5,6 +5,7 @@ import { aiConfig, conversationConfig } from '@/config';
 import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import logger from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
+import { ValidationError } from '@/utils/errorUtils';
 
 import type { BrainProtocolOptions } from '../types';
 
@@ -29,6 +30,12 @@ export class BrainProtocolConfig {
   
   /** Memory storage implementation for conversation memory */
   readonly memoryStorage?: ConversationMemoryStorage;
+
+  /** Version of the protocol */
+  readonly version: string = '1.0.0';
+
+  /** Name of the protocol */
+  readonly name: string = 'BrainProtocol';
 
   /**
    * Create a new configuration object from options
@@ -72,33 +79,84 @@ export class BrainProtocolConfig {
 
   /**
    * Validate the configuration
-   * @throws Error if the configuration is invalid
+   * @throws ValidationError if the configuration is invalid
    */
   validate(): void {
-    // Room ID is now required for both interfaces
-    if (!isNonEmptyString(this.roomId)) {
-      logger.warn('No room ID provided, using default');
+    // Room ID is required for CLI interface
+    if (this.interfaceType === 'cli' && !isNonEmptyString(this.roomId)) {
+      throw new ValidationError(
+        'BrainProtocol configuration is invalid: Room ID is required for CLI interface',
+        { interfaceType: this.interfaceType, roomId: this.roomId }
+      );
+    }
+
+    // Room ID is now recommended for Matrix interface
+    if (this.interfaceType === 'matrix' && !isNonEmptyString(this.roomId)) {
+      logger.warn('No room ID provided for Matrix interface, conversation tracking may be limited');
+    }
+
+    // API keys are not strictly required, as they may be provided by environment variables
+    if (!this.hasAnthropicApiKey() && !this.hasOpenAIApiKey()) {
+      logger.warn('No API keys provided, relying on environment variables');
+    }
+
+    // External sources require a news API key
+    if (this.useExternalSources && !isNonEmptyString(this.newsApiKey)) {
+      logger.warn('External sources are enabled, but no news API key was provided');
     }
   }
 
   /**
-   * Get the API key, falling back to the environment variable
+   * Get the API key, falling back to environment variables
+   * @returns The API key to use for AI services
    */
   getApiKey(): string {
     return this.apiKey || aiConfig.anthropic.apiKey || aiConfig.openAI.apiKey || '';
   }
 
   /**
-   * Check if Anthropic API key is available
+   * Check if an Anthropic API key is available
+   * @returns Whether an Anthropic API key is available
    */
   hasAnthropicApiKey(): boolean {
     return Boolean(this.apiKey || aiConfig.anthropic.apiKey);
   }
 
   /**
-   * Check if OpenAI API key is available
+   * Check if an OpenAI API key is available
+   * @returns Whether an OpenAI API key is available
    */
   hasOpenAIApiKey(): boolean {
     return Boolean(this.apiKey || aiConfig.openAI.apiKey);
+  }
+
+  /**
+   * Get default room ID for the current interface type
+   * @returns The default room ID
+   */
+  getDefaultRoomId(): string {
+    // For now, we only have a CLI default room ID
+    // Matrix should always provide a room ID
+    return conversationConfig.defaultCliRoomId;
+  }
+
+  /**
+   * Get MCP server configuration parameters
+   * @returns Configuration object for the MCP server
+   */
+  getMcpServerConfig(): {
+    apiKey: string;
+    newsApiKey?: string;
+    name: string;
+    version: string;
+    enableExternalSources: boolean;
+  } {
+    return {
+      apiKey: this.getApiKey(),
+      newsApiKey: this.newsApiKey,
+      name: this.name,
+      version: this.version,
+      enableExternalSources: this.useExternalSources,
+    };
   }
 }
