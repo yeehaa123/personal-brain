@@ -68,13 +68,22 @@ class TestNoteEmbeddingService extends NoteEmbeddingService {
       writable: true,
     });
   }
+  
+  // Override the factory methods to use our test class
+  public static override createFresh(apiKey?: string): TestNoteEmbeddingService {
+    return new TestNoteEmbeddingService(apiKey);
+  }
 }
 
 describe('NoteEmbeddingService', () => {
   let embeddingService: TestNoteEmbeddingService;
   
   beforeEach(() => {
-    embeddingService = new TestNoteEmbeddingService('mock-api-key');
+    // Reset singleton instances
+    NoteEmbeddingService.resetInstance();
+    
+    // Create a fresh service instance for testing
+    embeddingService = TestNoteEmbeddingService.createFresh('mock-api-key');
   });
   
   test('should properly initialize', () => {

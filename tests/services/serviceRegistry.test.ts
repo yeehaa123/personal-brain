@@ -23,6 +23,15 @@ import { createContainer } from '@/utils/dependencyContainer';
 
 describe('Service Registry', () => {
   beforeEach(() => {
+    // Reset singleton instances
+    NoteRepository.resetInstance();
+    ProfileRepository.resetInstance();
+    NoteEmbeddingService.resetInstance();
+    ProfileEmbeddingService.resetInstance();
+    NoteSearchService.resetInstance();
+    ProfileSearchService.resetInstance();
+    ProfileTagService.resetInstance();
+    
     // Create a fresh container for each test
     container = createContainer();
     registerServices(container);

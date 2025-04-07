@@ -50,6 +50,11 @@ export class MockNoteRepository extends NoteRepository {
     this.notes = JSON.parse(JSON.stringify(initialNotes));
   }
   
+  // Add static factory methods for consistency with real implementation
+  public static createFresh(initialNotes: Note[] = []): MockNoteRepository {
+    return new MockNoteRepository(initialNotes);
+  }
+  
   // Required abstract methods from BaseRepository
   protected override get table() {
     return notes;
@@ -241,8 +246,11 @@ describe('NoteRepository', () => {
   let repository: MockNoteRepository;
   
   beforeEach(() => {
+    // Clean up any singleton instances
+    NoteRepository.resetInstance();
+    
     // Create a fresh repository with the initial notes
-    repository = new MockNoteRepository(initialNotes);
+    repository = MockNoteRepository.createFresh(initialNotes);
   });
   
   test('should initialize correctly', () => {

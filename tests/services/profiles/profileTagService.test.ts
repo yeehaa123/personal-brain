@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
+import { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileTagService } from '@/services/profiles/profileTagService';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 
@@ -88,12 +89,15 @@ describe('ProfileTagService', () => {
   let repository: MockProfileRepository;
   
   beforeEach(() => {
+    // Reset singleton instances
+    ProfileRepository.resetInstance();
+    ProfileTagService.resetInstance();
+    
     // Create a fresh repository with the initial profile
-    MockProfileRepository.resetInstance();
     repository = MockProfileRepository.createFresh([mockProfile]);
     
     // Create the service
-    tagService = new ProfileTagService();
+    tagService = ProfileTagService.createFresh();
     
     // Replace the repository in the service with our mock
     Object.defineProperty(tagService, 'repository', {

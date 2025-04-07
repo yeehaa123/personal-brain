@@ -17,6 +17,16 @@ export class MockProfileRepository extends ProfileRepository {
     this.profile = initialProfile ? JSON.parse(JSON.stringify(initialProfile)) : null;
   }
   
+  // Add static factory methods for consistency with real implementation
+  public static createFresh(initialProfiles: Profile[] = []): MockProfileRepository {
+    return new MockProfileRepository(initialProfiles.length > 0 ? initialProfiles[0] : null);
+  }
+  
+  // Static method to reset the parent class singleton instance
+  public static override resetInstance(): void {
+    ProfileRepository.resetInstance();
+  }
+  
   // Implement required abstract methods from BaseRepository
   protected override get table() {
     return profiles;
@@ -113,8 +123,11 @@ describe('ProfileRepository', () => {
   let repository: MockProfileRepository;
   
   beforeEach(() => {
+    // Clean up any singleton instances
+    ProfileRepository.resetInstance();
+    
     // Create a fresh repository with the initial profile
-    repository = new MockProfileRepository(initialProfile);
+    repository = MockProfileRepository.createFresh([initialProfile]);
   });
   
   test('should initialize correctly', () => {

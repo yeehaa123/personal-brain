@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Note } from '@/models/note';
-import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
-import type { NoteRepository } from '@/services/notes/noteRepository';
+import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
@@ -114,9 +114,14 @@ let searchService: NoteSearchService;
 describe('NoteSearchService', () => {
   // Set up the test instances
   beforeEach(() => {
+    // Reset singleton instances
+    NoteRepository.resetInstance();
+    NoteEmbeddingService.resetInstance();
+    NoteSearchService.resetInstance();
+    
     repository = mockRepository as unknown as NoteRepository;
     embeddingService = new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
-    searchService = new NoteSearchService(repository, embeddingService);
+    searchService = NoteSearchService.createFresh(repository, embeddingService);
   });
 
   describe('search', () => {
