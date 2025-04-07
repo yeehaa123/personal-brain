@@ -101,8 +101,8 @@ mock.module('@/mcp/contexts/conversations/services/conversationMemoryService', (
     ConversationMemoryService: class extends MockMemoryService {
       override formatHistoryForPrompt = mock(() => Promise.resolve(
         'User: What is quantum computing?\nAssistant: Quantum computing is a type of computation that uses quantum bits or qubits to perform operations.\n\n' +
-        'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n'
-      ))
+        'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n',
+      ));
     },
   };
 });
