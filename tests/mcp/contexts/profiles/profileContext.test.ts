@@ -69,10 +69,10 @@ const mockProfileSearchService = {
 const mockMcpServer = createMockMcpServer();
 
 // Setup Anthropic mocks
-setupAnthropicMocks(mock);
+setupAnthropicMocks();
 
-// Setup the MCP module mock using the wrapper function that takes mock parameter
-setupMcpServerMocks(mock);
+// Setup the MCP module mock
+setupMcpServerMocks();
 
 // We need to mock these specific imports together
 mock.module('@/utils/dependencyContainer', () => {

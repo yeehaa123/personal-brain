@@ -37,8 +37,7 @@ export { MockNoteRepository } from './services/notes/noteRepository.test';
 export {
   setupAnthropicMocks,
   setupMcpServerMocks,
-  createMockMcpServer,
-} from './mcp/contexts/__mocks__/mcpMocks';
+} from './utils/mcpUtils';
 
 // External sources mocks
 export {

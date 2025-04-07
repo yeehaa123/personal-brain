@@ -9,14 +9,14 @@ import { ConversationContext } from '@/mcp/contexts/conversations/core/conversat
 import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
 import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
-import { MockConversationStorage } from '@test/__mocks__/storage';
-
 import {
   MockMemoryService,
   MockQueryService,
   MockResourceService,
   MockToolService,
-} from '../__mocks__';
+} from '@test/__mocks__/contexts';
+import { MockConversationStorage } from '@test/__mocks__/storage';
+
 
 // Mock the service registry
 mock.module('@/services/serviceRegistry', () => {

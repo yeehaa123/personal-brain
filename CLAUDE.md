@@ -113,3 +113,49 @@
 5. **Document Architectural Decisions**: Update documentation to reflect major architectural changes.
 6. **Use Type Checking**: Run the TypeScript compiler frequently to catch interface mismatches early.
 7. **Commit Logical Units**: Make commits focused on specific logical changes rather than many unrelated changes.
+
+## Mock Implementation Standards
+
+1. **Standardized Mock System**: All mocks should follow a consistent pattern:
+   - **Singleton Pattern**: Use getInstance(), resetInstance(), and createFresh() methods
+   - **Centralized Location**: Define mocks in the tests/__mocks__ directory
+   - **Type Compliance**: Implement the same interface as the real implementation
+   - **Reset Functionality**: Provide clear method to reset state between tests
+
+2. **Standardized Mock Structure**:
+   ```typescript
+   export class MockComponent implements ComponentInterface {
+     private static instance: MockComponent | null = null;
+     
+     // Singleton getInstance method
+     public static getInstance(): MockComponent {
+       if (!MockComponent.instance) {
+         MockComponent.instance = new MockComponent();
+       }
+       return MockComponent.instance;
+     }
+     
+     // Reset instance for test isolation
+     public static resetInstance(): void {
+       MockComponent.instance = null;
+     }
+     
+     // Create fresh instance for test isolation
+     public static createFresh(options?: Record<string, unknown>): MockComponent {
+       return new MockComponent(options);
+     }
+     
+     // Component implementation...
+   }
+   ```
+
+3. **Mock Categories**:
+   - `__mocks__/storage`: Storage implementations
+   - `__mocks__/contexts`: Context implementations
+   - `__mocks__/models`: Data model factories
+   - `__mocks__/services`: Service implementations
+
+4. **Test Isolation Principles**:
+   - Reset all mocks between tests using resetInstance()
+   - Use createFresh() for unique test requirements
+   - Maintain test purity by avoiding shared state

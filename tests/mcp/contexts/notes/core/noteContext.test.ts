@@ -8,8 +8,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import { NoteContext } from '@/mcp/contexts/notes/core/noteContext';
-
-import { createMockMcpServer } from '../../../contexts/__mocks__/mcpMocks';
+import { setupMcpServerMocks } from '@test/utils/mcpUtils';
 
 describe('NoteContext', () => {
   // We'll create mock servers as needed in the tests
@@ -90,7 +89,7 @@ describe('NoteContext', () => {
   });
   
   test('registerOnServer registers resources and tools', () => {
-    const testServer = createMockMcpServer();
+    const testServer = setupMcpServerMocks();
     const result = noteContext.registerOnServer(testServer);
     
     expect(result).toBe(true);

@@ -15,8 +15,8 @@ import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository'
 const mockNotes = createMockNotes();
 
 // Setup MCP server and Anthropic mocks
-setupMcpServerMocks(mock);
-setupAnthropicMocks(mock);
+setupMcpServerMocks();
+setupAnthropicMocks();
 
 // Create mock repository using our standardized implementation
 const mockNoteRepository = MockNoteRepository.createFresh(mockNotes);

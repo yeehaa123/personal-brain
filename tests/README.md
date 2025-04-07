@@ -66,6 +66,40 @@ The tests use several mocking approaches:
 3. **Service Mocks**: Providing test implementations of services
 4. **Dependency Injection**: Configuring the container with mock services
 
+### Standardized Mock System
+
+We've implemented a standardized mock system for consistency across tests:
+
+1. **Centralized Location**: All mocks are in the `tests/__mocks__` directory
+2. **Consistent Pattern**: All mocks follow the singleton pattern with:
+   - `getInstance()` - Get the singleton instance
+   - `resetInstance()` - Reset the singleton for test isolation
+   - `createFresh()` - Create a new instance for specific test needs
+
+3. **Mock Categories**:
+   - **Storage Mocks**: `__mocks__/storage` - Mock storage implementations
+   - **Context Mocks**: `__mocks__/contexts` - Mock context implementations
+   - **Model Mocks**: `__mocks__/models` - Mock data model factories
+   - **Service Mocks**: `__mocks__/services` - Mock service implementations
+
+4. **Usage**:
+```typescript
+import { MockConversationContext } from '@test/__mocks__/contexts';
+
+// Get singleton instance
+const context = MockConversationContext.getInstance();
+
+// Reset before/after tests
+beforeEach(() => {
+  MockConversationContext.resetInstance();
+});
+
+// Create a fresh instance for specific test
+const customContext = MockConversationContext.createFresh({
+  // Custom options
+});
+```
+
 ## Recent Test Fixes
 
 We identified and fixed several test isolation issues:

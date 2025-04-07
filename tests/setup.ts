@@ -17,11 +17,18 @@ import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
 
 import { setupLoggerMocks } from './__mocks__';
+import { 
+  MockBaseContext,
+  MockConversationContext, 
+  MockExternalSourceContext, 
+  MockNoteContext, 
+  MockProfileContext, 
+} from './__mocks__/contexts';
 import { MockConversationStorage } from './__mocks__/storage';
-import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
 import { setTestEnv } from './utils/envUtils';
 import { setupMockFetch } from './utils/fetchUtils';
+import { setupMcpServerMocks } from './utils/mcpUtils';
 
 // Set test environment
 setTestEnv('NODE_ENV', 'test');
@@ -32,7 +39,7 @@ beforeAll(() => {
   setupLoggerMocks(mock);
   
   // Set up global mocks for BrainProtocol and related classes
-  setupMcpServerMocks(mock);
+  setupMcpServerMocks();
 });
 
 // Per-test setup - runs before each test
@@ -42,6 +49,7 @@ beforeEach(() => {
     BrainProtocol.resetInstance();
   }
   
+  // Reset original contexts
   if (typeof NoteContext?.resetInstance === 'function') {
     NoteContext.resetInstance();
   }
@@ -53,6 +61,13 @@ beforeEach(() => {
   if (typeof ExternalSourceContext?.resetInstance === 'function') {
     ExternalSourceContext.resetInstance();
   }
+  
+  // Reset our standardized mock contexts
+  MockBaseContext.resetInstance();
+  MockConversationContext.resetInstance();
+  MockNoteContext.resetInstance();
+  MockProfileContext.resetInstance();
+  MockExternalSourceContext.resetInstance();
   
   resetServiceRegistration();
   
@@ -74,6 +89,31 @@ beforeEach(() => {
   mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
     return {
       InMemoryStorage: MockConversationStorage,
+    };
+  });
+  
+  // Mock the context classes
+  mock.module('@/mcp/contexts/conversations/core/conversationContext', () => {
+    return {
+      ConversationContext: MockConversationContext,
+    };
+  });
+  
+  mock.module('@/mcp/contexts/notes/core/noteContext', () => {
+    return {
+      NoteContext: MockNoteContext,
+    };
+  });
+  
+  mock.module('@/mcp/contexts/profiles/core/profileContext', () => {
+    return {
+      ProfileContext: MockProfileContext,
+    };
+  });
+  
+  mock.module('@/mcp/contexts/externalSources/core/externalSourceContext', () => {
+    return {
+      ExternalSourceContext: MockExternalSourceContext,
     };
   });
   
