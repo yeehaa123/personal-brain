@@ -7,10 +7,11 @@ import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import type { Note } from '@/models/note';
+import type { NewNote, Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { createIsolatedContext } from '@test/utils/contextUtils';
 import { createTestNote } from '@test/utils/embeddingUtils';
 
@@ -44,34 +45,27 @@ describe('ConversationToNoteService', () => {
 
   // Create mock functions with manual call tracking for test assertions
   let insertNoteCalls: Note[] = [];
-  const insertNoteMock = (data: Note) => {
-    insertNoteCalls.push(data);
-    return Promise.resolve('note-12345678');
+  
+  // Use our standardized mock repository implementation
+  const mockNoteRepository = MockNoteRepository.createFresh([sampleNote]);
+  
+  // Override insertNote method to track calls for test assertions
+  mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
+    // Store the entire data object for assertions
+    const noteData = {
+      ...data,
+      id: data.id || 'note-12345678',
+      createdAt: data.createdAt || new Date(),
+      updatedAt: data.updatedAt || new Date(),
+      source: data.source || 'conversation',
+      confidence: data.confidence !== undefined ? data.confidence : null,
+      verified: data.verified !== undefined ? data.verified : null,
+      conversationMetadata: data.conversationMetadata || null,
+    } as Note;
+    
+    insertNoteCalls.push(noteData);
+    return 'note-12345678';
   };
-
-  // Create proper mock objects with functions - no jest mock methods
-  const mockNoteRepository = {
-    insertNote: insertNoteMock,
-    getNoteById: () => Promise.resolve(sampleNote),
-    findBySource: () => Promise.resolve([]),
-    findByConversationMetadata: () => Promise.resolve([]),
-    // Add all other required NoteRepository methods as empty implementations
-    update: () => Promise.resolve(),
-    delete: () => Promise.resolve(true),
-    getById: () => Promise.resolve(sampleNote),
-    getAll: () => Promise.resolve([sampleNote]),
-    getCount: () => Promise.resolve(1),
-    insert: () => Promise.resolve(sampleNote),
-    // Add repository-specific methods
-    getRecentNotes: () => Promise.resolve([sampleNote]),
-    updateNoteEmbedding: () => Promise.resolve(),
-    getNotesWithoutEmbeddings: () => Promise.resolve([]),
-    getNotesWithEmbeddings: () => Promise.resolve([sampleNote]),
-    getOtherNotesWithEmbeddings: () => Promise.resolve([]),
-    getNoteCount: () => Promise.resolve(1),
-    searchNotesByKeywords: () => Promise.resolve([sampleNote]),
-    insertNoteChunk: () => Promise.resolve('chunk-id'),
-  } as unknown as NoteRepository;
 
   const mockEmbeddingService = {
     generateNoteEmbedding: () => Promise.resolve([1, 2, 3]),
@@ -121,6 +115,9 @@ describe('ConversationToNoteService', () => {
   beforeEach(async () => {
     // Clear tracking variables
     insertNoteCalls = [];
+    
+    // Reset our standardized repository mock
+    MockNoteRepository.resetInstance();
 
     // Reset the mock for extractTags
     mockExtractTags.mockClear();
@@ -152,10 +149,31 @@ describe('ConversationToNoteService', () => {
       value: new Map([['conv-123', testConversation]]),
     });
 
+    // Reset the mockNoteRepository to have the sample note
+    mockNoteRepository.notes = [sampleNote];
+    
+    // Re-implement the custom insertNote method for tracking
+    mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
+      // Store the entire data object for assertions
+      const noteData = {
+        ...data,
+        id: data.id || 'note-12345678',
+        createdAt: data.createdAt || new Date(),
+        updatedAt: data.updatedAt || new Date(),
+        source: data.source || 'conversation',
+        confidence: data.confidence !== undefined ? data.confidence : null,
+        verified: data.verified !== undefined ? data.verified : null,
+        conversationMetadata: data.conversationMetadata || null,
+      } as Note;
+      
+      insertNoteCalls.push(noteData);
+      return 'note-12345678';
+    };
+
     // Create service instance with isolated storage
     // We're using type assertion here as the test only needs a subset of the methods
     service = new ConversationToNoteService(
-      mockNoteRepository,
+      mockNoteRepository as unknown as NoteRepository,
       mockEmbeddingService,
       isolatedStorage as unknown as ConversationStorage, // Using type assertion for test simplicity
     );

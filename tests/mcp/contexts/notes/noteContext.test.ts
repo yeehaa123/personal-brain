@@ -9,6 +9,7 @@ import {
   setupAnthropicMocks,
   setupMcpServerMocks,
 } from '@test';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 
 // Create mock notes for testing
 const mockNotes = createMockNotes();
@@ -17,21 +18,8 @@ const mockNotes = createMockNotes();
 setupMcpServerMocks(mock);
 setupAnthropicMocks(mock);
 
-// Create mock repository and services
-const mockNoteRepository = {
-  getNoteById: async (id: string) => {
-    return mockNotes.find(note => note.id === id);
-  },
-  getRecentNotes: async () => {
-    return [...mockNotes];
-  },
-  searchNotesByKeywords: async () => {
-    return [...mockNotes];
-  },
-  getAllNotes: async () => {
-    return [...mockNotes];
-  },
-};
+// Create mock repository using our standardized implementation
+const mockNoteRepository = MockNoteRepository.createFresh(mockNotes);
 
 const mockNoteEmbeddingService = {
   findRelatedNotes: async () => {
@@ -155,6 +143,12 @@ describe('NoteContext Tests', () => {
   });
   
   beforeEach(() => {
+    // Reset our standardized repository mock
+    MockNoteRepository.resetInstance();
+    
+    // Ensure mockNoteRepository has the mock notes
+    mockNoteRepository.notes = [...mockNotes];
+    
     // Create a fresh context for each test
     noteContext = new NoteContext('mock-api-key');
     

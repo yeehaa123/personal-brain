@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-
 import type { McpServer } from '@/mcp';
 import type { NoteContext } from '@/mcp/contexts/notes';
 import { NoteService } from '@/mcp/protocol/components/noteService';
@@ -9,6 +8,7 @@ import {
   createMockNote,
   createMockNotes,
 } from '@test';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 
 
 
@@ -41,19 +41,25 @@ class MockNoteContext implements Partial<NoteContext> {
   searchService: INoteSearchService;
   embeddingService: INoteEmbeddingService;
   mcpServer: McpServer;
+  standardRepo: MockNoteRepository;
 
   constructor() {
     const mockNotes = createMockNotes();
-    // Create repository with proper interface
+    // Use our standardized repository
+    this.standardRepo = MockNoteRepository.createFresh(mockNotes);
+    
+    // Create repository adapter with proper interface
     this.repository = {
-      getNoteById: async (id: string) => mockNotes.find(note => note.id === id) || undefined,
-      getRecentNotes: async (limit = 5) => mockNotes.slice(0, limit),
+      getNoteById: async (id: string) => this.standardRepo.getNoteById(id),
+      getRecentNotes: async (limit = 5) => this.standardRepo.getRecentNotes(limit),
       addNote: async (note: Record<string, unknown>) => {
-        return createMockNote(
-          `note-${Date.now()}`,
-          note['title'] as string || 'Untitled',
-          note['tags'] as string[] || [],
-        );
+        const id = await this.standardRepo.insertNote({
+          title: note['title'] as string || 'Untitled',
+          content: note['content'] as string || '',
+          tags: note['tags'] as string[] || [],
+        });
+        const newNote = await this.standardRepo.getNoteById(id);
+        return newNote as Note;
       },
     };
 
@@ -140,6 +146,10 @@ describe('NoteService', () => {
   let mockContext: MockNoteContext;
 
   beforeEach(() => {
+    // Reset the standardized repository before each test
+    MockNoteRepository.resetInstance();
+    
+    // Create fresh context and service
     mockContext = new MockNoteContext();
     // Use type assertion for compatibility
     noteService = new NoteService(mockContext as unknown as NoteContext);

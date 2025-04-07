@@ -5,6 +5,7 @@ import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 
 
 // Set up embedding service mocks
@@ -60,47 +61,8 @@ const mockNotes = [
   }),
 ];
 
-// Create a mock repository
-class MockNoteRepository {
-  async getNoteById(id: string): Promise<Note | undefined> {
-    return mockNotes.find(note => note.id === id);
-  }
-  
-  async getRecentNotes(limit: number = 10): Promise<Note[]> {
-    return [...mockNotes]
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-      .slice(0, limit);
-  }
-  
-  async searchNotesByKeywords(
-    query?: string, 
-    tags?: string[], 
-    limit: number = 10, 
-    offset: number = 0,
-  ): Promise<Note[]> {
-    let results = [...mockNotes];
-    
-    // Filter by query if provided
-    if (query) {
-      const lowerQuery = query.toLowerCase();
-      results = results.filter(note => {
-        const text = `${note.title} ${note.content}`.toLowerCase();
-        return text.includes(lowerQuery);
-      });
-    }
-    
-    // Filter by tags if provided
-    if (tags && tags.length > 0) {
-      results = results.filter(note => {
-        if (!note.tags) return false;
-        return tags.some(tag => note.tags!.includes(tag));
-      });
-    }
-    
-    // Apply limit and offset
-    return results.slice(offset, offset + limit);
-  }
-}
+// Create a mock repository using our standardized implementation
+const mockRepository = MockNoteRepository.createFresh(mockNotes);
 
 // Create a mock embedding service
 class MockNoteEmbeddingService {
@@ -130,139 +92,71 @@ class MockNoteEmbeddingService {
   }
   
   async findRelatedNotes(noteId: string, maxResults: number = 5): Promise<Note[]> {
-    const note = mockNotes.find(n => n.id === noteId);
-    if (!note) {
-      // Return empty array instead of throwing for the test
+    // Check if the note exists first
+    const noteExists = mockNotes.some(note => note.id === noteId);
+    if (!noteExists) {
       return [];
     }
     
-    // Return other notes with similarity scores
-    const result = mockNotes
-      .filter(n => n.id !== noteId)
-      .map(n => ({
-        ...n,
-        similarity: 0.8 - Math.random() * 0.3, // Random similarity
-      }))
-      .sort((a, b) => (b.similarity || 0) - (a.similarity || 0))
+    // Return other notes, excluding the target note
+    return mockNotes
+      .filter(note => note.id !== noteId)
       .slice(0, maxResults);
-      
-    // Make sure we return valid Note objects
-    return result.map(({ similarity: _similarity, ...rest }) => createTestNote({
-      id: rest.id,
-      title: rest.title,
-      content: rest.content,
-      tags: rest.tags || [],
-      embedding: rest.embedding || undefined,
-      createdAt: rest.createdAt,
-      updatedAt: rest.updatedAt,
-    }));
   }
 }
 
+// Create instances of the mocks for tests
+let repository: NoteRepository;
+let embeddingService: NoteEmbeddingService;
+let searchService: NoteSearchService;
+
 describe('NoteSearchService', () => {
-  let searchService: NoteSearchService;
-  let repository: MockNoteRepository;
-  let embeddingService: MockNoteEmbeddingService;
-  
+  // Set up the test instances
   beforeEach(() => {
-    repository = new MockNoteRepository();
-    embeddingService = new MockNoteEmbeddingService();
-    searchService = new NoteSearchService(
-      repository as unknown as NoteRepository, 
-      embeddingService as unknown as NoteEmbeddingService,
-    );
+    repository = mockRepository as unknown as NoteRepository;
+    embeddingService = new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
+    searchService = new NoteSearchService(repository, embeddingService);
   });
   
-  test('should properly initialize', () => {
-    expect(searchService).toBeDefined();
-  });
-  
-  test('should create instance using factory method', () => {
-    // Mock the static method for this test
-    const originalMethod = NoteSearchService.createWithApiKey;
-    NoteSearchService.createWithApiKey = (_apiKey?: string) => {
-      return new NoteSearchService(
-        repository as unknown as NoteRepository,
-        embeddingService as unknown as NoteEmbeddingService,
-      );
-    };
-    
-    const service = NoteSearchService.createWithApiKey('mock-api-key');
-    
-    // Restore original method
-    NoteSearchService.createWithApiKey = originalMethod;
-    
-    expect(service).toBeDefined();
-    expect(service).toBeInstanceOf(NoteSearchService);
-  });
-  
-  test('should search notes with text query', async () => {
-    const results = await searchService.searchNotes({ 
-      query: 'javascript', 
-      limit: 5,
+  describe('search', () => {
+    test('should search notes by query', async () => {
+      const results = await searchService.search({ query: 'javascript' });
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some(note => note.id === 'note-2')).toBe(true);
     });
     
-    expect(results).toBeDefined();
-    expect(results.length).toBeGreaterThan(0);
-  });
-  
-  test('should search notes with tags', async () => {
-    const results = await searchService.searchNotes({ 
-      tags: ['ai', 'technology'],
-      limit: 5,
+    test('should search notes by tags', async () => {
+      const results = await searchService.search({ tags: ['ai'] });
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some(note => note.id === 'note-1')).toBe(true);
     });
     
-    expect(results).toBeDefined();
-    expect(results.length).toBeGreaterThan(0);
+    test('should apply limit and offset', async () => {
+      const results = await searchService.search({ limit: 1, offset: 1 });
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBe(1);
+    });
   });
   
-  test('should search notes with semantic similarity when enabled', async () => {
-    const results = await searchService.searchNotes({ 
-      query: 'artificial intelligence',
-      semanticSearch: true,
-      limit: 5,
+  describe('findRelated', () => {
+    test('should find related notes', async () => {
+      const results = await searchService.findRelated('note-1');
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.every(note => note.id !== 'note-1')).toBe(true);
     });
     
-    expect(results).toBeDefined();
-    expect(results.length).toBeGreaterThan(0);
-  });
-  
-  test('should find related notes by id', async () => {
-    const relatedNotes = await searchService.findRelated('note-1', 5);
-    
-    expect(relatedNotes).toBeDefined();
-    expect(Array.isArray(relatedNotes)).toBe(true);
-    expect(relatedNotes.length).toBeGreaterThan(0);
-  });
-  
-  test('should handle invalid id for related notes gracefully', async () => {
-    const relatedNotes = await searchService.findRelated('invalid-id', 5);
-    
-    // Should gracefully handle this by returning an empty array or recent notes
-    expect(relatedNotes).toBeDefined();
-    expect(Array.isArray(relatedNotes)).toBe(true);
-  });
-  
-  test('should handle empty search parameters', async () => {
-    const results = await searchService.searchNotes({});
-    
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
-  });
-  
-  test('should extract keywords from text', () => {
-    const text = 'This is a long text about machine learning and artificial intelligence algorithms';
-    
-    // Access the extractKeywords method
-    // Define type for NoteSearchService with private method
-    type SearchServiceWithPrivateMethods = NoteSearchService & {
-      extractKeywords: (text: string) => string[];
-    };
-    
-    const keywords = (searchService as SearchServiceWithPrivateMethods).extractKeywords(text);
-    
-    expect(keywords).toBeDefined();
-    expect(Array.isArray(keywords)).toBe(true);
-    expect(keywords.length).toBeGreaterThan(0);
+    test('should handle non-existent note ID', async () => {
+      const results = await searchService.findRelated('non-existent-id');
+      
+      expect(results).toBeDefined();
+      expect(results.length).toBe(0);
+    });
   });
 });

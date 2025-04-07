@@ -11,6 +11,7 @@ import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conv
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { createTestNote } from '@test/utils/embeddingUtils';
 // Mock classes to avoid external dependencies
 class MockConversationStorage implements ConversationStorage {
@@ -84,19 +85,11 @@ describe('Assistant Response Handling in Conversations', () => {
     source: 'conversation',
   });
 
-  const mockNoteRepository = {
-    insertNote: () => Promise.resolve('note-test'),
-    getNoteById: () => Promise.resolve(sampleNote),
-    findBySource: () => Promise.resolve([]),
-    findByConversationMetadata: () => Promise.resolve([]),
-    // Required repository methods for the test
-    update: () => Promise.resolve(),
-    delete: () => Promise.resolve(true),
-    getById: () => Promise.resolve(sampleNote),
-    getAll: () => Promise.resolve([sampleNote]),
-    getCount: () => Promise.resolve(1),
-    insert: () => Promise.resolve(sampleNote),
-  } as unknown as NoteRepository;
+  // Use our standardized MockNoteRepository
+  const mockNoteRepository = MockNoteRepository.createFresh([sampleNote]);
+  
+  // Override methods for test-specific behavior
+  mockNoteRepository.insertNote = async () => Promise.resolve('note-test');
 
   const mockEmbeddingService = {
     generateNoteEmbedding: () => Promise.resolve([1, 2, 3]),
@@ -126,6 +119,15 @@ describe('Assistant Response Handling in Conversations', () => {
   }
 
   beforeEach(() => {
+    // Reset our standardized mock repository
+    MockNoteRepository.resetInstance();
+    
+    // Ensure mockNoteRepository has the sample note
+    mockNoteRepository.notes = [sampleNote];
+    
+    // Override methods for test-specific behavior
+    mockNoteRepository.insertNote = async () => Promise.resolve('note-test');
+    
     // Create fresh mock storage
     mockStorage = new MockConversationStorage();
 
@@ -146,7 +148,7 @@ describe('Assistant Response Handling in Conversations', () => {
 
     // Create service with mocks
     service = new ConversationToNoteService(
-      mockNoteRepository,
+      mockNoteRepository as unknown as NoteRepository,
       mockEmbeddingService,
       mockStorage,
     );

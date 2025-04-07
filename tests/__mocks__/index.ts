@@ -20,10 +20,6 @@
 // Core mocks
 export * from './core/logger';
 
-// Model mocks
-export * from './models/note';
-export * from './models/profile';
-
 // Utility mocks
 export * from './utils/embeddingUtils';
 
