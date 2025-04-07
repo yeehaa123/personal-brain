@@ -17,7 +17,8 @@ import type {
   ProfileTagService,
 } from '@/services/profiles';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { getContainer, getService } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
+import { getService } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 
@@ -104,7 +105,7 @@ export class ProfileContext extends BaseContext {
     super(config as Record<string, unknown>);
     
     // Register services in the container
-    const container = getContainer();
+    const container = DependencyContainer.getInstance();
     registerServices(container, { apiKey: config.apiKey });
     
     // Resolve dependencies from container

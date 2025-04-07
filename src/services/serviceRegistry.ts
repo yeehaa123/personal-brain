@@ -11,8 +11,8 @@ import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemorySt
 import { ConversationToolService } from '@/mcp/contexts/conversations/tools';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import { container } from '@/utils/dependencyContainer';
-import type { DependencyContainer , ServiceFactory } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
+import type { ServiceFactory } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
@@ -72,7 +72,7 @@ export function resetServiceRegistration(): void {
  * @param config Optional configuration for services
  */
 export function registerServices(
-  diContainer: DependencyContainer = container,
+  diContainer: DependencyContainer = DependencyContainer.getInstance(),
   config: { apiKey?: string } = {},
 ): void {
   // Only log the first time services are registered
@@ -209,5 +209,5 @@ export function registerServices(
  * @returns The service instance
  */
 export function getService<T>(serviceId: string): T {
-  return container.resolve<T>(serviceId);
+  return DependencyContainer.getInstance().resolve<T>(serviceId);
 }

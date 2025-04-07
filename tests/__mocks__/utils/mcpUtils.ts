@@ -451,14 +451,15 @@ export function setupDependencyContainerMocks(mock: typeof viMock = viMock) {
   // Mock the DI container
   mock.module('@/utils/dependencyContainer', () => {
     return {
-      container: mockContainer,
-      getContainer: () => mockContainer,
-      getService: <T>(serviceId: string): T => mockContainer.resolve<T>(serviceId),
-      createContainer: () => new MockContainer(mockDependencies),
-      setupDependencyContainer: () => new MockContainer(mockDependencies),
-      useTestContainer: (_container?: unknown) => {
-        return () => {}; // Mock cleanup function
+      // Export the DependencyContainer class with static methods
+      DependencyContainer: {
+        getInstance: () => mockContainer,
+        resetInstance: () => {},
+        createFresh: () => new MockContainer(mockDependencies),
+        instance: mockContainer,
       },
+      // Keep getService for backward compatibility
+      getService: <T>(serviceId: string): T => mockContainer.resolve<T>(serviceId),
     };
   });
 

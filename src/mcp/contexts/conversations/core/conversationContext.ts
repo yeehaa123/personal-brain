@@ -359,7 +359,7 @@ export class ConversationContext extends BaseContext {
     try {
       // Get the container instance from the imported registry - using dynamic import to avoid circular deps
       import('@/utils/dependencyContainer').then(module => {
-        const container = module.container;
+        const container = module.DependencyContainer.getInstance();
         
         // Try to update the storage adapter in the container
         if (container.has(ServiceIdentifiers.ConversationStorageAdapter)) {

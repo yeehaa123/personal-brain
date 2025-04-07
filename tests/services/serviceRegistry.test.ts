@@ -18,7 +18,7 @@ import { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import { ProfileTagService } from '@/services/profiles/profileTagService';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { createContainer } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
 
 
 describe('Service Registry', () => {
@@ -31,13 +31,14 @@ describe('Service Registry', () => {
     NoteSearchService.resetInstance();
     ProfileSearchService.resetInstance();
     ProfileTagService.resetInstance();
+    DependencyContainer.resetInstance();
     
     // Create a fresh container for each test
-    container = createContainer();
+    container = DependencyContainer.createFresh();
     registerServices(container);
   });
   
-  let container = createContainer();
+  let container = DependencyContainer.createFresh();
   
   test('should register all expected services', () => {
     // Check repositories
@@ -106,7 +107,7 @@ describe('Service Registry', () => {
   
   test('should support service configuration', () => {
     // Create a new container with custom config
-    const configuredContainer = createContainer();
+    const configuredContainer = DependencyContainer.createFresh();
     const testApiKey = 'test-api-key';
     
     registerServices(configuredContainer, { apiKey: testApiKey });

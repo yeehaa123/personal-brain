@@ -6,7 +6,7 @@
  */
 import { afterAll, beforeAll } from 'bun:test';
 
-import { createContainer, useTestContainer } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
 
 import { mockFetch } from '../outputUtils';
 
@@ -15,19 +15,25 @@ import { mockFetch } from '../outputUtils';
  * This ensures clean isolation between test suites that use DI
  */
 export function setupDependencyContainer(): { cleanup: () => void } {
-  // Create a fresh container for this test suite
-  const testContainer = createContainer();
+  // Store the original instance
+  const originalInstance = DependencyContainer.getInstance();
   
-  // Use this container for all tests in this suite
-  const restoreContainer = useTestContainer(testContainer);
+  // Create a fresh container for this test suite
+  const testContainer = DependencyContainer.createFresh();
+  
+  // Temporarily replace the singleton with our test container
+  DependencyContainer.resetInstance();
+  (DependencyContainer as any).instance = testContainer;
   
   return {
     // Provide cleanup that restores the original container and clears the test container
     cleanup: () => {
-      if (testContainer && typeof testContainer.clear === 'function') {
-        testContainer.clear();
-      }
-      restoreContainer();
+      // Clear the test container
+      testContainer.clear();
+      
+      // Restore the original instance
+      DependencyContainer.resetInstance();
+      (DependencyContainer as any).instance = originalInstance;
     },
   };
 }

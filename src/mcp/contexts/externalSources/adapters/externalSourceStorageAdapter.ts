@@ -6,7 +6,7 @@
  */
 
 import { getEnv } from '@/utils/configUtils';
-import { getContainer } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
@@ -65,7 +65,7 @@ export interface ExternalSourceStorageConfig {
 export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSourceResult> {
   private sources: Map<string, ExternalSourceInterface> = new Map();
   private sourceCache: Map<string, CacheItem> = new Map();
-  private diContainer: ReturnType<typeof getContainer>;
+  private diContainer: DependencyContainer;
 
   /**
    * Options with defaults
@@ -87,7 +87,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     };
 
     // Set up DI container
-    this.diContainer = getContainer();
+    this.diContainer = DependencyContainer.getInstance();
 
     // Helper function to avoid duplicate registrations
     const registerIfNeeded = (

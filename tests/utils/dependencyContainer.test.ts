@@ -3,8 +3,8 @@
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import type { DependencyContainer } from '@/utils/dependencyContainer';
-import { createContainer } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
+import type { DependencyContainerConfig } from '@/utils/dependencyContainer';
 
 // Test sample services
 interface Service1 {
@@ -38,7 +38,10 @@ describe('DependencyContainer', () => {
   let container: DependencyContainer;
   
   beforeEach(() => {
-    container = createContainer();
+    // Reset the singleton instance before each test
+    DependencyContainer.resetInstance();
+    // Create a fresh container for testing
+    container = DependencyContainer.createFresh();
   });
   
   test('should register and resolve a service', () => {
@@ -114,5 +117,62 @@ describe('DependencyContainer', () => {
     
     const service = container.resolve<Service1>('service');
     expect(service.getValue()).toBe('second');
+  });
+  
+  test('should implement the singleton pattern correctly', () => {
+    // Reset instance to ensure clean state
+    DependencyContainer.resetInstance();
+    
+    // Create first instance
+    const instance1 = DependencyContainer.getInstance();
+    
+    // Create second instance - should be the same object
+    const instance2 = DependencyContainer.getInstance();
+    
+    // Verify singleton behavior
+    expect(instance1).toBe(instance2);
+    
+    // Reset the instance
+    DependencyContainer.resetInstance();
+    
+    // Create new instance - should be a different object
+    const instance3 = DependencyContainer.getInstance();
+    expect(instance3).not.toBe(instance1);
+  });
+  
+  test('should create fresh instances with createFresh', () => {
+    // Create multiple fresh instances
+    const fresh1 = DependencyContainer.createFresh();
+    const fresh2 = DependencyContainer.createFresh();
+    
+    // Verify they are different instances
+    expect(fresh1).not.toBe(fresh2);
+    
+    // Verify they are different from the singleton
+    const singleton = DependencyContainer.getInstance();
+    expect(fresh1).not.toBe(singleton);
+    expect(fresh2).not.toBe(singleton);
+  });
+  
+  test('should initialize with config when provided', () => {
+    // Create container with initial services
+    const config: DependencyContainerConfig = {
+      initialServices: {
+        'preConfigured': {
+          factory: () => new TestService1('preconfigured'),
+          singleton: true
+        }
+      }
+    };
+    
+    const container = DependencyContainer.createFresh(config);
+    
+    // Verify the preconfigured service exists
+    expect(container.has('preConfigured')).toBe(true);
+    
+    // Verify the service was created correctly
+    const service = container.resolve<Service1>('preConfigured');
+    expect(service).toBeInstanceOf(TestService1);
+    expect(service.getValue()).toBe('preconfigured');
   });
 });

@@ -16,7 +16,8 @@ import type {
 } from '@/services/notes';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { getContainer, getService } from '@/utils/dependencyContainer';
+import { DependencyContainer } from '@/utils/dependencyContainer';
+import { getService } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
@@ -105,7 +106,7 @@ export class NoteContext extends BaseContext {
     super(config as Record<string, unknown>);
     
     // Register services in the container
-    const container = getContainer();
+    const container = DependencyContainer.getInstance();
     registerServices(container, { apiKey: config?.apiKey });
     
     // Resolve dependencies from container

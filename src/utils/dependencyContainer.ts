@@ -18,39 +18,75 @@ export interface ServiceConfig<T = unknown> {
 }
 
 /**
+ * Configuration for the dependency container
+ */
+export interface DependencyContainerConfig {
+  /** Initial services to register */
+  initialServices?: Record<string, ServiceConfig<unknown>>;
+}
+
+/**
  * Main dependency container that registers and resolves services
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class DependencyContainer {
   private services = new Map<string, ServiceConfig<unknown>>();
   private instances = new Map<string, unknown>();
   
-  // Singleton instance
+  /** Singleton instance */
   private static instance: DependencyContainer | null = null;
   
   /**
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * @param config Optional configuration
+   */
+  private constructor(config?: DependencyContainerConfig) {
+    // Register initial services if provided
+    if (config?.initialServices) {
+      Object.entries(config.initialServices).forEach(([name, serviceConfig]) => {
+        this.services.set(name, serviceConfig);
+      });
+    }
+  }
+  
+  /**
    * Get the singleton instance of DependencyContainer
+   * @param config Optional configuration (only used when creating a new instance)
    * @returns The shared DependencyContainer instance
    */
-  public static getInstance(): DependencyContainer {
+  public static getInstance(config?: DependencyContainerConfig): DependencyContainer {
     if (!DependencyContainer.instance) {
-      DependencyContainer.instance = getContainer();
+      DependencyContainer.instance = new DependencyContainer(config);
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return DependencyContainer.instance;
   }
   
   /**
    * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
   public static resetInstance(): void {
-    DependencyContainer.instance = null;
+    if (DependencyContainer.instance) {
+      DependencyContainer.instance.clear();
+      DependencyContainer.instance = null;
+    }
   }
   
   /**
    * Create a fresh container instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * @param config Optional configuration
    * @returns A new DependencyContainer instance
    */
-  public static createFresh(): DependencyContainer {
-    return new DependencyContainer();
+  public static createFresh(config?: DependencyContainerConfig): DependencyContainer {
+    return new DependencyContainer(config);
   }
 
   /**
@@ -134,74 +170,10 @@ export class DependencyContainer {
 }
 
 /**
- * Allow container state to be scoped for testing
- */
-let testContainer: DependencyContainer | null = null;
-
-/**
- * The default global container instance for application-wide use
- */
-export const defaultContainer = new DependencyContainer();
-
-/**
- * Export container for backward compatibility
- */
-export const container = defaultContainer;
-
-/**
- * Get the container instance
- * Returns the test container if set, otherwise the default container
- */
-export function getContainer(): DependencyContainer {
-  return testContainer || defaultContainer;
-}
-
-/**
  * Helper for getting services from container with proper typing
  * @param serviceId Service identifier
  * @returns The service instance
  */
 export function getService<T>(serviceId: string): T {
-  return getContainer().resolve<T>(serviceId);
-}
-
-/**
- * Create a new isolated container (useful for testing)
- */
-export function createContainer(): DependencyContainer {
-  return new DependencyContainer();
-}
-
-/**
- * Set a container for testing purposes
- * @param container The container to use for testing
- * @returns A function to restore the original container
- */
-export function useTestContainer(container?: DependencyContainer | null): () => void {
-  const previousContainer = testContainer;
-  
-  // If a container is provided but doesn't have a clear method, add one
-  if (container && !('clear' in container)) {
-    Object.defineProperty(container, 'clear', {
-      value: function() {
-        // Default implementation of clear for test containers
-        if (this.services && this.services.clear) {
-          this.services.clear();
-        }
-        if (this.instances && this.instances.clear) {
-          this.instances.clear();
-        }
-      },
-      configurable: true,
-      writable: true,
-    });
-  }
-  
-  // Explicitly convert undefined to null to match type definition
-  testContainer = container === undefined ? null : container;
-  
-  // Return a cleanup function to restore the previous container
-  return () => {
-    testContainer = previousContainer;
-  };
+  return DependencyContainer.getInstance().resolve<T>(serviceId);
 }

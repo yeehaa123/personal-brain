@@ -13,7 +13,7 @@ import type { NoteRepository } from '@/services/notes/noteRepository';
 import type { NoteSearchService } from '@/services/notes/noteSearchService';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { getContainer, getService } from '@/utils/dependencyContainer';
+import { DependencyContainer, getService } from '@/utils/dependencyContainer';
 import logger from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
@@ -60,7 +60,7 @@ export class NoteContextWithDI {
    */
   static create(apiKey?: string): NoteContextWithDI {
     // Ensure services are registered
-    registerServices(getContainer(), { apiKey });
+    registerServices(DependencyContainer.getInstance(), { apiKey });
 
     // Get services from container
     const repository = getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
