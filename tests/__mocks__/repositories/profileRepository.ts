@@ -8,7 +8,6 @@
 import { profiles } from '@/db/schema';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-
 import { createMockProfile, createMockProfiles } from '@test/__mocks__/models/profile';
 
 /**

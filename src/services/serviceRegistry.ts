@@ -91,29 +91,29 @@ export function registerServices(
   // Register repositories
   registerIfNeeded<IRepository<Note>>(
     ServiceIdentifiers.NoteRepository,
-    () => new NoteRepository(),
+    () => NoteRepository.getInstance(),
   );
 
   registerIfNeeded<IRepository<Profile>>(
     ServiceIdentifiers.ProfileRepository,
-    () => new ProfileRepository(),
+    () => ProfileRepository.getInstance(),
   );
 
   // Register embedding services
   registerIfNeeded<IEmbeddingService>(
     ServiceIdentifiers.NoteEmbeddingService,
-    () => new NoteEmbeddingService(config.apiKey),
+    () => NoteEmbeddingService.getInstance(config.apiKey),
   );
 
   registerIfNeeded<IEmbeddingService>(
     ServiceIdentifiers.ProfileEmbeddingService,
-    () => new ProfileEmbeddingService(config.apiKey),
+    () => ProfileEmbeddingService.getInstance(config.apiKey),
   );
 
   // Register tag services
   registerIfNeeded(
     ServiceIdentifiers.ProfileTagService,
-    () => new ProfileTagService(),
+    () => ProfileTagService.getInstance(),
   );
 
   // Register search services with dependencies
@@ -125,7 +125,7 @@ export function registerServices(
       const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
 
       // Create service with injected dependencies
-      return new NoteSearchService(repository, embeddingService);
+      return NoteSearchService.getInstance(repository, embeddingService);
     },
   );
 
@@ -138,7 +138,7 @@ export function registerServices(
       const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
 
       // Create service with injected dependencies
-      return new ProfileSearchService(repository, embeddingService, tagService);
+      return ProfileSearchService.getInstance(repository, embeddingService, tagService);
     },
   );
   

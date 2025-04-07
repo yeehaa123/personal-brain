@@ -11,7 +11,6 @@ import type {
   ProfileEducation,
   ProfileExperience,
 } from '@models/profile';
-
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 /**

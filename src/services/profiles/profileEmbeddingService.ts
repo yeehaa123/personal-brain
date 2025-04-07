@@ -20,6 +20,37 @@ import { ProfileRepository } from './profileRepository';
  */
 export class ProfileEmbeddingService extends BaseEmbeddingService {
   private repository: ProfileRepository;
+  
+  // Singleton instance
+  private static instance: ProfileEmbeddingService | null = null;
+  
+  /**
+   * Get the singleton instance of the service
+   * @param apiKey Optional API key for the embedding service
+   * @returns The shared ProfileEmbeddingService instance
+   */
+  public static getInstance(apiKey?: string): ProfileEmbeddingService {
+    if (!ProfileEmbeddingService.instance) {
+      ProfileEmbeddingService.instance = new ProfileEmbeddingService(apiKey);
+    }
+    return ProfileEmbeddingService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ProfileEmbeddingService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @param apiKey Optional API key for the embedding service
+   * @returns A new ProfileEmbeddingService instance
+   */
+  public static createFresh(apiKey?: string): ProfileEmbeddingService {
+    return new ProfileEmbeddingService(apiKey);
+  }
 
   /**
    * Create a new ProfileEmbeddingService
@@ -27,7 +58,7 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
    */
   constructor(apiKey?: string) {
     super(apiKey);
-    this.repository = new ProfileRepository();
+    this.repository = ProfileRepository.getInstance();
   }
 
   /**

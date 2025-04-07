@@ -22,6 +22,48 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
   protected entityName = 'note';
   protected repository: NoteRepository;
   protected embeddingService: NoteEmbeddingService;
+  
+  // Singleton instance
+  private static instance: NoteSearchService | null = null;
+  
+  /**
+   * Get the singleton instance of the service
+   * @param repository Repository for accessing notes (defaults to singleton instance)
+   * @param embeddingService Service for note embeddings (defaults to singleton instance)
+   * @returns The shared NoteSearchService instance
+   */
+  public static getInstance(
+    repository?: NoteRepository,
+    embeddingService?: NoteEmbeddingService,
+  ): NoteSearchService {
+    if (!NoteSearchService.instance) {
+      NoteSearchService.instance = new NoteSearchService(
+        repository || NoteRepository.getInstance(),
+        embeddingService || NoteEmbeddingService.getInstance(),
+      );
+    }
+    return NoteSearchService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    NoteSearchService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @param repository Repository for accessing notes
+   * @param embeddingService Service for note embeddings
+   * @returns A new NoteSearchService instance
+   */
+  public static createFresh(
+    repository: NoteRepository,
+    embeddingService: NoteEmbeddingService,
+  ): NoteSearchService {
+    return new NoteSearchService(repository, embeddingService);
+  }
 
   /**
    * Create a new NoteSearchService with injected dependencies

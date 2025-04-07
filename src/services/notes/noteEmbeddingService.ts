@@ -16,10 +16,41 @@ import { NoteRepository } from './noteRepository';
  */
 export class NoteEmbeddingService extends BaseEmbeddingService {
   private noteRepository: NoteRepository;
+  
+  // Singleton instance
+  private static instance: NoteEmbeddingService | null = null;
+  
+  /**
+   * Get the singleton instance of the service
+   * @param apiKey Optional API key for the embedding service
+   * @returns The shared NoteEmbeddingService instance
+   */
+  public static getInstance(apiKey?: string): NoteEmbeddingService {
+    if (!NoteEmbeddingService.instance) {
+      NoteEmbeddingService.instance = new NoteEmbeddingService(apiKey);
+    }
+    return NoteEmbeddingService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    NoteEmbeddingService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @param apiKey Optional API key for the embedding service
+   * @returns A new NoteEmbeddingService instance
+   */
+  public static createFresh(apiKey?: string): NoteEmbeddingService {
+    return new NoteEmbeddingService(apiKey);
+  }
 
   constructor(apiKey?: string) {
     super(apiKey);
-    this.noteRepository = new NoteRepository();
+    this.noteRepository = NoteRepository.getInstance();
   }
 
   /**

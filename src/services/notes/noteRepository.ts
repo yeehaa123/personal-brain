@@ -18,6 +18,34 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
  * Repository for accessing and managing notes in the database
  */
 export class NoteRepository extends BaseRepository<typeof notes, Note> {
+  // Singleton instance
+  private static instance: NoteRepository | null = null;
+
+  /**
+   * Get the singleton instance of the repository
+   * @returns The shared NoteRepository instance
+   */
+  public static getInstance(): NoteRepository {
+    if (!NoteRepository.instance) {
+      NoteRepository.instance = new NoteRepository();
+    }
+    return NoteRepository.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    NoteRepository.instance = null;
+  }
+
+  /**
+   * Create a fresh repository instance (primarily for testing)
+   * @returns A new NoteRepository instance
+   */
+  public static createFresh(): NoteRepository {
+    return new NoteRepository();
+  }
   // New methods for conversation-to-notes feature
   
   /**

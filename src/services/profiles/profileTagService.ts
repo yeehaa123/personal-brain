@@ -18,12 +18,41 @@ import { ProfileRepository } from './profileRepository';
  */
 export class ProfileTagService {
   private repository: ProfileRepository;
+  
+  // Singleton instance
+  private static instance: ProfileTagService | null = null;
+  
+  /**
+   * Get the singleton instance of the service
+   * @returns The shared ProfileTagService instance
+   */
+  public static getInstance(): ProfileTagService {
+    if (!ProfileTagService.instance) {
+      ProfileTagService.instance = new ProfileTagService();
+    }
+    return ProfileTagService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ProfileTagService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @returns A new ProfileTagService instance
+   */
+  public static createFresh(): ProfileTagService {
+    return new ProfileTagService();
+  }
 
   /**
    * Create a new ProfileTagService
    */
   constructor() {
-    this.repository = new ProfileRepository();
+    this.repository = ProfileRepository.getInstance();
   }
 
   /**

@@ -50,6 +50,53 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
   protected repository: ProfileRepository;
   protected embeddingService: ProfileEmbeddingService;
   private tagService: ProfileTagService;
+  
+  // Singleton instance
+  private static instance: ProfileSearchService | null = null;
+  
+  /**
+   * Get the singleton instance of the service
+   * @param repository Repository for accessing profiles (defaults to singleton instance)
+   * @param embeddingService Service for profile embeddings (defaults to singleton instance)
+   * @param tagService Service for profile tag operations (defaults to a new instance)
+   * @returns The shared ProfileSearchService instance
+   */
+  public static getInstance(
+    repository?: ProfileRepository,
+    embeddingService?: ProfileEmbeddingService,
+    tagService?: ProfileTagService,
+  ): ProfileSearchService {
+    if (!ProfileSearchService.instance) {
+      ProfileSearchService.instance = new ProfileSearchService(
+        repository || ProfileRepository.getInstance(),
+        embeddingService || ProfileEmbeddingService.getInstance(),
+        tagService || new ProfileTagService(),
+      );
+    }
+    return ProfileSearchService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ProfileSearchService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @param repository Repository for accessing profiles
+   * @param embeddingService Service for profile embeddings
+   * @param tagService Service for profile tag operations
+   * @returns A new ProfileSearchService instance
+   */
+  public static createFresh(
+    repository: ProfileRepository,
+    embeddingService: ProfileEmbeddingService,
+    tagService: ProfileTagService,
+  ): ProfileSearchService {
+    return new ProfileSearchService(repository, embeddingService, tagService);
+  }
 
   /**
    * Create a new ProfileSearchService with injected dependencies
@@ -70,14 +117,14 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
   
   /**
    * Legacy constructor support for backwards compatibility
-   * @deprecated Use dependency injection instead
+   * @deprecated Use getInstance instead
    * @param apiKey Optional API key for embeddings
    */
   static createWithApiKey(apiKey?: string): ProfileSearchService {
-    const repository = new ProfileRepository();
-    const embeddingService = new ProfileEmbeddingService(apiKey);
+    const repository = ProfileRepository.getInstance();
+    const embeddingService = ProfileEmbeddingService.getInstance(apiKey);
     const tagService = new ProfileTagService();
-    return new ProfileSearchService(repository, embeddingService, tagService);
+    return ProfileSearchService.getInstance(repository, embeddingService, tagService);
   }
 
   /**

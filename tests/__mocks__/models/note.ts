@@ -6,7 +6,6 @@
  */
 
 import type { NewNote, Note, NoteSearchParams } from '@models/note';
-
 import { createMockEmbedding, hashString } from '@test/__mocks__/utils/embeddingUtils';
 
 /**

@@ -19,6 +19,34 @@ import { isDefined } from '@/utils/safeAccessUtils';
  * Repository for profile data operations
  */
 export class ProfileRepository extends BaseRepository<typeof profiles, Profile> {
+  // Singleton instance
+  private static instance: ProfileRepository | null = null;
+
+  /**
+   * Get the singleton instance of the repository
+   * @returns The shared ProfileRepository instance
+   */
+  public static getInstance(): ProfileRepository {
+    if (!ProfileRepository.instance) {
+      ProfileRepository.instance = new ProfileRepository();
+    }
+    return ProfileRepository.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ProfileRepository.instance = null;
+  }
+
+  /**
+   * Create a fresh repository instance (primarily for testing)
+   * @returns A new ProfileRepository instance
+   */
+  public static createFresh(): ProfileRepository {
+    return new ProfileRepository();
+  }
   /**
    * Get the table that this repository uses
    */
