@@ -113,13 +113,27 @@ test('component with isolated dependencies', () => {
 
 ### Recommended Patterns
 
-1. **Singleton with getInstance()**: Use static getInstance() method for components that should have a single instance, but allow createFresh() for testing.
+1. **Singleton with getInstance()**: Use static getInstance() method for components that should have a single instance. Always include resetInstance() and createFresh() methods for testing.
    ```typescript
+   // Singleton instance
+   private static instance: MyClass | null = null;
+   
+   // Get the singleton instance
    public static getInstance(options?: Options): MyClass {
      if (!MyClass.instance) {
        MyClass.instance = new MyClass(options);
      }
      return MyClass.instance;
+   }
+   
+   // Reset the singleton instance (primarily for testing)
+   public static resetInstance(): void {
+     MyClass.instance = null;
+   }
+   
+   // Create a fresh instance (primarily for testing)
+   public static createFresh(options?: Options): MyClass {
+     return new MyClass(options);
    }
    ```
 

@@ -15,11 +15,68 @@ interface ExpressResponse extends Response {
 }
 
 /**
+ * Configuration options for HeartbeatSSETransport
+ */
+export interface HeartbeatSSETransportConfig {
+  /** The endpoint where messages should be POSTed */
+  messagesEndpoint: string;
+  /** The Express response object */
+  res: Response;
+  /** The interval between heartbeats in milliseconds (default: 30000) */
+  heartbeatIntervalMs?: number;
+}
+
+/**
  * Extends the standard SSEServerTransport to add heartbeat support
  * and better connection management for Express
  */
 export class HeartbeatSSETransport extends SSEServerTransport {
+  // Singleton instance
+  private static instance: HeartbeatSSETransport | null = null;
+  
   private heartbeatInterval: ReturnType<typeof globalThis.setInterval> | null = null;
+
+  /**
+   * Get the singleton instance of HeartbeatSSETransport
+   * @param config Configuration options
+   * @returns The shared HeartbeatSSETransport instance
+   */
+  public static getInstance(config: HeartbeatSSETransportConfig): HeartbeatSSETransport {
+    if (!HeartbeatSSETransport.instance) {
+      HeartbeatSSETransport.instance = new HeartbeatSSETransport(
+        config.messagesEndpoint,
+        config.res,
+        config.heartbeatIntervalMs,
+      );
+    }
+    return HeartbeatSSETransport.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    if (HeartbeatSSETransport.instance) {
+      // Ensure we clean up any interval
+      HeartbeatSSETransport.instance.close().catch(err => {
+        console.error('Error closing HeartbeatSSETransport instance during reset:', err);
+      });
+    }
+    HeartbeatSSETransport.instance = null;
+  }
+
+  /**
+   * Create a fresh HeartbeatSSETransport instance (primarily for testing)
+   * @param config Configuration options
+   * @returns A new HeartbeatSSETransport instance
+   */
+  public static createFresh(config: HeartbeatSSETransportConfig): HeartbeatSSETransport {
+    return new HeartbeatSSETransport(
+      config.messagesEndpoint,
+      config.res,
+      config.heartbeatIntervalMs,
+    );
+  }
 
   /**
    * Creates a new HeartbeatSSETransport instance

@@ -56,9 +56,26 @@ export class BrainProtocol {
 
   /**
    * Reset the singleton instance (for testing)
+   * Also resets all manager singletons to ensure a clean state
    */
   public static resetInstance(): void {
+    // Reset all manager singletons
+    if (ContextManager.resetInstance) ContextManager.resetInstance();
+    if (ConversationManager.resetInstance) ConversationManager.resetInstance();
+    if (ProfileManager.resetInstance) ProfileManager.resetInstance();
+    if (ExternalSourceManager.resetInstance) ExternalSourceManager.resetInstance();
+    
+    // Finally reset the BrainProtocol instance
     BrainProtocol.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * @param options Configuration options
+   * @returns A new BrainProtocol instance
+   */
+  public static createFresh(options?: BrainProtocolOptions): BrainProtocol {
+    return new BrainProtocol(options);
   }
 
   /**
@@ -79,8 +96,8 @@ export class BrainProtocol {
       // Create the unified MCP server using config
       this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
       
-      // Initialize managers with proper error handling
-      this.contextManager = new ContextManager(this.config);
+      // Initialize managers with proper error handling using getInstance pattern
+      this.contextManager = ContextManager.getInstance({ config: this.config });
       
       // Ensure contexts are ready before proceeding
       if (!this.contextManager.areContextsReady()) {
@@ -91,13 +108,13 @@ export class BrainProtocol {
       this.contextManager.initializeContextLinks();
       
       // Initialize conversation manager
-      this.conversationManager = new ConversationManager(this.config);
+      this.conversationManager = ConversationManager.getInstance({ config: this.config });
       
       // Initialize profile manager with profile context
-      this.profileManager = new ProfileManager(
-        this.contextManager.getProfileContext(),
-        this.config.getApiKey(),
-      );
+      this.profileManager = ProfileManager.getInstance({
+        profileContext: this.contextManager.getProfileContext(),
+        apiKey: this.config.getApiKey(),
+      });
       
       // Initialize prompt formatter and profile analyzer for external source manager
       const promptFormatter = new PromptFormatter();
@@ -107,12 +124,12 @@ export class BrainProtocol {
       const profileAnalyzer = new ProfileAnalyzer(embeddingService);
       
       // Initialize external source manager
-      this.externalSourceManager = new ExternalSourceManager(
-        this.contextManager.getExternalSourceContext(),
+      this.externalSourceManager = ExternalSourceManager.getInstance({
+        externalSourceContext: this.contextManager.getExternalSourceContext(),
         profileAnalyzer,
         promptFormatter,
-        this.config.useExternalSources,
-      );
+        enabled: this.config.useExternalSources,
+      });
       
       // Initialize query processor
       this.queryProcessor = new QueryProcessor(

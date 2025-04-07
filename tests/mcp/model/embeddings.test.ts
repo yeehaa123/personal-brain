@@ -75,6 +75,14 @@ mock.module('@/mcp/model', () => {
         return MockEmbeddingService.instance;
       }
 
+      static resetInstance(): void {
+        MockEmbeddingService.instance = null;
+      }
+
+      static createFresh(_options?: { apiKey?: string }): MockEmbeddingService {
+        return new MockEmbeddingService();
+      }
+
       async getEmbedding(text: string) {
         const embedding = createMockEmbedding(text);
         return {

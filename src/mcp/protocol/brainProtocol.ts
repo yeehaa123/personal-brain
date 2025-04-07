@@ -95,6 +95,15 @@ export class BrainProtocol {
   public static resetInstance(): void {
     BrainProtocol.instance = null;
   }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * @param options Configuration options
+   * @returns A new BrainProtocol instance
+   */
+  public static createFresh(options?: BrainProtocolOptions): BrainProtocol {
+    return new BrainProtocol(options);
+  }
 
   constructor(
     optionsOrApiKey?: BrainProtocolOptions | string,

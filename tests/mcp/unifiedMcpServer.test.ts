@@ -41,6 +41,14 @@ mock.module('@mcp/model/embeddings', () => {
         return MockEmbeddingService._instance;
       }
 
+      static resetInstance(): void {
+        MockEmbeddingService._instance = null;
+      }
+
+      static createFresh(): MockEmbeddingService {
+        return new MockEmbeddingService();
+      }
+
       constructor() { }
 
       getEmbedding() {

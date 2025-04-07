@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
+import customRules from './.eslint/index.js';
 
 export default [
   js.configs.recommended,
@@ -70,6 +71,7 @@ export default [
     plugins: {
       '@typescript-eslint': typescriptEslint,
       'import': importPlugin,
+      'custom': customRules,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
@@ -152,6 +154,9 @@ export default [
       }],
       'import/no-unresolved': ['error', { ignore: ['^bun:'] }],
       'import/first': 'error',
+      
+      // Custom rules
+      'custom/enforce-singleton-pattern': 'error',
     },
   },
 ];

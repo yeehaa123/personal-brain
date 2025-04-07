@@ -16,6 +16,14 @@ import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import type { IContextManager } from '../types';
 
 /**
+ * Configuration options for ContextManager
+ */
+export interface ContextManagerConfig {
+  /** BrainProtocol configuration */
+  config: BrainProtocolConfig;
+}
+
+/**
  * Manages the various contexts used by the BrainProtocol
  * 
  * The ContextManager is responsible for:
@@ -25,6 +33,9 @@ import type { IContextManager } from '../types';
  * 4. Ensuring contexts are properly initialized before use
  */
 export class ContextManager implements IContextManager {
+  // Singleton instance
+  private static instance: ContextManager | null = null;
+
   // Core context objects
   private readonly noteContext: NoteContext;
   private readonly profileContext: ProfileContext;
@@ -37,10 +48,38 @@ export class ContextManager implements IContextManager {
   private initializationError: Error | null = null;
 
   /**
+   * Get the singleton instance of ContextManager
+   * @param options Configuration options
+   * @returns The shared ContextManager instance
+   */
+  public static getInstance(options: ContextManagerConfig): ContextManager {
+    if (!ContextManager.instance) {
+      ContextManager.instance = new ContextManager(options.config);
+    }
+    return ContextManager.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ContextManager.instance = null;
+  }
+
+  /**
+   * Create a fresh ContextManager instance (primarily for testing)
+   * @param options Configuration options
+   * @returns A new ContextManager instance
+   */
+  public static createFresh(options: ContextManagerConfig): ContextManager {
+    return new ContextManager(options.config);
+  }
+
+  /**
    * Create a new context manager
    * @param config Configuration for the brain protocol
    */
-  constructor(config: BrainProtocolConfig) {
+  private constructor(config: BrainProtocolConfig) {
     const apiKey = config.getApiKey();
     const newsApiKey = config.newsApiKey;
     const interfaceType = config.interfaceType || 'cli';

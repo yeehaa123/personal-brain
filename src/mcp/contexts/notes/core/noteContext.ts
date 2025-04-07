@@ -81,7 +81,7 @@ export class NoteContext extends BaseContext {
    * @param config Configuration for the context
    * @returns A new NoteContext instance
    */
-  static createFresh(config?: NoteContextConfig): NoteContext {
+  static override createFresh(config?: NoteContextConfig): NoteContext {
     return new NoteContext(config);
   }
   

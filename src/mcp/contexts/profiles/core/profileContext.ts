@@ -85,7 +85,7 @@ export class ProfileContext extends BaseContext {
    * @param config Optional configuration for the context
    * @returns A new ProfileContext instance
    */
-  static createFresh(config: ProfileContextConfig = {}): ProfileContext {
+  static override createFresh(config: ProfileContextConfig = {}): ProfileContext {
     return new ProfileContext(config);
   }
   

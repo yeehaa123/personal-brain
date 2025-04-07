@@ -18,7 +18,7 @@ export class MockProfileRepository extends ProfileRepository {
   }
   
   // Add static factory methods for consistency with real implementation
-  public static createFresh(initialProfiles: Profile[] = []): MockProfileRepository {
+  public static override createFresh(initialProfiles: Profile[] = []): MockProfileRepository {
     return new MockProfileRepository(initialProfiles.length > 0 ? initialProfiles[0] : null);
   }
   

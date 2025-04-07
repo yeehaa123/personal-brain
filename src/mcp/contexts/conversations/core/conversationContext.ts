@@ -152,7 +152,7 @@ export class ConversationContext extends BaseContext {
    * @param config Configuration options
    * @returns A new context instance
    */
-  static createFresh(config: Record<string, unknown> = {}): ConversationContext {
+  static override createFresh(config: Record<string, unknown> = {}): ConversationContext {
     return new ConversationContext(config as ConversationContextConfig);
   }
 

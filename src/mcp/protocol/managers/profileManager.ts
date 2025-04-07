@@ -13,23 +13,63 @@ import { isDefined } from '@/utils/safeAccessUtils';
 import type { IProfileManager, ProfileAnalysisResult } from '../types';
 
 /**
+ * Configuration options for ProfileManager
+ */
+export interface ProfileManagerConfig {
+  /** Profile context instance */
+  profileContext: ProfileContext;
+  /** API key for embedding service */
+  apiKey?: string;
+}
+
+/**
  * Manages profile information and relevance
  */
 export class ProfileManager implements IProfileManager {
+  // Singleton instance
+  private static instance: ProfileManager | null = null;
+  
   private profileContext: ProfileContext;
   private profileAnalyzer: ProfileAnalyzer;
   private profile: Profile | undefined;
 
   /**
-   * Create a new profile manager
-   * @param profileContext Profile context
-   * @param apiKey API key for embedding service
+   * Get the singleton instance of ProfileManager
+   * @param config Configuration options
+   * @returns The shared ProfileManager instance
    */
-  constructor(profileContext: ProfileContext, apiKey?: string) {
-    this.profileContext = profileContext;
+  public static getInstance(config: ProfileManagerConfig): ProfileManager {
+    if (!ProfileManager.instance) {
+      ProfileManager.instance = new ProfileManager(config);
+    }
+    return ProfileManager.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ProfileManager.instance = null;
+  }
+
+  /**
+   * Create a fresh ProfileManager instance (primarily for testing)
+   * @param config Configuration options
+   * @returns A new ProfileManager instance
+   */
+  public static createFresh(config: ProfileManagerConfig): ProfileManager {
+    return new ProfileManager(config);
+  }
+
+  /**
+   * Create a new profile manager
+   * @param config Configuration options containing profile context and optional API key
+   */
+  private constructor(config: ProfileManagerConfig) {
+    this.profileContext = config.profileContext;
     
     // Initialize the profile analyzer
-    const embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+    const embeddingService = EmbeddingService.getInstance(config.apiKey ? { apiKey: config.apiKey } : undefined);
     this.profileAnalyzer = new ProfileAnalyzer(embeddingService);
     
     // Load profile asynchronously

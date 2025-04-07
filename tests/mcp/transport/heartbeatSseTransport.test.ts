@@ -5,7 +5,7 @@
  * the standard SSEServerTransport and adds heartbeat functionality.
  */
 
-import { describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { Response } from 'express';
 
 import { HeartbeatSSETransport } from '../../../src/mcp/transport/heartbeatSseTransport';
@@ -79,14 +79,64 @@ describe('HeartbeatSSETransport', () => {
   const setIntervalMock = mock(() => 123 as unknown as ReturnType<typeof globalThis.setInterval>);
   const clearIntervalMock = mock(() => {});
   
+  // Reset the singleton instance before each test to avoid interference
+  beforeEach(() => {
+    HeartbeatSSETransport.resetInstance();
+  });
+  
+  // Test the getInstance and resetInstance methods
+  test('should implement the singleton pattern correctly', () => {
+    // Create first instance
+    const mockResponse1 = createMockResponse();
+    const instance1 = HeartbeatSSETransport.getInstance({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse1,
+    });
+    
+    // Create second instance with the same config - should be the same object
+    const instance2 = HeartbeatSSETransport.getInstance({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse1,
+    });
+    
+    // Both instances should be the same object
+    expect(instance1).toBe(instance2);
+    
+    // Reset the instance
+    HeartbeatSSETransport.resetInstance();
+    
+    // Create new instance - should be a different object
+    const mockResponse2 = createMockResponse();
+    const instance3 = HeartbeatSSETransport.getInstance({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse2,
+    });
+    
+    // Should be a different instance
+    expect(instance3).not.toBe(instance1);
+    
+    // Test createFresh always creates a new instance
+    const mockResponse3 = createMockResponse();
+    const freshInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse3,
+    });
+    
+    // Should be a different instance
+    expect(freshInstance).not.toBe(instance3);
+  });
+  
   test('should create a transport instance with heartbeat interval', () => {
     // Setup mocks
     globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
     globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
-    // Create a test instance
+    // Create a test instance using createFresh to avoid singleton interference
     const mockResponse = createMockResponse();
-    const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
+    const transportInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-messages',
+      res: mockResponse,
+    });
     
     try {
       expect(transportInstance).toBeDefined();
@@ -103,9 +153,12 @@ describe('HeartbeatSSETransport', () => {
     globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
     globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
-    // Create a test instance
+    // Create a test instance using createFresh to avoid singleton interference
     const mockResponse = createMockResponse();
-    const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
+    const transportInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-messages',
+      res: mockResponse,
+    });
     
     // Mock the getSessionId method for testing
     transportInstance.getSessionId = () => 'test-session-id';
@@ -136,9 +189,12 @@ describe('HeartbeatSSETransport', () => {
     globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
     globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
-    // Create a test instance
+    // Create a test instance using createFresh to avoid singleton interference
     const mockResponse = createMockResponse();
-    const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
+    const transportInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-messages',
+      res: mockResponse,
+    });
     
     const testData = { test: 'data', value: 123 };
     
@@ -169,7 +225,10 @@ describe('HeartbeatSSETransport', () => {
     // Create a test instance with ended response
     const mockResponse = createMockResponse();
     mockResponse.writableEnded = true;
-    const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
+    const transportInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-messages',
+      res: mockResponse,
+    });
     
     // Mock the getSessionId method for testing
     transportInstance.getSessionId = () => 'test-session-id';
@@ -195,9 +254,12 @@ describe('HeartbeatSSETransport', () => {
     globalThis.setInterval = setIntervalMock as unknown as typeof globalThis.setInterval;
     globalThis.clearInterval = clearIntervalMock as unknown as typeof globalThis.clearInterval;
     
-    // Create a test instance
+    // Create a test instance using createFresh to avoid singleton interference
     const mockResponse = createMockResponse();
-    const transportInstance = new HeartbeatSSETransport('/test-messages', mockResponse);
+    const transportInstance = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-messages',
+      res: mockResponse,
+    });
     
     // Set the private heartbeatInterval field
     Object.defineProperty(transportInstance, 'heartbeatInterval', {

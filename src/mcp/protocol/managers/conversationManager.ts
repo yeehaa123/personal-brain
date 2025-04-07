@@ -11,18 +11,57 @@ import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import type { IConversationManager, TurnOptions } from '../types';
 
 /**
+ * Configuration options for ConversationManager
+ */
+export interface ConversationManagerConfig {
+  /** BrainProtocol configuration */
+  config: BrainProtocolConfig;
+}
+
+/**
  * Manages conversation history and persistence
  */
 export class ConversationManager implements IConversationManager {
+  // Singleton instance
+  private static instance: ConversationManager | null = null;
+  
   private conversationContext: ConversationContext;
   private currentRoomId?: string;
   private currentConversationId?: string;
 
   /**
+   * Get the singleton instance of ConversationManager
+   * @param options Configuration options
+   * @returns The shared ConversationManager instance
+   */
+  public static getInstance(options: ConversationManagerConfig): ConversationManager {
+    if (!ConversationManager.instance) {
+      ConversationManager.instance = new ConversationManager(options.config);
+    }
+    return ConversationManager.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ConversationManager.instance = null;
+  }
+
+  /**
+   * Create a fresh ConversationManager instance (primarily for testing)
+   * @param options Configuration options
+   * @returns A new ConversationManager instance
+   */
+  public static createFresh(options: ConversationManagerConfig): ConversationManager {
+    return new ConversationManager(options.config);
+  }
+
+  /**
    * Create a new conversation manager
    * @param config Configuration for the brain protocol
    */
-  constructor(config: BrainProtocolConfig) {
+  private constructor(config: BrainProtocolConfig) {
     // Use injected storage if provided, otherwise use singleton getInstance()
     const storage = 
       (config.memoryStorage as ConversationStorage) || 

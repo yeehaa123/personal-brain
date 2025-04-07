@@ -51,7 +51,7 @@ export class MockNoteRepository extends NoteRepository {
   }
   
   // Add static factory methods for consistency with real implementation
-  public static createFresh(initialNotes: Note[] = []): MockNoteRepository {
+  public static override createFresh(initialNotes: Note[] = []): MockNoteRepository {
     return new MockNoteRepository(initialNotes);
   }
   

@@ -70,7 +70,7 @@ export class ExternalSourceContext extends BaseContext {
    * @param config Configuration for the context
    * @returns A new ExternalSourceContext instance
    */
-  static createFresh(config: Record<string, unknown> = {}): ExternalSourceContext {
+  static override createFresh(config: Record<string, unknown> = {}): ExternalSourceContext {
     return new ExternalSourceContext(config as ExternalSourceContextConfig);
   }
   

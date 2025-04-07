@@ -40,11 +40,11 @@ describe('HTTP Server with HeartbeatSSETransport Integration', () => {
       }) as unknown as Response['on'],
     };
     
-    // Create a transport instance
-    const transport = new HeartbeatSSETransport(
-      '/test-endpoint', 
-      mockResponse as Response,
-    );
+    // Create a transport instance using createFresh to avoid singleton interference
+    const transport = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse as Response,
+    });
     
     // Check that the transport is initialized
     expect(transport).toBeDefined();
@@ -73,11 +73,11 @@ describe('HTTP Server with HeartbeatSSETransport Integration', () => {
       on: mock(() => mockResponse) as unknown as Response['on'],
     };
     
-    // Create a transport instance
-    const transport = new HeartbeatSSETransport(
-      '/test-endpoint', 
-      mockResponse as Response,
-    );
+    // Create a transport instance using createFresh to avoid singleton interference
+    const transport = HeartbeatSSETransport.createFresh({
+      messagesEndpoint: '/test-endpoint',
+      res: mockResponse as Response,
+    });
     
     // Send events that should be ignored
     transport.sendCustomEvent('test-event', { data: 'test-data' });
@@ -108,11 +108,11 @@ describe('HTTP Server with HeartbeatSSETransport Integration', () => {
         on: mock(() => mockResponse) as unknown as Response['on'],
       };
       
-      // Create transport
-      const transport = new HeartbeatSSETransport(
-        '/test-endpoint', 
-        mockResponse as Response,
-      );
+      // Create transport using createFresh to avoid singleton interference
+      const transport = HeartbeatSSETransport.createFresh({
+        messagesEndpoint: '/test-endpoint',
+        res: mockResponse as Response,
+      });
       
       // Verify setInterval was called during initialization
       expect(mockSetInterval).toHaveBeenCalled();

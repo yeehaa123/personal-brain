@@ -24,6 +24,10 @@ class MockBrainProtocol {
   static resetInstance() {
     MockBrainProtocol._instance = null;
   }
+
+  static createFresh(options?: { conversationContext?: ConversationContext }): MockBrainProtocol {
+    return new MockBrainProtocol(options);
+  }
   
   getUseExternalSources() {
     return this._useExternalSources;

@@ -113,11 +113,15 @@ async function setupSseTransport(req: Request, res: Response, mcpServer: Extende
   // Add custom header for buffering (not part of standard transport)
   res.setHeader('X-Accel-Buffering', 'no'); 
 
-  // Create and store the transport
-  const transport = new HeartbeatSSETransport('/messages', res);
+  // Create and store the transport using the getInstance pattern
+  const transport = HeartbeatSSETransport.createFresh({
+    messagesEndpoint: '/messages',
+    res,
+    heartbeatIntervalMs: 30000, // Use default heartbeat interval
+  });
   
   // Get the session ID safely with bracket notation
-  const sessionId = transport['sessionId'] as string;
+  const sessionId = transport.getSessionId();
   transports[sessionId] = transport;
 
   logger.info(`SSE connection established with session ID: ${sessionId}`);

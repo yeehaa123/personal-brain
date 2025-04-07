@@ -178,4 +178,13 @@ export abstract class BaseContext implements ContextInterface {
   static resetInstance(): void {
     throw new Error('resetInstance must be implemented by derived classes');
   }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * @param options Configuration options for the context
+   * @returns A new BaseContext instance
+   */
+  static createFresh(_options?: Record<string, unknown>): BaseContext {
+    throw new Error('createFresh must be implemented by derived classes');
+  }
 }

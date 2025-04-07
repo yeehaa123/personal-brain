@@ -13,11 +13,66 @@ import logger from '@/utils/logger';
 import type { IExternalSourceManager } from '../types';
 
 /**
+ * Configuration options for ExternalSourceManager
+ */
+export interface ExternalSourceManagerConfig {
+  /** External source context instance */
+  externalSourceContext: ExternalSourceContext | null;
+  /** Profile analyzer for relevance checks */
+  profileAnalyzer: ProfileAnalyzer;
+  /** Prompt formatter for excerpts */
+  promptFormatter: PromptFormatter;
+  /** Whether external sources are enabled */
+  enabled?: boolean;
+}
+
+/**
  * Manages external knowledge sources
  */
 export class ExternalSourceManager implements IExternalSourceManager {
+  // Singleton instance
+  private static instance: ExternalSourceManager | null = null;
+  
   private externalSourceService: ExternalSourceService | null;
   private enabled: boolean;
+
+  /**
+   * Get the singleton instance of ExternalSourceManager
+   * @param config Configuration options
+   * @returns The shared ExternalSourceManager instance
+   */
+  public static getInstance(config: ExternalSourceManagerConfig): ExternalSourceManager {
+    if (!ExternalSourceManager.instance) {
+      ExternalSourceManager.instance = new ExternalSourceManager(
+        config.externalSourceContext,
+        config.profileAnalyzer,
+        config.promptFormatter,
+        config.enabled,
+      );
+    }
+    return ExternalSourceManager.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    ExternalSourceManager.instance = null;
+  }
+
+  /**
+   * Create a fresh ExternalSourceManager instance (primarily for testing)
+   * @param config Configuration options
+   * @returns A new ExternalSourceManager instance
+   */
+  public static createFresh(config: ExternalSourceManagerConfig): ExternalSourceManager {
+    return new ExternalSourceManager(
+      config.externalSourceContext,
+      config.profileAnalyzer,
+      config.promptFormatter,
+      config.enabled,
+    );
+  }
 
   /**
    * Create a new external source manager
@@ -26,7 +81,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
    * @param promptFormatter Prompt formatter for excerpts
    * @param enabled Whether external sources are enabled
    */
-  constructor(
+  private constructor(
     externalSourceContext: ExternalSourceContext | null,
     profileAnalyzer: ProfileAnalyzer,
     promptFormatter: PromptFormatter,
