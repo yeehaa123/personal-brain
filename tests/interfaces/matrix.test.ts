@@ -5,7 +5,7 @@ import { MatrixBrainInterface } from '@interfaces/matrix';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
-import { clearTestEnv, setTestEnv, setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+import { clearMockEnv, clearTestEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 

@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
-import { setTestEnv, setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+import { clearMockEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 // Import only the type for type checking

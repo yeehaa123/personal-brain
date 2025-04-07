@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { clearTestEnv, setTestEnv, setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+import { clearMockEnv, clearTestEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
 import { MatrixRenderer } from '../../src/commands/matrix-renderer';

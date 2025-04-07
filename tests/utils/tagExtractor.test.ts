@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
-import { setMockEnv, clearMockEnv, setTestEnv } from '@test/helpers/envUtils';
+import { clearMockEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 import { extractTags } from '@utils/tagExtractor';
 
 // Mock the ai package's generateObject function
