@@ -6,9 +6,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { MockConversationStorage } from './conversationStorage';
 import { 
-  createMockConversation, 
+  createMockConversationSummary, 
   createMockConversationTurn, 
-  createMockConversationSummary 
 } from './mockHelpers';
 
 describe('MockConversationStorage', () => {
@@ -137,13 +136,13 @@ describe('MockConversationStorage', () => {
       const turn = createMockConversationTurn();
       const turnId = await storage.addTurn(conversationId, turn);
       
-      expect(turnId).toBe(turn.id);
+      expect(turnId).toBe(turn.id!);
       
       const turns = await storage.getTurns(conversationId);
       expect(turns.length).toBe(1);
-      expect(turns[0].id).toBe(turn.id);
-      expect(turns[0].query).toBe(turn.query);
-      expect(turns[0].response).toBe(turn.response);
+      expect(turns[0].id).toBe(turn.id!);
+      expect(turns[0].query).toBe(turn.query!);
+      expect(turns[0].response).toBe(turn.response!);
     });
     
     test('getTurns should return empty array for a conversation with no turns', async () => {
@@ -213,7 +212,7 @@ describe('MockConversationStorage', () => {
       });
       
       // Wait to ensure ordering
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => globalThis.setTimeout(resolve, 10));
       
       // Create middle conversation (2 seconds ago)
       await storage.createConversation({
@@ -225,7 +224,7 @@ describe('MockConversationStorage', () => {
       });
       
       // Wait to ensure ordering
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => globalThis.setTimeout(resolve, 10));
       
       // Create newest conversation (1 second ago)
       await storage.createConversation({
@@ -295,7 +294,7 @@ describe('MockConversationStorage', () => {
       expect(success).toBe(true);
       
       const metadata = await storage.getMetadata(conversationId);
-      expect(metadata?.testKey).toBe('testValue');
+      expect(metadata?.['testKey']).toBe('testValue');
     });
     
     test('updateMetadata should merge with existing metadata', async () => {
@@ -311,8 +310,8 @@ describe('MockConversationStorage', () => {
       
       // Verify both keys exist
       const metadata = await storage.getMetadata(conversationId);
-      expect(metadata?.key1).toBe('value1');
-      expect(metadata?.key2).toBe('value2');
+      expect(metadata?.['key1']).toBe('value1');
+      expect(metadata?.['key2']).toBe('value2');
     });
     
     test('getMetadata should return null for a non-existent conversation', async () => {

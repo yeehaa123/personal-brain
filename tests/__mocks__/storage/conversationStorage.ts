@@ -7,7 +7,6 @@
 
 import { nanoid } from 'nanoid';
 
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { 
   ConversationInfo,
   ConversationStorage, 
@@ -15,6 +14,7 @@ import type {
   NewConversation, 
   SearchCriteria,
 } from '@/mcp/contexts/conversations/storage/conversationStorage';
+import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 /**
  * Standardized mock implementation of ConversationStorage
@@ -364,7 +364,7 @@ export class MockConversationStorage implements ConversationStorage {
     
     // Sort by most recently updated
     results.sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
     
     // Apply pagination
@@ -392,7 +392,7 @@ export class MockConversationStorage implements ConversationStorage {
     
     // Sort by updated time (newest first)
     results.sort((a, b) => 
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
     
     // Apply limit if provided

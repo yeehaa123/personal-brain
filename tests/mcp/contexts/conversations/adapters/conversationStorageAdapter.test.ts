@@ -1,13 +1,11 @@
 /**
  * Tests for ConversationStorageAdapter
  */
-import { describe, expect, mock, spyOn, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ListOptions, SearchCriteria } from '@/mcp/contexts/core/storageInterface';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-
-// Import the standardized mock implementation
 import { MockConversationStorage } from '@test/__mocks__/storage';
 
 // The InMemoryStorage mock is now set up globally in setup.ts

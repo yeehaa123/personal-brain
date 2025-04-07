@@ -5,13 +5,13 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
-import { MockConversationStorage } from '@test/__mocks__/storage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { NewNote, Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
+import { MockConversationStorage } from '@test/__mocks__/storage';
 import { createTestNote } from '@test/utils/embeddingUtils';
 
 // Mock the tagExtractor module

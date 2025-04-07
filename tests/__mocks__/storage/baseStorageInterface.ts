@@ -11,7 +11,7 @@ import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contex
  * Generic in-memory storage map for mocking
  */
 export class MockStorageInterface<T, ID = string> implements StorageInterface<T, ID> {
-  private static instances: Map<string, MockStorageInterface<any, any>> = new Map();
+  private static instances: Map<string, MockStorageInterface<unknown, unknown>> = new Map();
   private items: Map<string, T> = new Map();
   
   /**
@@ -56,7 +56,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
    * @returns Promise that resolves to the ID of the created entity
    */
   async create(item: Partial<T>): Promise<ID> {
-    const id = (item as any).id || `id-${Math.random().toString(36).substring(2, 9)}`;
+    const id = (item as Record<string, unknown>)['id'] as string || `id-${Math.random().toString(36).substring(2, 9)}`;
     this.items.set(String(id), item as T);
     return id as unknown as ID;
   }
@@ -143,7 +143,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
 
 // Export a factory function for creating instances
 export function createMockStorageInterface<T, ID = string>(
-  initialItems: Record<string, T> = {}
+  initialItems: Record<string, T> = {},
 ): MockStorageInterface<T, ID> {
   return MockStorageInterface.createFresh<T, ID>(initialItems);
 }

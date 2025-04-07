@@ -3,8 +3,8 @@
  * 
  * This file provides helper functions for creating and working with storage mocks.
  */
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
+import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 /**
  * Create a mock conversation for testing
@@ -12,7 +12,7 @@ import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/c
 export function createMockConversation(
   id = 'test-conversation',
   interfaceType: 'cli' | 'matrix' = 'cli',
-  roomId = 'test-room'
+  roomId = 'test-room',
 ): Conversation {
   return {
     id,
@@ -33,7 +33,7 @@ export function createMockConversation(
 export function createMockConversationTurn(
   id = 'test-turn',
   query = 'Test query',
-  response = 'Test response'
+  response = 'Test response',
 ): ConversationTurn {
   return {
     id,
@@ -52,7 +52,7 @@ export function createMockConversationTurn(
 export function createMockConversationSummary(
   id = 'test-summary',
   conversationId = 'test-conversation',
-  content = 'Test summary content'
+  content = 'Test summary content',
 ): ConversationSummary {
   return {
     id,
@@ -68,7 +68,7 @@ export function createMockConversationSummary(
  */
 export function createMockConversationTurns(count = 3): ConversationTurn[] {
   return Array.from({ length: count }, (_, i) => 
-    createMockConversationTurn(`turn-${i}`, `Query ${i}`, `Response ${i}`)
+    createMockConversationTurn(`turn-${i}`, `Query ${i}`, `Response ${i}`),
   );
 }
 
@@ -77,6 +77,6 @@ export function createMockConversationTurns(count = 3): ConversationTurn[] {
  */
 export function createMockConversations(count = 3): Conversation[] {
   return Array.from({ length: count }, (_, i) => 
-    createMockConversation(`conv-${i}`, i % 2 === 0 ? 'cli' : 'matrix', `room-${i}`)
+    createMockConversation(`conv-${i}`, i % 2 === 0 ? 'cli' : 'matrix', `room-${i}`),
   );
 }

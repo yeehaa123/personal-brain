@@ -17,8 +17,8 @@ import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
 
 import { setupLoggerMocks } from './__mocks__';
-import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
 import { MockConversationStorage } from './__mocks__/storage';
+import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
 import { setTestEnv } from './utils/envUtils';
 import { setupMockFetch } from './utils/fetchUtils';
@@ -83,13 +83,18 @@ beforeEach(() => {
       ConversationSummarizer: class {
         constructor() {}
         
-        async summarizeTurns(turns: any[]) {
+        async summarizeTurns(turns: unknown[]) {
           if (!turns || turns.length === 0) {
             throw new Error('Cannot summarize empty turns array');
           }
           
-          // Sort turns by timestamp
-          const sortedTurns = [...turns].sort((a, b) => {
+          // Sort turns by timestamp - we know the structure but need to type it properly
+          const typedTurns = turns as Array<{
+            timestamp?: Date;
+            id?: string;
+          }>;
+          
+          const sortedTurns = [...typedTurns].sort((a, b) => {
             const aTime = a.timestamp ? a.timestamp.getTime() : 0;
             const bTime = b.timestamp ? b.timestamp.getTime() : 0;
             return aTime - bTime;
@@ -101,11 +106,11 @@ beforeEach(() => {
             content: `Summary of ${turns.length} conversation turns about various topics.`,
             startTurnIndex: 0,
             endTurnIndex: turns.length - 1,
-            startTimestamp: sortedTurns[0].timestamp,
-            endTimestamp: sortedTurns[sortedTurns.length - 1].timestamp,
+            startTimestamp: sortedTurns[0]?.timestamp,
+            endTimestamp: sortedTurns[sortedTurns.length - 1]?.timestamp,
             turnCount: turns.length,
             metadata: {
-              originalTurnIds: sortedTurns.map(t => t.id),
+              originalTurnIds: sortedTurns.map(t => t.id || ''),
             },
           };
         }

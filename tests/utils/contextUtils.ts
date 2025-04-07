@@ -51,17 +51,17 @@
  */
 
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import { MockInMemoryStorage } from '@test/mcp/contexts/conversations/__mocks__/mockInMemoryStorage';
+import { MockConversationStorage } from '@test/__mocks__/storage';
 
 /**
  * Set up mocks for all InMemoryStorage instances across tests
- * This function mocks the InMemoryStorage module to use our mock implementation
+ * This function mocks the InMemoryStorage module to use our standardized mock implementation
  * @param mockFn The mock function to use (from bun:test)
  */
 export function setupInMemoryStorageMock(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
   mockFn.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
     return {
-      InMemoryStorage: MockInMemoryStorage,
+      InMemoryStorage: MockConversationStorage,
     };
   });
 }
@@ -86,7 +86,7 @@ export async function createIsolatedContext(options?: {
   const { ConversationContext } = Module;
   
   // Always create a fresh isolated storage instance
-  const storage = MockInMemoryStorage.createFresh();
+  const storage = MockConversationStorage.createFresh();
   
   // Create the context with the isolated storage
   const context = ConversationContext.createFresh({

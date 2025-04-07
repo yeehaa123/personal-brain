@@ -211,7 +211,7 @@ describe('ProfileSearchService', () => {
     const serviceWithEmptyRepo = new ProfileSearchService(
       emptyRepository as unknown as ProfileRepository, 
       mockEmbeddingService, 
-      mockTagService
+      mockTagService,
     );
     
     const results = await serviceWithEmptyRepo.findRelatedNotes(mockNoteContext, 5);

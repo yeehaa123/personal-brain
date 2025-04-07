@@ -6,13 +6,13 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
 import type { McpServer } from '@/mcp';
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
+import { MockConversationStorage } from '@test/__mocks__/storage';
 import {
   clearMockEnv,
   setMockEnv,
 } from '@test/utils/mcpUtils';
 
 // Import standardized storage mock and other mocks
-import { MockConversationStorage } from '@test/__mocks__/storage';
 import {
   MockMemoryService,
   MockQueryService,
