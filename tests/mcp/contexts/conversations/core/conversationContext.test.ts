@@ -250,10 +250,10 @@ describe('ConversationContext (BaseContext implementation)', () => {
       
       // Search criteria
       const criteria = { 
-        interfaceType: 'cli' as 'cli', 
+        interfaceType: 'cli' as const, 
         query: 'test query',
         limit: 10,
-        offset: 5
+        offset: 5,
       };
       
       // Call findConversations
@@ -261,7 +261,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
       
       // Verify the adapter method was called with the correct criteria
       expect(findSpy).toHaveBeenCalledWith(
-        expect.objectContaining(criteria)
+        expect.objectContaining(criteria),
       );
     });
 
@@ -293,7 +293,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
       // Verify it was called with both parameters
       expect(findSpy).toHaveBeenCalledWith(expect.objectContaining({
         roomId: uniqueRoomId,
-        interfaceType: 'cli'
+        interfaceType: 'cli',
       }));
     });
 

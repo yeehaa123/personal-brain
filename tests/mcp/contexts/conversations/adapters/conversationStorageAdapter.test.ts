@@ -120,7 +120,7 @@ describe('ConversationStorageAdapter', () => {
       const criteria = {
         interfaceType: 'cli',
         query: 'test',
-        limit: 10
+        limit: 10,
       } as SearchCriteria;
       
       // Call adapter search
@@ -130,7 +130,7 @@ describe('ConversationStorageAdapter', () => {
       expect(spy).toHaveBeenCalledWith(expect.objectContaining({
         interfaceType: 'cli',
         query: 'test',
-        limit: 10
+        limit: 10,
       }));
     });
 
@@ -148,7 +148,7 @@ describe('ConversationStorageAdapter', () => {
       const options = {
         limit: 5,
         offset: 10,
-        interfaceType: 'cli'
+        interfaceType: 'cli',
       } as ListOptions;
       
       // Call adapter list
@@ -168,7 +168,7 @@ describe('ConversationStorageAdapter', () => {
       // Mock to return two conversations
       spy.mockImplementation(() => Promise.resolve([
         { id: '1', interfaceType: 'cli', roomId: 'room1', startedAt: new Date(), updatedAt: new Date(), turnCount: 1 },
-        { id: '2', interfaceType: 'cli', roomId: 'room2', startedAt: new Date(), updatedAt: new Date(), turnCount: 2 }
+        { id: '2', interfaceType: 'cli', roomId: 'room2', startedAt: new Date(), updatedAt: new Date(), turnCount: 2 },
       ]));
       
       // Call count without criteria

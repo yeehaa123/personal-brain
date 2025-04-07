@@ -17,12 +17,13 @@
  */
 
 import { nanoid } from 'nanoid';
+
 import type { 
   ConversationInfo,
   ConversationStorage, 
   ConversationSummary, 
   NewConversation, 
-  SearchCriteria 
+  SearchCriteria, 
 } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
@@ -115,7 +116,7 @@ export class MockInMemoryStorage implements ConversationStorage {
    */
   async getConversationByRoom(
     roomId: string, 
-    interfaceType?: 'cli' | 'matrix'
+    interfaceType?: 'cli' | 'matrix',
   ): Promise<string | null> {
     if (!interfaceType) {
       const matrixKey = this.getRoomKey(roomId, 'matrix');
@@ -138,7 +139,7 @@ export class MockInMemoryStorage implements ConversationStorage {
    */
   async updateConversation(
     conversationId: string,
-    updates: Partial<Conversation>
+    updates: Partial<Conversation>,
   ): Promise<boolean> {
     const conversation = this.conversations.get(conversationId);
     
@@ -160,7 +161,7 @@ export class MockInMemoryStorage implements ConversationStorage {
       
       const newRoomKey = this.getRoomKey(
         updates.roomId, 
-        updates.interfaceType || conversation.interfaceType
+        updates.interfaceType || conversation.interfaceType,
       );
       this.roomIndex.set(newRoomKey, conversationId);
     }
@@ -225,7 +226,7 @@ export class MockInMemoryStorage implements ConversationStorage {
   async getTurns(
     conversationId: string,
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<ConversationTurn[]> {
     const turns = this.turns.get(conversationId) || [];
     
@@ -339,7 +340,7 @@ export class MockInMemoryStorage implements ConversationStorage {
    */
   async getRecentConversations(
     _limit?: number,
-    interfaceType?: 'cli' | 'matrix'
+    interfaceType?: 'cli' | 'matrix',
   ): Promise<ConversationInfo[]> {
     // For mock, just return all conversations
     const results = await this.findConversations({});
@@ -357,7 +358,7 @@ export class MockInMemoryStorage implements ConversationStorage {
    */
   async updateMetadata(
     conversationId: string,
-    metadata: Record<string, unknown>
+    metadata: Record<string, unknown>,
   ): Promise<boolean> {
     const conversation = this.conversations.get(conversationId);
     
