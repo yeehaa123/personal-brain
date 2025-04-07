@@ -11,8 +11,10 @@
     /models/                  # Data model mocks
       note.ts                 # Note model mocks
       profile.ts              # Profile model mocks 
+    /repositories/            # Repository mocks
+      noteRepository.ts       # Note repository mock
+      profileRepository.ts    # Profile repository mock (in progress)
     /services/                # Service layer mocks
-      repository.ts           # Repository mocks
       searchService.ts        # Search service mocks
       embeddingService.ts     # Embedding service mocks
     /contexts/                # Context mocks
@@ -98,10 +100,40 @@ For each mock type:
 - [x] Run linter and fix issues
 - [x] Run typecheck
 
+### NoteRepository Mock Progress
+- [x] Create centralized MockNoteRepository implementation
+- [x] Implement singleton pattern with getInstance/resetInstance methods
+- [x] Match interface with real NoteRepository (core methods + specialized methods)
+- [x] Update the following test files to use standardized mock:
+  - [x] tests/services/notes/noteSearchService.test.ts
+  - [x] tests/services/notes/conversationToNoteService.test.ts
+  - [x] tests/mcp/contexts/notes/noteContext.test.ts
+  - [x] tests/services/notes/assistant-response-handling.test.ts
+  - [x] tests/mcp/contexts/notes/adapters/noteStorageAdapter.test.ts
+  - [x] tests/mcp/protocol/components/noteService.test.ts
+  - [x] tests/commands/conversation-notes.test.ts
+- [x] Successfully committed all changes
+
+### ProfileRepository Mock Plan
+- [ ] Create centralized MockProfileRepository implementation
+- [ ] Implement singleton pattern with getInstance/resetInstance methods
+- [ ] Match interface with real ProfileRepository (core methods + specialized methods)
+- [ ] Update the following test files to use standardized mock:
+  - [ ] tests/services/profiles/profileEmbeddingService.test.ts
+  - [ ] tests/services/profiles/profileSearchService.test.ts
+  - [ ] tests/services/profiles/profileTagService.test.ts
+  - [ ] tests/mcp/contexts/profiles/profileContext.test.ts
+  - [ ] tests/mcp/contexts/profiles/adapters/profileStorageAdapter.test.ts
+  - [ ] tests/mcp/protocol/components/profileAnalyzer.test.ts
+- [ ] Run tests to ensure all changes work properly
+- [ ] Commit all changes
+
 Remaining mocks to migrate:
 - [x] Note model mock
 - [x] Profile model mock
-- [ ] Repository mocks
+- [x] NoteRepository mock
+- [ ] ProfileRepository mock (in progress)
+- [ ] Other repository mocks
 - [ ] Storage mocks
 - [ ] Context mocks
 
