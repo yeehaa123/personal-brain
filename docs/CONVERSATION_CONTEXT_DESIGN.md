@@ -360,14 +360,14 @@ export class ContextManager implements IContextManager {
 
 ## Migration Strategy
 
-When migrating from the current ConversationMemory to ConversationContext:
+The migration from the previous architecture to ConversationContext:
 
-1. **Preserve Interfaces**: Keep backward compatibility where possible
-2. **Gradual Adoption**: Update one component at a time
-3. **Runtime Detection**: Check for active memory and migrate if needed
-4. **Test Coverage**: Ensure extensive tests for migration cases
+1. **Preserve Interfaces**: Maintained backward compatibility where possible
+2. **Gradual Adoption**: Updated one component at a time
+3. **Comprehensive Testing**: Ensured extensive test coverage
+4. **Proper Mocking**: Updated tests to use proper mock implementations
 
-The ConversationManager will be updated to delegate to ConversationContext, providing a smooth transition.
+The ConversationManager has been updated to delegate to ConversationContext, providing a smooth transition.
 
 ## Testing Strategy
 
@@ -406,22 +406,27 @@ The ConversationContext design has been implemented with the following completed
 
 ### Refactoring Process
 
-The implementation was completed in two major refactoring phases:
+The implementation was completed in multiple refactoring phases:
 
-**Phase 1: Remove redundant storage implementation**
-- Removed adapter in protocol/memory/inMemoryStorage.ts that duplicated functionality
-- Updated ConversationMemory to directly use ConversationStorage interface
-- Simplified tests by removing adapter class
-- Updated imports throughout the codebase
+**Phase 1: Create proper architecture**
+- Created BaseContext architecture for all contexts
+- Implemented ConversationContext extending BaseContext
+- Created adapter layer with ConversationStorageAdapter
+- Organized code into core/, adapters/, formatters/, and storage/ directories
+- Ensured proper separation of concerns
 
-**Phase 2: Move remaining components to contexts directory**
-- Moved ConversationMemory from protocol/memory to contexts/conversations
-- Moved ConversationSummarizer from protocol/memory to contexts/conversations
+**Phase 2: Move functionality to new structure**
+- Moved core functionality to ConversationContext
+- Organized tiered memory into memory/ directory
 - Updated imports across the codebase
-- Created temporary adapter in protocol/memory/index.ts
-- Updated exports in contexts/conversations/index.ts
 - Moved tests to match the new structure
 - Fixed import ordering and linting issues
+
+**Phase 3: Improve testing**
+- Created proper mock implementations for InMemoryStorage
+- Updated tests to focus on contracts rather than implementation details
+- Ensured test isolation to prevent cross-test contamination
+- Fixed TypeScript errors in tests
 
 ## Future Enhancements
 

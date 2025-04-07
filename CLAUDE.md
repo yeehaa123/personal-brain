@@ -68,11 +68,11 @@
 
 4. **Temporary Adapters for Refactoring**: When moving code, create temporary adapters to maintain backward compatibility.
    ```typescript
-   // In old location: protocol/memory/index.ts
+   // In old location: protocol/components/index.ts
    export { 
-     ConversationMemory, 
-     ConversationSummarizer 
-   } from '@/mcp/contexts/conversations';
+     ContextComponent, 
+     ComponentManager 
+   } from '@/mcp/contexts/core';
    ```
 
 5. **Incremental Refactoring**: Refactor in small, testable increments rather than big-bang rewrites.

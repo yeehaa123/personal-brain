@@ -196,6 +196,6 @@ interface ConversationMetadata {
 
 1. Existing tiered memory system
 2. NoteRepository and NoteContext
-3. ConversationMemory
+3. ConversationContext and storage adapters
 4. CommandHandler infrastructure
 5. BrainProtocol prompt formatters
