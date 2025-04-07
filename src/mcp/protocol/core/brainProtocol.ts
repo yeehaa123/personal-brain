@@ -6,7 +6,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { createUnifiedMcpServer } from '@/mcp';
 import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
-import type { ConversationMemory } from '@/mcp/contexts/conversations';
+import type { ConversationContext } from '@/mcp/contexts/conversations';
 import { EmbeddingService } from '@/mcp/model';
 import { ProfileAnalyzer } from '@/mcp/protocol/components/profileAnalyzer';
 import { PromptFormatter } from '@/mcp/protocol/components/promptFormatter';
@@ -165,11 +165,11 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the conversation memory
-   * @returns Conversation memory instance
+   * Get the conversation context
+   * @returns Conversation context instance
    */
-  getConversationMemory(): ConversationMemory {
-    return this.conversationManager.getConversationMemory();
+  getConversationContext(): ConversationContext {
+    return this.conversationManager.getConversationContext();
   }
 
   /**

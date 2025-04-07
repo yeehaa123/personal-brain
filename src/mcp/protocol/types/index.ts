@@ -3,9 +3,8 @@
  * All types are exported for use by components
  */
 import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
-import type { ConversationContext } from '@/mcp/contexts/conversations';
+import type { ConversationContext, ConversationStorage } from '@/mcp/contexts/conversations';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
-import type { ConversationMemoryStorage } from '@/mcp/protocol/schemas/conversationMemoryStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
@@ -24,8 +23,8 @@ export interface BrainProtocolOptions {
   interfaceType?: 'cli' | 'matrix';
   /** Room ID for the conversation */
   roomId?: string;
-  /** Memory storage implementation for conversation memory */
-  memoryStorage?: ConversationMemoryStorage;
+  /** Memory storage implementation for conversation storage */
+  memoryStorage?: ConversationStorage;
   /** Anchor name for conversation context (usually "Host") */
   anchorName?: string;
   /** Anchor ID for conversation context (user identifier) */

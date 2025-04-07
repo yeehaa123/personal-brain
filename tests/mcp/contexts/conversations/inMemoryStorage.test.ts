@@ -1,8 +1,12 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { InMemoryStorage } from '../../../../src/mcp/contexts/conversations/inMemoryStorage';
+// Import the real implementation
+import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
 
 describe('InMemoryStorage', () => {
+  // We don't need to access instance directly as the tests
+  // should focus on the public API, not implementation details
+  
   // Tests specifically for the createFresh fix to ensure complete isolation between instances
   describe('createFresh isolation (cross-test contamination fix)', () => {
     test('should create instances with completely empty data structures', () => {
@@ -40,6 +44,34 @@ describe('InMemoryStorage', () => {
       const byRoom2 = await instance2.getConversationByRoom(roomId, 'matrix');
       expect(byRoom2).toBeNull();
     });
+    
+    test('clear() should reset singleton instance', async () => {
+      // Create two instances and verify they're isolated
+      const instance1 = InMemoryStorage.createFresh();
+      
+      // Add data to first instance
+      const roomId = 'test-room-clear';
+      await instance1.createConversation({
+        interfaceType: 'matrix',
+        roomId,
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      // Explicitly clear the instance
+      instance1.clear();
+      
+      // Get a new instance - it should be completely fresh
+      const instance2 = InMemoryStorage.createFresh();
+      
+      // Verify new instance has no access to previous data
+      const byRoom = await instance2.getConversationByRoom(roomId, 'matrix');
+      expect(byRoom).toBeNull();
+      
+      // Verify singleton is null or different after clear
+      // @ts-expect-error - Accessing private static field for testing
+      expect(InMemoryStorage.instance).toBeNull();
+    });
   });
   
   let storage: InMemoryStorage;
@@ -47,6 +79,14 @@ describe('InMemoryStorage', () => {
   beforeEach(() => {
     // Create a fresh instance for each test
     storage = InMemoryStorage.createFresh();
+  });
+  
+  afterEach(() => {
+    // Explicitly call clear to ensure no lingering state
+    storage.clear();
+    // Reset singleton instance
+    // @ts-expect-error - Accessing private field for testing
+    InMemoryStorage.instance = null;
   });
 
   describe('createConversation', () => {

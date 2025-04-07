@@ -3,14 +3,16 @@
  */
 import { nanoid } from 'nanoid';
 
-import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
-
+import { ConversationSummarizer } from '@/mcp/contexts/conversations/memory/summarizer';
 import type { 
   ConversationStorage, 
   ConversationSummary, 
-} from './conversationStorage';
-import { ConversationSummarizer } from './summarizer';
+} from '@/mcp/contexts/conversations/storage/conversationStorage';
+import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import logger from '@/utils/logger';
+
+
+// Import summarizer for conversation summarization
 
 
 /**

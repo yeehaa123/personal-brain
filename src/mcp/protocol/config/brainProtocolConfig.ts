@@ -37,6 +37,9 @@ export class BrainProtocolConfig {
 
   /** Anchor ID for conversation context */
   readonly anchorId?: string;
+  
+  /** Default user name for conversations */
+  readonly defaultUserName?: string;
 
   /** Version of the protocol */
   readonly version: string = '1.0.0';

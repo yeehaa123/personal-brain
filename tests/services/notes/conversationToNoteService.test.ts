@@ -4,15 +4,15 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
-import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
-import type { InMemoryStorage } from '@/mcp/contexts/conversations/inMemoryStorage';
+import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
+import type { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { createIsolatedContext } from '@test/utils/contextUtils';
 import { createTestNote } from '@test/utils/embeddingUtils';
-import { createIsolatedMemory } from '@test/utils/memoryUtils';
 
 // Mock the tagExtractor module
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));
@@ -128,9 +128,10 @@ describe('ConversationToNoteService', () => {
       async () => ['ecosystem', 'architecture', 'example'],
     );
 
-    // Create a fresh isolated memory storage instance for testing
-    const { storage } = await createIsolatedMemory();
-    isolatedStorage = storage as InMemoryStorage;
+    // Create a fresh isolated storage instance for testing
+    const { storage } = await createIsolatedContext();
+    // @ts-expect-error - Type mismatch between real and mock storage, but API is compatible
+    isolatedStorage = storage;
 
     // We need to manually create a conversation with ID 'conv-123' in our test storage
     // Since we can't mock nanoid in InMemoryStorage easily, use direct object manipulation

@@ -1,15 +1,15 @@
 /**
- * Memory Utilities for Tests
+ * Context Utilities for Tests
  * 
- * This file provides utilities for creating and mocking conversation memory components in tests.
- * It includes functions for mocking the ConversationSummarizer and other memory-related functions.
+ * This file provides utilities for creating and mocking conversation context components in tests.
+ * It includes functions for mocking the ConversationSummarizer and other context-related functions.
  * 
  * Usage:
  * ```typescript
- * import { setupMemoryMocks } from '@test/utils/memoryUtils';
+ * import { setupContextMocks } from '@test/utils/contextUtils';
  * 
- * // Setup mocks for the memory-related services
- * setupMemoryMocks(mock);
+ * // Setup mocks for the context-related services
+ * setupContextMocks(mock);
  * ```
  * 
  * # IMPORTANT: Best Practices for InMemoryStorage in Tests
@@ -30,9 +30,8 @@
  * // Create an isolated storage instance
  * const storage = InMemoryStorage.createFresh();
  * 
- * // Pass it to ConversationMemory
- * const memory = new ConversationMemory({ 
- *   interfaceType: 'cli',
+ * // Pass it to ConversationContext
+ * const context = ConversationContext.createFresh({ 
  *   storage: storage
  * });
  * 
@@ -52,50 +51,65 @@
  */
 
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import { MockInMemoryStorage } from '@test/mcp/contexts/conversations/__mocks__/mockInMemoryStorage';
 
 /**
- * Create an isolated ConversationMemory instance for testing
+ * Set up mocks for all InMemoryStorage instances across tests
+ * This function mocks the InMemoryStorage module to use our mock implementation
+ * @param mockFn The mock function to use (from bun:test)
+ */
+export function setupInMemoryStorageMock(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
+  mockFn.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
+    return {
+      InMemoryStorage: MockInMemoryStorage,
+    };
+  });
+}
+
+/**
+ * Create an isolated ConversationContext instance for testing
  * 
  * This function follows best practices for test isolation by using InMemoryStorage.createFresh()
- * and explicitly passing the storage to the memory instance.
+ * and explicitly passing the storage to the context instance.
  * 
- * @param options Optional configuration for the ConversationMemory
- * @returns Object containing the memory instance and its isolated storage
+ * @param options Optional configuration for the ConversationContext
+ * @returns Object containing the context instance and its isolated storage
  */
-export async function createIsolatedMemory(options?: {
-  interfaceType?: 'cli' | 'matrix';
+export async function createIsolatedContext(options?: {
   apiKey?: string;
-  memoryOptions?: Record<string, unknown>;
+  contextOptions?: Record<string, unknown>;
 }) {
   // Import dynamically to avoid circular dependencies
   // Using dynamic imports instead of require() to satisfy linting rules
   const Module = await import('@/mcp/contexts/conversations');
   
-  const { InMemoryStorage, ConversationMemory } = Module;
+  const { ConversationContext } = Module;
   
   // Always create a fresh isolated storage instance
-  const storage = InMemoryStorage.createFresh();
+  const storage = MockInMemoryStorage.createFresh();
   
-  // Create the memory with the isolated storage
-  const memory = new ConversationMemory({
-    interfaceType: options?.interfaceType || 'cli',
+  // Create the context with the isolated storage
+  const context = ConversationContext.createFresh({
     storage: storage,
-    options: options?.memoryOptions,
+    ...options?.contextOptions,
     apiKey: options?.apiKey,
   });
   
-  return { memory, storage };
+  return { context, storage };
 }
 
 /**
- * Setup memory-related mocks for testing
+ * Setup context-related mocks for testing
  */
-export function setupMemoryMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
-  // We don't want to mock the ConversationMemory class itself since it contains core logic
+export function setupContextMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
+  // Set up InMemoryStorage mock first
+  setupInMemoryStorageMock(mockFn);
+
+  // We don't want to mock the ConversationContext class itself since it contains core logic
   // Instead, we'll ensure the storage and summarizer work properly
   
   // Mock the ConversationSummarizer to return consistent results and avoid API calls
-  mockFn.module('@/mcp/contexts/conversations/summarizer', () => {
+  mockFn.module('@/mcp/contexts/conversations/memory/summarizer', () => {
     return {
       ConversationSummarizer: class MockConversationSummarizer {
         constructor() {

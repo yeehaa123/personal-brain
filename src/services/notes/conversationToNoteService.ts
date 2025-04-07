@@ -27,8 +27,19 @@ export class ConversationToNoteService {
     
     // Use provided storage or get from ConversationContext
     // Note: In tests, always pass explicit storage for proper isolation
-    this.conversationStorage = conversationStorage || 
-      ConversationContext.getInstance().getStorage();
+    if (conversationStorage) {
+      this.conversationStorage = conversationStorage;
+    } else {
+      const contextStorage = ConversationContext.getInstance().getStorage();
+      // If it's the adapter, get the underlying storage
+      if ('getStorageImplementation' in contextStorage) {
+        this.conversationStorage = (contextStorage as unknown as { 
+          getStorageImplementation(): ConversationStorage 
+        }).getStorageImplementation();
+      } else {
+        this.conversationStorage = contextStorage as ConversationStorage;
+      }
+    }
   }
 
   /**

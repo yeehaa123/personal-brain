@@ -3,7 +3,7 @@
  */
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
-import type { ConversationSummary } from './conversationStorage';
+import type { ConversationSummary } from '../storage/conversationStorage';
 
 /**
  * Formatting options for conversations

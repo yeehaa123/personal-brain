@@ -3,9 +3,9 @@
  */
 import { nanoid } from 'nanoid';
 
-import { ClaudeModel } from '@/mcp/model';
+import { ClaudeModel } from '@/mcp/model/claude';
 import type { ConversationSummary, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@utils/logger';
+import logger from '@/utils/logger';
 
 /**
  * Service for summarizing conversation turns

@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { z } from 'zod';
 
 import {
-  ConversationMemoryOptionsSchema,
+  ConversationOptionsSchema,
   ConversationSchema,
   ConversationTurnSchema,
 } from '@/mcp/protocol/schemas/conversationSchemas';
@@ -91,9 +91,9 @@ describe('Conversation Schema Validation', () => {
     expect(result.success).toBe(true);
   });
 
-  test('should apply default values to conversation memory options', () => {
+  test('should apply default values to conversation options', () => {
     // Provide empty options
-    const result = ConversationMemoryOptionsSchema.parse({});
+    const result = ConversationOptionsSchema.parse({});
 
     // Check that defaults are applied
     expect(result.maxActiveTurns).toBe(10);
@@ -105,7 +105,7 @@ describe('Conversation Schema Validation', () => {
     expect(result.maxArchivedTurns).toBe(50);
   });
 
-  test('should validate custom conversation memory options', () => {
+  test('should validate custom conversation options', () => {
     const customOptions = {
       maxActiveTurns: 5,
       maxTokens: 1000,
@@ -119,7 +119,7 @@ describe('Conversation Schema Validation', () => {
       maxArchivedTurns: 30,
     };
 
-    const result = ConversationMemoryOptionsSchema.parse(customOptions);
+    const result = ConversationOptionsSchema.parse(customOptions);
     
     // Should have all properties from the input
     expect(result.maxActiveTurns).toBe(customOptions.maxActiveTurns);
@@ -144,7 +144,7 @@ describe('Conversation Schema Validation', () => {
 
     // Should throw a ZodError
     expect(() => {
-      ConversationMemoryOptionsSchema.parse(invalidOptions);
+      ConversationOptionsSchema.parse(invalidOptions);
     }).toThrow(z.ZodError);
   });
 });

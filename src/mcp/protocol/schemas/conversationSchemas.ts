@@ -1,5 +1,5 @@
 /**
- * Schema definitions for conversation memory using Zod
+ * Schema definitions for conversation context using Zod
  */
 import { z } from 'zod';
 
@@ -106,9 +106,9 @@ export const ConversationSchema = z.object({
 });
 
 /**
- * Schema for configuration options for the tiered conversation memory
+ * Schema for configuration options for the tiered conversation context
  */
-export const ConversationMemoryOptionsSchema = z.object({
+export const ConversationOptionsSchema = z.object({
   // Maximum number of turns to keep in active memory
   maxActiveTurns: z.number().int().positive().default(10),
   
@@ -149,5 +149,5 @@ export const ConversationMemoryOptionsSchema = z.object({
 export type ConversationTurn = z.infer<typeof ConversationTurnSchema>;
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;
 export type Conversation = z.infer<typeof ConversationSchema>;
-export type ConversationMemoryOptions = z.infer<typeof ConversationMemoryOptionsSchema>;
+export type ConversationOptions = z.infer<typeof ConversationOptionsSchema>;
 export type MemoryTier = z.infer<typeof MemoryTierEnum>;

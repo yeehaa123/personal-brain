@@ -17,10 +17,10 @@ import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
 
 import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
+import { setupContextMocks } from './utils/contextUtils';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
 import { setTestEnv } from './utils/envUtils';
 import { setupMockFetch } from './utils/fetchUtils';
-import { setupMemoryMocks } from './utils/memoryUtils';
 
 // Set test environment
 setTestEnv('NODE_ENV', 'test');
@@ -81,8 +81,8 @@ beforeEach(() => {
   // Setup embedding mocks for consistent vector operations
   setupEmbeddingMocks(mock);
   
-  // Setup memory mocks for consistent conversation memory behavior
-  setupMemoryMocks(mock);
+  // Setup context mocks for consistent conversation context behavior
+  setupContextMocks(mock);
   
   // Setup default fetch mock for network isolation
   global.fetch = setupMockFetch({});

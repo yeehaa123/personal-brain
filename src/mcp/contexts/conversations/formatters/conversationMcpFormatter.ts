@@ -3,7 +3,7 @@
  */
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
-import type { ConversationSummary } from './conversationStorage';
+import type { ConversationSummary } from '../storage/conversationStorage';
 
 // Interface for MCP-formatted conversation response
 export interface McpFormattedConversation {

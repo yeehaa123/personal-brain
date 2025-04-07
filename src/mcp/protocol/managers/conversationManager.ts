@@ -2,9 +2,8 @@
  * Conversation Manager for BrainProtocol
  * Manages conversation history and persistence
  */
-import type { ConversationContext } from '@/mcp/contexts/conversations';
-import { ConversationMemory, InMemoryStorage } from '@/mcp/contexts/conversations';
-import type { ConversationStorage } from '@/mcp/contexts/conversations/conversationStorage';
+import { ConversationContext, InMemoryStorage } from '@/mcp/contexts/conversations';
+import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
@@ -15,8 +14,9 @@ import type { IConversationManager, TurnOptions } from '../types';
  * Manages conversation history and persistence
  */
 export class ConversationManager implements IConversationManager {
-  private conversationMemory: ConversationMemory;
+  private conversationContext: ConversationContext;
   private currentRoomId?: string;
+  private currentConversationId?: string;
 
   /**
    * Create a new conversation manager
@@ -24,16 +24,15 @@ export class ConversationManager implements IConversationManager {
    */
   constructor(config: BrainProtocolConfig) {
     // Use injected storage if provided, otherwise use singleton getInstance()
-    // Note: memoryStorage is now stored directly in config rather than as a method
-    const memoryStorage = 
+    const storage = 
       (config.memoryStorage as ConversationStorage) || 
       InMemoryStorage.getInstance();
     
-    // Initialize conversation memory with interface type
-    this.conversationMemory = new ConversationMemory({
-      interfaceType: config.interfaceType,
-      storage: memoryStorage,
-      apiKey: config.getApiKey(),
+    // Initialize conversation context with the proper configuration
+    this.conversationContext = ConversationContext.createFresh({
+      storage: storage,
+      anchorName: config.anchorName || 'Host',
+      defaultUserName: config.defaultUserName || 'User',
     });
     
     // Set initial room ID
@@ -42,24 +41,15 @@ export class ConversationManager implements IConversationManager {
     // Initialize conversation
     this.initializeConversation();
     
-    logger.debug('Conversation manager initialized');
+    logger.debug('Conversation manager initialized with BaseContext architecture');
   }
 
   /**
-   * Get the conversation memory instance
-   * @returns The conversation memory
-   */
-  getConversationMemory(): ConversationMemory {
-    return this.conversationMemory;
-  }
-  
-  /**
-   * Get the conversation context (required by IConversationManager interface)
+   * Get the conversation context instance
    * @returns The conversation context
    */
   getConversationContext(): ConversationContext {
-    // This is a temporary stub until ConversationContext is fully integrated
-    throw new Error('ConversationContext is not yet implemented in this implementation');
+    return this.conversationContext;
   }
 
   /**
@@ -68,9 +58,12 @@ export class ConversationManager implements IConversationManager {
    */
   async setCurrentRoom(roomId: string): Promise<void> {
     this.currentRoomId = roomId;
-    await this.conversationMemory.getOrCreateConversationForRoom(roomId);
+    this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
+      roomId,
+      'cli',
+    );
     
-    logger.debug(`Switched to room: ${roomId}`);
+    logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId}`);
   }
 
   /**
@@ -79,8 +72,12 @@ export class ConversationManager implements IConversationManager {
   async initializeConversation(): Promise<void> {
     try {
       if (this.currentRoomId) {
-        await this.conversationMemory.getOrCreateConversationForRoom(this.currentRoomId);
-        logger.debug(`Initialized conversation for room: ${this.currentRoomId}`);
+        this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
+          this.currentRoomId,
+          'cli',
+        );
+        
+        logger.debug(`Initialized conversation ${this.currentConversationId} for room: ${this.currentRoomId}`);
       } else {
         logger.warn('No room ID provided, cannot initialize conversation');
       }
@@ -94,7 +91,7 @@ export class ConversationManager implements IConversationManager {
    * @returns Whether there is an active conversation
    */
   hasActiveConversation(): boolean {
-    return Boolean(this.conversationMemory.currentConversation);
+    return Boolean(this.currentConversationId);
   }
 
   /**
@@ -102,7 +99,7 @@ export class ConversationManager implements IConversationManager {
    * @returns The current conversation ID or null
    */
   getCurrentConversationId(): string | null {
-    return this.conversationMemory.currentConversation;
+    return this.currentConversationId || null;
   }
 
   /**
@@ -111,7 +108,7 @@ export class ConversationManager implements IConversationManager {
    * @returns The conversation or null
    */
   async getConversation(conversationId: string): Promise<Conversation | null> {
-    return await this.conversationMemory.getConversationMemory().storage.getConversation(conversationId);
+    return await this.conversationContext.getConversation(conversationId);
   }
 
   /**
@@ -122,7 +119,20 @@ export class ConversationManager implements IConversationManager {
    */
   async saveTurn(query: string, response: string, options?: TurnOptions): Promise<void> {
     try {
-      await this.conversationMemory.addTurn(query, response, options);
+      if (!this.currentConversationId) {
+        await this.initializeConversation();
+        if (!this.currentConversationId) {
+          throw new Error('No active conversation to save turn to');
+        }
+      }
+      
+      await this.conversationContext.addTurn(
+        this.currentConversationId,
+        query,
+        response,
+        options,
+      );
+      
       logger.debug(`Saved turn with userId: ${options?.userId || 'unknown'}`);
     } catch (error) {
       logger.warn('Failed to save conversation turn:', error);
@@ -135,7 +145,11 @@ export class ConversationManager implements IConversationManager {
    */
   async getConversationHistory(): Promise<string> {
     try {
-      return await this.conversationMemory.formatHistoryForPrompt();
+      if (!this.currentConversationId) {
+        return '';
+      }
+      
+      return await this.conversationContext.formatHistoryForPrompt(this.currentConversationId);
     } catch (error) {
       logger.warn('Failed to get conversation history:', error);
       return '';

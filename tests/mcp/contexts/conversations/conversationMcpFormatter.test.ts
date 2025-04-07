@@ -3,8 +3,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { ConversationMcpFormatter, type McpFormattedConversation, type McpFormattedSummaries, type McpFormattedTurns } from '@/mcp/contexts/conversations/conversationMcpFormatter';
-import type { ConversationSummary } from '@/mcp/contexts/conversations/conversationStorage';
+import { ConversationMcpFormatter, type McpFormattedConversation, type McpFormattedSummaries, type McpFormattedTurns } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
+import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 describe('ConversationMcpFormatter', () => {

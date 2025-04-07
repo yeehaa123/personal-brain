@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { InMemoryStorage } from '../../../../src/mcp/contexts/conversations/inMemoryStorage';
-import { TieredMemoryManager } from '../../../../src/mcp/contexts/conversations/tieredMemoryManager';
+import { TieredMemoryManager } from '@/mcp/contexts/conversations/memory/tieredMemoryManager';
+import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
 
 // We'll skip more complex mocking for now and focus on the basic functionality
 describe('TieredMemoryManager', () => {
