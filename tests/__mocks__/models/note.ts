@@ -7,7 +7,7 @@
 
 import type { NewNote, Note, NoteSearchParams } from '@models/note';
 
-import { createMockEmbedding, hashString } from '../utils/embeddingUtils';
+import { createMockEmbedding, hashString } from '@test/__mocks__/utils/embeddingUtils';
 
 /**
  * MockNote class with factory methods for creating notes

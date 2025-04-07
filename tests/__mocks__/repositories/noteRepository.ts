@@ -9,7 +9,7 @@ import { notes } from '@/db/schema';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import type { Note } from '@models/note';
 
-import { createMockNote, createMockNotes } from '../models/note';
+import { createMockNote, createMockNotes } from '@test/__mocks__/models/note';
 
 /**
  * MockNoteRepository class with standardized interface

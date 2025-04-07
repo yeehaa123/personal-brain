@@ -12,7 +12,7 @@ import type {
   ProfileExperience,
 } from '@models/profile';
 
-import { createMockEmbedding } from '../utils/embeddingUtils';
+import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 /**
  * Create a date info object for profile dates
