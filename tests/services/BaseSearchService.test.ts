@@ -10,8 +10,7 @@ import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
-
-import { mockLogger, restoreLogger } from '../mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 
 
@@ -121,7 +120,7 @@ describe('BaseSearchService', () => {
 
   beforeAll(() => {
     // Silence logger during tests
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
     
     searchService = new TestSearchService();
   });

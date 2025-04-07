@@ -7,8 +7,7 @@ import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
 import { setupEmbeddingMocks } from '@test';
-
-import { mockLogger, restoreLogger } from '../mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
@@ -24,7 +23,7 @@ describe('BaseEmbeddingService', () => {
 
   beforeAll(() => {
     // Silence logger during tests using the existing mockLogger utility
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
 
     service = new TestEmbeddingService();
   });

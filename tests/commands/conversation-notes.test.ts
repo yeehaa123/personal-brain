@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { CommandHandler, CommandResult } from '@commands/index';
-import { createMockNote, createTrackers, mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
+import { createMockNote, createTrackers } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
 import logger from '@utils/logger';
 
@@ -64,7 +65,7 @@ describe('Conversation Notes Commands', () => {
 
   beforeEach(() => {
     // Mock logger to suppress logs
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
     
     // Set up trackers and mock CLI interface
     trackers = createTrackers();

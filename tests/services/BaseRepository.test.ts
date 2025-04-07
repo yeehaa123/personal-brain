@@ -8,8 +8,7 @@ import { db } from '@/db';
 import { BaseRepository } from '@/services/BaseRepository';
 import { DatabaseError, ValidationError } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
-
-import { mockLogger, restoreLogger } from '../mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 
 
@@ -49,8 +48,8 @@ describe('BaseRepository', () => {
   let originalLogger: Record<string, unknown>;
 
   beforeAll(() => {
-    // Silence logger during tests using the existing mockLogger utility
-    originalLogger = mockLogger(logger);
+    // Silence logger during tests
+    originalLogger = silenceLogger(logger);
 
     repository = new TestRepository();
   });

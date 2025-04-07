@@ -16,6 +16,7 @@ import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
 
+import { setupLoggerMocks } from './__mocks__';
 import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
 import { setupContextMocks } from './utils/contextUtils';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
@@ -25,22 +26,10 @@ import { setupMockFetch } from './utils/fetchUtils';
 // Set test environment
 setTestEnv('NODE_ENV', 'test');
 
-// Define mock logger for silent operation during tests
-const mockLogger = {
-  info: () => {},
-  debug: () => {},
-  warn: () => {},
-  error: () => {},
-  child: () => mockLogger,
-};
-
 // Global setup - runs once before all tests
 beforeAll(() => {
   // Mock the logger to prevent console noise during tests
-  mock.module('@utils/logger', () => ({
-    default: mockLogger,
-    createLogger: () => mockLogger,
-  }));
+  setupLoggerMocks(mock);
   
   // Set up global mocks for BrainProtocol and related classes
   setupMcpServerMocks(mock);

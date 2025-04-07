@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 
-import { createTrackers, mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
+import { createTrackers } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
 import { CLIInterface } from '@utils/cliInterface';
 import logger from '@utils/logger';
@@ -12,7 +13,7 @@ describe('Tag Formatting', () => {
   
   beforeAll(() => {
     // Set up trackers and mocks
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
   
   afterAll(() => {

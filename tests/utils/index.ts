@@ -5,4 +5,4 @@ export * from './cliUtils';
 export * from './dependencyUtils';
 export * from './embeddingUtils';
 export * from './envUtils';
-export * from './loggerUtils';
+// Logger utils moved to __mocks__/core/logger.ts

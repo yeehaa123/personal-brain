@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Note } from '@models/note';
-import { createMockNotes, createTrackers, mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
+import { createMockNotes, createTrackers } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
 import logger from '@utils/logger';
 import { displayNotes, formatNotePreview, getExcerpt } from '@utils/noteUtils';
@@ -22,7 +23,7 @@ describe('noteUtils', () => {
     // Set up trackers and mocks
     trackers = createTrackers();
     originalCLI = mockCLIInterface(trackers);
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
   
   afterEach(() => {

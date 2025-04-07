@@ -7,7 +7,7 @@ import type { McpServer } from '@/mcp';
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
 import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import {
   clearMockEnv,
   setMockEnv,
@@ -171,7 +171,7 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
     // Set up mock environment
     setMockEnv();
     // Silence logger
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
 
   afterAll(() => {

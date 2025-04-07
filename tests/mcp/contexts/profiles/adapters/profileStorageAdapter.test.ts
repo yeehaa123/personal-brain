@@ -6,7 +6,7 @@ import { describe, expect, mock, test } from 'bun:test';
 import { ProfileStorageAdapter } from '@/mcp/contexts/profiles/adapters/profileStorageAdapter';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-import { mockLogger } from '@test/mocks';
+import { silenceLogger } from '@test/__mocks__';
 import logger from '@utils/logger';
 
 // Mock profile for testing
@@ -56,7 +56,7 @@ function createMockRepository() {
 
 describe('ProfileStorageAdapter', () => {
   // Mock the logger to prevent output in tests
-  mockLogger(logger);
+  silenceLogger(logger);
   
   // In Bun we can't do automatic cleanup, but we could do manual cleanup in each test if needed
   

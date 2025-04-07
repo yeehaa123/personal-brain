@@ -17,11 +17,9 @@ export {
   createMockNotes,
   createMockNote,
   createMockProfile,
-  
+
   // Mock utility functions
   createTrackers,
-  mockLogger,
-  restoreLogger,
   mockEnv,
   resetMocks,
 } from './mocks';
@@ -31,14 +29,14 @@ export { MockProfileRepository } from './services/profiles/profileRepository.tes
 export { MockNoteRepository } from './services/notes/noteRepository.test';
 
 // MCP mocks
-export { 
+export {
   setupAnthropicMocks,
   setupMcpServerMocks,
   createMockMcpServer,
 } from './mcp/contexts/__mocks__/mcpMocks';
 
 // External sources mocks
-export { 
+export {
   MockNewsApiSource,
   MockWikipediaSource,
   setupMockFetch,

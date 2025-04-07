@@ -6,7 +6,7 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
 import type { Profile } from '@/models/profile';
-import { mockLogger } from '@test/mocks';
+import { silenceLogger } from '@test/__mocks__';
 import logger from '@utils/logger';
 
 // Mock the dependency container and service registry functions
@@ -96,7 +96,7 @@ mock.module('@/utils/dependencyContainer', () => {
 
 describe('ProfileContext', () => {
   // Mock the logger to prevent output in tests
-  mockLogger(logger);
+  silenceLogger(logger);
   
   // In Bun we can't do automatic cleanup, but we could do manual cleanup in each test if needed
   

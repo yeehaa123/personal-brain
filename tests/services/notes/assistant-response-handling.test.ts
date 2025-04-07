@@ -12,8 +12,8 @@ import { ConversationToNoteService } from '@/services/notes/conversationToNoteSe
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import logger from '@/utils/logger';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import { createTestNote } from '@test/utils/embeddingUtils';
-import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
 
 // Mock classes to avoid external dependencies
 class MockConversationStorage implements ConversationStorage {
@@ -131,7 +131,7 @@ describe('Assistant Response Handling in Conversations', () => {
 
   beforeEach(() => {
     // Mock the logger
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
     
     // Create fresh mock storage
     mockStorage = new MockConversationStorage();

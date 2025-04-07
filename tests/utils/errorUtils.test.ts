@@ -11,7 +11,7 @@ import {
   ValidationError,
 } from '@/utils/errorUtils';
 import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 // Store original logger methods
 let originalLogger: Record<string, unknown>;
@@ -20,7 +20,7 @@ describe('errorUtils', () => {
   // Setup and teardown for all tests
   beforeEach(() => {
     // Mock the logger to prevent actual logging
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
   
   afterEach(() => {

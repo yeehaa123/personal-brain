@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 
-import { mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import { CLIInterface } from '@utils/cliInterface';
 import logger from '@utils/logger';
 
@@ -11,7 +11,7 @@ describe('CLIInterface', () => {
   
   beforeAll(() => {
     // Silence logger during tests
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
   
   afterAll(() => {

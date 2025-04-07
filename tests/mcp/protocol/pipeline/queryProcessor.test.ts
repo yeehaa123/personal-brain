@@ -21,9 +21,9 @@ import type {
 } from '@/mcp/protocol/types/index';
 import type { Note } from '@/models/note';
 import logger from '@/utils/logger';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 import { createMockNote, createMockProfile } from '../../../mocks';
-import { mockLogger, restoreLogger } from '../../../utils/loggerUtils';
 
 // Import types
 
@@ -317,7 +317,7 @@ describe('QueryProcessor', () => {
     };
     
     // Temporarily mock the logger to suppress warning about empty query
-    const originalLogger = mockLogger(logger);
+    const originalLogger = silenceLogger(logger);
     
     try {
       const processor = new QueryProcessor(
@@ -357,7 +357,7 @@ describe('QueryProcessor', () => {
     });
     
     // Temporarily mock the logger to avoid warning noise in test output
-    const originalLogger = mockLogger(logger);
+    const originalLogger = silenceLogger(logger);
     
     try {
       const processor = new QueryProcessor(

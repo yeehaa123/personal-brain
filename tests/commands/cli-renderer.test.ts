@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import type { Note } from '@models/note';
-import { createMockNotes, createTrackers, mockLogger, restoreLogger } from '@test/mocks';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
+import { createMockNotes, createTrackers } from '@test/mocks';
 import { mockCLIInterface, mockDisplayNotes, restoreCLIInterface } from '@test/test-utils';
 import logger from '@utils/logger';
 import { displayNotes } from '@utils/noteUtils';
@@ -24,7 +25,7 @@ describe('CLIRenderer', () => {
     // Set up trackers and mocks
     trackers = createTrackers();
     originalCLI = mockCLIInterface(trackers);
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
 
     // Mock displayNotes function
     mockDisplayNotes(displayNotes, trackers);

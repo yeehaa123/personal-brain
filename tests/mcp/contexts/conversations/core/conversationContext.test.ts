@@ -10,7 +10,7 @@ import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/c
 import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import logger from '@/utils/logger';
-import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
+import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 // Import here to avoid circular reference
 import { 
@@ -142,7 +142,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
 
   beforeAll(() => {
     // Silence logger
-    originalLogger = mockLogger(logger);
+    originalLogger = silenceLogger(logger);
   });
 
   afterAll(() => {
