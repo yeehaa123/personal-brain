@@ -28,6 +28,87 @@
 - Run `lint:fix` frequently during refactoring to prevent import ordering issues
 - Use TypeScript path aliases (@/ prefix) consistently for internal imports
 
+## Testing Guidelines
+
+### Test Organization
+
+The test directory structure follows a clear separation of concerns:
+
+```
+tests/
+├── __mocks__/             # Centralized mock implementations
+│   ├── contexts/          # Context mock implementations
+│   ├── core/              # Core service mock implementations
+│   ├── models/            # Model mock implementations
+│   ├── protocol/          # Protocol component mock implementations
+│   ├── repositories/      # Repository mock implementations
+│   ├── services/          # Service mock implementations
+│   ├── storage/           # Storage mock implementations
+│   └── utils/             # Utility mock implementations
+├── helpers/               # Test helper functions
+│   ├── di/                # Dependency injection helpers
+│   ├── envUtils.ts        # Environment variable test utilities
+│   ├── index.ts           # Main helper exports
+│   └── outputUtils.ts     # Console/output capture utilities
+├── [test modules...]      # Actual test files
+```
+
+### Import Patterns
+
+Always use standardized import paths for test utilities:
+
+```typescript
+// GOOD: Standardized import paths with TypeScript path aliases
+import { createMockNote } from '@test/__mocks__/models/note';
+import { setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+import { mockFetch } from '@test/helpers/outputUtils';
+
+// BAD: Relative import paths that are fragile to refactoring
+import { createMockNote } from '../../../__mocks__/models/note';
+```
+
+### Environment Setup
+
+Use standard environment helpers for test setup/teardown:
+
+```typescript
+import { setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+
+describe('Your Test Suite', () => {
+  beforeAll(() => {
+    // Standard environment setup with API keys, etc.
+    setMockEnv();
+    // Add any custom environment variables needed
+    setTestEnv('CUSTOM_VAR', 'value');
+  });
+  
+  afterAll(() => {
+    // Clean up environment
+    clearMockEnv();
+  });
+});
+```
+
+### Test Isolation Patterns
+
+- Reset singletons between test suites with `resetInstance()`
+- Create isolated components with `createFresh()`
+- Use `setupDependencyContainer()` for dependency isolation
+
+```typescript
+import { setupDependencyContainer } from '@test/helpers/di/containerUtils';
+
+test('component with isolated dependencies', () => {
+  const { cleanup } = setupDependencyContainer();
+  try {
+    // Test with isolated dependencies
+  } finally {
+    // Clean up dependencies
+    cleanup();
+  }
+});
+```
+
 ## Architecture Patterns & Anti-patterns
 
 ### Recommended Patterns
@@ -128,9 +209,9 @@
      private static instance: MockComponent | null = null;
      
      // Singleton getInstance method
-     public static getInstance(): MockComponent {
+     public static getInstance(options?: Record<string, unknown>): MockComponent {
        if (!MockComponent.instance) {
-         MockComponent.instance = new MockComponent();
+         MockComponent.instance = new MockComponent(options);
        }
        return MockComponent.instance;
      }
@@ -149,13 +230,107 @@
    }
    ```
 
-3. **Mock Categories**:
-   - `__mocks__/storage`: Storage implementations
-   - `__mocks__/contexts`: Context implementations
-   - `__mocks__/models`: Data model factories
-   - `__mocks__/services`: Service implementations
+3. **Mock Implementation Patterns**:
 
-4. **Test Isolation Principles**:
+   **Class-based Mocks**: For services, repositories, and contexts:
+   ```typescript
+   // In @test/__mocks__/repositories/noteRepository.ts
+   export class MockNoteRepository implements NoteRepository {
+     private static instance: MockNoteRepository | null = null;
+     private notes: Note[] = [];
+     
+     static getInstance(): MockNoteRepository {
+       if (!MockNoteRepository.instance) {
+         MockNoteRepository.instance = new MockNoteRepository();
+       }
+       return MockNoteRepository.instance;
+     }
+     
+     static resetInstance(): void {
+       MockNoteRepository.instance = null;
+     }
+     
+     static createFresh(initialNotes: Note[] = []): MockNoteRepository {
+       const repo = new MockNoteRepository();
+       repo.notes = [...initialNotes];
+       return repo;
+     }
+     
+     // Repository methods...
+   }
+   ```
+
+   **Factory Functions**: For models and simple objects:
+   ```typescript
+   // In @test/__mocks__/models/note.ts
+   export function createMockNote(
+     id = 'mock-note-id',
+     title = 'Mock Note Title',
+     tags = ['mock', 'test'],
+     content = 'Mock note content'
+   ): Note {
+     return {
+       id,
+       title,
+       tags,
+       content,
+       created: new Date().toISOString(),
+       updated: new Date().toISOString(),
+       embedding: createMockEmbedding(content),
+     };
+   }
+   
+   export function createMockNotes(count = 3): Note[] {
+     return Array.from({ length: count }, (_, i) => 
+       createMockNote(`note-${i}`, `Note ${i}`, ['mock', `tag-${i}`])
+     );
+   }
+   ```
+
+4. **Helper Utilities**:
+
+   **Environment Helpers**: For setting up test environments:
+   ```typescript
+   // In @test/helpers/envUtils.ts
+   export function setMockEnv(): void {
+     // Sets up standard API keys and other environment variables
+     setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
+     setTestEnv('OPENAI_API_KEY', 'mock-openai-key');
+     // ...
+   }
+   
+   export function clearMockEnv(): void {
+     // Cleans up environment variables after tests
+     clearTestEnv('ANTHROPIC_API_KEY');
+     clearTestEnv('OPENAI_API_KEY');
+     // ...
+   }
+   ```
+
+   **Output Capture**: For testing console output:
+   ```typescript
+   // In @test/helpers/outputUtils.ts
+   export function captureOutput() {
+     let output = '';
+     const originalWrite = process.stdout.write;
+     
+     process.stdout.write = function(str) {
+       output += str.toString();
+       return true;
+     };
+     
+     return {
+       getOutput: () => output,
+       restore: () => {
+         process.stdout.write = originalWrite;
+       },
+     };
+   }
+   ```
+
+5. **Test Isolation Principles**:
    - Reset all mocks between tests using resetInstance()
    - Use createFresh() for unique test requirements
    - Maintain test purity by avoiding shared state
+   - Use helper functions for consistent environment setup
+   - Isolate dependencies with setupDependencyContainer()
