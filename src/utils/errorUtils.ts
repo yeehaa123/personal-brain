@@ -93,7 +93,7 @@ export function handleError(error: unknown, errorMessage?: string): AppError {
     logger.error(error.toLogString());
     return error;
   }
-  
+
   // For Error objects, convert to AppError
   if (error instanceof Error) {
     const appError = new AppError(
@@ -104,11 +104,11 @@ export function handleError(error: unknown, errorMessage?: string): AppError {
     logger.error(appError.toLogString());
     return appError;
   }
-  
+
   // For other values (string, number, object, etc.)
   const message = errorMessage || (typeof error === 'string' ? error : 'Unknown error occurred');
   const context = typeof error === 'object' && error ? { originalError: error } : undefined;
-  
+
   const appError = new AppError(message, 'UNKNOWN_ERROR', context);
   logger.error(appError.toLogString());
   return appError;
@@ -121,7 +121,7 @@ export function handleError(error: unknown, errorMessage?: string): AppError {
  * @returns Result of the function or throws AppError
  */
 export async function tryExec<T>(
-  fn: () => Promise<T>, 
+  fn: () => Promise<T>,
   errorMessage?: string,
 ): Promise<T> {
   try {
@@ -147,14 +147,14 @@ export async function safeExec<T>(
     return await fn();
   } catch (error) {
     const appError = handleError(error);
-    
+
     // Use the appropriate log level
     if (logLevel === 'warn') {
       logger.warn(appError.toLogString());
     } else if (logLevel === 'debug') {
       logger.debug(appError.toLogString());
     }
-    
+
     return defaultValue;
   }
 }

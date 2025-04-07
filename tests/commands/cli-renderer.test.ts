@@ -3,20 +3,15 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import type { Note } from '@models/note';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import { createMockNotes, createTrackers } from '@test/mocks';
 import { mockCLIInterface, mockDisplayNotes, restoreCLIInterface } from '@test/test-utils';
-import logger from '@utils/logger';
 import { displayNotes } from '@utils/noteUtils';
-
-
 
 describe('CLIRenderer', () => {
   let renderer: CLIRenderer;
   let mockNotes: Note[];
   let trackers: ReturnType<typeof createTrackers>;
   let originalCLI: Record<string, unknown>;
-  let originalLogger: Record<string, unknown>;
 
   beforeEach(() => {
     renderer = new CLIRenderer();
@@ -25,7 +20,6 @@ describe('CLIRenderer', () => {
     // Set up trackers and mocks
     trackers = createTrackers();
     originalCLI = mockCLIInterface(trackers);
-    originalLogger = silenceLogger(logger);
 
     // Mock displayNotes function
     mockDisplayNotes(displayNotes, trackers);
@@ -34,7 +28,6 @@ describe('CLIRenderer', () => {
   afterEach(() => {
     // Restore original functionality
     restoreCLIInterface(originalCLI);
-    restoreLogger(logger, originalLogger);
   });
 
   describe('render method', () => {
@@ -142,7 +135,7 @@ describe('CLIRenderer', () => {
           });
         },
       };
-      
+
       // Set the command handler
       // Type cast to unknown then to CommandHandler to avoid TypeScript complaining about missing properties
       // For the test we only need the confirmSaveNote method

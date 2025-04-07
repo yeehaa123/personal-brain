@@ -1,16 +1,12 @@
 /**
  * Tests for BaseRepository
  */
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { beforeAll, describe, expect, mock, test } from 'bun:test';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 
 import { db } from '@/db';
 import { BaseRepository } from '@/services/BaseRepository';
 import { DatabaseError, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
-
-
 
 // Create a mock table with the minimum interface we need
 const mockTable = {
@@ -37,7 +33,7 @@ class TestRepository extends BaseRepository<SQLiteTable, { id: string; value: st
   protected get entityName() {
     return 'test';
   }
-  
+
   protected getIdColumn(): SQLiteColumn {
     return mockIdColumn;
   }
@@ -45,19 +41,11 @@ class TestRepository extends BaseRepository<SQLiteTable, { id: string; value: st
 
 describe('BaseRepository', () => {
   let repository: TestRepository;
-  let originalLogger: Record<string, unknown>;
 
   beforeAll(() => {
-    // Silence logger during tests
-    originalLogger = silenceLogger(logger);
-
     repository = new TestRepository();
   });
 
-  afterAll(() => {
-    // Restore original logger functions
-    restoreLogger(logger, originalLogger);
-  });
 
   test('getById should return an entity when found', async () => {
     const result = await repository.getById('test-id');
@@ -65,7 +53,7 @@ describe('BaseRepository', () => {
   });
 
   test('getById should throw ValidationError with invalid ID', async () => {
-    await expect(repository.getById('')).rejects.toThrow(ValidationError);
+    expect(repository.getById('')).rejects.toThrow(ValidationError);
   });
 
   test('deleteById should return true on success', async () => {
@@ -77,10 +65,10 @@ describe('BaseRepository', () => {
     // Force an error by mocking db.delete to throw
     const originalDelete = db.delete;
     db.delete = mock(() => { throw new Error('Test error'); });
-    
+
     const result = await repository.deleteById('test-id');
     expect(result).toBe(false);
-    
+
     // Restore db.delete
     db.delete = originalDelete;
   });
@@ -90,10 +78,10 @@ describe('BaseRepository', () => {
     // Create a spy on repository.getCount
     const originalGetCount = repository.getCount.bind(repository);
     repository.getCount = mock(async () => 2);
-    
+
     const count = await repository.getCount();
     expect(count).toBe(2);
-    
+
     // Restore original method
     repository.getCount = originalGetCount;
   });
@@ -101,13 +89,13 @@ describe('BaseRepository', () => {
   test('getCount should handle error gracefully', async () => {
     // Similarly, we'll directly test the error handling in getCount
     const originalGetCount = repository.getCount.bind(repository);
-    
+
     repository.getCount = mock(async () => {
       throw new DatabaseError('Error getting test count');
     });
-    
-    await expect(repository.getCount()).rejects.toThrow(DatabaseError);
-    
+
+    expect(repository.getCount()).rejects.toThrow(DatabaseError);
+
     // Restore original method
     repository.getCount = originalGetCount;
   });

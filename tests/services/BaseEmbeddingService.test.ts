@@ -1,13 +1,11 @@
 /**
  * Tests for BaseEmbeddingService
  */
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
 import { setupEmbeddingMocks } from '@test';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
@@ -18,20 +16,8 @@ class TestEmbeddingService extends BaseEmbeddingService {
 }
 
 describe('BaseEmbeddingService', () => {
-  let service: TestEmbeddingService;
-  let originalLogger: Record<string, unknown>;
 
-  beforeAll(() => {
-    // Silence logger during tests using the existing mockLogger utility
-    originalLogger = silenceLogger(logger);
-
-    service = new TestEmbeddingService();
-  });
-
-  afterAll(() => {
-    // Restore original logger functions
-    restoreLogger(logger, originalLogger);
-  });
+  const service = new TestEmbeddingService();
 
   test('should generate embeddings for valid text', async () => {
     const embedding = await service.generateEmbedding('test text');
@@ -40,13 +26,13 @@ describe('BaseEmbeddingService', () => {
   });
 
   test('should throw ValidationError for empty text', async () => {
-    await expect(service.generateEmbedding('')).rejects.toThrow(ValidationError);
+    expect(service.generateEmbedding('')).rejects.toThrow(ValidationError);
   });
 
   test('should calculate similarity between embeddings', () => {
     const embedding1 = [0.1, 0.2, 0.3];
     const embedding2 = [0.2, 0.3, 0.4];
-    
+
     const similarity = service.calculateSimilarity(embedding1, embedding2);
     expect(typeof similarity).toBe('number');
     expect(similarity).toBeGreaterThanOrEqual(0);
@@ -62,16 +48,16 @@ describe('BaseEmbeddingService', () => {
     // Get the embedding service to mock cosineSimilarity
     const embeddingService = service.getEmbeddingService();
     const originalCosineSimilarity = embeddingService.cosineSimilarity;
-    
+
     // Make it throw an error
     embeddingService.cosineSimilarity = mock(() => {
       throw new Error('Similarity calculation error');
     });
-    
+
     // Calculate similarity should return 0 instead of throwing
     const similarity = service.calculateSimilarity([0.1], [0.2]);
     expect(similarity).toBe(0);
-    
+
     // Restore original method
     embeddingService.cosineSimilarity = originalCosineSimilarity;
   });

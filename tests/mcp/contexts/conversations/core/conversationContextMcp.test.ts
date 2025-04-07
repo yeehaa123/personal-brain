@@ -6,17 +6,15 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
 import type { McpServer } from '@/mcp';
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
-import logger from '@/utils/logger';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import {
   clearMockEnv,
   setMockEnv,
 } from '@test/utils/mcpUtils';
 
 // Import here to avoid circular reference
-import { 
+import {
   MockInMemoryStorage,
-  MockMemoryService, 
+  MockMemoryService,
   MockQueryService,
 } from '../__mocks__';
 
@@ -27,7 +25,7 @@ mock.module('@/services/serviceRegistry', () => {
   const adapter = new ConversationStorageAdapter(storage);
   const formatter = { formatConversation: mock(() => 'Formatted conversation') };
   const mcpFormatter = { formatConversationForMcp: mock(() => ({})) };
-  
+
   // Create resource and tool services with actual implementations
   const resourceService = {
     getResources: mock(() => [
@@ -36,7 +34,7 @@ mock.module('@/services/serviceRegistry', () => {
       { protocol: 'conversations', path: 'get/:id', handler: mock(() => Promise.resolve({})) },
     ]),
   };
-  
+
   const toolService = {
     getTools: mock(() => [
       { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
@@ -45,7 +43,7 @@ mock.module('@/services/serviceRegistry', () => {
     ]),
     getToolSchema: mock(() => ({})),
   };
-  
+
   const queryService = new MockQueryService();
   const memoryService = new MockMemoryService();
 
@@ -83,7 +81,7 @@ mock.module('@/services/serviceRegistry', () => {
       ConversationMemoryService: 'conversation.memory',
     },
     getService: mockGetService,
-    registerServices: mock(() => {}),
+    registerServices: mock(() => { }),
   };
 });
 
@@ -164,21 +162,14 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
   let conversationContext: ConversationContext;
   let storage: MockInMemoryStorage;
   let adapter: ConversationStorageAdapter;
-  let originalLogger: Record<string, unknown>;
   let queryService: MockQueryService;
 
   beforeAll(() => {
-    // Set up mock environment
     setMockEnv();
-    // Silence logger
-    originalLogger = silenceLogger(logger);
   });
 
   afterAll(() => {
-    // Clean up mock environment
     clearMockEnv();
-    // Restore logger
-    restoreLogger(logger, originalLogger);
   });
 
   beforeEach(() => {
@@ -223,9 +214,9 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
     // Clear collections before testing
     mockResources.length = 0;
     mockTools.length = 0;
-    
+
     const result = conversationContext.registerOnServer(mockMcpServer);
-    
+
     expect(result).toBe(true);
     expect(mockResources.length).toBeGreaterThan(0);
     expect(mockTools.length).toBeGreaterThan(0);
@@ -235,7 +226,7 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
     // The BaseContext implementation has error handling that catches the error when
     // trying to use an undefined server and returns false
     const result = conversationContext.registerOnServer(undefined as unknown as McpServer);
-    
+
     // Expect it to return false when the server is undefined
     expect(result).toBe(false);
   });
@@ -250,7 +241,7 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
 
     // Call the method directly
     const conversationId = await conversationContext.createConversation('cli', 'test-room');
-    
+
     // Verify the result
     expect(conversationId).toBe('test-id');
     expect(queryService.createConversation).toHaveBeenCalledWith('cli', 'test-room');
@@ -313,11 +304,11 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
 
     // Mock the methods to return our test data
     queryService.getConversation.mockImplementation(() => Promise.resolve(mockConversation));
-    
+
     const memoryService = (conversationContext as unknown as { memoryService: MockMemoryService }).memoryService;
     memoryService.getTurns.mockImplementation(() => Promise.resolve(mockTurns));
     memoryService.getSummaries.mockImplementation(() => Promise.resolve([]));
-    
+
     // Mock the formatter to return a predictable object
     type McpFormatterType = {
       formatConversationForMcp: () => {
@@ -329,7 +320,7 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
         summaryCount: number;
       };
     };
-    
+
     (conversationContext as unknown as { mcpFormatter: McpFormatterType }).mcpFormatter = {
       formatConversationForMcp: mock(() => ({
         id: 'test-id',
@@ -353,8 +344,8 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
     expect(formatted?.interfaceType).toBe('cli');
     expect(formatted?.turnCount).toBe(2);
     expect(
-      (conversationContext as unknown as { 
-        mcpFormatter: { formatConversationForMcp: () => unknown } 
+      (conversationContext as unknown as {
+        mcpFormatter: { formatConversationForMcp: () => unknown }
       }).mcpFormatter.formatConversationForMcp,
     ).toHaveBeenCalled();
   });

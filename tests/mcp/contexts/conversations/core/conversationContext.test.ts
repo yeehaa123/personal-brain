@@ -2,23 +2,21 @@
  * Tests for the refactored ConversationContext using BaseContext architecture
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
 import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
 import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
-import logger from '@/utils/logger';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 // Import here to avoid circular reference
-import { 
+import {
   MockInMemoryStorage,
-  MockMemoryService, 
+  MockMemoryService,
   MockQueryService,
   MockResourceService,
-  MockToolService, 
+  MockToolService,
 } from '../__mocks__';
 
 // Mock the service registry
@@ -67,7 +65,7 @@ mock.module('@/services/serviceRegistry', () => {
       ConversationMemoryService: 'conversation.memory',
     },
     getService: mockGetService,
-    registerServices: mock(() => {}),
+    registerServices: mock(() => { }),
   };
 });
 
@@ -108,7 +106,7 @@ mock.module('@/mcp/contexts/conversations/tools/conversationTools', () => {
         { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
         { protocol: 'conversations', path: 'add_turn', name: 'add_turn', handler: mock(() => Promise.resolve({})) },
       ]);
-      
+
       getToolSchema = mock(() => ({}));
     },
   };
@@ -136,19 +134,8 @@ describe('ConversationContext (BaseContext implementation)', () => {
   let context: ConversationContext;
   let adapter: ConversationStorageAdapter;
   let storage: MockInMemoryStorage;
-  let originalLogger: Record<string, unknown>;
   let queryService: MockQueryService;
   let memoryService: MockMemoryService;
-
-  beforeAll(() => {
-    // Silence logger
-    originalLogger = silenceLogger(logger);
-  });
-
-  afterAll(() => {
-    // Restore logger
-    restoreLogger(logger, originalLogger);
-  });
 
   beforeEach(() => {
     // Create a fresh storage for each test
@@ -277,7 +264,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
         summaries: [],
         archivedTurns: [],
       }));
-      
+
       memoryService.addTurn.mockImplementation(() => Promise.resolve('turn-id'));
 
       // Call the method
@@ -315,7 +302,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
           userName: 'TestUser',
         },
       ];
-      
+
       memoryService.getTurns.mockImplementation(() => Promise.resolve(mockTurns));
       memoryService.getSummaries.mockImplementation(() => Promise.resolve([]));
 
@@ -367,16 +354,16 @@ describe('ConversationContext (BaseContext implementation)', () => {
       queryService.findConversations.mockImplementation(() => Promise.resolve([]));
 
       // Search criteria
-      const criteria = { 
-        interfaceType: 'cli' as const, 
+      const criteria = {
+        interfaceType: 'cli' as const,
         query: 'test query',
         limit: 10,
         offset: 5,
       };
-      
+
       // Call the method
       await context.findConversations(criteria);
-      
+
       // Verify it delegates to the query service
       expect(queryService.findConversations).toHaveBeenCalledWith(criteria);
     });
@@ -384,10 +371,10 @@ describe('ConversationContext (BaseContext implementation)', () => {
     test('getConversationsByRoom() correctly calls query service', async () => {
       // Set up test data
       queryService.getConversationsByRoom.mockImplementation(() => Promise.resolve([]));
-      
+
       // Call the method with parameters
       await context.getConversationsByRoom('test-room', 'cli');
-      
+
       // Verify it delegates to the query service
       expect(queryService.getConversationsByRoom).toHaveBeenCalledWith('test-room', 'cli');
     });
@@ -395,10 +382,10 @@ describe('ConversationContext (BaseContext implementation)', () => {
     test('getRecentConversations() correctly calls query service', async () => {
       // Set up test data
       queryService.getRecentConversations.mockImplementation(() => Promise.resolve([]));
-      
+
       // Call the method with parameters
       await context.getRecentConversations(10, 'cli');
-      
+
       // Verify it delegates to the query service
       expect(queryService.getRecentConversations).toHaveBeenCalledWith(10, 'cli');
     });

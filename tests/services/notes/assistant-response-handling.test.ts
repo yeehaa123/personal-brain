@@ -4,17 +4,14 @@
  * This file tests specifically how the conversation-to-note service processes
  * user and assistant turns when creating notes.
  */
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { ConversationInfo, ConversationStorage, ConversationSummary, SearchCriteria } from '@/mcp/contexts/conversations';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
-import logger from '@/utils/logger';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 import { createTestNote } from '@test/utils/embeddingUtils';
-
 // Mock classes to avoid external dependencies
 class MockConversationStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();
@@ -43,29 +40,29 @@ class MockConversationStorage implements ConversationStorage {
   async deleteConversation(): Promise<boolean> { return false; }
   async addTurn(): Promise<string> { return ''; }
   async getTurns(): Promise<ConversationTurn[]> { return []; }
-  async updateTurn(): Promise<boolean> { return false; } 
+  async updateTurn(): Promise<boolean> { return false; }
   async addSummary(): Promise<string> { return ''; }
   async getSummaries(): Promise<ConversationSummary[]> { return []; }
   async findConversations(_criteria: SearchCriteria): Promise<ConversationInfo[]> {
     const now = new Date();
-    return [{ 
-      id: 'mock-conv-1', 
-      interfaceType: 'cli', 
+    return [{
+      id: 'mock-conv-1',
+      interfaceType: 'cli',
       roomId: 'mock-room-1',
-      startedAt: now, 
-      updatedAt: now, 
+      startedAt: now,
+      updatedAt: now,
       turnCount: 2,
     }];
   }
-  
+
   async getRecentConversations(_limit?: number, _interfaceType?: 'cli' | 'matrix'): Promise<ConversationInfo[]> {
     const now = new Date();
-    return [{ 
-      id: 'mock-conv-1', 
-      interfaceType: 'cli', 
+    return [{
+      id: 'mock-conv-1',
+      interfaceType: 'cli',
       roomId: 'mock-room-1',
-      startedAt: now, 
-      updatedAt: now, 
+      startedAt: now,
+      updatedAt: now,
       turnCount: 2,
     }];
   }
@@ -77,7 +74,6 @@ describe('Assistant Response Handling in Conversations', () => {
   let mockStorage: MockConversationStorage;
   let service: ConversationToNoteService;
   let mockConversation: Conversation;
-  let originalLogger: Record<string, unknown>;
   const testConversationId = 'test-conversation-id';
 
   // Mock services
@@ -130,9 +126,6 @@ describe('Assistant Response Handling in Conversations', () => {
   }
 
   beforeEach(() => {
-    // Mock the logger
-    originalLogger = silenceLogger(logger);
-    
     // Create fresh mock storage
     mockStorage = new MockConversationStorage();
 
@@ -147,7 +140,7 @@ describe('Assistant Response Handling in Conversations', () => {
       interfaceType: 'matrix',
       roomId: 'test-matrix-room',
     };
-    
+
     // Store in mock storage
     mockStorage.setConversation(testConversationId, mockConversation);
 
@@ -157,11 +150,6 @@ describe('Assistant Response Handling in Conversations', () => {
       mockEmbeddingService,
       mockStorage,
     );
-  });
-  
-  afterEach(() => {
-    // Restore the original logger
-    restoreLogger(logger, originalLogger);
   });
 
   test('should correctly identify assistant vs user turns', async () => {
@@ -173,7 +161,7 @@ describe('Assistant Response Handling in Conversations', () => {
       userId: 'matrix-user',
       userName: 'User',
     });
-    
+
     const assistantTurn = createConversationTurn({
       id: 'assistant-turn-1',
       query: 'What is ecosystem architecture?', // Query included to match real implementation
@@ -181,28 +169,28 @@ describe('Assistant Response Handling in Conversations', () => {
       userId: 'assistant', // This is the critical part we're testing
       userName: 'Assistant',
     }, 1000); // Later timestamp
-    
+
     // Add turns to conversation
     mockConversation.activeTurns = [userTurn, assistantTurn];
     mockStorage.setConversation(testConversationId, mockConversation);
-    
+
     // Get the conversation from storage
     const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
-    
+
     // Check that we have two turns
     expect(conversation?.activeTurns.length).toBe(2);
-    
+
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
-    
+
     // Check that the note contains the question-answer pair
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
-    
+
     // It should not contain empty answers or questions
     expect(preview.content).not.toContain('**Answer**: (No response)');
-    
+
     // Note: We're no longer logging the preview content to keep test output clean
   });
 
@@ -217,7 +205,7 @@ describe('Assistant Response Handling in Conversations', () => {
         userId: 'matrix-user',
         userName: 'User',
       }),
-      
+
       createConversationTurn({
         id: 'assistant-turn-1',
         query: 'What is ecosystem architecture?',
@@ -225,7 +213,7 @@ describe('Assistant Response Handling in Conversations', () => {
         userId: 'assistant',
         userName: 'Assistant',
       }, 1000),
-      
+
       // Second pair
       createConversationTurn({
         id: 'user-turn-2',
@@ -234,7 +222,7 @@ describe('Assistant Response Handling in Conversations', () => {
         userId: 'matrix-user',
         userName: 'User',
       }, 2000),
-      
+
       createConversationTurn({
         id: 'assistant-turn-2',
         query: 'Can you give me examples?',
@@ -243,21 +231,21 @@ describe('Assistant Response Handling in Conversations', () => {
         userName: 'Assistant',
       }, 3000),
     ];
-    
+
     // Add turns to conversation
     mockConversation.activeTurns = turns;
     mockStorage.setConversation(testConversationId, mockConversation);
-    
+
     // Get the conversation
     const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
-    
+
     // Check that we have four turns
     expect(conversation?.activeTurns.length).toBe(4);
-    
+
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
-    
+
     // Check that both question-answer pairs are included
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
@@ -275,7 +263,7 @@ describe('Assistant Response Handling in Conversations', () => {
         userId: 'matrix-user',
         userName: 'User',
       }),
-      
+
       createConversationTurn({
         id: 'assistant-turn-1',
         query: 'What is ecosystem architecture?',
@@ -284,18 +272,18 @@ describe('Assistant Response Handling in Conversations', () => {
         userName: 'Assistant',
       }, 1000),
     ];
-    
+
     // Add turns to conversation
     mockConversation.activeTurns = turns;
     mockStorage.setConversation(testConversationId, mockConversation);
-    
+
     // Get the conversation
     const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
-    
+
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
-    
+
     // Check that HTML is cleaned in the content
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**:');
@@ -308,7 +296,7 @@ describe('Assistant Response Handling in Conversations', () => {
   test('should correctly handle different Matrix userId formats', async () => {
     // Matrix userIds can be in various formats - simulate realistic IDs
     const matrixUserId = '@user:matrix.org';
-    
+
     const turns = [
       // User with typical Matrix ID
       createConversationTurn({
@@ -318,7 +306,7 @@ describe('Assistant Response Handling in Conversations', () => {
         userId: matrixUserId, // Matrix-style user ID
         userName: 'Matrix User',
       }),
-      
+
       // Assistant with proper assistant ID
       createConversationTurn({
         id: 'assistant-turn-1',
@@ -328,21 +316,21 @@ describe('Assistant Response Handling in Conversations', () => {
         userName: 'Assistant',
       }, 1000),
     ];
-    
+
     // Add turns to conversation
     mockConversation.activeTurns = turns;
     mockStorage.setConversation(testConversationId, mockConversation);
-    
+
     // Get the conversation
     const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
-    
+
     // Check that we have two turns
     expect(conversation?.activeTurns.length).toBe(2);
-    
+
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
-    
+
     // Check that the note contains the question-answer pair
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');
@@ -362,7 +350,7 @@ describe('Assistant Response Handling in Conversations', () => {
           turnType: 'user',
         },
       }),
-      
+
       // Assistant turn with metadata
       createConversationTurn({
         id: 'assistant-turn-1',
@@ -375,22 +363,22 @@ describe('Assistant Response Handling in Conversations', () => {
         },
       }, 1000),
     ];
-    
+
     // Add turns to conversation
     mockConversation.activeTurns = turns;
     mockStorage.setConversation(testConversationId, mockConversation);
-    
+
     // Get the conversation
     const conversation = await mockStorage.getConversation(testConversationId);
     expect(conversation).toBeDefined();
-    
+
     // Check that turns have correct metadata
     expect(conversation?.activeTurns[0].metadata?.['turnType']).toBe('user');
     expect(conversation?.activeTurns[1].metadata?.['turnType']).toBe('assistant');
-    
+
     // Generate note preview
     const preview = await service.prepareNotePreview(conversation!, conversation!.activeTurns);
-    
+
     // Verify the content has proper question-answer format
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: Ecosystem architecture refers to designing systems with interconnected components.');

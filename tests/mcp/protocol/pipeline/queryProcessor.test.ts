@@ -20,8 +20,6 @@ import type {
   ProfileAnalysisResult,
 } from '@/mcp/protocol/types/index';
 import type { Note } from '@/models/note';
-import logger from '@/utils/logger';
-import { restoreLogger, silenceLogger } from '@test/__mocks__';
 
 import { createMockNote, createMockProfile } from '../../../mocks';
 
@@ -74,40 +72,40 @@ describe('QueryProcessor', () => {
         return [];
       },
     );
-    
+
     spyOn(NoteService.prototype, 'getRelatedNotes').mockImplementation(
       async (): Promise<Note[]> => {
         return [sampleRelatedNote];
       },
     );
-    
+
     // Mock the ClaudeModel complete method with correct signature
     spyOn(ClaudeModel.prototype, 'complete').mockImplementation(
       async (_systemPrompt: string, userPrompt: string, _maxTokens?: number): Promise<ModelResponse> => {
         if (userPrompt.includes('ecosystem')) {
-          return { 
+          return {
             response: 'Ecosystem architecture involves designing interconnected components that work together.',
             usage: { inputTokens: 100, outputTokens: 20 },
           };
         }
-        
+
         if (userPrompt.includes('profile')) {
-          return { 
+          return {
             response: 'Your profile shows expertise in software development and architecture.',
             usage: { inputTokens: 150, outputTokens: 25 },
           };
         }
-        
-        return { 
+
+        return {
           response: 'I don\'t have specific information about that in my knowledge base.',
           usage: { inputTokens: 50, outputTokens: 15 },
         };
       },
     );
   });
-  
+
   // Create mock instances that will be used across tests
-  
+
   // Mock Context Manager
   const createMockContextManager = (): IContextManager => {
     return {
@@ -115,29 +113,29 @@ describe('QueryProcessor', () => {
       getProfileContext: () => ({} as unknown as ProfileContext),
       getExternalSourceContext: () => ({} as unknown as ExternalSourceContext),
       getConversationContext: () => ({} as unknown as ConversationContext),
-      setExternalSourcesEnabled: () => {},
+      setExternalSourcesEnabled: () => { },
       getExternalSourcesEnabled: () => true,
       areContextsReady: () => true,
-      initializeContextLinks: () => {},
+      initializeContextLinks: () => { },
     };
   };
-  
+
   // Mock Conversation Manager
   const createMockConversationManager = (): IConversationManager => {
     let hasActive = true;
-    
+
     return {
       getConversationContext: () => ({} as unknown as ConversationContext),
-      setCurrentRoom: async () => {},
+      setCurrentRoom: async () => { },
       initializeConversation: async () => { hasActive = true; },
       hasActiveConversation: () => hasActive,
       getCurrentConversationId: () => 'conv-123',
       getConversation: async () => null,
-      saveTurn: async () => {},
+      saveTurn: async () => { },
       getConversationHistory: async () => 'User: What is ecosystem architecture?\nAssistant: It\'s a design approach.',
     };
   };
-  
+
   // Mock Profile Manager
   const createMockProfileManager = (): IProfileManager => {
     return {
@@ -154,12 +152,12 @@ describe('QueryProcessor', () => {
       },
     };
   };
-  
+
   // Mock External Source Manager
   const createMockExternalSourceManager = (): IExternalSourceManager => {
     return {
       isEnabled: () => true,
-      setEnabled: () => {},
+      setEnabled: () => { },
       getExternalResults: async (query: string): Promise<ExternalSourceResult[] | null> => {
         if (query.includes('ecosystem')) {
           return [sampleExternalResult];
@@ -168,7 +166,7 @@ describe('QueryProcessor', () => {
       },
     };
   };
-  
+
   // Test basic query processing
   test('should process a basic query successfully', async () => {
     // Arrange
@@ -176,13 +174,13 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
-    
+
     // Set up spies
     const profileAnalyzeSpy = spyOn(profileManager, 'analyzeProfileRelevance');
     const historyGetSpy = spyOn(conversationManager, 'getConversationHistory');
     const externalGetSpy = spyOn(externalSourceManager, 'getExternalResults');
     const turnSaveSpy = spyOn(conversationManager, 'saveTurn');
-    
+
     const processor = new QueryProcessor(
       contextManager,
       conversationManager,
@@ -190,24 +188,24 @@ describe('QueryProcessor', () => {
       externalSourceManager,
       'mock-api-key',
     );
-    
+
     // Act
     const result = await processor.processQuery('What is ecosystem architecture?');
-    
+
     // Assert
     expect(result).toBeDefined();
     expect(result.answer).toContain('Ecosystem architecture');
     expect(result.citations).toBeDefined();
     expect(result.relatedNotes).toBeDefined();
     expect(result.relatedNotes.length).toBeGreaterThan(0);
-    
+
     // Verify method calls via spies
     expect(profileAnalyzeSpy).toHaveBeenCalledWith('What is ecosystem architecture?');
     expect(historyGetSpy).toHaveBeenCalled();
     expect(externalGetSpy).toHaveBeenCalled();
     expect(turnSaveSpy).toHaveBeenCalledTimes(2); // Once for user, once for assistant
   });
-  
+
   // Test profile-specific query
   test('should include profile information for profile queries', async () => {
     // Arrange
@@ -215,10 +213,10 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
-    
+
     // Set up spies
     const profileGetSpy = spyOn(profileManager, 'getProfile');
-    
+
     const processor = new QueryProcessor(
       contextManager,
       conversationManager,
@@ -226,19 +224,19 @@ describe('QueryProcessor', () => {
       externalSourceManager,
       'mock-api-key',
     );
-    
+
     // Act
     const result = await processor.processQuery('Tell me about my profile');
-    
+
     // Assert
     expect(result).toBeDefined();
     expect(result.profile).toBeDefined();
     expect(result.profile?.fullName).toBe('John Doe');
-    
+
     // Verify method calls
     expect(profileGetSpy).toHaveBeenCalled();
   });
-  
+
   // Test room-based conversation
   test('should set the current room when roomId is provided', async () => {
     // Arrange
@@ -246,14 +244,14 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
-    
+
     // Set up spies
     const roomSetSpy = spyOn(conversationManager, 'setCurrentRoom');
     const initSpy = spyOn(conversationManager, 'initializeConversation');
-    
+
     // Override for this test
     spyOn(conversationManager, 'hasActiveConversation').mockImplementation(() => false);
-    
+
     const processor = new QueryProcessor(
       contextManager,
       conversationManager,
@@ -261,19 +259,19 @@ describe('QueryProcessor', () => {
       externalSourceManager,
       'mock-api-key',
     );
-    
+
     // Act
-    await processor.processQuery('What is ecosystem architecture?', { 
+    await processor.processQuery('What is ecosystem architecture?', {
       roomId: 'room-123',
       userId: 'user-123',
       userName: 'Test User',
     });
-    
+
     // Assert
     expect(roomSetSpy).toHaveBeenCalledWith('room-123');
     expect(initSpy).toHaveBeenCalled();
   });
-  
+
   // Test external source handling
   test('should include external sources when relevant', async () => {
     // Arrange
@@ -281,7 +279,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
-    
+
     const processor = new QueryProcessor(
       contextManager,
       conversationManager,
@@ -289,17 +287,17 @@ describe('QueryProcessor', () => {
       externalSourceManager,
       'mock-api-key',
     );
-    
+
     // Act
     const result = await processor.processQuery('What is ecosystem architecture in external sources?');
-    
+
     // Assert
     expect(result).toBeDefined();
     expect(result.externalSources).toBeDefined();
     expect(result.externalSources?.length).toBeGreaterThan(0);
     expect(result.externalSources?.[0].source).toBe('Wikipedia');
   });
-  
+
   // Test empty query handling
   test('should handle empty queries with a default question', async () => {
     // Arrange
@@ -307,7 +305,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
-    
+
     // Set up spy to capture the actual query used
     let capturedQuery = '';
     const analyzeProfileRelevanceOriginal = profileManager.analyzeProfileRelevance;
@@ -315,85 +313,7 @@ describe('QueryProcessor', () => {
       capturedQuery = query; // Capture the query
       return analyzeProfileRelevanceOriginal(query);
     };
-    
-    // Temporarily mock the logger to suppress warning about empty query
-    const originalLogger = silenceLogger(logger);
-    
-    try {
-      const processor = new QueryProcessor(
-        contextManager,
-        conversationManager,
-        profileManager,
-        externalSourceManager,
-        'mock-api-key',
-      );
-      
-      // Act
-      const result = await processor.processQuery('');
-      
-      // Assert
-      expect(result).toBeDefined();
-      expect(result.answer).toBeDefined();
-      
-      // Verify it used a default question
-      expect(capturedQuery).toBe('What information do you have in this brain?');
-    } finally {
-      // Restore original logger
-      restoreLogger(logger, originalLogger);
-    }
-  });
-  
-  // Test error handling during turn saving
-  test('should continue processing even if saving turns fails', async () => {
-    // Arrange
-    const contextManager = createMockContextManager();
-    const conversationManager = createMockConversationManager();
-    const profileManager = createMockProfileManager();
-    const externalSourceManager = createMockExternalSourceManager();
-    
-    // Mock a failure when saving turns
-    spyOn(conversationManager, 'saveTurn').mockImplementation(async () => {
-      throw new Error('Failed to save turn');
-    });
-    
-    // Temporarily mock the logger to avoid warning noise in test output
-    const originalLogger = silenceLogger(logger);
-    
-    try {
-      const processor = new QueryProcessor(
-        contextManager,
-        conversationManager,
-        profileManager,
-        externalSourceManager,
-        'mock-api-key',
-      );
-      
-      // Act - Should not throw despite the saveTurn error
-      const result = await processor.processQuery('What is ecosystem architecture?');
-      
-      // Assert - Should still return a result
-      expect(result).toBeDefined();
-      expect(result.answer).toBeDefined();
-    } finally {
-      // Restore original logger
-      restoreLogger(logger, originalLogger);
-    }
-  });
-  
-  // Test handling inactive conversations
-  test('should initialize a conversation if none is active', async () => {
-    // Arrange
-    const contextManager = createMockContextManager();
-    const conversationManager = createMockConversationManager();
-    const profileManager = createMockProfileManager();
-    const externalSourceManager = createMockExternalSourceManager();
-    
-    // Mock no active conversation
-    spyOn(conversationManager, 'hasActiveConversation').mockImplementation(() => false);
-    
-    // Set up spy
-    const initSpy = spyOn(conversationManager, 'initializeConversation');
-    
+
     const processor = new QueryProcessor(
       contextManager,
       conversationManager,
@@ -401,10 +321,74 @@ describe('QueryProcessor', () => {
       externalSourceManager,
       'mock-api-key',
     );
-    
+
+    // Act
+    const result = await processor.processQuery('');
+
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.answer).toBeDefined();
+
+    // Verify it used a default question
+    expect(capturedQuery).toBe('What information do you have in this brain?');
+  });
+
+  // Test error handling during turn saving
+  test('should continue processing even if saving turns fails', async () => {
+    // Arrange
+    const contextManager = createMockContextManager();
+    const conversationManager = createMockConversationManager();
+    const profileManager = createMockProfileManager();
+    const externalSourceManager = createMockExternalSourceManager();
+
+    // Mock a failure when saving turns
+    spyOn(conversationManager, 'saveTurn').mockImplementation(async () => {
+      throw new Error('Failed to save turn');
+    });
+
+    // Temporarily mock the logger to avoid warning noise in test output
+
+    const processor = new QueryProcessor(
+      contextManager,
+      conversationManager,
+      profileManager,
+      externalSourceManager,
+      'mock-api-key',
+    );
+
+    // Act - Should not throw despite the saveTurn error
+    const result = await processor.processQuery('What is ecosystem architecture?');
+
+    // Assert - Should still return a result
+    expect(result).toBeDefined();
+    expect(result.answer).toBeDefined();
+  });
+
+  // Test handling inactive conversations
+  test('should initialize a conversation if none is active', async () => {
+    // Arrange
+    const contextManager = createMockContextManager();
+    const conversationManager = createMockConversationManager();
+    const profileManager = createMockProfileManager();
+    const externalSourceManager = createMockExternalSourceManager();
+
+    // Mock no active conversation
+    spyOn(conversationManager, 'hasActiveConversation').mockImplementation(() => false);
+
+    // Set up spy
+    const initSpy = spyOn(conversationManager, 'initializeConversation');
+
+    const processor = new QueryProcessor(
+      contextManager,
+      conversationManager,
+      profileManager,
+      externalSourceManager,
+      'mock-api-key',
+    );
+
     // Act
     await processor.processQuery('What is ecosystem architecture?');
-    
+
     // Assert
     expect(initSpy).toHaveBeenCalled();
   });
