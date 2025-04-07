@@ -4,11 +4,11 @@ import type { McpServer } from '@/mcp';
 import type { NoteContext } from '@/mcp/contexts/notes';
 import { NoteService } from '@/mcp/protocol/components/noteService';
 import type { Note } from '@/models/note';
-import {
-  createMockNote,
-  createMockNotes,
-} from '@test';
+import { createMockNote, createMockNotes } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
+
+// Define NoteWithScore type for this test
+type NoteWithScore = Note & { score: number };
 
 
 
@@ -47,7 +47,7 @@ class MockNoteContext implements Partial<NoteContext> {
     const mockNotes = createMockNotes();
     // Use our standardized repository
     this.standardRepo = MockNoteRepository.createFresh(mockNotes);
-    
+
     // Create repository adapter with proper interface
     this.repository = {
       getNoteById: async (id: string) => this.standardRepo.getNoteById(id),
@@ -71,10 +71,11 @@ class MockNoteContext implements Partial<NoteContext> {
 
     // Create embedding service with proper interface
     this.embeddingService = {
-      findRelatedNotes: async (_noteId: string, limit = 5) => mockNotes.slice(0, limit).map(note => ({
-        ...note,
-        score: 0.85,
-      })),
+      findRelatedNotes: async (_noteId: string, limit = 5): Promise<NoteWithScore[]> =>
+        mockNotes.slice(0, limit).map(note => ({
+          ...note,
+          score: 0.85,
+        })),
     };
 
     // Create simple MCP server mock
@@ -84,12 +85,12 @@ class MockNoteContext implements Partial<NoteContext> {
       resource: () => this.mcpServer,
       tool: () => this.mcpServer,
       prompt: () => this.mcpServer,
-      onMessage: () => {},
-      sendMessage: () => {},
+      onMessage: () => { },
+      sendMessage: () => { },
       server: {
         connect: () => ({}),
-        sendMessage: () => {},
-        close: () => {},
+        sendMessage: () => { },
+        close: () => { },
       },
       _registeredResources: [],
       _registeredResourceTemplates: [],
@@ -148,7 +149,7 @@ describe('NoteService', () => {
   beforeEach(() => {
     // Reset the standardized repository before each test
     MockNoteRepository.resetInstance();
-    
+
     // Create fresh context and service
     mockContext = new MockNoteContext();
     // Use type assertion for compatibility

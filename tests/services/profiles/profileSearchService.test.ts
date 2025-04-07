@@ -6,8 +6,9 @@ import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddi
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
-import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
+import { createMockEmbedding, setupEmbeddingMocks } from '@test/utils/embeddingUtils';
+import { createTestNote } from '@test/utils/embeddingUtils';
 
 // Define interface for NoteContext
 interface NoteContext {
@@ -78,8 +79,8 @@ const mockProfile: Profile = {
 // Create mock notes for testing
 const mockNotes: Note[] = [
   createTestNote({
-    id: 'note-1', 
-    title: 'TypeScript Best Practices', 
+    id: 'note-1',
+    title: 'TypeScript Best Practices',
     content: 'Guide to TypeScript development and best practices.',
     tags: ['typescript', 'software-engineering', 'programming'],
     embedding: createMockEmbedding('typescript note'),
@@ -88,8 +89,8 @@ const mockNotes: Note[] = [
     source: 'import',
   }),
   createTestNote({
-    id: 'note-2', 
-    title: 'React Component Design', 
+    id: 'note-2',
+    title: 'React Component Design',
     content: 'How to design effective React components.',
     tags: ['react', 'frontend', 'ui-design'],
     embedding: createMockEmbedding('react note'),
@@ -98,8 +99,8 @@ const mockNotes: Note[] = [
     source: 'import',
   }),
   createTestNote({
-    id: 'note-3', 
-    title: 'Machine Learning Introduction', 
+    id: 'note-3',
+    title: 'Machine Learning Introduction',
     content: 'Introduction to ML concepts and applications.',
     tags: ['machine-learning', 'ai', 'data-science'],
     embedding: createMockEmbedding('ml note'),
@@ -117,17 +118,17 @@ const mockRepository = MockProfileRepository.createFresh([mockProfile]);
 const mockNoteContext: NoteContext = {
   searchNotes: async (options: { tags?: string[]; limit?: number; semanticSearch?: boolean }) => {
     const { tags, limit = 10 } = options;
-    
+
     if (tags && tags.length > 0) {
       return mockNotes.filter(note => {
         if (!note.tags) return false;
         return tags.some(tag => note.tags!.includes(tag));
       }).slice(0, limit);
     }
-    
+
     return mockNotes.slice(0, limit);
   },
-  
+
   searchNotesWithEmbedding: async (_embedding: number[], limit = 5) => {
     // Return notes with a guaranteed similarity score
     const notesWithScores = mockNotes.map((note, index) => {
@@ -138,7 +139,7 @@ const mockNoteContext: NoteContext = {
         similarity: score,
       };
     });
-    
+
     return notesWithScores
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
@@ -155,33 +156,33 @@ ProfileSearchService.createWithApiKey = (_apiKey?: string) => {
 
 describe('ProfileSearchService', () => {
   let searchService: ProfileSearchService;
-  
+
   beforeEach(() => {
     // Go back to using the factory method which we've mocked
     searchService = ProfileSearchService.createWithApiKey('mock-api-key');
   });
-  
+
   test('should properly initialize', () => {
     expect(searchService).toBeDefined();
   });
-  
+
   test('should create instance using factory method', () => {
     const service = ProfileSearchService.createWithApiKey('mock-api-key');
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileSearchService);
   });
-  
+
   test('should find related notes', async () => {
     const results = await searchService.findRelatedNotes(mockNoteContext, 5);
-    
+
     expect(results).toBeDefined();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThan(0);
-    
+
     // Note: The actual implementation may return notes without similarity scores
     // in certain cases (e.g., when using tag-based search), so we skip this check
   });
-  
+
   test('should find notes with similar tags', async () => {
     const results = await searchService.findNotesWithSimilarTags(
       mockNoteContext,
@@ -189,49 +190,49 @@ describe('ProfileSearchService', () => {
       5,
       0, // Add the offset parameter
     );
-    
+
     expect(results).toBeDefined();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThan(0);
-    
+
     // Results should include notes with matching tags
     const foundTags = results.flatMap(note => note.tags || []);
     expect(foundTags).toContain('typescript');
     expect(foundTags).toContain('software-engineering');
   });
-  
+
   test('should handle case when profile is not found', async () => {
     // Use our standardized mock repository with no profiles
     MockProfileRepository.resetInstance();
     const emptyRepository = MockProfileRepository.createFresh([]);
     emptyRepository.getProfile = async () => undefined;
-    
+
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
     const serviceWithEmptyRepo = new ProfileSearchService(
-      emptyRepository as unknown as ProfileRepository, 
-      mockEmbeddingService, 
+      emptyRepository as unknown as ProfileRepository,
+      mockEmbeddingService,
       mockTagService,
     );
-    
+
     const results = await serviceWithEmptyRepo.findRelatedNotes(mockNoteContext, 5);
-    
+
     expect(results).toBeDefined();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(0);
   });
-  
+
   test('should handle profile without embedding', async () => {
     // Create a profile without embedding
     const profileWithoutEmbedding: Profile = {
       ...mockProfile,
       embedding: null,
     };
-    
+
     // Use our standardized mock repository
     MockProfileRepository.resetInstance();
     const repositoryWithoutEmbedding = MockProfileRepository.createFresh([profileWithoutEmbedding]);
-    
+
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
     const serviceWithoutEmbedding = new ProfileSearchService(
@@ -239,26 +240,26 @@ describe('ProfileSearchService', () => {
       mockEmbeddingService,
       mockTagService,
     );
-    
+
     const results = await serviceWithoutEmbedding.findRelatedNotes(mockNoteContext, 5);
-    
+
     expect(results).toBeDefined();
     expect(Array.isArray(results)).toBe(true);
     // Should still return results based on tags if available
     expect(results.length).toBeGreaterThan(0);
   });
-  
+
   test('should handle profile without tags', async () => {
     // Create a profile without tags
     const profileWithoutTags: Profile = {
       ...mockProfile,
       tags: null,
     };
-    
+
     // Use our standardized mock repository
     MockProfileRepository.resetInstance();
     const repositoryWithoutTags = MockProfileRepository.createFresh([profileWithoutTags]);
-    
+
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
     const serviceWithoutTags = new ProfileSearchService(
@@ -266,9 +267,9 @@ describe('ProfileSearchService', () => {
       mockEmbeddingService,
       mockTagService,
     );
-    
+
     const results = await serviceWithoutTags.findNotesWithSimilarTags(mockNoteContext, [], 5);
-    
+
     expect(results).toBeDefined();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(0);

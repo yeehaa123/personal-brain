@@ -3,7 +3,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { notes } from '@/db/schema';
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
-import { createMockNote, createTestNote } from '@test';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createTestNote } from '@test/utils/embeddingUtils';
 
 
 // Define initial data for testing

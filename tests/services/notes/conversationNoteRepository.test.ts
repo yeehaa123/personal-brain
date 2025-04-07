@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { db } from '@/db';
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
-import { createMockNote } from '@test';
+import { createMockNote } from '@test/__mocks__/models/note';
 
 // Create a mock note with conversation metadata
 const mockConversationNote = createMockNote('note-conv-2', 'Note with specific metadata', ['conversation', 'metadata']);

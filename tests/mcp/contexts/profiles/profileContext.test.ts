@@ -2,13 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import { ProfileContext } from '@/mcp';
 import type { Profile } from '@/models/profile';
-import {
-  clearMockEnv,
-  setMockEnv,
-  setupAnthropicMocks,
-  setupMcpServerMocks,
-} from '@test';
 import { createMockProfile } from '@test/__mocks__/models/profile';
+import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { setupAnthropicMocks, setupMcpServerMocks } from '@test/utils/mcpUtils';
 import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
 
 

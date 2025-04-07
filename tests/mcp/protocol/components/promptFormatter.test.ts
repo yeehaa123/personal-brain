@@ -5,7 +5,8 @@ import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/source
 import { PromptFormatter } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import { createMockEmbedding, createMockNote } from '@test';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createMockEmbedding } from '@test/utils/embeddingUtils';
 
 
 

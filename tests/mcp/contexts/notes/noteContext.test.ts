@@ -2,14 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import { NoteContext } from '@/mcp';
 import { ServiceIdentifiers } from '@/services/serviceRegistry';
-import {
-  clearMockEnv,
-  createMockNotes,
-  setMockEnv,
-  setupAnthropicMocks,
-  setupMcpServerMocks,
-} from '@test';
+import { createMockNotes } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
+import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { setupAnthropicMocks, setupMcpServerMocks } from '@test/utils/mcpUtils';
 
 // Create mock notes for testing
 const mockNotes = createMockNotes();
@@ -90,9 +86,9 @@ mock.module('@/utils/dependencyContainer', () => {
           return {};
         }
       },
-      register: () => {},
+      register: () => { },
       has: () => true,
-      clear: () => {},
+      clear: () => { },
     }),
     getService: (serviceId: string) => {
       switch (serviceId) {
@@ -119,57 +115,57 @@ mock.module('@/utils/dependencyContainer', () => {
           return {};
         }
       },
-      register: () => {},
+      register: () => { },
       has: () => true,
-      clear: () => {},
+      clear: () => { },
     },
   };
 });
 
 describe('NoteContext Tests', () => {
   let noteContext: NoteContext;
-  
+
   // We don't need any extra test isolation here since we're
   // already setting up everything we need manually
-  
+
   beforeAll(() => {
     // Set up mock environment variables using centralized function
     setMockEnv();
   });
-  
+
   afterAll(() => {
     // Clean up environment variables using centralized function
     clearMockEnv();
   });
-  
+
   beforeEach(() => {
     // Reset our standardized repository mock
     MockNoteRepository.resetInstance();
-    
+
     // Ensure mockNoteRepository has the mock notes
     mockNoteRepository.notes = [...mockNotes];
-    
+
     // Create a fresh context for each test
     noteContext = new NoteContext('mock-api-key');
-    
+
     // Now directly override the internal service references
     // This is a bit of a hack but necessary for the tests
     Object.defineProperty(noteContext, 'repository', {
       value: mockNoteRepository,
       writable: true,
     });
-    
+
     Object.defineProperty(noteContext, 'searchService', {
       value: mockNoteSearchService,
       writable: true,
     });
-    
+
     Object.defineProperty(noteContext, 'embeddingService', {
       value: mockNoteEmbeddingService,
       writable: true,
     });
   });
-  
+
   test('NoteContext properly initializes all services', () => {
     // Basic validation of the instance and its methods
     expect(noteContext).toBeDefined();
@@ -178,28 +174,28 @@ describe('NoteContext Tests', () => {
     expect(typeof noteContext.getRelatedNotes).toBe('function');
     expect(typeof noteContext.getRecentNotes).toBe('function');
   });
-  
+
   test('MCP Server can define resources', () => {
     // Create a simple mock for the handler
     const resourceHandler = async () => ({
-      contents: [{ 
-        uri: 'test://uri', 
-        text: 'Test content', 
+      contents: [{
+        uri: 'test://uri',
+        text: 'Test content',
       }],
     });
-    
+
     // Get the MCP server and define a resource
     const mcpServer = noteContext.getMcpServer();
     mcpServer.resource('test_resource', 'test://pattern', resourceHandler);
-    
+
     // Since we replaced toHaveBeenCalledWith with our own implementation,
     // we'll just verify the server is properly defined
     expect(mcpServer).toBeDefined();
   });
-  
+
   test('getNoteById returns a note object or null', async () => {
     const note = await noteContext.getNoteById('note-1');
-    
+
     // We just check the interface, not exact values which may depend on mocks
     expect(note).toBeDefined();
     if (note) {
@@ -207,24 +203,24 @@ describe('NoteContext Tests', () => {
       expect(typeof note.title).toBe('string');
     }
   });
-  
+
   test('searchNotes returns search results', async () => {
     const results = await noteContext.searchNotes({ query: 'test' });
-    
+
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThan(0);
   });
-  
+
   test('getRelatedNotes returns related notes', async () => {
     const results = await noteContext.getRelatedNotes('note-1');
-    
+
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThan(0);
   });
-  
+
   test('getRecentNotes returns recent notes', async () => {
     const results = await noteContext.getRecentNotes();
-    
+
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBeGreaterThan(0);
   });

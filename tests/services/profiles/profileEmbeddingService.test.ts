@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
-import { setupEmbeddingMocks } from '@test';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
+import { setupEmbeddingMocks } from '@test/utils/embeddingUtils';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
@@ -54,44 +54,44 @@ const mockRepository = MockProfileRepository.createFresh([mockProfile]);
 
 describe('ProfileEmbeddingService', () => {
   let embeddingService: ProfileEmbeddingService;
-  
+
   beforeEach(() => {
     // Create the service
     embeddingService = new ProfileEmbeddingService('mock-api-key');
-    
+
     // Replace the repository in the service with our mock
     Object.defineProperty(embeddingService, 'repository', {
       value: mockRepository,
       writable: true,
     });
   });
-  
+
   test('should properly initialize', () => {
     expect(embeddingService).toBeDefined();
   });
-  
+
   test('should create instance with API key', () => {
     const service = new ProfileEmbeddingService('mock-api-key');
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileEmbeddingService);
   });
-  
+
   test('should generate embedding for text', async () => {
     const text = 'This is a profile description for embedding generation';
     const embedding = await embeddingService.generateEmbedding(text);
-    
+
     expect(embedding).toBeDefined();
     expect(Array.isArray(embedding)).toBe(true);
     expect(embedding.length).toBeGreaterThan(0);
   });
-  
+
   test('should determine when to regenerate embeddings', () => {
     // Should regenerate when important profile fields change
     const changes1: Partial<Profile> = {
       summary: 'New summary content',
     };
     expect(embeddingService.shouldRegenerateEmbedding(changes1)).toBe(true);
-    
+
     const changes2: Partial<Profile> = {
       experiences: [
         {
@@ -108,21 +108,21 @@ describe('ProfileEmbeddingService', () => {
       ],
     };
     expect(embeddingService.shouldRegenerateEmbedding(changes2)).toBe(true);
-    
+
     // Should not regenerate for non-essential fields
     const changes3: Partial<Profile> = {
       updatedAt: new Date(),
     };
     expect(embeddingService.shouldRegenerateEmbedding(changes3)).toBe(false);
   });
-  
+
   test('should generate profile text for embedding', () => {
     const profileText = embeddingService.getProfileTextForEmbedding(mockProfile);
-    
+
     expect(profileText).toBeDefined();
     expect(typeof profileText).toBe('string');
     expect(profileText.length).toBeGreaterThan(0);
-    
+
     // Should include important profile information
     expect(profileText).toContain('John Doe');
     // Update the expected text to match what's actually generated
@@ -131,32 +131,32 @@ describe('ProfileEmbeddingService', () => {
     expect(profileText).toContain('Tech Corp');
     expect(profileText).toContain('University of Technology');
   });
-  
+
   test('should generate embedding for profile', async () => {
     // Mock the repository's getProfile and updateProfile methods
     mockRepository.getProfile = async () => mockProfile;
     mockRepository.updateProfile = async () => true;
-    
+
     const result = await embeddingService.generateEmbeddingForProfile();
-    
+
     expect(result).toBeDefined();
     expect(result.updated).toBe(true);
   });
-  
+
   test('should handle profile with minimal information', () => {
     const minimalProfile: Partial<Profile> = {
       fullName: 'John Smith',
       // Missing most fields
     };
-    
+
     const profileText = embeddingService.getProfileTextForEmbedding(minimalProfile);
-    
+
     expect(profileText).toBeDefined();
     expect(typeof profileText).toBe('string');
     expect(profileText.length).toBeGreaterThan(0);
     expect(profileText).toContain('John Smith');
   });
-  
+
   test('should skip undefined or null fields', () => {
     const partialProfile: Partial<Profile> = {
       fullName: 'John Smith',
@@ -164,9 +164,9 @@ describe('ProfileEmbeddingService', () => {
       summary: undefined,
       headline: 'Developer',
     };
-    
+
     const profileText = embeddingService.getProfileTextForEmbedding(partialProfile);
-    
+
     expect(profileText).toBeDefined();
     expect(profileText).toContain('John Smith');
     expect(profileText).toContain('Developer');

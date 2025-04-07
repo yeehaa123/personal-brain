@@ -5,7 +5,7 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ValidationError } from '@/utils/errorUtils';
-import { setupEmbeddingMocks } from '@test';
+import { setupEmbeddingMocks } from '@test/utils/embeddingUtils';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
