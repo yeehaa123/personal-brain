@@ -4,8 +4,8 @@ import { NoteContext } from '@/mcp';
 import { ServiceIdentifiers } from '@/services/serviceRegistry';
 import { createMockNotes } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
+import { setupAnthropicMocks, setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';
 import { clearMockEnv, setMockEnv } from '@test/test-utils';
-import { setupAnthropicMocks, setupMcpServerMocks } from '@test/utils/mcpUtils';
 
 // Create mock notes for testing
 const mockNotes = createMockNotes();

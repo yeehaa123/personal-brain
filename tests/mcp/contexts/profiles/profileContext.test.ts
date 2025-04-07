@@ -3,9 +3,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 import { ProfileContext } from '@/mcp';
 import type { Profile } from '@/models/profile';
 import { createMockProfile } from '@test/__mocks__/models/profile';
+import { setupAnthropicMocks, setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';
+import { setupMcpServerMocks as createMockMcpServer } from '@test/__mocks__/utils/mcpUtils';
 import { clearMockEnv, setMockEnv } from '@test/test-utils';
-import { setupAnthropicMocks, setupMcpServerMocks } from '@test/utils/mcpUtils';
-import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
 
 
 // Import the mock server creator that doesn't take parameters

@@ -1,5 +1,16 @@
 /**
- * Fetch mock utilities for tests
+ * Mock Fetch Utilities
+ * 
+ * This file provides standardized mock implementations for fetch operations
+ * to be used across tests.
+ * 
+ * Usage:
+ * ```typescript
+ * import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
+ * 
+ * // Set up a mock fetch for tests
+ * global.fetch = setupMockFetch();
+ * ```
  */
 
 /**

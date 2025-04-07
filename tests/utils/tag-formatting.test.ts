@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { createTrackers } from '@test/mocks';
-import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
+import { createTrackers, mockCLIInterface, restoreCLIInterface } from '@test/__mocks__/utils/cliUtils';
 import { CLIInterface } from '@utils/cliInterface';
 
 describe('Tag Formatting', () => {

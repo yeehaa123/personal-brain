@@ -14,7 +14,7 @@ import { MockConversationStorage } from '@test/__mocks__/storage';
 import {
   clearMockEnv,
   setMockEnv,
-} from '@test/utils/mcpUtils';
+} from '@test/__mocks__/utils/mcpUtils';
 
 // Import standardized storage mock and other mocks
 

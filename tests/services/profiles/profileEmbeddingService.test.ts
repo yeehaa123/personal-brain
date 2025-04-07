@@ -4,7 +4,7 @@ import type { Profile } from '@/models/profile';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
-import { setupEmbeddingMocks } from '@test/utils/embeddingUtils';
+import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);

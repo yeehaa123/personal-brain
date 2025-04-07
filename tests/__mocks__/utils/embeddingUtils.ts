@@ -3,6 +3,17 @@
  * 
  * This file provides utilities for creating mock embeddings
  * for use in tests across the codebase.
+ * 
+ * Usage:
+ * ```typescript
+ * import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+ * 
+ * // Create a deterministic embedding for testing
+ * const embedding = createMockEmbedding('test input');
+ * 
+ * // Setup mocks for the embedding service
+ * setupEmbeddingMocks(mock);
+ * ```
  */
 
 /**
@@ -42,9 +53,94 @@ export function hashString(str: string): number {
 }
 
 /**
+ * Set up embedding mocks for tests
+ * 
+ * @param mockFn Bun's mock function
+ */
+export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
+  // Mock the embedding module
+  mockFn.module('@/mcp/model/embeddings', () => {
+    return {
+      getEmbedding: async (text: string) => {
+        return {
+          embedding: createMockEmbedding(text),
+          truncated: false,
+        };
+      },
+      getBatchEmbeddings: async (texts: string[]) => {
+        return texts.map(text => ({
+          embedding: createMockEmbedding(text),
+          truncated: false,
+        }));
+      },
+      cosineSimilarity: (_vec1: number[], _vec2: number[]) => {
+        // Simple deterministic similarity calculation for tests
+        return 0.85;
+      },
+      chunkText: (text: string, _chunkSize: number = 1000, _overlap: number = 200) => {
+        // Simple implementation that just splits by sentences for testing
+        const sentences = text.split(/[.!?]+\s+/);
+        // If there are fewer sentences than would make a chunk, return the whole text
+        if (sentences.length <= 2) {
+          return [text];
+        }
+        // Otherwise create 2 chunks for testing
+        return [
+          sentences.slice(0, Math.ceil(sentences.length / 2)).join('. ') + '.',
+          sentences.slice(Math.floor(sentences.length / 2) - 1).join('. ') + '.',
+        ];
+      },
+    };
+  });
+  
+  // Also mock the OpenAI module that's used by BaseEmbeddingService
+  mockFn.module('openai', () => {
+    return {
+      OpenAI: class MockOpenAI {
+        constructor() {}
+        embeddings = {
+          create: async ({ input }: { input: string | string[] }) => {
+            if (Array.isArray(input)) {
+              return {
+                data: input.map(text => ({
+                  embedding: createMockEmbedding(text),
+                  object: 'embedding',
+                  index: 0,
+                })),
+                model: 'text-embedding-3-small',
+                object: 'list',
+                usage: {
+                  prompt_tokens: 100,
+                  total_tokens: 100,
+                },
+              };
+            } else {
+              return {
+                data: [{
+                  embedding: createMockEmbedding(input),
+                  object: 'embedding',
+                  index: 0,
+                }],
+                model: 'text-embedding-3-small',
+                object: 'list',
+                usage: {
+                  prompt_tokens: 50,
+                  total_tokens: 50,
+                },
+              };
+            }
+          },
+        };
+      },
+    };
+  });
+}
+
+/**
  * Embedding-related mock utilities
  */
 export const EmbeddingUtils = {
   createMockEmbedding,
   hashString,
+  setupEmbeddingMocks,
 };

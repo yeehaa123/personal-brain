@@ -4,7 +4,7 @@ import { notes } from '@/db/schema';
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { createTestNote } from '@test/utils/embeddingUtils';
+import { createTestNote } from '@test/__mocks__/models/note';
 
 
 // Define initial data for testing

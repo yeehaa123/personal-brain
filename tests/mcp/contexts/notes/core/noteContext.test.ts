@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import { NoteContext } from '@/mcp/contexts/notes/core/noteContext';
-import { setupMcpServerMocks } from '@test/utils/mcpUtils';
+import { setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';
 
 describe('NoteContext', () => {
   // We'll create mock servers as needed in the tests

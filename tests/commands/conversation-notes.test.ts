@@ -3,8 +3,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createTrackers } from '@test/mocks';
-import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
+import { createTrackers, mockCLIInterface, restoreCLIInterface } from '@test/__mocks__/utils/cliUtils';
 
 // Mock the conversation turns
 const mockConversationTurns = [

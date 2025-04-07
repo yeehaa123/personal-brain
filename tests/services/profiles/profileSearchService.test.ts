@@ -6,9 +6,9 @@ import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddi
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
+import { createTestNote } from '@test/__mocks__/models/note';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test/utils/embeddingUtils';
-import { createTestNote } from '@test/utils/embeddingUtils';
+import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 
 // Define interface for NoteContext
 interface NoteContext {

@@ -10,9 +10,9 @@ import type { NewNote, Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { MockConversationStorage } from '@test/__mocks__/storage';
-import { createTestNote } from '@test/utils/embeddingUtils';
 
 // Mock the tagExtractor module
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));

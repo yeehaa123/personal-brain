@@ -25,10 +25,10 @@ import {
   MockProfileContext, 
 } from './__mocks__/contexts';
 import { MockConversationStorage } from './__mocks__/storage';
-import { setupEmbeddingMocks } from './utils/embeddingUtils';
+import { setupEmbeddingMocks } from './__mocks__/utils/embeddingUtils';
+import { setupMockFetch } from './__mocks__/utils/fetchUtils';
+import { setupMcpServerMocks } from './__mocks__/utils/mcpUtils';
 import { setTestEnv } from './utils/envUtils';
-import { setupMockFetch } from './utils/fetchUtils';
-import { setupMcpServerMocks } from './utils/mcpUtils';
 
 // Set test environment
 setTestEnv('NODE_ENV', 'test');

@@ -11,8 +11,8 @@ import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conv
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createTestNote } from '@test/utils/embeddingUtils';
 // Mock classes to avoid external dependencies
 class MockConversationStorage implements ConversationStorage {
   private conversations = new Map<string, Conversation>();

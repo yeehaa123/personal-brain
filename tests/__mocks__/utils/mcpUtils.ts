@@ -1,6 +1,21 @@
 /**
- * MCP and related services mock utilities for tests
+ * MCP and related services mock utilities
+ * 
+ * This file provides standardized mock implementations for MCP-related operations
+ * to be used across tests.
+ * 
+ * Usage:
+ * ```typescript
+ * import { setupMcpServerMocks, setupAnthropicMocks } from '@test/__mocks__/utils/mcpUtils';
+ * 
+ * // Set up MCP server mocks
+ * const mockServer = setupMcpServerMocks();
+ * 
+ * // Set up Anthropic API mocks
+ * setupAnthropicMocks(mock);
+ * ```
  */
+
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { mock as viMock } from 'bun:test';
 
@@ -25,16 +40,6 @@ export function clearMockEnv(): void {
   delete process.env['OPENAI_API_KEY'];
   delete process.env['NEWS_API_KEY'];
 }
-
-
-// We're not using this function but keeping it commented out for future reference
-/**
- * Helper function to create mock functions that return specific values
- * @param returnValue The value to be returned by the mock
- */
-// function createMockWithReturnValue<T>(returnValue: T) {
-//   return viMock(() => returnValue);
-// }
 
 /**
  * Helper function to create mock functions with a specific implementation

@@ -6,7 +6,7 @@ import type { ProfileAnalyzer , PromptFormatter } from '@/mcp/protocol/component
 import { ExternalSourceService  } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { createMockEmbedding } from '@test/utils/embeddingUtils';
+import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 
 

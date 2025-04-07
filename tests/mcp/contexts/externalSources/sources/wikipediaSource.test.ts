@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { WikipediaSource } from '@/mcp/contexts/externalSources/sources/wikipediaSource';
-import { setupEmbeddingMocks } from '@test/utils/embeddingUtils';
-import { setupMockFetch } from '@test/utils/fetchUtils';
+import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
 
 // Helper to access private methods safely without using intersection types
 // This approach avoids the "never" type issue

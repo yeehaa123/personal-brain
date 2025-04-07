@@ -4,9 +4,9 @@ import type { Note } from '@/models/note';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
+import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test/utils/embeddingUtils';
-import { createTestNote } from '@test/utils/embeddingUtils';
+import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 
 
 // Set up embedding service mocks

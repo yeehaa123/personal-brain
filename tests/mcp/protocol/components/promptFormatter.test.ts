@@ -6,7 +6,7 @@ import { PromptFormatter } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { createMockEmbedding } from '@test/utils/embeddingUtils';
+import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 
 
