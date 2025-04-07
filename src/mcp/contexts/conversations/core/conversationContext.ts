@@ -28,6 +28,7 @@ import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemorySt
 import { ConversationToolService } from '@/mcp/contexts/conversations/tools';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
 import logger from '@/utils/logger';
 
 /**
@@ -45,7 +46,7 @@ export interface ConversationContextConfig {
   version?: string;
 
   /**
-   * Storage implementation
+   * Storage implementation - if provided, will override the registered storage adapter
    */
   storage?: ConversationStorage;
 
@@ -55,24 +56,29 @@ export interface ConversationContextConfig {
   tieredMemoryConfig?: Record<string, unknown>;
 
   /**
-   * Name for the anchor (defaults to 'Host')
+   * Display configuration
    */
-  anchorName?: string;
+  display?: {
+    /**
+     * Name for the anchor/assistant (defaults to 'Host')
+     */
+    anchorName?: string;
 
-  /**
-   * ID for the anchor
-   */
-  anchorId?: string;
+    /**
+     * ID for the anchor/assistant
+     */
+    anchorId?: string;
 
-  /**
-   * Default user name (defaults to 'User')
-   */
-  defaultUserName?: string;
+    /**
+     * Default user name (defaults to 'User')
+     */
+    defaultUserName?: string;
 
-  /**
-   * Default user ID
-   */
-  defaultUserId?: string;
+    /**
+     * Default user ID
+     */
+    defaultUserId?: string;
+  };
 }
 
 /**
@@ -183,33 +189,68 @@ export class ConversationContext extends BaseContext {
       version,
     } as Record<string, unknown>);
 
-    // Now initialize the full config object
+    // Now initialize the full config object with defaults
     this.contextConfig = {
       name,
       version,
       storage: config.storage || InMemoryStorage.getInstance(),
       tieredMemoryConfig: config.tieredMemoryConfig || {},
-      anchorName: config.anchorName || 'Host',
-      anchorId: config.anchorId || '',
-      defaultUserName: config.defaultUserName || 'User',
-      defaultUserId: config.defaultUserId || '',
+      display: {
+        anchorName: config.display?.anchorName || 'Host',
+        anchorId: config.display?.anchorId || '',
+        defaultUserName: config.display?.defaultUserName || 'User',
+        defaultUserId: config.display?.defaultUserId || '',
+      },
     };
+    
+    // Handle backwards compatibility with old config format
+    if ('anchorName' in config) {
+      this.contextConfig.display.anchorName = config.anchorName as string || 'Host';
+    }
+    if ('anchorId' in config) {
+      this.contextConfig.display.anchorId = config.anchorId as string || '';
+    }
+    if ('defaultUserName' in config) {
+      this.contextConfig.display.defaultUserName = config.defaultUserName as string || 'User';
+    }
+    if ('defaultUserId' in config) {
+      this.contextConfig.display.defaultUserId = config.defaultUserId as string || '';
+    }
 
-    // Create storage adapter
-    this.storageAdapter = new ConversationStorageAdapter(this.contextConfig.storage || InMemoryStorage.getInstance());
-
-    // Initialize formatters
-    this.formatter = new ConversationFormatter();
-    this.mcpFormatter = new ConversationMcpFormatter();
-
-    // Initialize services
-    this.resourceService = new ConversationResourceService();
-    this.toolService = new ConversationToolService();
-    this.queryService = new ConversationQueryService(this.storageAdapter);
-    this.memoryService = new ConversationMemoryService(
-      this.storageAdapter,
-      this.contextConfig.tieredMemoryConfig,
-    );
+    // Get services from dependency injection container
+    try {
+      // Get all required services from the container
+      this.storageAdapter = getService<ConversationStorageAdapter>(ServiceIdentifiers.ConversationStorageAdapter);
+      this.formatter = getService<ConversationFormatter>(ServiceIdentifiers.ConversationFormatter);
+      this.mcpFormatter = getService<ConversationMcpFormatter>(ServiceIdentifiers.ConversationMcpFormatter);
+      this.resourceService = getService<ConversationResourceService>(ServiceIdentifiers.ConversationResourceService);
+      this.toolService = getService<ConversationToolService>(ServiceIdentifiers.ConversationToolService);
+      this.queryService = getService<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
+      this.memoryService = getService<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
+      
+      // If tieredMemoryConfig is provided, update the memory service configuration
+      if (Object.keys(this.contextConfig.tieredMemoryConfig).length > 0) {
+        this.memoryService.updateConfig(this.contextConfig.tieredMemoryConfig);
+      }
+    } catch (error) {
+      // Fall back to direct instantiation if DI fails
+      logger.warn('Failed to resolve services via DI, falling back to direct instantiation', {
+        context: 'ConversationContext',
+        error,
+      });
+      
+      // Create services directly as a fallback
+      this.storageAdapter = new ConversationStorageAdapter(this.contextConfig.storage || InMemoryStorage.getInstance());
+      this.formatter = new ConversationFormatter();
+      this.mcpFormatter = new ConversationMcpFormatter();
+      this.resourceService = new ConversationResourceService();
+      this.toolService = new ConversationToolService();
+      this.queryService = new ConversationQueryService(this.storageAdapter);
+      this.memoryService = new ConversationMemoryService(
+        this.storageAdapter,
+        this.contextConfig.tieredMemoryConfig,
+      );
+    }
 
     // Now that services are initialized, set resources and tools
     this.resources = this.resourceService.getResources(this);
@@ -265,7 +306,7 @@ export class ConversationContext extends BaseContext {
    * @returns The anchor name
    */
   getAnchorName(): string {
-    return this.contextConfig.anchorName;
+    return this.contextConfig.display.anchorName || 'Host';
   }
 
   /**
@@ -273,7 +314,39 @@ export class ConversationContext extends BaseContext {
    * @returns The anchor ID
    */
   getAnchorId(): string | undefined {
-    return this.contextConfig.anchorId;
+    return this.contextConfig.display.anchorId;
+  }
+  
+  /**
+   * Get the query service
+   * @returns The query service
+   */
+  getQueryService(): ConversationQueryService {
+    return this.queryService;
+  }
+  
+  /**
+   * Get the memory service
+   * @returns The memory service
+   */
+  getMemoryService(): ConversationMemoryService {
+    return this.memoryService;
+  }
+  
+  /**
+   * Get the resource service
+   * @returns The resource service
+   */
+  getResourceService(): ConversationResourceService {
+    return this.resourceService;
+  }
+  
+  /**
+   * Get the tool service
+   * @returns The tool service
+   */
+  getToolService(): ConversationToolService {
+    return this.toolService;
   }
 
   /**
@@ -283,16 +356,67 @@ export class ConversationContext extends BaseContext {
   setStorage(storage: ConversationStorageAdapter): void {
     this.storageAdapter = storage;
     
-    // We need to recreate services that depend on the storage
-    this.queryService = new ConversationQueryService(this.storageAdapter);
-    this.memoryService = new ConversationMemoryService(
-      this.storageAdapter,
-      this.contextConfig.tieredMemoryConfig,
-    );
-
-    // Refresh MCP components
-    this.resources = this.resourceService.getResources(this);
-    this.tools = this.toolService.getTools(this);
+    try {
+      // Get the container instance from the imported registry - using dynamic import to avoid circular deps
+      import('@/utils/dependencyContainer').then(module => {
+        const container = module.container;
+        
+        // Try to update the storage adapter in the container
+        if (container.has(ServiceIdentifiers.ConversationStorageAdapter)) {
+          container.unregister(ServiceIdentifiers.ConversationStorageAdapter);
+          container.register(ServiceIdentifiers.ConversationStorageAdapter, () => storage);
+          
+          // Recreate services that depend on the storage adapter
+          this.queryService = getService<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
+          this.memoryService = getService<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
+          
+          // Update resources and tools with new services
+          this.resources = this.resourceService.getResources(this);
+          this.tools = this.toolService.getTools(this);
+        } else {
+          // Fall back to direct instantiation
+          this.queryService = new ConversationQueryService(this.storageAdapter);
+          this.memoryService = new ConversationMemoryService(
+            this.storageAdapter,
+            this.contextConfig.tieredMemoryConfig,
+          );
+          
+          // Update resources and tools with new services
+          this.resources = this.resourceService.getResources(this);
+          this.tools = this.toolService.getTools(this);
+        }
+      }).catch(_error => {
+        // Fall back to direct instantiation if dynamic import fails
+        logger.warn('Failed to update DI container, falling back to direct instantiation', { 
+          context: 'ConversationContext', 
+        });
+        
+        this.queryService = new ConversationQueryService(this.storageAdapter);
+        this.memoryService = new ConversationMemoryService(
+          this.storageAdapter,
+          this.contextConfig.tieredMemoryConfig,
+        );
+        
+        // Refresh MCP components
+        this.resources = this.resourceService.getResources(this);
+        this.tools = this.toolService.getTools(this);
+      });
+    } catch (_error) {
+      // Fall back to direct instantiation if DI fails
+      logger.warn('Error in setStorage, falling back to direct instantiation', {
+        context: 'ConversationContext',
+      });
+      
+      this.queryService = new ConversationQueryService(this.storageAdapter);
+      this.memoryService = new ConversationMemoryService(
+        this.storageAdapter,
+        this.contextConfig.tieredMemoryConfig,
+      );
+      
+      // Refresh MCP components
+      this.resources = this.resourceService.getResources(this);
+      this.tools = this.toolService.getTools(this);
+    }
   }
 
   /**
@@ -364,8 +488,8 @@ export class ConversationContext extends BaseContext {
     }
 
     // Default user ID and name from options or context defaults
-    const userId = options?.userId || this.contextConfig.defaultUserId;
-    const userName = options?.userName || this.contextConfig.defaultUserName;
+    const userId = options?.userId || this.contextConfig.display.defaultUserId;
+    const userName = options?.userName || this.contextConfig.display.defaultUserName;
 
     // Create turn
     const turn: Partial<ConversationTurn> = {
@@ -444,8 +568,8 @@ export class ConversationContext extends BaseContext {
       format: options.format || 'text',
       includeTimestamps: options.includeTimestamps || false,
       includeMetadata: options.includeMetadata || false,
-      anchorName: this.contextConfig.anchorName,
-      anchorId: this.contextConfig.anchorId,
+      anchorName: this.contextConfig.display.anchorName,
+      anchorId: this.contextConfig.display.anchorId,
       highlightAnchor: true,
     };
 
@@ -468,7 +592,7 @@ export class ConversationContext extends BaseContext {
    * @returns True if user is the anchor
    */
   isAnchor(userId: string): boolean {
-    return this.contextConfig.anchorId === userId;
+    return this.contextConfig.display.anchorId === userId;
   }
 
   /**

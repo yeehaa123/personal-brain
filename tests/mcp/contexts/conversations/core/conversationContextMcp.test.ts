@@ -13,14 +13,81 @@ import {
   setMockEnv,
 } from '@test/utils/mcpUtils';
 
-// Import the mock implementation from our mocks directory
+// Import here to avoid circular reference
 import { 
   MockInMemoryStorage,
   MockMemoryService, 
   MockQueryService,
-  MockResourceService,
-  MockToolService, 
 } from '../__mocks__';
+
+// Mock the service registry
+mock.module('@/services/serviceRegistry', () => {
+  // Create instances to return from getService
+  const storage = MockInMemoryStorage.createFresh();
+  const adapter = new ConversationStorageAdapter(storage);
+  const formatter = { formatConversation: mock(() => 'Formatted conversation') };
+  const mcpFormatter = { formatConversationForMcp: mock(() => ({})) };
+  
+  // Create resource and tool services with actual implementations
+  const resourceService = {
+    getResources: mock(() => [
+      { protocol: 'conversations', path: 'list', handler: mock(() => Promise.resolve({})) },
+      { protocol: 'conversations', path: 'search', handler: mock(() => Promise.resolve({})) },
+      { protocol: 'conversations', path: 'get/:id', handler: mock(() => Promise.resolve({})) },
+    ]),
+  };
+  
+  const toolService = {
+    getTools: mock(() => [
+      { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
+      { protocol: 'conversations', path: 'add_turn', name: 'add_turn', handler: mock(() => Promise.resolve({})) },
+      { protocol: 'conversations', path: 'get_conversation_history', name: 'get_conversation_history', handler: mock(() => Promise.resolve({})) },
+    ]),
+    getToolSchema: mock(() => ({})),
+  };
+  
+  const queryService = new MockQueryService();
+  const memoryService = new MockMemoryService();
+
+  // Mock getService to return appropriate instances
+  const mockGetService = mock((serviceId: string) => {
+    switch (serviceId) {
+    case 'conversation.storage':
+      return adapter;
+    case 'conversation.formatter':
+      return formatter;
+    case 'conversation.mcpFormatter':
+      return mcpFormatter;
+    case 'conversation.resources':
+      return resourceService;
+    case 'conversation.tools':
+      return toolService;
+    case 'conversation.query':
+      return queryService;
+    case 'conversation.memory':
+      return memoryService;
+    default:
+      return null;
+    }
+  });
+
+  // Return a mock implementation
+  return {
+    ServiceIdentifiers: {
+      ConversationStorageAdapter: 'conversation.storage',
+      ConversationFormatter: 'conversation.formatter',
+      ConversationMcpFormatter: 'conversation.mcpFormatter',
+      ConversationResourceService: 'conversation.resources',
+      ConversationToolService: 'conversation.tools',
+      ConversationQueryService: 'conversation.query',
+      ConversationMemoryService: 'conversation.memory',
+    },
+    getService: mockGetService,
+    registerServices: mock(() => {}),
+  };
+});
+
+// Mock implementations are already imported at the top of the file
 
 // We need to mock the services
 mock.module('@/mcp/contexts/conversations/services/conversationQueryService', () => {
@@ -31,15 +98,20 @@ mock.module('@/mcp/contexts/conversations/services/conversationQueryService', ()
 
 mock.module('@/mcp/contexts/conversations/services/conversationMemoryService', () => {
   return {
-    ConversationMemoryService: MockMemoryService,
+    ConversationMemoryService: class extends MockMemoryService {
+      override formatHistoryForPrompt = mock(() => Promise.resolve(
+        'User: What is quantum computing?\nAssistant: Quantum computing is a type of computation that uses quantum bits or qubits to perform operations.\n\n' +
+        'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n'
+      ))
+    },
   };
 });
 
 mock.module('@/mcp/contexts/conversations/resources/conversationResources', () => {
   return {
-    ConversationResourceService: class extends MockResourceService {
+    ConversationResourceService: class {
       // Add MCP resource test data
-      override getResources = mock(() => [
+      getResources = mock(() => [
         { protocol: 'conversations', path: 'list', handler: mock(() => Promise.resolve({})) },
         { protocol: 'conversations', path: 'search', handler: mock(() => Promise.resolve({})) },
         { protocol: 'conversations', path: 'get/:id', handler: mock(() => Promise.resolve({})) },
@@ -50,13 +122,15 @@ mock.module('@/mcp/contexts/conversations/resources/conversationResources', () =
 
 mock.module('@/mcp/contexts/conversations/tools/conversationTools', () => {
   return {
-    ConversationToolService: class extends MockToolService {
+    ConversationToolService: class {
       // Add MCP tool test data
-      override getTools = mock(() => [
+      getTools = mock(() => [
         { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
         { protocol: 'conversations', path: 'add_turn', name: 'add_turn', handler: mock(() => Promise.resolve({})) },
         { protocol: 'conversations', path: 'get_conversation_history', name: 'get_conversation_history', handler: mock(() => Promise.resolve({})) },
       ]);
+
+      getToolSchema = mock(() => ({}));
     },
   };
 });
@@ -158,8 +232,11 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
   });
 
   test('registerOnServer returns false with undefined server', () => {
-    // Passing undefined to test error handling
+    // The BaseContext implementation has error handling that catches the error when
+    // trying to use an undefined server and returns false
     const result = conversationContext.registerOnServer(undefined as unknown as McpServer);
+    
+    // Expect it to return false when the server is undefined
     expect(result).toBe(false);
   });
 

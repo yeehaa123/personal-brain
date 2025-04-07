@@ -2,6 +2,13 @@
  * Service registry for dependency injection
  * Centralized registration of all application services
  */
+import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
+import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
+import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
+import { ConversationResourceService } from '@/mcp/contexts/conversations/resources';
+import { ConversationMemoryService, ConversationQueryService } from '@/mcp/contexts/conversations/services';
+import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
+import { ConversationToolService } from '@/mcp/contexts/conversations/tools';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { container } from '@/utils/dependencyContainer';
@@ -38,6 +45,15 @@ export const ServiceIdentifiers = {
 
   // Tag Services
   ProfileTagService: 'tag.profile',
+  
+  // Conversation Services
+  ConversationResourceService: 'conversation.resources',
+  ConversationToolService: 'conversation.tools',
+  ConversationQueryService: 'conversation.query',
+  ConversationMemoryService: 'conversation.memory',
+  ConversationStorageAdapter: 'conversation.storage',
+  ConversationFormatter: 'conversation.formatter',
+  ConversationMcpFormatter: 'conversation.mcpFormatter',
 };
 
 // Track if services have been registered to avoid duplicate logs
@@ -123,6 +139,60 @@ export function registerServices(
 
       // Create service with injected dependencies
       return new ProfileSearchService(repository, embeddingService, tagService);
+    },
+  );
+  
+  // Register conversation services
+  
+  // Register storage adapter and formatters first since other services depend on them
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationStorageAdapter,
+    () => {
+      const storage = InMemoryStorage.getInstance();
+      return new ConversationStorageAdapter(storage);
+    },
+  );
+  
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationFormatter,
+    () => new ConversationFormatter(),
+  );
+  
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationMcpFormatter,
+    () => new ConversationMcpFormatter(),
+  );
+  
+  // Register resource and tool services
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationResourceService,
+    () => new ConversationResourceService(),
+  );
+  
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationToolService,
+    () => new ConversationToolService(),
+  );
+  
+  // Register query service with its dependencies
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationQueryService,
+    (container) => {
+      const storageAdapter = container.resolve<ConversationStorageAdapter>(
+        ServiceIdentifiers.ConversationStorageAdapter,
+      );
+      return new ConversationQueryService(storageAdapter);
+    },
+  );
+  
+  // Register memory service with its dependencies
+  registerIfNeeded(
+    ServiceIdentifiers.ConversationMemoryService,
+    (container) => {
+      const storageAdapter = container.resolve<ConversationStorageAdapter>(
+        ServiceIdentifiers.ConversationStorageAdapter,
+      );
+      return new ConversationMemoryService(storageAdapter);
     },
   );
 

@@ -6,11 +6,13 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
 
 import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
+import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
+import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import logger from '@/utils/logger';
 import { mockLogger, restoreLogger } from '@test/utils/loggerUtils';
 
-// Import the mock implementation from our mocks directory
+// Import here to avoid circular reference
 import { 
   MockInMemoryStorage,
   MockMemoryService, 
@@ -18,6 +20,57 @@ import {
   MockResourceService,
   MockToolService, 
 } from '../__mocks__';
+
+// Mock the service registry
+mock.module('@/services/serviceRegistry', () => {
+  // Create instances to return from getService
+  const storage = MockInMemoryStorage.createFresh();
+  const adapter = new ConversationStorageAdapter(storage);
+  const formatter = new ConversationFormatter();
+  const mcpFormatter = new ConversationMcpFormatter();
+  const resourceService = new MockResourceService();
+  const toolService = new MockToolService();
+  const queryService = new MockQueryService();
+  const memoryService = new MockMemoryService();
+
+  // Mock getService to return appropriate instances
+  const mockGetService = mock((serviceId: string) => {
+    switch (serviceId) {
+    case 'conversation.storage':
+      return adapter;
+    case 'conversation.formatter':
+      return formatter;
+    case 'conversation.mcpFormatter':
+      return mcpFormatter;
+    case 'conversation.resources':
+      return resourceService;
+    case 'conversation.tools':
+      return toolService;
+    case 'conversation.query':
+      return queryService;
+    case 'conversation.memory':
+      return memoryService;
+    default:
+      return null;
+    }
+  });
+
+  // Return a mock implementation
+  return {
+    ServiceIdentifiers: {
+      ConversationStorageAdapter: 'conversation.storage',
+      ConversationFormatter: 'conversation.formatter',
+      ConversationMcpFormatter: 'conversation.mcpFormatter',
+      ConversationResourceService: 'conversation.resources',
+      ConversationToolService: 'conversation.tools',
+      ConversationQueryService: 'conversation.query',
+      ConversationMemoryService: 'conversation.memory',
+    },
+    getService: mockGetService,
+    registerServices: mock(() => {}),
+  };
+});
+
 
 // We need to mock the services
 mock.module('@/mcp/contexts/conversations/services/conversationQueryService', () => {
@@ -28,19 +81,36 @@ mock.module('@/mcp/contexts/conversations/services/conversationQueryService', ()
 
 mock.module('@/mcp/contexts/conversations/services/conversationMemoryService', () => {
   return {
-    ConversationMemoryService: MockMemoryService,
+    ConversationMemoryService: class extends MockMemoryService {
+      override formatHistoryForPrompt = mock(() => Promise.resolve(
+        'User: What is quantum computing?\nAssistant: Quantum computing is a type of computation that uses quantum bits or qubits to perform operations.\n\n' +
+        'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n'
+      ))
+    },
   };
 });
 
 mock.module('@/mcp/contexts/conversations/resources/conversationResources', () => {
   return {
-    ConversationResourceService: MockResourceService,
+    ConversationResourceService: class {
+      getResources = mock(() => [
+        { protocol: 'conversations', path: 'list', handler: mock(() => Promise.resolve({})) },
+        { protocol: 'conversations', path: 'search', handler: mock(() => Promise.resolve({})) },
+      ]);
+    },
   };
 });
 
 mock.module('@/mcp/contexts/conversations/tools/conversationTools', () => {
   return {
-    ConversationToolService: MockToolService,
+    ConversationToolService: class {
+      getTools = mock(() => [
+        { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
+        { protocol: 'conversations', path: 'add_turn', name: 'add_turn', handler: mock(() => Promise.resolve({})) },
+      ]);
+      
+      getToolSchema = mock(() => ({}));
+    },
   };
 });
 
