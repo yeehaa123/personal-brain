@@ -4,11 +4,11 @@ import { ProfileContext } from '@/mcp';
 import type { Profile } from '@/models/profile';
 import {
   clearMockEnv,
-  createMockProfile,
   setMockEnv,
   setupAnthropicMocks,
   setupMcpServerMocks,
 } from '@test';
+import { createMockProfile } from '@test/__mocks__/models/profile';
 import { setupMcpServerMocks as createMockMcpServer } from '@test/utils/mcpUtils';
 
 

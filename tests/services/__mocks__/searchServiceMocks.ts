@@ -3,7 +3,7 @@
  */
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import { createMockEmbedding } from '@test/utils/embeddingUtils';
+import { createMockEmbedding } from '@test/__mocks__';
 
 import { createMockNotes, createMockProfile } from './repositoryMocks';
 

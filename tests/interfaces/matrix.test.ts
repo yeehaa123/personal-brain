@@ -2,7 +2,10 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import type { CommandInfo, CommandResult } from '@commands/index';
 import { MatrixBrainInterface } from '@interfaces/matrix';
-import { createMockEmbedding, createMockNote, createMockProfile, mockEnv, resetMocks } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createMockProfile } from '@test/__mocks__/models/profile';
+import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { mockEnv, resetMocks } from '@test/mocks';
 import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
 
 

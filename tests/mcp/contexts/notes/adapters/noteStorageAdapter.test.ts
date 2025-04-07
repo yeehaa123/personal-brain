@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { NoteStorageAdapter } from '@/mcp/contexts/notes/adapters/noteStorageAdapter';
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
-import { createMockNote } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
 
 describe('NoteStorageAdapter', () => {
   // Mock the logger and log functions to prevent console noise during tests

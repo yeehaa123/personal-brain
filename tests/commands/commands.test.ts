@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { CommandHandler, CommandResult } from '@commands/index';
-import { createMockNote, createMockProfile, mockEnv, resetMocks } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createMockProfile } from '@test/__mocks__/models/profile';
+import { mockEnv, resetMocks } from '@test/mocks';
 import { setTestEnv } from '@test/utils/envUtils';
 
 

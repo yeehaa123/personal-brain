@@ -5,7 +5,8 @@
 
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
-import { createMockEmbedding } from '@test/utils/embeddingUtils';
+import { createMockEmbedding } from '@test/__mocks__';
+import { createMockProfile as originalCreateMockProfile } from '@test/__mocks__/models/profile';
 
 // Create mock notes
 export function createMockNote(id: string, title: string, tags: string[] = []): Note {
@@ -104,39 +105,39 @@ export function createMockProfile(id: string = 'mock-profile-id'): Profile {
 // Mock repository classes
 export class MockNoteRepository {
   notes: Note[] = [];
-  
+
   constructor(initialNotes: Note[] = createMockNotes()) {
     this.notes = [...initialNotes];
   }
-  
+
   getById = async (id: string): Promise<Note | null> => {
     return this.notes.find(note => note.id === id) || null;
   };
-  
+
   getAll = async (): Promise<Note[]> => {
     return [...this.notes];
   };
-  
+
   create = async (note: Omit<Note, 'id'>): Promise<Note> => {
     const newNote = { ...note, id: `note-${Date.now()}` } as Note;
     this.notes.push(newNote);
     return newNote;
   };
-  
+
   update = async (id: string, update: Partial<Note>): Promise<Note | null> => {
     const index = this.notes.findIndex(note => note.id === id);
     if (index === -1) return null;
-    
+
     this.notes[index] = { ...this.notes[index], ...update };
     return this.notes[index];
   };
-  
+
   delete = async (id: string): Promise<boolean> => {
     const initialLength = this.notes.length;
     this.notes = this.notes.filter(note => note.id !== id);
     return this.notes.length < initialLength;
   };
-  
+
   searchByKeywords = async (_query: string | undefined, _tags?: string[], limit?: number, offset?: number): Promise<Note[]> => {
     // Unused parameters prefixed with _ to avoid warnings
     return this.notes.slice(offset || 0, (offset || 0) + (limit || this.notes.length));
@@ -145,33 +146,33 @@ export class MockNoteRepository {
 
 export class MockProfileRepository {
   profiles: Profile[] = [];
-  
-  constructor(initialProfiles: Profile[] = [createMockProfile()]) {
+
+  constructor(initialProfiles: Profile[] = [originalCreateMockProfile()]) {
     this.profiles = [...initialProfiles];
   }
-  
+
   getById = async (id: string): Promise<Profile | null> => {
     return this.profiles.find(profile => profile.id === id) || null;
   };
-  
+
   getAll = async (): Promise<Profile[]> => {
     return [...this.profiles];
   };
-  
+
   create = async (profile: Omit<Profile, 'id'>): Promise<Profile> => {
     const newProfile = { ...profile, id: `profile-${Date.now()}` } as Profile;
     this.profiles.push(newProfile);
     return newProfile;
   };
-  
+
   update = async (id: string, update: Partial<Profile>): Promise<Profile | null> => {
     const index = this.profiles.findIndex(profile => profile.id === id);
     if (index === -1) return null;
-    
+
     this.profiles[index] = { ...this.profiles[index], ...update };
     return this.profiles[index];
   };
-  
+
   delete = async (id: string): Promise<boolean> => {
     const initialLength = this.profiles.length;
     this.profiles = this.profiles.filter(profile => profile.id !== id);

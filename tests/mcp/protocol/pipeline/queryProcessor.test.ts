@@ -20,8 +20,8 @@ import type {
   ProfileAnalysisResult,
 } from '@/mcp/protocol/types/index';
 import type { Note } from '@/models/note';
-
-import { createMockNote, createMockProfile } from '../../../mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createMockProfile } from '@test/__mocks__/models/profile';
 
 // Import types
 

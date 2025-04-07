@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
 import { createUnifiedMcpServer } from '@/mcp';
 import type { UnifiedMcpServerConfig } from '@/mcp';
-import { createMockEmbedding } from '@test/mocks';
+import { createMockEmbedding } from '@test/__mocks__/';
 import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
 
 
@@ -13,7 +13,7 @@ mock.module('@anthropic-ai/sdk', () => {
       constructor() {
         // Mock constructor
       }
-      
+
       messages = {
         create: async () => ({
           id: 'mock-msg-id',
@@ -41,20 +41,20 @@ mock.module('@mcp/model/embeddings', () => {
         return MockEmbeddingService._instance;
       }
 
-      constructor() {}
-      
+      constructor() { }
+
       getEmbedding() {
         return Promise.resolve({
           embedding: createMockEmbedding('test embedding'),
           truncated: false,
         });
       }
-      
+
       cosineSimilarity(_vec1: number[], _vec2: number[]) {
         // Simple mock - return 0.8 for simplicity
         return 0.8;
       }
-      
+
       chunkText(text: string) {
         return [text];
       }
@@ -68,21 +68,21 @@ describe('Unified MCP Server', () => {
     setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
     setTestEnv('NEWSAPI_KEY', 'mock-news-api-key');
   });
-  
+
   afterAll(() => {
     // Clean up mock environment
     clearTestEnv('ANTHROPIC_API_KEY');
     clearTestEnv('NEWSAPI_KEY');
   });
-  
+
   test('creates a unified MCP server with defaults', () => {
     // Create the unified MCP server with default options
     const unifiedServer = createUnifiedMcpServer();
-    
+
     // Check that the server was created
     expect(unifiedServer).toBeDefined();
   });
-  
+
   test('creates a unified MCP server with custom configuration', () => {
     // Create the unified MCP server with custom configuration
     const config: UnifiedMcpServerConfig = {
@@ -92,48 +92,48 @@ describe('Unified MCP Server', () => {
       version: '2.0.0',
       enableExternalSources: true,
     };
-    
+
     const unifiedServer = createUnifiedMcpServer(config);
-    
+
     // Check that the server was created
     expect(unifiedServer).toBeDefined();
   });
-  
+
   // TODO: Add tests for registering resources and tools from all contexts
   // This will depend on how we implement the unified server
-  
+
   test('handles resource registration from all contexts', () => {
     // Create the unified MCP server
     const unifiedServer = createUnifiedMcpServer({
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-news-api-key',
     });
-    
+
     // Mock to check resource registration
     // Ideally, we would test if specific resources are registered, but
     // McpServer doesn't expose a way to check registered resources directly
     expect(unifiedServer).toBeDefined();
-    
+
     // In a real test, we would check if specific resources are available
     // by calling them and checking the response
   });
-  
+
   test('handles tool registration from all contexts', () => {
     // Create the unified MCP server
     const unifiedServer = createUnifiedMcpServer({
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-news-api-key',
     });
-    
+
     // Mock to check tool registration
     // Ideally, we would test if specific tools are registered, but
     // McpServer doesn't expose a way to check registered tools directly
     expect(unifiedServer).toBeDefined();
-    
+
     // In a real test, we would check if specific tools are available
     // by calling them and checking the response
   });
-  
+
   test('creates a functional unified server with all features', () => {
     // Create the unified MCP server with all features enabled
     const unifiedServer = createUnifiedMcpServer({
@@ -143,10 +143,10 @@ describe('Unified MCP Server', () => {
       version: '1.0.0',
       enableExternalSources: true,
     });
-    
+
     // Check that a server was created
     expect(unifiedServer).toBeDefined();
-    
+
     // In a real implementation, we would test specific functionality
   });
 });

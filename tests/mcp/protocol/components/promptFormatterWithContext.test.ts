@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import { PromptFormatter } from '@/mcp/protocol/components';
 import type { Note } from '@models/note';
-import { createMockNote } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
 
 describe('PromptFormatter with ConversationContext', () => {
   // Test data

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { CommandHandler, CommandResult } from '@commands/index';
-import { createMockNote, createTrackers } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { createTrackers } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
 
 // Mock the conversation turns

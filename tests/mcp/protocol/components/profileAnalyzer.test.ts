@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { EmbeddingService } from '@/mcp/model';
 import { ProfileAnalyzer } from '@/mcp/protocol/components';
-import { createMockProfile } from '@test/mocks';
+import { createMockProfile } from '@test/__mocks__/models/profile';
 
 describe('ProfileAnalyzer', () => {
   // Mock embedding service with properly typed mock functions

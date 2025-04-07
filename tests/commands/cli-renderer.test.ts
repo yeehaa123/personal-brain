@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import type { Note } from '@models/note';
-import { createMockNotes, createTrackers } from '@test/mocks';
+import { createMockNotes } from '@test/__mocks__/models/note';
+import { createTrackers } from '@test/mocks';
 import { mockCLIInterface, mockDisplayNotes, restoreCLIInterface } from '@test/test-utils';
 import { displayNotes } from '@utils/noteUtils';
 

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Note } from '@models/note';
-import { createMockNotes, createTrackers } from '@test/mocks';
+import { createMockNotes } from '@test/__mocks__/models/note';
+import { createTrackers } from '@test/mocks';
 import { mockCLIInterface, restoreCLIInterface } from '@test/test-utils';
 import { displayNotes, formatNotePreview, getExcerpt } from '@utils/noteUtils';
 

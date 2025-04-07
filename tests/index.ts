@@ -13,11 +13,16 @@ export * from './utils';
 
 // Mock data and factories
 export {
-  // Mock data generators
+  // Mock data generators - imported from standardized mocks
+  createMockNote, 
   createMockNotes,
-  createMockNote,
-  createMockProfile,
+} from './__mocks__/models/note';
 
+export {
+  createMockProfile,
+} from './__mocks__/models/profile';
+
+export {
   // Mock utility functions
   createTrackers,
   mockEnv,

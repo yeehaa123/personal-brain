@@ -99,7 +99,8 @@ For each mock type:
 - [x] Run typecheck
 
 Remaining mocks to migrate:
-- [ ] Model mocks (Note, Profile)
+- [x] Note model mock
+- [x] Profile model mock
 - [ ] Repository mocks
 - [ ] Storage mocks
 - [ ] Context mocks

@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { CommandResult } from '@commands/index';
-import { createMockNote, mockEnv, resetMocks } from '@test/mocks';
+import { createMockNote } from '@test/__mocks__/models/note';
+import { mockEnv, resetMocks } from '@test/mocks';
 import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
 
 import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';

@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { Profile } from '@/models/profile';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import { 
-  createMockProfile, 
   MockProfileRepository,
   setupEmbeddingMocks,
 } from '@test';
+import { createMockProfile } from '@test/__mocks__/models/profile';
 
 
 // Set up embedding service mocks

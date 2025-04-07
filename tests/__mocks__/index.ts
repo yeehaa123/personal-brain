@@ -20,8 +20,13 @@
 // Core mocks
 export * from './core/logger';
 
+// Model mocks
+export * from './models/note';
+export * from './models/profile';
+
+// Utility mocks
+export * from './utils/embeddingUtils';
+
 // Add additional exports as you create more mock files:
-// export * from './models/note';
-// export * from './models/profile';
 // export * from './services/repository';
 // etc.
