@@ -11,9 +11,9 @@ import {
   setMockEnv,
 } from '@test/utils/mcpUtils';
 
-// Import here to avoid circular reference
+// Import standardized storage mock and other mocks
+import { MockConversationStorage } from '@test/__mocks__/storage';
 import {
-  MockInMemoryStorage,
   MockMemoryService,
   MockQueryService,
 } from '../__mocks__';
@@ -21,7 +21,7 @@ import {
 // Mock the service registry
 mock.module('@/services/serviceRegistry', () => {
   // Create instances to return from getService
-  const storage = MockInMemoryStorage.createFresh();
+  const storage = MockConversationStorage.createFresh();
   const adapter = new ConversationStorageAdapter(storage);
   const formatter = { formatConversation: mock(() => 'Formatted conversation') };
   const mcpFormatter = { formatConversationForMcp: mock(() => ({})) };
@@ -133,12 +133,7 @@ mock.module('@/mcp/contexts/conversations/tools/conversationTools', () => {
   };
 });
 
-// Mock InMemoryStorage using our mock implementation
-mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
-  return {
-    InMemoryStorage: MockInMemoryStorage,
-  };
-});
+// The InMemoryStorage mock is now set up globally in setup.ts
 
 // Create mock server with resource and tool tracking
 const mockResources: unknown[] = [];
@@ -160,7 +155,7 @@ const mockMcpServer = {
 
 describe('ConversationContext MCP Integration with BaseContext', () => {
   let conversationContext: ConversationContext;
-  let storage: MockInMemoryStorage;
+  let storage: MockConversationStorage;
   let adapter: ConversationStorageAdapter;
   let queryService: MockQueryService;
 
@@ -174,7 +169,7 @@ describe('ConversationContext MCP Integration with BaseContext', () => {
 
   beforeEach(() => {
     // Create fresh storage and adapter instance for each test
-    storage = MockInMemoryStorage.createFresh();
+    storage = MockConversationStorage.createFresh();
     adapter = new ConversationStorageAdapter(storage);
 
     // Create a fresh context with clean storage

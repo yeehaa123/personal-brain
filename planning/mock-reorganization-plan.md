@@ -135,7 +135,11 @@ Remaining mocks to migrate:
 - [x] NoteRepository mock
 - [x] ProfileRepository mock
 - [ ] Other repository mocks
-- [ ] Storage mocks
+- [x] Storage mocks
+  - [x] BaseStorageInterface mock (generic base for all storage implementations)
+  - [x] ConversationStorage mock (specific implementation for conversation storage)
+  - [x] Updated all tests to use standardized storage mocks
+  - [x] Centralized mocks in setup.ts and removed duplicate mocks from individual test files
 - [ ] Context mocks
 
 When all mocks are migrated:

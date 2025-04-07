@@ -7,22 +7,17 @@ import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapter
 import type { ListOptions, SearchCriteria } from '@/mcp/contexts/core/storageInterface';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
-// Import the mock implementation from our mocks directory
-import { MockInMemoryStorage } from '../__mocks__/mockInMemoryStorage';
+// Import the standardized mock implementation
+import { MockConversationStorage } from '@test/__mocks__/storage';
 
-// Mock InMemoryStorage using our mock implementation
-mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
-  return {
-    InMemoryStorage: MockInMemoryStorage,
-  };
-});
+// The InMemoryStorage mock is now set up globally in setup.ts
 
 
 describe('ConversationStorageAdapter', () => {
 
   describe('CRUD operations', () => {
     test('create() creates a conversation and returns its ID', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const result = await adapter.create({
@@ -40,7 +35,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('read() retrieves a conversation by ID', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await storage.createConversation({
@@ -59,7 +54,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('update() updates a conversation', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await storage.createConversation({
@@ -83,7 +78,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('delete() deletes a conversation', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await storage.createConversation({
@@ -107,7 +102,7 @@ describe('ConversationStorageAdapter', () => {
 
   describe('Search and list operations', () => {
     test('search() correctly passes search criteria to storage', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
       
       // Create spy on the findConversations method
@@ -135,7 +130,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('list() correctly passes list options to getRecentConversations', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
       
       // Create spy on the getRecentConversations method
@@ -159,7 +154,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('count() without criteria uses findConversations with empty object', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
       
       // Create spy on findConversations
@@ -184,7 +179,7 @@ describe('ConversationStorageAdapter', () => {
 
   describe('Turn and summary operations', () => {
     test('addTurn() adds a turn through the adapter', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await storage.createConversation({
@@ -214,7 +209,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('getTurns() retrieves turns through the adapter', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await storage.createConversation({
@@ -253,7 +248,7 @@ describe('ConversationStorageAdapter', () => {
   describe('Extended functionality', () => {
 
     test('getConversationByRoom() retrieves conversation ID by room ID', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       await storage.createConversation({
@@ -271,7 +266,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('getOrCreateConversation() creates a new conversation if none exists', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const id = await adapter.getOrCreateConversation('new-room', 'cli');
@@ -284,7 +279,7 @@ describe('ConversationStorageAdapter', () => {
     });
 
     test('getOrCreateConversation() returns existing conversation if one exists', async () => {
-      const storage = MockInMemoryStorage.createFresh();
+      const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
 
       const originalId = await storage.createConversation({

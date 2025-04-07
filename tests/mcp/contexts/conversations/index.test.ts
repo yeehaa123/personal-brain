@@ -14,8 +14,8 @@ describe('ConversationContext Module', () => {
 
   test('should export the ConversationStorageAdapter class', () => {
     expect(ConversationContextModule.ConversationStorageAdapter).toBeDefined();
-    // Create an instance
-    const storage = ConversationContextModule.InMemoryStorage.createFresh();
+    // Create an instance using our mock for testing
+    const storage = new ConversationContextModule.InMemoryStorage();
     const adapter = new ConversationContextModule.ConversationStorageAdapter(storage);
     expect(typeof adapter.create).toBe('function');
   });

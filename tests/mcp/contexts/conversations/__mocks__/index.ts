@@ -11,7 +11,7 @@ import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 
-export { MockInMemoryStorage } from './mockInMemoryStorage';
+// MockInMemoryStorage is now imported from '@test/__mocks__/storage' as MockConversationStorage
 
 export class MockQueryService {
   createConversation = mock(() => Promise.resolve('conv-123'));

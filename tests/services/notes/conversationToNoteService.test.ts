@@ -5,14 +5,13 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
-import type { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
+import { MockConversationStorage } from '@test/__mocks__/storage';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { NewNote, Note } from '@/models/note';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createIsolatedContext } from '@test/utils/contextUtils';
 import { createTestNote } from '@test/utils/embeddingUtils';
 
 // Mock the tagExtractor module
@@ -45,10 +44,10 @@ describe('ConversationToNoteService', () => {
 
   // Create mock functions with manual call tracking for test assertions
   let insertNoteCalls: Note[] = [];
-  
+
   // Use our standardized mock repository implementation
   const mockNoteRepository = MockNoteRepository.createFresh([sampleNote]);
-  
+
   // Override insertNote method to track calls for test assertions
   mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
     // Store the entire data object for assertions
@@ -62,7 +61,7 @@ describe('ConversationToNoteService', () => {
       verified: data.verified !== undefined ? data.verified : null,
       conversationMetadata: data.conversationMetadata || null,
     } as Note;
-    
+
     insertNoteCalls.push(noteData);
     return 'note-12345678';
   };
@@ -78,8 +77,8 @@ describe('ConversationToNoteService', () => {
   // Create service instance
   let service: ConversationToNoteService;
 
-  // Storage for isolated InMemoryStorage instance
-  let isolatedStorage: InMemoryStorage;
+  // Storage for isolated ConversationStorage instance
+  let isolatedStorage: MockConversationStorage;
 
   // Sample conversation and turns for testing
   const sampleConversation: Conversation = {
@@ -115,7 +114,7 @@ describe('ConversationToNoteService', () => {
   beforeEach(async () => {
     // Clear tracking variables
     insertNoteCalls = [];
-    
+
     // Reset our standardized repository mock
     MockNoteRepository.resetInstance();
 
@@ -125,33 +124,21 @@ describe('ConversationToNoteService', () => {
       async () => ['ecosystem', 'architecture', 'example'],
     );
 
-    // Create a fresh isolated storage instance for testing
-    const { storage } = await createIsolatedContext();
-    // @ts-expect-error - Type mismatch between real and mock storage, but API is compatible
-    isolatedStorage = storage;
+    // Create a fresh storage instance for testing
+    isolatedStorage = MockConversationStorage.createFresh();
 
-    // We need to manually create a conversation with ID 'conv-123' in our test storage
-    // Since we can't mock nanoid in InMemoryStorage easily, use direct object manipulation
-    // to insert the test conversation directly
-    const testConversation = {
+    // Create a test conversation with a known ID using the MockConversationStorage API
+    await isolatedStorage.createConversation({
       id: 'conv-123',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      activeTurns: [],
-      summaries: [],
-      archivedTurns: [],
-      interfaceType: 'cli' as const,
+      interfaceType: 'cli',
       roomId: conversationConfig.defaultCliRoomId,
-    };
-    
-    // Add the conversation directly to the storage's conversations map
-    Object.defineProperty(isolatedStorage, 'conversations', {
-      value: new Map([['conv-123', testConversation]]),
+      startedAt: new Date(),
+      updatedAt: new Date(),
     });
 
     // Reset the mockNoteRepository to have the sample note
     mockNoteRepository.notes = [sampleNote];
-    
+
     // Re-implement the custom insertNote method for tracking
     mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
       // Store the entire data object for assertions
@@ -165,7 +152,7 @@ describe('ConversationToNoteService', () => {
         verified: data.verified !== undefined ? data.verified : null,
         conversationMetadata: data.conversationMetadata || null,
       } as Note;
-      
+
       insertNoteCalls.push(noteData);
       return 'note-12345678';
     };
@@ -324,16 +311,16 @@ describe('ConversationToNoteService', () => {
   test('should update conversation metadata when creating a note', async () => {
     // We'll use the existing conv-123 from storage
     const testConversation = await isolatedStorage.getConversation('conv-123');
-    
+
     expect(testConversation).toBeDefined();
-    
+
     await service.createNoteFromConversation(testConversation!, sampleTurns);
-    
+
     const updatedConversation = await isolatedStorage.getConversation('conv-123');
-    
+
     expect(updatedConversation).toBeDefined();
     expect(updatedConversation?.metadata).toBeDefined();
-    
+
     // Use bracket notation to access dynamic properties
     expect(updatedConversation?.metadata?.['noteId']).toBeDefined();
     expect(updatedConversation?.metadata?.['noteCreatedAt']).toBeDefined();
@@ -390,18 +377,18 @@ describe('ConversationToNoteService', () => {
     expect(preview.content).toContain('**Question**: Can you give me examples?');
     expect(preview.content).toContain('**Answer**:');
     expect(preview.content).toContain('- Cloud platforms like AWS');
-    
+
     // Now test the actual note creation
     await service.createNoteFromConversation(sampleConversation, htmlTurns);
-    
+
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
-    
+
     // Check that HTML is sanitized and converted to markdown in the created note
     expect(insertCall.content).toContain('**Ecosystem Architecture**');
     expect(insertCall.content).toContain('- Cloud platforms like AWS');
   });
-  
+
   test('should handle missing or empty response values', async () => {
     // Create sample turns with empty or missing responses - proper user/assistant role separation
     const emptyResponseTurns: ConversationTurn[] = [
@@ -438,20 +425,20 @@ describe('ConversationToNoteService', () => {
         userName: 'Assistant',
       },
     ];
-    
+
     // Generate preview with empty response
     const preview = await service.prepareNotePreview(
       sampleConversation,
       emptyResponseTurns,
     );
-    
-    
+
+
     // Verify that questions are shown and empty response is handled
     expect(preview.content).toContain('**Question**: What is ecosystem architecture?');
     expect(preview.content).toContain('**Answer**: (No response)'); // Empty response should show placeholder
     expect(preview.content).toContain('**Question**: Can you give me examples?');
     expect(preview.content).toContain('**Answer**: Examples of ecosystem architecture');
-    
+
     // Now create turns with undefined response - proper user/assistant role separation
     const undefinedResponseTurns: ConversationTurn[] = [
       {
@@ -487,14 +474,14 @@ describe('ConversationToNoteService', () => {
         userName: 'Assistant',
       },
     ];
-    
+
     // Generate preview with undefined response
     const previewUndef = await service.prepareNotePreview(
       sampleConversation,
       undefinedResponseTurns,
     );
-    
-    
+
+
     // Verify that questions are shown and undefined response is handled
     expect(previewUndef.content).toContain('**Question**: What is ecosystem architecture?');
     expect(previewUndef.content).toContain('**Answer**: (No response)'); // Should have a placeholder

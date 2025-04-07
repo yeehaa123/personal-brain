@@ -10,9 +10,10 @@ import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/c
 import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 
-// Import here to avoid circular reference
+// Import standardized storage mock
+import { MockConversationStorage } from '@test/__mocks__/storage';
+// Import other mocks
 import {
-  MockInMemoryStorage,
   MockMemoryService,
   MockQueryService,
   MockResourceService,
@@ -22,7 +23,7 @@ import {
 // Mock the service registry
 mock.module('@/services/serviceRegistry', () => {
   // Create instances to return from getService
-  const storage = MockInMemoryStorage.createFresh();
+  const storage = MockConversationStorage.createFresh();
   const adapter = new ConversationStorageAdapter(storage);
   const formatter = new ConversationFormatter();
   const mcpFormatter = new ConversationMcpFormatter();
@@ -112,34 +113,20 @@ mock.module('@/mcp/contexts/conversations/tools/conversationTools', () => {
   };
 });
 
-// Mock InMemoryStorage using our mock implementation
-mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
-  return {
-    InMemoryStorage: MockInMemoryStorage,
-  };
-});
+// The InMemoryStorage mock is now set up globally in setup.ts
 
-// We'll mock a Claude service for testing
-mock.module('@/mcp/model/claude', () => {
-  return {
-    ClaudeService: {
-      getInstance: () => ({
-        generateCompletion: () => Promise.resolve({ completion: 'Test summary' }),
-      }),
-    },
-  };
-});
+// Claude model is mocked globally in setup.ts
 
 describe('ConversationContext (BaseContext implementation)', () => {
   let context: ConversationContext;
   let adapter: ConversationStorageAdapter;
-  let storage: MockInMemoryStorage;
+  let storage: MockConversationStorage;
   let queryService: MockQueryService;
   let memoryService: MockMemoryService;
 
   beforeEach(() => {
     // Create a fresh storage for each test
-    storage = MockInMemoryStorage.createFresh();
+    storage = MockConversationStorage.createFresh();
     adapter = new ConversationStorageAdapter(storage);
 
     // Create a fresh context with our test adapter
@@ -329,7 +316,7 @@ describe('ConversationContext (BaseContext implementation)', () => {
     });
 
     test('setStorage() updates the storage adapter', () => {
-      const newAdapter = new ConversationStorageAdapter(MockInMemoryStorage.createFresh());
+      const newAdapter = new ConversationStorageAdapter(MockConversationStorage.createFresh());
       context.setStorage(newAdapter);
 
       expect(context.getStorage()).toBe(newAdapter);

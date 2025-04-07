@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { TieredMemoryManager } from '@/mcp/contexts/conversations/memory/tieredMemoryManager';
-import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
+import { MockConversationStorage } from '@test/__mocks__/storage';
 
 // We'll skip more complex mocking for now and focus on the basic functionality
 describe('TieredMemoryManager', () => {
   let manager: TieredMemoryManager;
-  let storage: InMemoryStorage;
+  let storage: MockConversationStorage;
   let conversationId: string;
 
   beforeEach(async () => {
     // Create a fresh storage instance
-    storage = InMemoryStorage.createFresh();
+    storage = MockConversationStorage.createFresh();
     
     // Create the tiered memory manager
     manager = new TieredMemoryManager(storage, {

@@ -18,7 +18,7 @@ import { resetServiceRegistration } from '@/services/serviceRegistry';
 
 import { setupLoggerMocks } from './__mocks__';
 import { setupMcpServerMocks } from './mcp/contexts/__mocks__/mcpMocks';
-import { setupContextMocks } from './utils/contextUtils';
+import { MockConversationStorage } from './__mocks__/storage';
 import { setupEmbeddingMocks } from './utils/embeddingUtils';
 import { setTestEnv } from './utils/envUtils';
 import { setupMockFetch } from './utils/fetchUtils';
@@ -70,8 +70,73 @@ beforeEach(() => {
   // Setup embedding mocks for consistent vector operations
   setupEmbeddingMocks(mock);
   
-  // Setup context mocks for consistent conversation context behavior
-  setupContextMocks(mock);
+  // Setup ConversationStorage mock
+  mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
+    return {
+      InMemoryStorage: MockConversationStorage,
+    };
+  });
+  
+  // Mock the ConversationSummarizer to return consistent results
+  mock.module('@/mcp/contexts/conversations/memory/summarizer', () => {
+    return {
+      ConversationSummarizer: class {
+        constructor() {}
+        
+        async summarizeTurns(turns: any[]) {
+          if (!turns || turns.length === 0) {
+            throw new Error('Cannot summarize empty turns array');
+          }
+          
+          // Sort turns by timestamp
+          const sortedTurns = [...turns].sort((a, b) => {
+            const aTime = a.timestamp ? a.timestamp.getTime() : 0;
+            const bTime = b.timestamp ? b.timestamp.getTime() : 0;
+            return aTime - bTime;
+          });
+          
+          return {
+            id: `summary-${Math.random().toString(36).substring(2, 9)}`,
+            timestamp: new Date(),
+            content: `Summary of ${turns.length} conversation turns about various topics.`,
+            startTurnIndex: 0,
+            endTurnIndex: turns.length - 1,
+            startTimestamp: sortedTurns[0].timestamp,
+            endTimestamp: sortedTurns[sortedTurns.length - 1].timestamp,
+            turnCount: turns.length,
+            metadata: {
+              originalTurnIds: sortedTurns.map(t => t.id),
+            },
+          };
+        }
+      },
+    };
+  });
+  
+  // Mock Claude model for testing
+  mock.module('@/mcp/model/claude', () => {
+    return {
+      ClaudeModel: class {
+        constructor() {}
+        
+        async complete(_systemPrompt: string, userPrompt: string) {
+          const words = userPrompt
+            .split(/\s+/)
+            .filter(w => w.length > 4)
+            .slice(0, 5)
+            .join(', ');
+          
+          return {
+            response: `This conversation covered topics including ${words || 'various subjects'}.`,
+            usage: {
+              inputTokens: 100,
+              outputTokens: 50,
+            },
+          };
+        }
+      },
+    };
+  });
   
   // Setup default fetch mock for network isolation
   global.fetch = setupMockFetch({});
