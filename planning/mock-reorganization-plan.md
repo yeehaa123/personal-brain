@@ -127,7 +127,7 @@ For each mock type:
   - [x] Kept tests/mcp/contexts/profiles/profileContext.test.ts as-is (uses complex module mocking)
   - [x] No change needed for tests/mcp/protocol/components/profileAnalyzer.test.ts (doesn't use repository directly)
 - [x] Run tests to ensure all changes work properly
-- [ ] Commit all changes
+- [x] Commit all changes
 
 Remaining mocks to migrate:
 - [x] Note model mock
