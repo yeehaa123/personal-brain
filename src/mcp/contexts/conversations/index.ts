@@ -39,3 +39,8 @@ export {
   type McpFormattedConversation,
   type McpFormattingOptions,
 } from './formatters/conversationMcpFormatter';
+
+// Export service components
+export { ConversationMemoryService, ConversationQueryService } from './services';
+export { ConversationResourceService } from './resources';
+export { ConversationToolService } from './tools';
