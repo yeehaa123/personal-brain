@@ -5,8 +5,7 @@ import { MatrixBrainInterface } from '@interfaces/matrix';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
-import { mockEnv, resetMocks } from '@test/mocks';
-import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
+import { clearTestEnv, setTestEnv, setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
 
 
 
@@ -322,7 +321,7 @@ describe('MatrixBrainInterface', () => {
   let testRenderer: TestMatrixRenderer;
   
   beforeAll(() => {
-    mockEnv();
+    setMockEnv();
     // Set required environment variables
     setTestEnv('MATRIX_HOMESERVER_URL', 'https://matrix.test.org');
     setTestEnv('MATRIX_USER_ID', '@test:test.org');
@@ -332,7 +331,7 @@ describe('MatrixBrainInterface', () => {
   });
   
   afterAll(() => {
-    resetMocks();
+    clearMockEnv();
     clearTestEnv('MATRIX_HOMESERVER_URL');
     clearTestEnv('MATRIX_USER_ID');
     clearTestEnv('MATRIX_ACCESS_TOKEN');

@@ -1,9 +1,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
-import { mockEnv, resetMocks } from '@test/mocks';
+import { setMockEnv, clearMockEnv, setTestEnv } from '@test/helpers/envUtils';
 import { extractTags } from '@utils/tagExtractor';
-
-import { setTestEnv } from './envUtils';
 
 // Mock the ai package's generateObject function
 mock.module('ai', () => {
@@ -55,11 +53,11 @@ mock.module('@utils/textUtils', () => {
 
 describe('Tag Extractor', () => {
   beforeAll(() => {
-    mockEnv();
+    setMockEnv();
   });
   
   afterAll(() => {
-    resetMocks();
+    clearMockEnv();
   });
   
   test('should extract tags from ecosystem content', async () => {

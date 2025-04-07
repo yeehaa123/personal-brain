@@ -2,8 +2,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { CommandHandler } from '@commands/index';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
-import { mockEnv } from '@test/mocks';
-import { setTestEnv } from '@test/helpers/envUtils';
+import { setTestEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Skip these tests by default as they're integration tests
 // Run with: ENABLE_INTEGRATION_TESTS=1 bun test tests/interfaces/matrix-save-note-integration.test.ts
@@ -17,7 +16,7 @@ describeOrSkip('Matrix save-note integration', () => {
 
   beforeEach(async () => {
     // Setup environment
-    mockEnv();
+    setMockEnv();
     setTestEnv('MATRIX_HOMESERVER_URL', 'https://matrix.test.org');
     setTestEnv('MATRIX_USER_ID', '@test:test.org');
     setTestEnv('MATRIX_ACCESS_TOKEN', 'mock-token');

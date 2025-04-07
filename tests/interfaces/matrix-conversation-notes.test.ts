@@ -2,8 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { mockEnv, resetMocks } from '@test/mocks';
-import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
+import { clearTestEnv, setTestEnv, setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
 
 import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
 import { MatrixRenderer } from '../../src/commands/matrix-renderer';
@@ -11,7 +10,7 @@ import type { BrainProtocol } from '../../src/mcp/protocol/brainProtocol';
 
 // Mock environment variables
 beforeEach(() => {
-  mockEnv();
+  setMockEnv();
   setTestEnv('MATRIX_HOMESERVER_URL', 'https://matrix.test.org');
   setTestEnv('MATRIX_USER_ID', '@test:test.org');
   setTestEnv('MATRIX_ACCESS_TOKEN', 'mock-token');
@@ -20,7 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  resetMocks();
+  clearMockEnv();
   clearTestEnv('MATRIX_HOMESERVER_URL');
   clearTestEnv('MATRIX_USER_ID');
   clearTestEnv('MATRIX_ACCESS_TOKEN');
