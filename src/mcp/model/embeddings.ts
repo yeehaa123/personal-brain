@@ -170,7 +170,7 @@ export class EmbeddingService {
   /**
    * Get the singleton instance of EmbeddingService
    * @param config Optional configuration to override defaults
-   * @returns The singleton EmbeddingService instance
+   * @returns The shared EmbeddingService instance
    */
   public static getInstance(config?: EmbeddingConfig): EmbeddingService {
     if (!EmbeddingService.instance) {
@@ -184,6 +184,22 @@ export class EmbeddingService {
       }
     }
     return EmbeddingService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    EmbeddingService.instance = null;
+  }
+  
+  /**
+   * Create a fresh service instance (primarily for testing)
+   * @param config Optional configuration to override defaults
+   * @returns A new EmbeddingService instance
+   */
+  public static createFresh(config?: EmbeddingConfig): EmbeddingService {
+    return new EmbeddingService(config);
   }
 
   /**

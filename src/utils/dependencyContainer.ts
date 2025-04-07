@@ -29,12 +29,28 @@ export class DependencyContainer {
   
   /**
    * Get the singleton instance of DependencyContainer
+   * @returns The shared DependencyContainer instance
    */
   public static getInstance(): DependencyContainer {
     if (!DependencyContainer.instance) {
       DependencyContainer.instance = getContainer();
     }
     return DependencyContainer.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    DependencyContainer.instance = null;
+  }
+  
+  /**
+   * Create a fresh container instance (primarily for testing)
+   * @returns A new DependencyContainer instance
+   */
+  public static createFresh(): DependencyContainer {
+    return new DependencyContainer();
   }
 
   /**

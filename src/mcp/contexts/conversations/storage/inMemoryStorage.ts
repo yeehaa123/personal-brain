@@ -44,6 +44,13 @@ export class InMemoryStorage implements ConversationStorage {
   }
 
   /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    InMemoryStorage.instance = null;
+  }
+  
+  /**
    * Create a fresh instance (primarily for testing)
    * This method guarantees a completely isolated instance with no shared state
    */
@@ -57,7 +64,7 @@ export class InMemoryStorage implements ConversationStorage {
     
     // Reset the singleton instance to ensure it doesn't interfere with tests
     // This ensures each test gets a truly isolated environment
-    InMemoryStorage.instance = null;
+    InMemoryStorage.resetInstance();
     
     return instance;
   }
