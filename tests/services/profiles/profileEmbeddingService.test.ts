@@ -2,12 +2,9 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
-import { 
-  MockProfileRepository,
-  setupEmbeddingMocks,
-} from '@test';
+import { setupEmbeddingMocks } from '@test';
 import { createMockProfile } from '@test/__mocks__/models/profile';
-
+import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
@@ -49,7 +46,9 @@ const mockProfile: Profile = {
 };
 
 // Create a mock repository with the test profile
-const mockRepository = new MockProfileRepository(mockProfile);
+// Use our standardized mock repository
+MockProfileRepository.resetInstance();
+const mockRepository = MockProfileRepository.createFresh([mockProfile]);
 
 // No need to add the static factory method as the class doesn't have one - we'll handle this in the test
 

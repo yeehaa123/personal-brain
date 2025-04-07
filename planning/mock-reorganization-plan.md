@@ -114,25 +114,26 @@ For each mock type:
   - [x] tests/commands/conversation-notes.test.ts
 - [x] Successfully committed all changes
 
-### ProfileRepository Mock Plan
-- [ ] Create centralized MockProfileRepository implementation
-- [ ] Implement singleton pattern with getInstance/resetInstance methods
-- [ ] Match interface with real ProfileRepository (core methods + specialized methods)
-- [ ] Update the following test files to use standardized mock:
-  - [ ] tests/services/profiles/profileEmbeddingService.test.ts
-  - [ ] tests/services/profiles/profileSearchService.test.ts
-  - [ ] tests/services/profiles/profileTagService.test.ts
-  - [ ] tests/mcp/contexts/profiles/profileContext.test.ts
-  - [ ] tests/mcp/contexts/profiles/adapters/profileStorageAdapter.test.ts
-  - [ ] tests/mcp/protocol/components/profileAnalyzer.test.ts
-- [ ] Run tests to ensure all changes work properly
+### ProfileRepository Mock Progress
+- [x] Create centralized MockProfileRepository implementation
+- [x] Implement singleton pattern with getInstance/resetInstance methods
+- [x] Match interface with real ProfileRepository (core methods + specialized methods)
+- [x] Update the following test files to use standardized mock:
+  - [x] tests/services/profiles/profileEmbeddingService.test.ts
+  - [x] tests/services/profiles/profileSearchService.test.ts
+  - [x] tests/services/profiles/profileTagService.test.ts
+  - [x] tests/mcp/contexts/profiles/adapters/profileStorageAdapter.test.ts
+  - [x] Kept tests/services/profiles/profileRepository.test.ts as correct pattern (extends real repository)
+  - [x] Kept tests/mcp/contexts/profiles/profileContext.test.ts as-is (uses complex module mocking)
+  - [x] No change needed for tests/mcp/protocol/components/profileAnalyzer.test.ts (doesn't use repository directly)
+- [x] Run tests to ensure all changes work properly
 - [ ] Commit all changes
 
 Remaining mocks to migrate:
 - [x] Note model mock
 - [x] Profile model mock
 - [x] NoteRepository mock
-- [ ] ProfileRepository mock (in progress)
+- [x] ProfileRepository mock
 - [ ] Other repository mocks
 - [ ] Storage mocks
 - [ ] Context mocks

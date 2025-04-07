@@ -7,7 +7,7 @@ import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
 import { createMockEmbedding, createTestNote, setupEmbeddingMocks } from '@test';
-
+import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 
 // Define interface for NoteContext
 interface NoteContext {
@@ -109,12 +109,9 @@ const mockNotes: Note[] = [
   }),
 ];
 
-// Create a mock repository
-const mockRepository: Partial<ProfileRepository> = {
-  getProfile: async () => {
-    return { ...mockProfile };
-  },
-};
+// Create a mock repository with our standardized mock
+MockProfileRepository.resetInstance();
+const mockRepository = MockProfileRepository.createFresh([mockProfile]);
 
 // Create a mock note context
 const mockNoteContext: NoteContext = {
@@ -153,7 +150,7 @@ ProfileSearchService.createWithApiKey = (_apiKey?: string) => {
   // Mock the embeddingService and tagService with empty objects
   const mockEmbeddingService = {} as ProfileEmbeddingService;
   const mockTagService = {} as ProfileTagService;
-  return new ProfileSearchService(mockRepository as ProfileRepository, mockEmbeddingService, mockTagService);
+  return new ProfileSearchService(mockRepository as unknown as ProfileRepository, mockEmbeddingService, mockTagService);
 };
 
 describe('ProfileSearchService', () => {
@@ -204,14 +201,18 @@ describe('ProfileSearchService', () => {
   });
   
   test('should handle case when profile is not found', async () => {
-    // Create a service with a repository that returns no profile
-    const emptyRepository: Partial<ProfileRepository> = {
-      getProfile: async () => undefined,
-    };
+    // Use our standardized mock repository with no profiles
+    MockProfileRepository.resetInstance();
+    const emptyRepository = MockProfileRepository.createFresh([]);
+    emptyRepository.getProfile = async () => undefined;
     
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    const serviceWithEmptyRepo = new ProfileSearchService(emptyRepository as ProfileRepository, mockEmbeddingService, mockTagService);
+    const serviceWithEmptyRepo = new ProfileSearchService(
+      emptyRepository as unknown as ProfileRepository, 
+      mockEmbeddingService, 
+      mockTagService
+    );
     
     const results = await serviceWithEmptyRepo.findRelatedNotes(mockNoteContext, 5);
     
@@ -221,20 +222,20 @@ describe('ProfileSearchService', () => {
   });
   
   test('should handle profile without embedding', async () => {
-    // Create a service with a repository that returns a profile without embedding
+    // Create a profile without embedding
     const profileWithoutEmbedding: Profile = {
       ...mockProfile,
       embedding: null,
     };
     
-    const repositoryWithoutEmbedding: Partial<ProfileRepository> = {
-      getProfile: async () => profileWithoutEmbedding,
-    };
+    // Use our standardized mock repository
+    MockProfileRepository.resetInstance();
+    const repositoryWithoutEmbedding = MockProfileRepository.createFresh([profileWithoutEmbedding]);
     
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
     const serviceWithoutEmbedding = new ProfileSearchService(
-      repositoryWithoutEmbedding as ProfileRepository,
+      repositoryWithoutEmbedding as unknown as ProfileRepository,
       mockEmbeddingService,
       mockTagService,
     );
@@ -248,20 +249,20 @@ describe('ProfileSearchService', () => {
   });
   
   test('should handle profile without tags', async () => {
-    // Create a service with a repository that returns a profile without tags
+    // Create a profile without tags
     const profileWithoutTags: Profile = {
       ...mockProfile,
       tags: null,
     };
     
-    const repositoryWithoutTags: Partial<ProfileRepository> = {
-      getProfile: async () => profileWithoutTags,
-    };
+    // Use our standardized mock repository
+    MockProfileRepository.resetInstance();
+    const repositoryWithoutTags = MockProfileRepository.createFresh([profileWithoutTags]);
     
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
     const serviceWithoutTags = new ProfileSearchService(
-      repositoryWithoutTags as ProfileRepository,
+      repositoryWithoutTags as unknown as ProfileRepository,
       mockEmbeddingService,
       mockTagService,
     );

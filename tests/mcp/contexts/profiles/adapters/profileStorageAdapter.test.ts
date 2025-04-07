@@ -7,6 +7,7 @@ import { ProfileStorageAdapter } from '@/mcp/contexts/profiles/adapters/profileS
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { silenceLogger } from '@test/__mocks__';
+import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 import logger from '@utils/logger';
 
 // Mock profile for testing
@@ -41,17 +42,24 @@ const mockProfile: Profile = {
   volunteerWork: null,
 };
 
-// Create a mock repository
+// Create a mock repository that wraps our standardized implementation but adds spies
 function createMockRepository() {
-  return {
+  // Create a fresh instance of our standardized MockProfileRepository
+  MockProfileRepository.resetInstance();
+  const mockRepo = MockProfileRepository.createFresh([mockProfile]);
+  
+  // Add spies to the methods we need to track
+  const spiedRepo = {
+    ...mockRepo,
     getProfile: mock(() => Promise.resolve(mockProfile)),
     insertProfile: mock((profile: Profile) => Promise.resolve(profile.id || 'new-id')),
     updateProfile: mock(() => Promise.resolve(true)),
     deleteProfile: mock(() => Promise.resolve(true)),
-    // Include other methods that might be called
     getById: mock(() => Promise.resolve(mockProfile)),
     deleteById: mock(() => Promise.resolve(true)),
-  } as unknown as ProfileRepository;
+  };
+  
+  return spiedRepo as unknown as ProfileRepository;
 }
 
 describe('ProfileStorageAdapter', () => {

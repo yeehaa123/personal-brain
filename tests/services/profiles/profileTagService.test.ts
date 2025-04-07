@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
 import { ProfileTagService } from '@/services/profiles/profileTagService';
-import { MockProfileRepository } from '@test';
+import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 
 
 // Mock the tag extractor module
@@ -89,7 +89,8 @@ describe('ProfileTagService', () => {
   
   beforeEach(() => {
     // Create a fresh repository with the initial profile
-    repository = new MockProfileRepository(mockProfile);
+    MockProfileRepository.resetInstance();
+    repository = MockProfileRepository.createFresh([mockProfile]);
     
     // Create the service
     tagService = new ProfileTagService();
