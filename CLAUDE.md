@@ -67,6 +67,69 @@ import { mockFetch } from '@test/helpers/outputUtils';
 import { createMockNote } from '../../../__mocks__/models/note';
 ```
 
+### Mock Implementation Patterns
+
+This codebase uses two primary patterns for mock implementations:
+
+1. **Mock Classes** - For services, repositories, and components that follow the Component Interface Standardization pattern:
+
+```typescript
+// In @test/__mocks__/services/mockSearchService.ts
+export class MockSearchService implements SearchService {
+  // Singleton pattern implementation
+  private static instance: MockSearchService | null = null;
+  
+  static getInstance(): MockSearchService {
+    if (!MockSearchService.instance) {
+      MockSearchService.instance = new MockSearchService();
+    }
+    return MockSearchService.instance;
+  }
+  
+  static resetInstance(): void {
+    MockSearchService.instance = null;
+  }
+  
+  static createFresh(options?: MockOptions): MockSearchService {
+    const service = new MockSearchService();
+    // Set up the mock with options if provided
+    if (options?.results) {
+      service.mockResults = options.results;
+    }
+    return service;
+  }
+  
+  // Mock state
+  private mockResults: SearchResult[] = [];
+  
+  // Implement interface methods
+  async search(query: string): Promise<SearchResult[]> {
+    return this.mockResults;
+  }
+}
+```
+
+2. **Factory Functions** - For simpler data objects that don't need state management:
+
+```typescript
+// In @test/__mocks__/models/mockNote.ts
+export function createMockNote(
+  id = 'mock-note-id',
+  title = 'Mock Note Title',
+  tags = ['mock', 'test'],
+  content = 'Mock note content'
+): Note {
+  return {
+    id,
+    title,
+    tags,
+    content,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  };
+}
+```
+
 ### Environment Setup
 
 Use standard environment helpers for test setup/teardown:
@@ -91,17 +154,68 @@ describe('Your Test Suite', () => {
 
 ### Test Isolation Patterns
 
-- Reset singletons between test suites with `resetInstance()`
-- Create isolated components with `createFresh()`
-- Use `setupDependencyContainer()` for dependency isolation
+This codebase uses a standardized pattern for test isolation that ensures components and their dependencies are properly reset between tests:
+
+#### 1. Reset Singletons in beforeEach
+
+Always reset singleton instances before each test to prevent test interference:
+
+```typescript
+import { beforeEach, describe, test } from 'bun:test';
+import { MyService } from '@/services/myService';
+
+describe('My Service Tests', () => {
+  // Reset singleton before each test
+  beforeEach(() => {
+    MyService.resetInstance();
+    // Reset other related singletons if needed
+    DependencyService.resetInstance();
+  });
+  
+  test('should perform some operation', () => {
+    // Get a clean instance for this test
+    const service = MyService.getInstance();
+    // Test with a clean state...
+  });
+});
+```
+
+#### 2. Use createFresh for Isolated Testing
+
+When you need special configurations that shouldn't affect the singleton:
+
+```typescript
+test('should handle special configuration', () => {
+  // Create an isolated instance with special config
+  const service = MyService.createFresh({
+    specialMode: true,
+    customTimeout: 5000,
+  });
+  
+  // Test this specific configuration without affecting the singleton
+  expect(service.getTimeout()).toBe(5000);
+});
+```
+
+#### 3. Use Dependency Injection
+
+For testing interaction between components:
 
 ```typescript
 import { setupDependencyContainer } from '@test/helpers/di/containerUtils';
 
 test('component with isolated dependencies', () => {
-  const { cleanup } = setupDependencyContainer();
+  const { container, cleanup } = setupDependencyContainer();
+  
   try {
-    // Test with isolated dependencies
+    // Register mock dependencies
+    container.register('logger', MockLogger.createFresh());
+    container.register('repository', MockRepository.createFresh(initialData));
+    
+    // Create component under test
+    const service = MyService.createFresh({ container });
+    
+    // Test with controlled dependencies...
   } finally {
     // Clean up dependencies
     cleanup();
@@ -113,29 +227,73 @@ test('component with isolated dependencies', () => {
 
 ### Recommended Patterns
 
-1. **Singleton with getInstance()**: Use static getInstance() method for components that should have a single instance. Always include resetInstance() and createFresh() methods for testing.
+1. **Component Interface Standardization Pattern**: Use a consistent pattern for all singleton components with getInstance/resetInstance/createFresh methods.
    ```typescript
-   // Singleton instance
-   private static instance: MyClass | null = null;
-   
-   // Get the singleton instance
-   public static getInstance(options?: Options): MyClass {
-     if (!MyClass.instance) {
-       MyClass.instance = new MyClass(options);
+   /**
+    * Your class documentation
+    */
+   export class MyClass {
+     // Singleton instance, always null initially
+     private static instance: MyClass | null = null;
+     
+     // Private constructor to enforce getInstance() usage
+     private constructor(options?: Options) {
+       // Implementation...
      }
-     return MyClass.instance;
-   }
-   
-   // Reset the singleton instance (primarily for testing)
-   public static resetInstance(): void {
-     MyClass.instance = null;
-   }
-   
-   // Create a fresh instance (primarily for testing)
-   public static createFresh(options?: Options): MyClass {
-     return new MyClass(options);
+     
+     /**
+      * Get the singleton instance of the component
+      * @param options Configuration options
+      * @returns The shared instance
+      */
+     public static getInstance(options?: Options): MyClass {
+       if (!MyClass.instance) {
+         MyClass.instance = new MyClass(options);
+       }
+       return MyClass.instance;
+     }
+     
+     /**
+      * Reset the singleton instance (primarily for testing)
+      * This clears the instance and any resources it holds
+      */
+     public static resetInstance(): void {
+       // Clean up any resources if needed
+       if (MyClass.instance) {
+         // MyClass.instance.cleanup();
+       }
+       MyClass.instance = null;
+     }
+     
+     /**
+      * Create a fresh instance (primarily for testing)
+      * This creates a new instance without affecting the singleton
+      * @param options Configuration options
+      * @returns A new instance
+      */
+     public static createFresh(options?: Options): MyClass {
+       return new MyClass(options);
+     }
    }
    ```
+
+   This pattern has been implemented in several categories of components:
+   
+   1. **Contexts**: BaseContext, ConversationContext, NoteContext, ProfileContext, ExternalSourceContext
+   2. **Managers**: ContextManager, ConversationManager, ProfileManager, ExternalSourceManager
+   3. **Services**: All repository and service classes in services/ directory
+   4. **Protocol**: BrainProtocol
+   5. **Transport**: HeartbeatSSETransport
+   
+   Using this pattern consistently provides several benefits:
+   
+   - **Singletons with controlled access**: Components that should have only one instance
+   - **Testability**: The resetInstance() method enables proper test isolation
+   - **Flexibility**: createFresh() enables creating instances for special test cases
+   - **Clear configuration**: Config interfaces provide type safety for initialization options
+   - **Consistent API**: All components have the same interface for instantiation
+
+   > Note: An ESLint rule enforces that any class with getInstance() must also include resetInstance() and createFresh() methods.
 
 2. **Interface-First Design**: Define clear interfaces before implementing classes to ensure proper separation of concerns.
    ```typescript
