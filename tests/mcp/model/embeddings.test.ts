@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import { EmbeddingService } from '@/mcp/model';
 import { createMockEmbedding } from '@test/__mocks__/';
-import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 

@@ -1,27 +1,10 @@
 /**
- * Test utilities for the personal-brain project
+ * Output and mocking utilities for testing
  * 
- * This file provides common test utilities like environment setup/teardown,
- * output capture, dependency injection setup, and function mocking.
- * 
- * NOTE: Mock implementations have been moved to the standardized mock system
- * in the tests/__mocks__ directory.
+ * This file provides utilities for capturing console output and mocking functions
+ * for use in tests.
  */
-import { afterAll, beforeAll, mock } from 'bun:test';
-
-import { createContainer, useTestContainer } from '@/utils/dependencyContainer';
-
-import { 
-  clearStandardTestEnv, 
-  clearTestEnv, 
-  setTestEnv,
-  setupStandardTestEnv,
-} from './utils/envUtils';
-
-// Re-export environment utilities with preferred names
-export const setMockEnv = setupStandardTestEnv;
-export const clearMockEnv = clearStandardTestEnv;
-export { setTestEnv, clearTestEnv };
+import { mock } from 'bun:test';
 
 /**
  * Helper to capture console output
@@ -172,66 +155,4 @@ export function mockFetch(): () => void {
   return () => {
     globalThis.fetch = originalFetch;
   };
-}
-
-/**
- * Manage the dependency container for tests
- * This ensures clean isolation between test suites that use DI
- */
-export function setupDependencyContainer(): { cleanup: () => void } {
-  // Create a fresh container for this test suite
-  const testContainer = createContainer();
-  
-  // Use this container for all tests in this suite
-  const restoreContainer = useTestContainer(testContainer);
-  
-  return {
-    // Provide cleanup that restores the original container and clears the test container
-    cleanup: () => {
-      if (testContainer && typeof testContainer.clear === 'function') {
-        testContainer.clear();
-      }
-      restoreContainer();
-    },
-  };
-}
-
-/**
- * Setup and teardown utilities for test suites using dependency injection
- * @param options Additional setup options
- */
-export function setupDITestSuite(
-  options: { mockFetch?: boolean } = { mockFetch: true },
-): void {
-  let diCleanup: (() => void) | null = null;
-  let fetchCleanup: (() => void) | null = null;
-  
-  // Use the already imported hooks from the global scope
-  // This avoids the require() style import
-  
-  beforeAll(() => {
-    // Setup dependency container isolation
-    const container = setupDependencyContainer();
-    diCleanup = container.cleanup;
-    
-    // Ensure the container is properly reset for each test
-    // This is critical for test isolation
-    // Just use the cleanup function we have
-    
-    // Setup fetch mocking if requested
-    if (options.mockFetch) {
-      fetchCleanup = mockFetch();
-    }
-  });
-  
-  afterAll(() => {
-    // Clean up in reverse order
-    if (fetchCleanup) {
-      fetchCleanup();
-    }
-    
-    if (diCleanup) {
-      diCleanup();
-    }
-  });
 }

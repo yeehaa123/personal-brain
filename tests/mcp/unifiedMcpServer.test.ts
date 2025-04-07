@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 import { createUnifiedMcpServer } from '@/mcp';
 import type { UnifiedMcpServerConfig } from '@/mcp';
 import { createMockEmbedding } from '@test/__mocks__/';
-import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 // Mock the Anthropic client

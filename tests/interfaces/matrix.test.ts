@@ -6,7 +6,7 @@ import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 import { mockEnv, resetMocks } from '@test/mocks';
-import { clearTestEnv, setTestEnv } from '@test/utils/envUtils';
+import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 

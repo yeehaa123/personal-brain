@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { CommandHandler } from '@commands/index';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { mockEnv } from '@test/mocks';
-import { setTestEnv } from '@test/utils/envUtils';
+import { setTestEnv } from '@test/helpers/envUtils';
 
 // Skip these tests by default as they're integration tests
 // Run with: ENABLE_INTEGRATION_TESTS=1 bun test tests/interfaces/matrix-save-note-integration.test.ts

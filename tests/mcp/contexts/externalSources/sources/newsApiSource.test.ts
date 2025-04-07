@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { NewsApiSource } from '@/mcp/contexts/externalSources/sources/newsApiSource';
 import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
-import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Helper to access private methods safely without using intersection types
 // This approach avoids the "never" type issue

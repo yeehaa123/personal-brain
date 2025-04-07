@@ -3,7 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 import { ExternalSourceContext } from '@/mcp';
 import { setupMcpServerMocks as createMockServerMock } from '@test/__mocks__/utils/mcpUtils';
 import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/__mocks__/utils/mcpUtils';
-import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 
 // Create a mock MCP server 

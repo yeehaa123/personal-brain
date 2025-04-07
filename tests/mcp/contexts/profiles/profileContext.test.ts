@@ -5,7 +5,7 @@ import type { Profile } from '@/models/profile';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { setupAnthropicMocks, setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';
 import { setupMcpServerMocks as createMockMcpServer } from '@test/__mocks__/utils/mcpUtils';
-import { clearMockEnv, setMockEnv } from '@test/test-utils';
+import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 
 // Import the mock server creator that doesn't take parameters
