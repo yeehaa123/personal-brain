@@ -15,10 +15,21 @@ interface Logger {
 }
 
 /**
+ * Configuration options for MockLogger to match real Logger
+ */
+interface MockLoggerConfig {
+  silent?: boolean;
+  [key: string]: unknown;
+}
+
+/**
  * Mock Logger class with singleton pattern
  */
 export class MockLogger implements Logger {
   static instance: MockLogger | null = null;
+  
+  // Configuration options
+  private config: MockLoggerConfig;
   
   // Tracking logged messages for assertions
   messages: {
@@ -28,7 +39,13 @@ export class MockLogger implements Logger {
     error: string[];
   };
   
-  constructor() {
+  constructor(config: MockLoggerConfig = {}) {
+    // Store config
+    this.config = {
+      silent: config.silent || false,
+      ...config
+    };
+    
     // Initialize empty message tracking
     this.messages = {
       info: [],
@@ -40,10 +57,14 @@ export class MockLogger implements Logger {
   
   /**
    * Get singleton instance
+   * @param config Configuration options
    */
-  public static getInstance(): MockLogger {
+  public static getInstance(config?: MockLoggerConfig): MockLogger {
     if (!MockLogger.instance) {
-      MockLogger.instance = new MockLogger();
+      MockLogger.instance = new MockLogger(config);
+    } else if (config && Object.keys(config).length > 0) {
+      // Update existing instance config
+      MockLogger.instance.updateConfig(config);
     }
     return MockLogger.instance;
   }
@@ -57,28 +78,48 @@ export class MockLogger implements Logger {
   
   /**
    * Create a fresh instance for isolated testing
+   * @param config Configuration options
    */
-  public static createFresh(): MockLogger {
-    return new MockLogger();
+  public static createFresh(config?: MockLoggerConfig): MockLogger {
+    return new MockLogger(config);
+  }
+  
+  /**
+   * Update the configuration
+   * @param config New configuration options
+   */
+  private updateConfig(config: MockLoggerConfig): void {
+    this.config = {
+      ...this.config,
+      ...config
+    };
   }
   
   /**
    * Mock logger methods
    */
   info(message: string, ..._args: unknown[]): void {
-    this.messages.info.push(message);
+    if (!this.config.silent) {
+      this.messages.info.push(message);
+    }
   }
   
   debug(message: string, ..._args: unknown[]): void {
-    this.messages.debug.push(message);
+    if (!this.config.silent) {
+      this.messages.debug.push(message);
+    }
   }
   
   warn(message: string, ..._args: unknown[]): void {
-    this.messages.warn.push(message);
+    if (!this.config.silent) {
+      this.messages.warn.push(message);
+    }
   }
   
   error(message: string, ..._args: unknown[]): void {
-    this.messages.error.push(message);
+    if (!this.config.silent) {
+      this.messages.error.push(message);
+    }
   }
   
   /**
@@ -101,17 +142,18 @@ export class MockLogger implements Logger {
 
 /**
  * Create a mock logger instance
+ * @param config Logger configuration
  */
-export function createMockLogger(): MockLogger {
-  return MockLogger.createFresh();
+export function createMockLogger(config?: MockLoggerConfig): MockLogger {
+  return MockLogger.createFresh(config);
 }
 
 /**
  * Setup global mock for logger
  */
 export function setupLoggerMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
-  // Create a default mock logger
-  const mockLogger = createMockLogger();
+  // Create a default mock logger that's silent in test mode
+  const mockLogger = createMockLogger({ silent: process.env.NODE_ENV === 'test' });
   
   // Mock the logger module for both implementations:
   // 1. Old logger (default export)
@@ -120,9 +162,9 @@ export function setupLoggerMocks(mockFn: { module: (name: string, factory: () =>
     default: mockLogger,
     createLogger: () => mockLogger,
     Logger: {
-      getInstance: () => mockLogger,
+      getInstance: (config?: MockLoggerConfig) => MockLogger.getInstance(config),
       resetInstance: () => MockLogger.resetInstance(),
-      createFresh: () => createMockLogger(),
+      createFresh: (config?: MockLoggerConfig) => MockLogger.createFresh(config),
     },
   }));
 }

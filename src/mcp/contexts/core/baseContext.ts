@@ -3,11 +3,16 @@
  * 
  * Provides a standard implementation that all contexts should extend.
  * This ensures consistent behavior across different context types.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance 
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type { 
   ContextInterface, 
@@ -16,20 +21,38 @@ import type {
 } from './contextInterface';
 
 /**
+ * Configuration options for BaseContext
+ */
+export interface BaseContextConfig {
+  [key: string]: unknown;
+}
+
+/**
  * Abstract base class that implements ContextInterface
  * All specific contexts should extend this class
  */
 export abstract class BaseContext implements ContextInterface {
+  // Note: Each derived class should implement their own instance property
+  // Using private in the derived class: private static instance: DerivedClass | null = null;
+  
+  /** Logger instance */
+  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /** McpServer instance */
   protected mcpServer: McpServer;
+  
+  /** Resources and tools collections */
   protected resources: ResourceDefinition[] = [];
   protected tools: ResourceDefinition[] = [];
+  
+  /** Ready state flag */
   protected readyState: boolean = false;
   
   /**
-   * Constructor for BaseContext
+   * Private constructor to enforce the use of getInstance() or createFresh()
    * @param config Configuration object for the context
    */
-  constructor(protected config: Record<string, unknown> = {}) {
+  protected constructor(protected config: Record<string, unknown> = {}) {
     // Create MCP server with context info
     this.mcpServer = {
       name: this.getContextName(),
@@ -59,6 +82,40 @@ export abstract class BaseContext implements ContextInterface {
   protected abstract initializeMcpComponents(): void;
   
   /**
+   * Get the singleton instance
+   * This is an abstract method that derived classes must implement
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance of the derived class
+   */
+  static getInstance(_options?: Record<string, unknown>): BaseContext {
+    throw new Error('getInstance must be implemented by derived classes');
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This is an abstract method that derived classes must implement
+   * 
+   * This clears the instance and any resources it holds
+   */
+  static resetInstance(): void {
+    throw new Error('resetInstance must be implemented by derived classes');
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This is an abstract method that derived classes must implement
+   * 
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options for the context
+   * @returns A new instance of the derived class
+   */
+  static createFresh(_options?: Record<string, unknown>): BaseContext {
+    throw new Error('createFresh must be implemented by derived classes');
+  }
+  
+  /**
    * Initialize the context
    * @returns Promise resolving to true if initialization was successful
    */
@@ -68,7 +125,7 @@ export abstract class BaseContext implements ContextInterface {
       this.readyState = true;
       return true;
     } catch (error) {
-      logger.error(`Error initializing ${this.getContextName()}`, { error, context: 'BaseContext' });
+      this.logger.error(`Error initializing ${this.getContextName()}`, { error, context: 'BaseContext' });
       this.readyState = false;
       return false;
     }
@@ -107,7 +164,7 @@ export abstract class BaseContext implements ContextInterface {
       this.registerMcpTools(server);
       return true;
     } catch (error) {
-      logger.error(`Error registering ${this.getContextName()} on server`, { error, context: 'BaseContext' });
+      this.logger.error(`Error registering ${this.getContextName()} on server`, { error, context: 'BaseContext' });
       return false;
     }
   }
@@ -166,25 +223,5 @@ export abstract class BaseContext implements ContextInterface {
    */
   getTools(): ResourceDefinition[] {
     return [...this.tools];
-  }
-  
-  /**
-   * Create an index file for core components
-   */
-  static getInstance(_options?: Record<string, unknown>): BaseContext {
-    throw new Error('getInstance must be implemented by derived classes');
-  }
-  
-  static resetInstance(): void {
-    throw new Error('resetInstance must be implemented by derived classes');
-  }
-  
-  /**
-   * Create a fresh instance (primarily for testing)
-   * @param options Configuration options for the context
-   * @returns A new BaseContext instance
-   */
-  static createFresh(_options?: Record<string, unknown>): BaseContext {
-    throw new Error('createFresh must be implemented by derived classes');
   }
 }

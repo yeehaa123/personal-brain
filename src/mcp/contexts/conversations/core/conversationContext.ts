@@ -4,6 +4,11 @@
  * This refactored version extends BaseContext to ensure consistent behavior
  * with other context implementations. It also uses specialized services
  * for different responsibilities.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance 
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { nanoid } from 'nanoid';
@@ -29,7 +34,7 @@ import { ConversationToolService } from '@/mcp/contexts/conversations/tools';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 /**
  * Configuration options for ConversationContext
@@ -108,6 +113,7 @@ export interface HistoryOptions {
  * It delegates specialized functionality to service components.
  */
 export class ConversationContext extends BaseContext {
+  /** The singleton instance */
   private static instance: ConversationContext | null = null;
 
   /**
@@ -136,31 +142,52 @@ export class ConversationContext extends BaseContext {
   private memoryService: ConversationMemoryService;
 
   /**
-   * Get singleton instance of ConversationContext
-   * @param config Configuration options
-   * @returns The context instance
+   * Get the singleton instance of ConversationContext
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  static override getInstance(config: Record<string, unknown> = {}): ConversationContext {
+  static override getInstance(options: Record<string, unknown> = {}): ConversationContext {
     if (!ConversationContext.instance) {
-      ConversationContext.instance = new ConversationContext(config as ConversationContextConfig);
+      ConversationContext.instance = new ConversationContext(options as ConversationContextConfig);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationContext singleton instance created');
+    } else if (Object.keys(options).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ConversationContext.instance;
   }
 
   /**
-   * Create a fresh instance for testing
-   * @param config Configuration options
-   * @returns A new context instance
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
-  static override createFresh(config: Record<string, unknown> = {}): ConversationContext {
-    return new ConversationContext(config as ConversationContextConfig);
+  static override resetInstance(): void {
+    if (ConversationContext.instance) {
+      // Any cleanup needed before destroying the instance
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationContext singleton instance reset');
+      
+      ConversationContext.instance = null;
+    }
   }
 
   /**
-   * Reset the singleton instance
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new ConversationContext instance
    */
-  static override resetInstance(): void {
-    ConversationContext.instance = null;
+  static override createFresh(options: Record<string, unknown> = {}): ConversationContext {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ConversationContext instance');
+    
+    return new ConversationContext(options as ConversationContextConfig);
   }
 
   /**
@@ -175,10 +202,10 @@ export class ConversationContext extends BaseContext {
   }
 
   /**
-   * Create a new ConversationContext
+   * Private constructor to enforce the use of getInstance() or createFresh()
    * @param config Configuration options
    */
-  constructor(config: ConversationContextConfig = {}) {
+  private constructor(config: ConversationContextConfig = {}) {
     // Extract values before calling super
     const name = config.name || 'ConversationBrain';
     const version = config.version || '1.0.0';
@@ -234,7 +261,7 @@ export class ConversationContext extends BaseContext {
       }
     } catch (error) {
       // Fall back to direct instantiation if DI fails
-      logger.warn('Failed to resolve services via DI, falling back to direct instantiation', {
+      this.logger.warn('Failed to resolve services via DI, falling back to direct instantiation', {
         context: 'ConversationContext',
         error,
       });
@@ -256,7 +283,7 @@ export class ConversationContext extends BaseContext {
     this.resources = this.resourceService.getResources(this);
     this.tools = this.toolService.getTools(this);
 
-    logger.debug('ConversationContext initialized with BaseContext architecture and services', {
+    this.logger.debug('ConversationContext initialized with BaseContext architecture and services', {
       context: 'ConversationContext',
     });
   }
@@ -387,7 +414,7 @@ export class ConversationContext extends BaseContext {
         }
       }).catch(_error => {
         // Fall back to direct instantiation if dynamic import fails
-        logger.warn('Failed to update DI container, falling back to direct instantiation', { 
+        this.logger.warn('Failed to update DI container, falling back to direct instantiation', { 
           context: 'ConversationContext', 
         });
         
@@ -403,7 +430,7 @@ export class ConversationContext extends BaseContext {
       });
     } catch (_error) {
       // Fall back to direct instantiation if DI fails
-      logger.warn('Error in setStorage, falling back to direct instantiation', {
+      this.logger.warn('Error in setStorage, falling back to direct instantiation', {
         context: 'ConversationContext',
       });
       
@@ -716,12 +743,12 @@ export class ConversationContext extends BaseContext {
           await newStorage.addSummary(newConversationId, summary);
         }
 
-        logger.debug(`Migrated conversation ${conversation.id} to new storage`, { context: 'ConversationContext' });
+        this.logger.debug(`Migrated conversation ${conversation.id} to new storage`, { context: 'ConversationContext' });
       } catch (error) {
-        logger.error(`Error migrating conversation ${conversationInfo.id}:`, { error, context: 'ConversationContext' });
+        this.logger.error(`Error migrating conversation ${conversationInfo.id}:`, { error, context: 'ConversationContext' });
       }
     }
 
-    logger.info(`Completed migration of ${conversations.length} conversations to new storage`, { context: 'ConversationContext' });
+    this.logger.info(`Completed migration of ${conversations.length} conversations to new storage`, { context: 'ConversationContext' });
   }
 }
