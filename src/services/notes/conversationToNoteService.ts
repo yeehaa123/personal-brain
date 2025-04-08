@@ -1,45 +1,172 @@
 /**
  * Service for converting conversations to permanent notes
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { nanoid } from 'nanoid';
 
 import { ConversationContext, type ConversationStorage } from '@/mcp/contexts/conversations';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { NewNote, Note } from '@/models/note';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { extractTags } from '@/utils/tagExtractor';
 
-import type { NoteEmbeddingService } from './noteEmbeddingService';
-import type { NoteRepository } from './noteRepository';
+import { NoteEmbeddingService } from './noteEmbeddingService';
+import { NoteRepository } from './noteRepository';
 
 export class ConversationToNoteService {
   private noteRepository: NoteRepository;
   private embeddingService: NoteEmbeddingService;
   private conversationStorage: ConversationStorage;
-
+  
+  /**
+   * Singleton instance of ConversationToNoteService
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: ConversationToNoteService | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Get the singleton instance of the service
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param noteRepository Repository for accessing notes (defaults to singleton instance)
+   * @param embeddingService Service for note embeddings (defaults to singleton instance)
+   * @param conversationStorage Optional custom conversation storage
+   * @returns The singleton instance
+   */
+  public static getInstance(
+    noteRepository?: NoteRepository,
+    embeddingService?: NoteEmbeddingService,
+    conversationStorage?: ConversationStorage,
+  ): ConversationToNoteService {
+    if (!ConversationToNoteService.instance) {
+      // Get dependencies from their respective singletons if not provided
+      const actualRepository = noteRepository ?? NoteRepository.getInstance();
+      const actualEmbeddingService = embeddingService ?? NoteEmbeddingService.getInstance();
+      
+      ConversationToNoteService.instance = new ConversationToNoteService(
+        actualRepository,
+        actualEmbeddingService,
+        conversationStorage,
+      );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationToNoteService singleton instance created');
+    } else if (noteRepository || embeddingService || conversationStorage) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
+    }
+    
+    return ConversationToNoteService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // Clean up resources if needed
+      if (ConversationToNoteService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ConversationToNoteService instance reset:', error);
+    } finally {
+      ConversationToNoteService.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationToNoteService singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh service instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param noteRepository Repository for accessing notes
+   * @param embeddingService Service for note embeddings
+   * @param conversationStorage Optional custom conversation storage
+   * @returns A new ConversationToNoteService instance
+   */
+  public static createFresh(
+    noteRepository: NoteRepository,
+    embeddingService: NoteEmbeddingService,
+    conversationStorage?: ConversationStorage,
+  ): ConversationToNoteService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ConversationToNoteService instance');
+    
+    return new ConversationToNoteService(noteRepository, embeddingService, conversationStorage);
+  }
+  
+  /**
+   * Create a new ConversationToNoteService
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * 
+   * @param noteRepository Repository for accessing notes
+   * @param embeddingService Service for note embeddings
+   * @param conversationStorage Optional custom conversation storage
+   */
   constructor(
     noteRepository: NoteRepository, 
     embeddingService: NoteEmbeddingService,
     conversationStorage?: ConversationStorage,
   ) {
+    this.logger.debug('Creating ConversationToNoteService instance');
+    
+    // Validate required dependencies
+    if (!noteRepository) {
+      throw new Error('NoteRepository is required for ConversationToNoteService');
+    }
+    
+    if (!embeddingService) {
+      throw new Error('NoteEmbeddingService is required for ConversationToNoteService');
+    }
+    
     this.noteRepository = noteRepository;
     this.embeddingService = embeddingService;
     
     // Use provided storage or get from ConversationContext
     // Note: In tests, always pass explicit storage for proper isolation
     if (conversationStorage) {
+      this.logger.debug('Using provided conversation storage');
       this.conversationStorage = conversationStorage;
     } else {
+      this.logger.debug('Getting conversation storage from ConversationContext');
       const contextStorage = ConversationContext.getInstance().getStorage();
+      
       // If it's the adapter, get the underlying storage
       if ('getStorageImplementation' in contextStorage) {
+        this.logger.debug('Using storage implementation from adapter');
         this.conversationStorage = (contextStorage as unknown as { 
           getStorageImplementation(): ConversationStorage 
         }).getStorageImplementation();
       } else {
+        this.logger.debug('Using storage directly from context');
         this.conversationStorage = contextStorage as ConversationStorage;
       }
     }
+    
+    this.logger.debug('ConversationToNoteService instance created');
   }
 
   /**
@@ -115,9 +242,9 @@ export class ConversationToNoteService {
     let formattedContent = '';
     
     // Add debug information about all turns
-    logger.debug(`Processing ${turns.length} turns for note creation`);
+    this.logger.debug(`Processing ${turns.length} turns for note creation`);
     turns.forEach((turn, idx) => {
-      logger.debug(`Turn ${idx}: userId=${turn.userId}, query=${turn.query ? 'present' : 'empty'}, response=${turn.response ? 'present' : 'empty'}`);
+      this.logger.debug(`Turn ${idx}: userId=${turn.userId}, query=${turn.query ? 'present' : 'empty'}, response=${turn.response ? 'present' : 'empty'}`);
     });
     
     // We need to go through the turns and correctly pair user questions with assistant answers
@@ -127,7 +254,7 @@ export class ConversationToNoteService {
       const isUser = turn.userId !== 'assistant';
       
       // Add detailed debug logging for userId detection
-      logger.debug(`Turn ${i}: userId=${turn.userId}, isUser=${isUser}, has query=${!!turn.query}, has response=${!!turn.response}`);
+      this.logger.debug(`Turn ${i}: userId=${turn.userId}, isUser=${isUser}, has query=${!!turn.query}, has response=${!!turn.response}`);
       
       if (isUser) {
         // This is a user question
@@ -143,22 +270,22 @@ export class ConversationToNoteService {
           
           if (isAssistant) {
             // Add debug info about the matching assistant turn
-            logger.debug(`Found assistant turn at index ${j} with userId=${nextTurn.userId}`);
+            this.logger.debug(`Found assistant turn at index ${j} with userId=${nextTurn.userId}`);
             
             // Found an assistant turn
             if (nextTurn.response) {
               // Log debug info about the response
               if (nextTurn.response.includes('<') && nextTurn.response.includes('>')) {
-                logger.debug(`HTML tags found in response: ${nextTurn.response.substring(0, 100)}...`);
+                this.logger.debug(`HTML tags found in response: ${nextTurn.response.substring(0, 100)}...`);
               }
               
               // Check if the response is empty
               const trimmedResponse = nextTurn.response.trim();
               if (trimmedResponse.length === 0) {
-                logger.debug(`Empty response found in assistant turn ${j}`);
+                this.logger.debug(`Empty response found in assistant turn ${j}`);
                 formattedContent += '**Answer**: (No response)\n\n';
               } else {
-                logger.debug(`Found valid response in assistant turn ${j}: "${trimmedResponse.substring(0, 50)}..."`);
+                this.logger.debug(`Found valid response in assistant turn ${j}: "${trimmedResponse.substring(0, 50)}..."`);
                 // Clean HTML from responses before adding to note content
                 const cleanResponse = this.sanitizeHtmlIfPresent(nextTurn.response);
                 formattedContent += `**Answer**: ${cleanResponse}\n\n`;
@@ -166,7 +293,7 @@ export class ConversationToNoteService {
               foundAnswer = true;
               break;
             } else {
-              logger.debug(`Assistant turn ${j} has undefined or null response`);
+              this.logger.debug(`Assistant turn ${j} has undefined or null response`);
               // Found an assistant turn but with empty response
               formattedContent += '**Answer**: (No response)\n\n';
               foundAnswer = true;
@@ -226,10 +353,11 @@ export class ConversationToNoteService {
    */
   private async generateTagsFromContent(content: string): Promise<string[]> {
     try {
+      this.logger.debug('Generating tags for note content');
       return await extractTags(content);
     } catch (error) {
       // Log at debug level since we have a fallback mechanism
-      logger.debug('Tag extraction API failed, using fallback keyword extraction:', error);
+      this.logger.debug('Tag extraction API failed, using fallback keyword extraction:', error);
       // Extract keywords as fallback
       return this.extractKeywords(content);
     }
@@ -291,7 +419,7 @@ export class ConversationToNoteService {
       const conversation = await this.conversationStorage.getConversation(conversationId);
       
       if (!conversation) {
-        logger.warn(`Cannot link note: Conversation ${conversationId} not found`);
+        this.logger.warn(`Cannot link note: Conversation ${conversationId} not found`);
         return;
       }
       
@@ -301,9 +429,9 @@ export class ConversationToNoteService {
         noteCreatedAt: new Date(),
       });
       
-      logger.info(`Linked conversation ${conversationId} to note ${noteId}`);
+      this.logger.info(`Linked conversation ${conversationId} to note ${noteId}`);
     } catch (error) {
-      logger.error(`Error linking conversation ${conversationId} to note ${noteId}:`, error);
+      this.logger.error(`Error linking conversation ${conversationId} to note ${noteId}:`, error);
     }
   }
   
@@ -346,7 +474,7 @@ export class ConversationToNoteService {
     text: string,
   ): Promise<boolean> {
     // This will be implemented when we have access to the conversation storage
-    logger.debug(`Highlighting segment in conversation ${conversationId}, turn ${turnId}: ${text}`);
+    this.logger.debug(`Highlighting segment in conversation ${conversationId}, turn ${turnId}: ${text}`);
     return true; // Placeholder for successful operation
   }
   
@@ -357,7 +485,7 @@ export class ConversationToNoteService {
   private sanitizeHtmlIfPresent(text: string): string {
     // Check if the text contains HTML tags
     if (text.includes('<') && text.includes('>') && /<\/?[a-z]/.test(text)) {
-      logger.debug('Sanitizing HTML from response for note content');
+      this.logger.debug('Sanitizing HTML from response for note content');
       
       // Replace HTML tags with appropriate markdown or text alternatives
       return text
