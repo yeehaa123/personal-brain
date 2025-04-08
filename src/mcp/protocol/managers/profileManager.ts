@@ -1,13 +1,18 @@
 /**
  * Profile Manager for BrainProtocol
  * Manages profile information and relevance analysis
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { relevanceConfig } from '@/config';
 import type { ProfileContext } from '@/mcp';
 import { EmbeddingService } from '@/mcp/model';
 import { ProfileAnalyzer } from '@/mcp/protocol/components/profileAnalyzer';
 import type { Profile } from '@/models/profile';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
 
 import type { IProfileManager, ProfileAnalysisResult } from '../types';
@@ -26,8 +31,16 @@ export interface ProfileManagerConfig {
  * Manages profile information and relevance
  */
 export class ProfileManager implements IProfileManager {
-  // Singleton instance
+  /**
+   * Singleton instance of ProfileManager
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ProfileManager | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   private profileContext: ProfileContext;
   private profileAnalyzer: ProfileAnalyzer;
@@ -35,37 +48,75 @@ export class ProfileManager implements IProfileManager {
 
   /**
    * Get the singleton instance of ProfileManager
-   * @param config Configuration options
-   * @returns The shared ProfileManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param config Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
   public static getInstance(config: ProfileManagerConfig): ProfileManager {
     if (!ProfileManager.instance) {
       ProfileManager.instance = new ProfileManager(config);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileManager singleton instance created');
+    } else if (config && Object.keys(config).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ProfileManager.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ProfileManager.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ProfileManager.instance) {
+        // Any cleanup needed would go here
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ProfileManager instance reset:', error);
+    } finally {
+      ProfileManager.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileManager singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh ProfileManager instance (primarily for testing)
+   * Create a fresh ProfileManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @param config Configuration options
    * @returns A new ProfileManager instance
    */
   public static createFresh(config: ProfileManagerConfig): ProfileManager {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileManager instance');
+    
     return new ProfileManager(config);
   }
 
   /**
    * Create a new profile manager
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
+   * 
    * @param config Configuration options containing profile context and optional API key
    */
-  private constructor(config: ProfileManagerConfig) {
+  public constructor(config: ProfileManagerConfig) {
     this.profileContext = config.profileContext;
     
     // Initialize the profile analyzer
@@ -75,7 +126,7 @@ export class ProfileManager implements IProfileManager {
     // Load profile asynchronously
     this.loadProfile();
     
-    logger.debug('Profile manager initialized');
+    this.logger.debug('Profile manager initialized');
   }
 
   /**
@@ -88,12 +139,12 @@ export class ProfileManager implements IProfileManager {
       if (isDefined(profileResult)) {
         // Set profile only if we got a valid result
         this.profile = profileResult;
-        logger.info('Profile loaded successfully');
+        this.logger.info('Profile loaded successfully');
       } else {
-        logger.info('No profile found');
+        this.logger.info('No profile found');
       }
     } catch (error) {
-      logger.error('Error loading profile:', error);
+      this.logger.error('Error loading profile:', error);
       // Explicitly set profile to undefined in case of error
       this.profile = undefined;
     }
@@ -138,20 +189,29 @@ export class ProfileManager implements IProfileManager {
       relevanceConfig.fallback.highRelevance : 
       relevanceConfig.fallback.lowRelevance;
     
+    this.logger.debug(`Initial profile relevance determination: ${isProfileQuery ? 'high' : 'low'}`);
+    
     // Get the profile
     const profile = await this.getProfile();
     
     // Calculate relevance if we have a profile with embeddings
     if (isDefined(profile) && isDefined(profile.embedding)) {
-      relevance = await this.profileAnalyzer.getProfileRelevance(query, profile);
-      logger.debug(`Profile semantic relevance: ${relevance.toFixed(2)}`);
-      
-      // If relevance is high enough, consider it a profile query
-      if (relevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
-        logger.info('Query is semantically relevant to profile');
-        // Update isProfileQuery based on relevance
-        return { isProfileQuery: true, relevance };
+      try {
+        relevance = await this.profileAnalyzer.getProfileRelevance(query, profile);
+        this.logger.debug(`Profile semantic relevance: ${relevance.toFixed(2)}`);
+        
+        // If relevance is high enough, consider it a profile query
+        if (relevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
+          this.logger.info(`Query is semantically relevant to profile (score: ${relevance.toFixed(2)})`);
+          // Update isProfileQuery based on relevance
+          return { isProfileQuery: true, relevance };
+        }
+      } catch (error) {
+        this.logger.error('Error calculating profile relevance:', error);
+        // Fall back to initial determination
       }
+    } else {
+      this.logger.debug('No profile or embedding available for semantic relevance calculation');
     }
     
     return { isProfileQuery, relevance };

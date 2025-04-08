@@ -12,6 +12,7 @@
 
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import type { Response } from 'express';
+
 import { Logger } from '@utils/logger';
 
 // Interface for ExpressResponse to make TypeScript happy with our cast

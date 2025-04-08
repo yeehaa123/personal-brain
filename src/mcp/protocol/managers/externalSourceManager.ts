@@ -1,6 +1,11 @@
 /**
  * External Source Manager for BrainProtocol
  * Manages external knowledge sources
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
@@ -8,7 +13,7 @@ import { ExternalSourceService } from '@/mcp/protocol/components/externalSourceS
 import type { ProfileAnalyzer } from '@/mcp/protocol/components/profileAnalyzer';
 import type { PromptFormatter } from '@/mcp/protocol/components/promptFormatter';
 import type { Note } from '@/models/note';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type { IExternalSourceManager } from '../types';
 
@@ -30,16 +35,27 @@ export interface ExternalSourceManagerConfig {
  * Manages external knowledge sources
  */
 export class ExternalSourceManager implements IExternalSourceManager {
-  // Singleton instance
+  /**
+   * Singleton instance of ExternalSourceManager
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ExternalSourceManager | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   private externalSourceService: ExternalSourceService | null;
   private enabled: boolean;
 
   /**
    * Get the singleton instance of ExternalSourceManager
-   * @param config Configuration options
-   * @returns The shared ExternalSourceManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param config Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
   public static getInstance(config: ExternalSourceManagerConfig): ExternalSourceManager {
     if (!ExternalSourceManager.instance) {
@@ -49,23 +65,55 @@ export class ExternalSourceManager implements IExternalSourceManager {
         config.promptFormatter,
         config.enabled,
       );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ExternalSourceManager singleton instance created');
+    } else if (config && Object.keys(config).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ExternalSourceManager.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ExternalSourceManager.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ExternalSourceManager.instance && ExternalSourceManager.instance.externalSourceService) {
+        // Any cleanup needed for the service would go here
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ExternalSourceManager instance reset:', error);
+    } finally {
+      ExternalSourceManager.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ExternalSourceManager singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh ExternalSourceManager instance (primarily for testing)
+   * Create a fresh ExternalSourceManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @param config Configuration options
    * @returns A new ExternalSourceManager instance
    */
   public static createFresh(config: ExternalSourceManagerConfig): ExternalSourceManager {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ExternalSourceManager instance');
+    
     return new ExternalSourceManager(
       config.externalSourceContext,
       config.profileAnalyzer,
@@ -76,12 +124,15 @@ export class ExternalSourceManager implements IExternalSourceManager {
 
   /**
    * Create a new external source manager
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
+   * 
    * @param externalSourceContext External source context
    * @param profileAnalyzer Profile analyzer for relevance checks
    * @param promptFormatter Prompt formatter for excerpts
    * @param enabled Whether external sources are enabled
    */
-  private constructor(
+  public constructor(
     externalSourceContext: ExternalSourceContext | null,
     profileAnalyzer: ProfileAnalyzer,
     promptFormatter: PromptFormatter,
@@ -96,10 +147,10 @@ export class ExternalSourceManager implements IExternalSourceManager {
         profileAnalyzer,
         promptFormatter,
       );
-      logger.debug('External source manager initialized with service');
+      this.logger.debug('External source manager initialized with service');
     } else {
       this.externalSourceService = null;
-      logger.debug('External source manager initialized without service');
+      this.logger.debug('External source manager initialized without service');
     }
   }
 
@@ -117,7 +168,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
    */
   setEnabled(enabled: boolean): void {
     this.enabled = enabled;
-    logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
+    this.logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -129,6 +180,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
   async getExternalResults(query: string, relevantNotes: Note[]): Promise<ExternalSourceResult[] | null> {
     // If not enabled or no service, return null
     if (!this.enabled || !this.externalSourceService) {
+      this.logger.debug('External sources are disabled or service not initialized');
       return null;
     }
     
@@ -136,13 +188,21 @@ export class ExternalSourceManager implements IExternalSourceManager {
     const shouldQueryExternal = this.externalSourceService.shouldQueryExternalSources(query, relevantNotes);
     
     if (shouldQueryExternal) {
-      logger.info('Querying external sources for additional context');
-      const results = await this.externalSourceService.fetchExternalContext(query);
-      
-      if (results && results.length > 0) {
-        logger.info(`Found ${results.length} relevant external sources`);
-        return results;
+      this.logger.info('Querying external sources for additional context');
+      try {
+        const results = await this.externalSourceService.fetchExternalContext(query);
+        
+        if (results && results.length > 0) {
+          this.logger.info(`Found ${results.length} relevant external sources`);
+          return results;
+        } else {
+          this.logger.debug('No relevant external sources found');
+        }
+      } catch (error) {
+        this.logger.error('Error fetching external context:', error);
       }
+    } else {
+      this.logger.debug('External sources query not needed based on relevant notes');
     }
     
     return null;
