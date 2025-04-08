@@ -71,6 +71,16 @@ const {activeTurns, summaries, archivedTurns} = await conversationContext.getTie
    - Implement helper functions to facilitate the transition
    - Add logging to track usage during development
 
+4. **Add Tiered Memory Management Commands**
+   - Implement CLI and Matrix commands for tiered memory control:
+     - `memory-status`: Show current memory tiers and usage
+     - `summarize`: Force summarization of oldest active turns
+     - `recall`: Bring archived turns back into active memory
+     - `forget`: Archive specific turns to reduce context
+     - `memory-config`: View/update tiered memory configuration
+   - Create dedicated formatters for displaying memory tier information
+   - Implement proper permission checks for memory management commands
+
 ### Phase 2: Make Properties Optional (1 day)
 
 1. **Update Schema Definitions**
@@ -135,15 +145,27 @@ const {activeTurns, summaries, archivedTurns} = await conversationContext.getTie
    - Run performance tests to ensure no regressions
    - Check memory usage improvements
 
-### Phase 5: Documentation and Knowledge Sharing (0.5 day)
+### Phase 5: Documentation and User Experience (1 day)
 
 1. **Update Architecture Documentation**
    - Document the new conversation data access patterns
    - Update CLAUDE.md with guidance on using the tiered memory system
+   - Create developer docs for working with the tiered memory API
 
-2. **Knowledge Sharing**
+2. **Improve Tiered Memory Visualization**
+   - Create visual representation of memory tiers in CLI and Matrix
+   - Add memory status indicators in conversation display
+   - Implement visual cues for summarized content
+
+3. **Command Documentation and Help**
+   - Add detailed help for new memory management commands
+   - Create examples and usage scenarios
+   - Implement tab completion for memory management commands
+
+4. **Knowledge Sharing**
    - Share the changes with the team
    - Provide examples of how to access conversation history properly
+   - Conduct demo of new memory management capabilities
 
 ## Files to be Modified
 
@@ -209,20 +231,35 @@ const {activeTurns, summaries, archivedTurns} = await conversationContext.getTie
 
 ## Success Criteria
 
+### Core Refactoring
 1. All direct accesses to conversation turn data are replaced with tiered memory system access
 2. All tests pass with the new architecture
 3. No regression in functionality or performance
 4. Code is cleaner and more maintainable
 5. Documentation is updated to reflect the new architecture
 
+### Enhanced Tiered Memory Management
+6. New command set provides full control over tiered memory system:
+   - Users can view memory status and configuration
+   - Users can control summarization process
+   - Users can manage active/archived content
+7. Memory management UX is intuitive and well-documented
+8. Visualization provides clear indicators of memory state
+9. Memory management commands are available in both CLI and Matrix interfaces
+10. Performance impact of memory management is minimal
+
 ## Timeline
 
-- **Total Estimated Time**: 5-7 days
-- **Phase 1 (Preparation)**: 1-2 days
+- **Total Estimated Time**: 7-9 days
+- **Phase 1 (Preparation)**: 2-3 days
+  - Audit & Analysis: 0.5 day
+  - Enhance Tiered Memory System: 0.5 day
+  - Migration Utilities: 0.5 day
+  - New Tiered Memory Commands: 1-1.5 days
 - **Phase 2 (Make Properties Optional)**: 1 day
 - **Phase 3 (Update Consumption Code)**: 2-3 days
 - **Phase 4 (Complete Removal)**: 1 day
-- **Phase 5 (Documentation)**: 0.5 day
+- **Phase 5 (Documentation and User Experience)**: 1 day
 
 ## Appendix: Example Code Changes
 
