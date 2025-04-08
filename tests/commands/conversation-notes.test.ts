@@ -95,7 +95,7 @@ const mockConversationContext = {
   getTieredHistory: mock(async (_conversationId: string) => ({
     activeTurns: mockConversationTurns,
     summaries: [],
-    archivedTurns: []
+    archivedTurns: [],
   })),
 };
 
@@ -270,7 +270,7 @@ describe('Conversation Notes Commands', () => {
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: mockConversationTurns,
         summaries: [],
-        archivedTurns: []
+        archivedTurns: [],
       }));
       
       // Execute the save-note command
@@ -313,6 +313,53 @@ describe('Conversation Notes Commands', () => {
       expect(notesWithMetadata.length).toBeGreaterThan(0);
     });
     
+    test('should handle save-note command with rich tiered history', async () => {
+      // Create a conversation with empty activeTurns but with summaries and archived turns
+      const conversationWithHistory = {
+        ...mockConversation,
+        activeTurns: [], // Empty activeTurns
+      };
+      
+      // Create mock summaries and archived turns
+      const mockSummary = {
+        id: 'summary1',
+        conversationId: 'conv123',
+        content: 'This is a summary of previous turns',
+        createdAt: new Date(),
+      };
+      
+      const mockArchivedTurn = {
+        id: 'archived-turn1',
+        timestamp: new Date(Date.now() - 3600000), // 1 hour ago
+        query: 'Old question',
+        response: 'Old answer',
+        userId: 'user1',
+        userName: 'User',
+      };
+      
+      // Override getConversation to return conversation with empty activeTurns
+      mockBrainProtocol.getConversation.mockImplementationOnce(async () => conversationWithHistory);
+      
+      // Mock a rich tiered history
+      mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
+        activeTurns: mockConversationTurns,
+        summaries: [mockSummary],
+        archivedTurns: [mockArchivedTurn]
+      }));
+      
+      // Execute the save-note command
+      const result = await commandHandler.processCommand('save-note', '');
+
+      // Verify the command succeeds with turns from tiered history
+      expect(result.type).toBe('save-note-preview');
+      
+      // Verify context.getTieredHistory was called
+      expect(mockConversationContext.getTieredHistory).toHaveBeenCalledWith('conv123');
+      
+      // Verify prepareNotePreview was called with the active turns from tiered history
+      expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
+    });
+    
     test('should handle confirmation when activeTurns is empty but turns are in tiered history', async () => {
       // Create a conversation with empty activeTurns
       const emptyTurnsConversation = {
@@ -327,7 +374,7 @@ describe('Conversation Notes Commands', () => {
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: mockConversationTurns,
         summaries: [],
-        archivedTurns: []
+        archivedTurns: [],
       }));
       
       // Execute the confirmation
@@ -338,6 +385,82 @@ describe('Conversation Notes Commands', () => {
       
       // Verify context.getTieredHistory was called instead of using activeTurns
       expect(mockConversationContext.getTieredHistory).toHaveBeenCalledWith('conv123');
+    });
+    
+    test('should handle multi-level tiered memory with summarized turns', async () => {
+      // Create a conversation with a complex memory hierarchy
+      const complexMemoryConversation = {
+        ...mockConversation,
+        activeTurns: [], // Empty activeTurns
+      };
+      
+      // Create an extensive tiered memory setup
+      const recentTurns = [
+        {
+          id: 'turn-recent1',
+          timestamp: new Date(),
+          query: 'What is the most recent question?',
+          response: 'This is the most recent answer',
+          userId: 'user1',
+          userName: 'User',
+        },
+        {
+          id: 'turn-recent2',
+          timestamp: new Date(),
+          query: 'Another recent question?',
+          response: 'Another recent answer',
+          userId: 'assistant',
+          userName: 'Assistant',
+        }
+      ];
+      
+      const oldSummaries = [
+        {
+          id: 'summary1',
+          conversationId: 'conv123',
+          content: 'First conversation summary covering older turns',
+          createdAt: new Date(Date.now() - 86400000), // 1 day ago
+        },
+        {
+          id: 'summary2',
+          conversationId: 'conv123',
+          content: 'Second conversation summary covering mid-age turns',
+          createdAt: new Date(Date.now() - 43200000), // 12 hours ago
+        }
+      ];
+      
+      const archivedTurns = [
+        {
+          id: 'turn-old1',
+          timestamp: new Date(Date.now() - 86400000), // 1 day ago
+          query: 'What was asked in the beginning?',
+          response: 'This was the first answer',
+          userId: 'user1',
+          userName: 'User',
+        }
+      ];
+      
+      // Override getConversation to return the complex conversation
+      mockBrainProtocol.getConversation.mockImplementationOnce(async () => complexMemoryConversation);
+      
+      // Mock a rich tiered history with multiple levels
+      mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
+        activeTurns: recentTurns, // Only recent turns are active
+        summaries: oldSummaries,
+        archivedTurns: archivedTurns
+      }));
+      
+      // Execute the save-note command
+      const result = await commandHandler.processCommand('save-note', '');
+
+      // Verify the command succeeds with turns from tiered history
+      expect(result.type).toBe('save-note-preview');
+      
+      // Verify tiered history was used, not activeTurns from conversation
+      expect(mockConversationContext.getTieredHistory).toHaveBeenCalledWith('conv123');
+      
+      // Verify the prepareNotePreview was called
+      expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
     });
   });
 
