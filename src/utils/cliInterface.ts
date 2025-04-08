@@ -1,5 +1,8 @@
 /**
  * CLI Interface utility using Inquirer for prompts and Chalk for styling
+ * 
+ * TODO: This class will be updated as part of the CLI/logger separation initiative
+ * See planning/cli-logger-separation.md for the detailed plan
  */
 import { clearInterval, setInterval } from 'timers';
 

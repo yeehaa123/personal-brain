@@ -1,6 +1,9 @@
 /**
  * CLI Renderer for command results
  * This module handles formatting and displaying command results in the CLI
+ * 
+ * TODO: This class will be updated as part of the CLI/logger separation initiative
+ * See planning/cli-logger-separation.md for the detailed plan
  */
 /* global setTimeout */
 

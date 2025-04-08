@@ -5,6 +5,9 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * 
+ * TODO: This class will be updated as part of the CLI/logger separation initiative
+ * See planning/cli-logger-separation.md for the detailed plan
  */
 import winston from 'winston';
 

@@ -13,22 +13,28 @@ This document outlines the development plan for the Personal Brain project, focu
 
 ## Current Priorities
 
-1. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
+1. **CLI Interface Improvements**: Separate logger output from CLI content
+   - Create clear visual distinction between logs and actual content
+   - Add option to control log visibility (hide/show/log level)
+   - Implement consistent formatting across output types
+   - See detailed plan in `planning/cli-logger-separation.md`
+
+2. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
    - Move from in-memory to database storage
    - Support archiving and retrieval of old conversations
    - Implement cross-conversation knowledge transfer
 
-2. **Memory Usage Optimization**: Implement token counting for precise context management
+3. **Memory Usage Optimization**: Implement token counting for precise context management
    - Add token counting to replace turn counting for memory management
    - Optimize prompt formatting based on token usage
    - Add intelligent context selection based on relevance and token limits
 
-3. **Matrix Interface Enhancements**: Continue improving the Matrix interface
+4. **Matrix Interface Enhancements**: Continue improving the Matrix interface
    - Support Markdown rendering in Matrix
    - Add image embedding in responses
    - Improve formatting of citations and external sources
 
-4. **Integration with PKM Tools**: Add support for other personal knowledge management tools
+5. **Integration with PKM Tools**: Add support for other personal knowledge management tools
    - Implement import/export for tools like Obsidian or Logseq
    - Support standard markdown formats with frontmatter
    - Create bidirectional linking capabilities
