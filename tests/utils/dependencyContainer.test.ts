@@ -160,9 +160,9 @@ describe('DependencyContainer', () => {
       initialServices: {
         'preConfigured': {
           factory: () => new TestService1('preconfigured'),
-          singleton: true
-        }
-      }
+          singleton: true,
+        },
+      },
     };
     
     const container = DependencyContainer.createFresh(config);

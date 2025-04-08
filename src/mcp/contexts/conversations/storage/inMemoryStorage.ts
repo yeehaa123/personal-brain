@@ -1,10 +1,15 @@
 /**
  * In-memory implementation of ConversationStorage
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { nanoid } from 'nanoid';
 
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type {
   ConversationInfo,
@@ -15,8 +20,36 @@ import type {
 } from './conversationStorage';
 
 /**
+ * Configuration options for InMemoryStorage
+ */
+export interface InMemoryStorageConfig {
+  /**
+   * Initial conversations to populate the storage with
+   */
+  initialConversations?: Map<string, Conversation>;
+  
+  /**
+   * Initial turns to populate the storage with
+   */
+  initialTurns?: Map<string, ConversationTurn[]>;
+  
+  /**
+   * Initial summaries to populate the storage with
+   */
+  initialSummaries?: Map<string, ConversationSummary[]>;
+  
+  /**
+   * Whether to log verbose debug information
+   */
+  verbose?: boolean;
+}
+
+/**
  * In-memory storage for conversations
  * This implementation stores all data in memory and is lost when the process restarts
+ * 
+ * Follows the Component Interface Standardization pattern with getInstance(),
+ * resetInstance(), and createFresh() methods.
  */
 export class InMemoryStorage implements ConversationStorage {
   private static instance: InMemoryStorage | null = null;
@@ -25,48 +58,106 @@ export class InMemoryStorage implements ConversationStorage {
   private turns: Map<string, ConversationTurn[]> = new Map();
   private summaries: Map<string, ConversationSummary[]> = new Map();
   private roomIndex: Map<string, string> = new Map();
+  private verbose: boolean = false;
+  
+  private logger = Logger.getInstance();
 
   /**
-   * Private constructor to ensure singleton pattern
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param config - Optional configuration options
    */
-  private constructor() {
-    // Initialize storage
+  private constructor(config?: InMemoryStorageConfig) {
+    // Initialize storage with configuration if provided
+    if (config) {
+      if (config.initialConversations) {
+        this.conversations = new Map(config.initialConversations);
+      }
+      
+      if (config.initialTurns) {
+        this.turns = new Map(config.initialTurns);
+      }
+      
+      if (config.initialSummaries) {
+        this.summaries = new Map(config.initialSummaries);
+      }
+      
+      if (config.verbose) {
+        this.verbose = config.verbose;
+      }
+      
+      // Rebuild room index from conversations
+      this.rebuildRoomIndex();
+    }
+    
+    if (this.verbose) {
+      this.logger.debug('InMemoryStorage instance created');
+    }
   }
 
   /**
-   * Get the singleton instance
+   * Get the singleton instance of InMemoryStorage
+   * 
+   * @param config - Optional configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  public static getInstance(): InMemoryStorage {
+  public static getInstance(config?: InMemoryStorageConfig): InMemoryStorage {
     if (!InMemoryStorage.instance) {
-      InMemoryStorage.instance = new InMemoryStorage();
+      InMemoryStorage.instance = new InMemoryStorage(config);
+      
+      // Log instance creation but only on first creation
+      const logger = Logger.getInstance();
+      logger.debug('InMemoryStorage singleton instance created');
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return InMemoryStorage.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state between tests
    */
   public static resetInstance(): void {
-    InMemoryStorage.instance = null;
+    if (InMemoryStorage.instance) {
+      // Clear all data before resetting
+      InMemoryStorage.instance.clear();
+      InMemoryStorage.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('InMemoryStorage singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh instance (primarily for testing)
-   * This method guarantees a completely isolated instance with no shared state
+   * Create a fresh instance that is not the singleton
+   * This method is primarily used for testing to create isolated instances
+   * 
+   * @param config - Optional configuration options
+   * @returns A new InMemoryStorage instance
    */
-  public static createFresh(): InMemoryStorage {
-    // Create a new instance and explicitly initialize empty data structures
-    const instance = new InMemoryStorage();
-    instance.conversations = new Map();
-    instance.turns = new Map();
-    instance.summaries = new Map();
-    instance.roomIndex = new Map();
+  public static createFresh(config?: InMemoryStorageConfig): InMemoryStorage {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh InMemoryStorage instance');
     
-    // Reset the singleton instance to ensure it doesn't interfere with tests
-    // This ensures each test gets a truly isolated environment
-    InMemoryStorage.resetInstance();
+    // Create a new instance and explicitly initialize according to config
+    return new InMemoryStorage(config);
+  }
+  
+  /**
+   * Rebuild the room index from conversations
+   * This is used when initializing with pre-populated conversations
+   */
+  private rebuildRoomIndex(): void {
+    this.roomIndex.clear();
     
-    return instance;
+    for (const conversation of this.conversations.values()) {
+      const roomKey = this.getRoomKey(conversation.roomId, conversation.interfaceType);
+      this.roomIndex.set(roomKey, conversation.id);
+    }
   }
 
   /**
@@ -102,7 +193,9 @@ export class InMemoryStorage implements ConversationStorage {
     const roomKey = this.getRoomKey(conversation.roomId, conversation.interfaceType);
     this.roomIndex.set(roomKey, id);
     
-    logger.debug(`Created conversation ${id} for room ${conversation.roomId}`);
+    if (this.verbose) {
+      this.logger.debug(`Created conversation ${id} for room ${conversation.roomId}`);
+    }
     return id;
   }
 
@@ -528,10 +621,9 @@ export class InMemoryStorage implements ConversationStorage {
     this.summaries.clear();
     this.roomIndex.clear();
     
-    // Reset the static instance to ensure no lingering state
-    InMemoryStorage.instance = null;
-    
-    logger.debug('Cleared all data from InMemoryStorage');
+    if (this.verbose) {
+      this.logger.debug('Cleared all data from InMemoryStorage');
+    }
   }
 
 }

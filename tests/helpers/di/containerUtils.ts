@@ -23,7 +23,8 @@ export function setupDependencyContainer(): { cleanup: () => void } {
   
   // Temporarily replace the singleton with our test container
   DependencyContainer.resetInstance();
-  (DependencyContainer as any).instance = testContainer;
+  // Using type assertion for testing purposes only
+  (DependencyContainer as unknown as { instance: DependencyContainer }).instance = testContainer;
   
   return {
     // Provide cleanup that restores the original container and clears the test container
@@ -33,7 +34,8 @@ export function setupDependencyContainer(): { cleanup: () => void } {
       
       // Restore the original instance
       DependencyContainer.resetInstance();
-      (DependencyContainer as any).instance = originalInstance;
+      // Using type assertion for testing purposes only
+      (DependencyContainer as unknown as { instance: DependencyContainer }).instance = originalInstance;
     },
   };
 }

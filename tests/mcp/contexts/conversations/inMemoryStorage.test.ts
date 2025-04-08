@@ -2,10 +2,101 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 // Import the real implementation
 import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
+import type { InMemoryStorageConfig } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
 
 describe('InMemoryStorage', () => {
   // We don't need to access instance directly as the tests
   // should focus on the public API, not implementation details
+  
+  // Tests for the Component Interface Standardization pattern
+  describe('Component Interface Standardization pattern', () => {
+    beforeEach(() => {
+      // Reset singleton for each test
+      InMemoryStorage.resetInstance();
+    });
+    
+    test('getInstance should return the same instance when called multiple times', () => {
+      const instance1 = InMemoryStorage.getInstance();
+      const instance2 = InMemoryStorage.getInstance();
+      
+      expect(instance1).toBe(instance2);
+    });
+    
+    test('getInstance should accept configuration when creating a new instance', async () => {
+      // Initial config with verbose mode enabled
+      const config: InMemoryStorageConfig = { verbose: true };
+      const instance = InMemoryStorage.getInstance(config);
+      
+      // Add a conversation to verify it works
+      const roomId = 'config-test-room';
+      await instance.createConversation({
+        interfaceType: 'matrix',
+        roomId,
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      // Verify the conversation was created
+      const result = await instance.getConversationByRoom(roomId, 'matrix');
+      expect(result).not.toBeNull();
+    });
+    
+    test('resetInstance should clear the singleton instance', () => {
+      // Get an instance
+      const instance1 = InMemoryStorage.getInstance();
+      
+      // Reset the instance
+      InMemoryStorage.resetInstance();
+      
+      // Get a new instance
+      const instance2 = InMemoryStorage.getInstance();
+      
+      // They should be different objects
+      expect(instance1).not.toBe(instance2);
+    });
+    
+    test('createFresh should create new instances separate from the singleton', () => {
+      // Get the singleton
+      const singleton = InMemoryStorage.getInstance();
+      
+      // Create a fresh instance
+      const fresh = InMemoryStorage.createFresh();
+      
+      // They should be different objects
+      expect(singleton).not.toBe(fresh);
+      
+      // The singleton should still be accessible
+      const singletonAgain = InMemoryStorage.getInstance();
+      expect(singletonAgain).toBe(singleton);
+    });
+    
+    test('getInstance with config should warn but not change existing instance', async () => {
+      // Create first instance
+      const instance1 = InMemoryStorage.getInstance();
+      
+      // Add data to first instance
+      const roomId = 'warning-test-room';
+      await instance1.createConversation({
+        interfaceType: 'matrix',
+        roomId,
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      });
+      
+      // Try to get instance with new config - should return same instance
+      const newConfig: InMemoryStorageConfig = { 
+        initialConversations: new Map(),
+      };
+      const instance2 = InMemoryStorage.getInstance(newConfig);
+      
+      // Should be the same instance
+      expect(instance2).toBe(instance1);
+      
+      // Should still have our conversation
+      const result = await instance2.getConversationByRoom(roomId, 'matrix');
+      expect(result).not.toBeNull();
+    });
+  });
   
   // Tests specifically for the createFresh fix to ensure complete isolation between instances
   describe('createFresh isolation (cross-test contamination fix)', () => {
@@ -45,7 +136,7 @@ describe('InMemoryStorage', () => {
       expect(byRoom2).toBeNull();
     });
     
-    test('clear() should reset singleton instance', async () => {
+    test('clear() should clear all data from the instance', async () => {
       // Create two instances and verify they're isolated
       const instance1 = InMemoryStorage.createFresh();
       
@@ -61,16 +152,9 @@ describe('InMemoryStorage', () => {
       // Explicitly clear the instance
       instance1.clear();
       
-      // Get a new instance - it should be completely fresh
-      const instance2 = InMemoryStorage.createFresh();
-      
-      // Verify new instance has no access to previous data
-      const byRoom = await instance2.getConversationByRoom(roomId, 'matrix');
+      // Verify instance has no more data
+      const byRoom = await instance1.getConversationByRoom(roomId, 'matrix');
       expect(byRoom).toBeNull();
-      
-      // Verify singleton is null or different after clear
-      // @ts-expect-error - Accessing private static field for testing
-      expect(InMemoryStorage.instance).toBeNull();
     });
   });
   
@@ -85,8 +169,7 @@ describe('InMemoryStorage', () => {
     // Explicitly call clear to ensure no lingering state
     storage.clear();
     // Reset singleton instance
-    // @ts-expect-error - Accessing private field for testing
-    InMemoryStorage.instance = null;
+    InMemoryStorage.resetInstance();
   });
 
   describe('createConversation', () => {
