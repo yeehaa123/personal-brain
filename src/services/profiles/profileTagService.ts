@@ -1,12 +1,17 @@
 /**
  * Service for profile tag generation and management
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type {
   ProfileEducation,
   ProfileExperience,
 } from '@/models/profile';
 import type { Profile } from '@/models/profile';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
 import { extractTags } from '@/utils/tagExtractor';
 
@@ -19,40 +24,83 @@ import { ProfileRepository } from './profileRepository';
 export class ProfileTagService {
   private repository: ProfileRepository;
   
-  // Singleton instance
+  /**
+   * Singleton instance of ProfileTagService
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ProfileTagService | null = null;
   
   /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
    * Get the singleton instance of the service
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
    * @returns The shared ProfileTagService instance
    */
   public static getInstance(): ProfileTagService {
     if (!ProfileTagService.instance) {
       ProfileTagService.instance = new ProfileTagService();
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileTagService singleton instance created');
     }
+    
     return ProfileTagService.instance;
   }
   
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ProfileTagService.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ProfileTagService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ProfileTagService instance reset:', error);
+    } finally {
+      ProfileTagService.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileTagService singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh service instance (primarily for testing)
+   * Create a fresh service instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @returns A new ProfileTagService instance
    */
   public static createFresh(): ProfileTagService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileTagService instance');
+    
     return new ProfileTagService();
   }
 
   /**
    * Create a new ProfileTagService
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
    */
   constructor() {
     this.repository = ProfileRepository.getInstance();
+    this.logger.debug('ProfileTagService instance created');
   }
 
   /**
@@ -63,7 +111,7 @@ export class ProfileTagService {
   async generateProfileTags(profileText: string): Promise<string[]> {
     try {
       if (!profileText || typeof profileText !== 'string' || profileText.trim().length === 0) {
-        logger.warn('Empty profile text provided for tag generation');
+        this.logger.warn('Empty profile text provided for tag generation');
         return [];
       }
 
@@ -76,7 +124,7 @@ export class ProfileTagService {
 
       return tags;
     } catch (error) {
-      logger.error(`Error generating profile tags: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error generating profile tags: ${error instanceof Error ? error.message : String(error)}`);
       const profile = await this.repository.getProfile();
       return this.extractProfileKeywords(profile || {});
     }
@@ -88,32 +136,40 @@ export class ProfileTagService {
    * @returns The updated tags or null if operation failed
    */
   async updateProfileTags(forceRegenerate = false): Promise<string[] | null> {
+    this.logger.debug(`Updating profile tags, forceRegenerate=${forceRegenerate}`);
     const profile = await this.repository.getProfile();
 
     if (!profile) {
+      this.logger.warn('Cannot update tags: No profile found');
       return null;
     }
 
     // Check if we need to generate tags
     if (!forceRegenerate && profile.tags && profile.tags.length > 0) {
+      this.logger.debug(`Using existing profile tags: ${profile.tags.join(', ')}`);
       return profile.tags as string[];
     }
 
     try {
       // Get profile text for tag generation
+      this.logger.debug(`Generating new tags for profile ${profile.id}`);
       const profileText = this.getProfileTextForTagGeneration(profile);
       const tags = await this.generateProfileTags(profileText);
 
       if (!tags.length) {
+        this.logger.warn('Tag generation produced no tags');
         return null;
       }
 
+      this.logger.debug(`Generated ${tags.length} tags: ${tags.join(', ')}`);
+      
       // Update profile with new tags
+      this.logger.debug(`Updating profile ${profile.id} with new tags`);
       const success = await this.repository.updateProfile(profile.id, { tags });
       
       return success ? tags : null;
     } catch (error) {
-      logger.error('Error updating profile tags', { 
+      this.logger.error('Error updating profile tags', { 
         error: error instanceof Error ? error.message : String(error),
         context: 'ProfileTagService',
       });
