@@ -195,7 +195,7 @@ export class MatrixResponseFormatter {
     
     // Debug: log if we see any notes with attribution footers
     const notesWithAttributions = notes.filter(note => 
-      note.content.includes('**Note**: This content was derived from a conversation')
+      note.content.includes('**Note**: This content was derived from a conversation'),
     );
     
     if (notesWithAttributions.length > 0) {

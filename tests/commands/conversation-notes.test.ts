@@ -89,11 +89,17 @@ const mockConversationToNoteService = {
   }),
 };
 
+// Mock for ConversationContext 
+const mockConversationContext = {
+  getTurns: mock(async (_conversationId: string) => mockConversationTurns),
+};
+
 // Mock BrainProtocol
 const mockBrainProtocol = {
   hasActiveConversation: mock(() => true),
   getCurrentConversationId: mock(() => 'conv123'),
   getConversation: mock(async (_id: string) => mockConversation),
+  getConversationContext: mock(() => mockConversationContext),
   getNoteContext: mock(() => ({
     getNoteRepository: mock(() => mockRepository),
     getNoteEmbeddingService: mock(() => ({})),
@@ -149,6 +155,22 @@ describe('Conversation Notes Commands', () => {
       return { type: 'error', message: 'Conversation not found.' };
     }
 
+    // Get turns through conversation context rather than relying on conversation.activeTurns
+    let turns = [];
+    try {
+      const conversationContext = mockBrainProtocol.getConversationContext();
+      turns = await conversationContext.getTurns(conversationId);
+    } catch (error) {
+      // Fallback to activeTurns if available
+      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
+        turns = conversation.activeTurns;
+      }
+    }
+
+    if (turns.length === 0) {
+      return { type: 'error', message: 'Conversation has no turns to save.' };
+    }
+
     // Mock service methods don't need the same parameters as the real ones
     const preview = await mockConversationToNoteService.prepareNotePreview();
 
@@ -166,6 +188,22 @@ describe('Conversation Notes Commands', () => {
 
     if (!conversation) {
       return { type: 'error', message: 'Conversation not found.' };
+    }
+
+    // Get turns through conversation context rather than relying on conversation.activeTurns
+    let turns = [];
+    try {
+      const conversationContext = mockBrainProtocol.getConversationContext();
+      turns = await conversationContext.getTurns(conversationId);
+    } catch (error) {
+      // Fallback to activeTurns if available
+      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
+        turns = conversation.activeTurns;
+      }
+    }
+
+    if (turns.length === 0) {
+      return { type: 'error', message: 'Conversation has no turns to save.' };
     }
 
     // First, directly add a note to the repository with the right metadata
@@ -227,6 +265,33 @@ describe('Conversation Notes Commands', () => {
       expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
     });
 
+    test('should handle save-note command when activeTurns is empty but turns are in context', async () => {
+      // Create a conversation with empty activeTurns
+      const emptyTurnsConversation = {
+        ...mockConversation,
+        activeTurns: [], // Empty activeTurns, the old code would fail
+      };
+      
+      // Override getConversation to return conversation with empty activeTurns
+      mockBrainProtocol.getConversation.mockImplementationOnce(async () => emptyTurnsConversation);
+      
+      // Ensure context.getTurns still returns valid turns
+      mockConversationContext.getTurns.mockImplementationOnce(async () => mockConversationTurns);
+      
+      // Execute the save-note command
+      const result = await commandHandler.processCommand('save-note', '');
+
+      // Verify the command still succeeds using turns from context
+      expect(result.type).toBe('save-note-preview');
+      if (result.type === 'save-note-preview') {
+        expect(result.conversationId).toBe('conv123');
+      }
+      
+      // Verify context.getTurns was called instead of using activeTurns
+      expect(mockConversationContext.getTurns).toHaveBeenCalledWith('conv123');
+      expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
+    });
+
     test('should handle confirmation of save-note', async () => {
       // Verify repository's initial state
       expect(mockRepository.notes.length).toBe(1);
@@ -251,6 +316,29 @@ describe('Conversation Notes Commands', () => {
         note => note.conversationMetadata?.conversationId === 'conv123',
       );
       expect(notesWithMetadata.length).toBeGreaterThan(0);
+    });
+    
+    test('should handle confirmation when activeTurns is empty but turns are in context', async () => {
+      // Create a conversation with empty activeTurns
+      const emptyTurnsConversation = {
+        ...mockConversation,
+        activeTurns: [], // Empty activeTurns, the old code would fail
+      };
+      
+      // Override getConversation to return conversation with empty activeTurns
+      mockBrainProtocol.getConversation.mockImplementationOnce(async () => emptyTurnsConversation);
+      
+      // Ensure context.getTurns still returns valid turns
+      mockConversationContext.getTurns.mockImplementationOnce(async () => mockConversationTurns);
+      
+      // Execute the confirmation
+      const result = await commandHandler.confirmSaveNote('conv123', 'Final Title');
+
+      // Verify the command still succeeds using turns from context
+      expect(result.type).toBe('save-note-confirm');
+      
+      // Verify context.getTurns was called instead of using activeTurns
+      expect(mockConversationContext.getTurns).toHaveBeenCalledWith('conv123');
     });
   });
 

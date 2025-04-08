@@ -163,7 +163,7 @@ describe('Matrix Formatters', () => {
           tags: ['tag3'],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        }
+        },
       ];
       
       const result = formatter.formatAnswer(answer, citations, relatedNotes);

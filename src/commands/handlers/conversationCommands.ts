@@ -174,8 +174,24 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get all active turns from the conversation
-    const turns: ConversationTurn[] = conversation.activeTurns;
+    // Get all active turns from the conversation - don't rely on conversation.activeTurns
+    // which may not be populated correctly, instead get turns directly from the conversation context
+    const conversationContext = this.brainProtocol.getConversationContext();
+    let turns: ConversationTurn[] = [];
+    
+    try {
+      // Fetch turns directly from the context
+      turns = await conversationContext.getTurns(conversationId);
+      this.logger.debug(`Retrieved ${turns.length} turns from conversation context`);
+    } catch (error) {
+      this.logger.warn(`Error getting turns directly: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // Fallback to activeTurns if available, but log a warning
+      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
+        turns = conversation.activeTurns;
+        this.logger.warn(`Falling back to conversation.activeTurns (${turns.length} turns)`);
+      }
+    }
     
     // Enhanced debugging for conversation content
     this.logger.debug(`Conversation ID: ${conversationId}`);
@@ -189,7 +205,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       
       this.logger.debug(`Turn ${index + 1} (${role}):`);
       if (isUser) {
-        this.logger.debug(`  Query: ${turn.query.substring(0, 50)}...`);
+        this.logger.debug(`  Query: ${turn.query?.substring(0, 50) || '<no query>'}...`);
       } else {
         this.logger.debug(`  Response length: ${turn.response?.length || 0}`);
         
@@ -240,8 +256,24 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get all active turns from the conversation
-    const turns: ConversationTurn[] = conversation.activeTurns;
+    // Get all active turns from the conversation using conversation context
+    const conversationContext = this.brainProtocol.getConversationContext();
+    let turns: ConversationTurn[] = [];
+    
+    try {
+      // Fetch turns directly from the context
+      turns = await conversationContext.getTurns(conversationId);
+      this.logger.debug(`Retrieved ${turns.length} turns from conversation context for confirmation`);
+    } catch (error) {
+      this.logger.warn(`Error getting turns directly for confirmation: ${error instanceof Error ? error.message : String(error)}`);
+      
+      // Fallback to activeTurns if available, but log a warning
+      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
+        turns = conversation.activeTurns;
+        this.logger.warn(`Falling back to conversation.activeTurns for confirmation (${turns.length} turns)`);
+      }
+    }
+    
     if (turns.length === 0) {
       return this.formatError('Conversation has no turns to save.');
     }
