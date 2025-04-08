@@ -13,42 +13,49 @@ This document outlines the development plan for the Personal Brain project, focu
 
 ## Current Priorities
 
-1. **CLI Interface Improvements**: Separate logger output from CLI content
+1. **[HIGH PRIORITY] Conversation Schema Refactoring**: Remove direct access to conversation turns data
+   - Eliminate direct access to conversation history data through Conversation object properties
+   - Establish the TieredMemoryManager as the single source of truth for conversation history
+   - Create a cleaner, more maintainable architecture with clear responsibilities
+   - Prevent potential bugs from inconsistent access patterns
+   - See detailed plan in [`planning/conversation-schema-refactoring.md`](/planning/conversation-schema-refactoring.md)
+
+2. **CLI Interface Improvements**: Separate logger output from CLI content
    - Create clear visual distinction between logs and actual content
    - Add option to control log visibility (hide/show/log level)
    - Implement consistent formatting across output types
-   - See detailed plan in `planning/cli-logger-separation.md`
+   - See detailed plan in [`planning/cli-logger-separation.md`](/planning/cli-logger-separation.md)
 
-2. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
+3. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
    - Move from in-memory to database storage
    - Support archiving and retrieval of old conversations
    - Implement cross-conversation knowledge transfer
 
-3. **Memory Usage Optimization**: Implement token counting for precise context management
+4. **Memory Usage Optimization**: Implement token counting for precise context management
    - Add token counting to replace turn counting for memory management
    - Optimize prompt formatting based on token usage
    - Add intelligent context selection based on relevance and token limits
 
-4. **Matrix Interface Enhancements**: Continue improving the Matrix interface
+5. **Matrix Interface Enhancements**: Continue improving the Matrix interface
    - Support Markdown rendering in Matrix
    - Add image embedding in responses
    - Improve formatting of citations and external sources
    - Create visually distinct bot messages
    - Implement Matrix "slack-like blocks" if viable
-   - See detailed plan in `planning/matrix-interface-improvements.md`
+   - See detailed plan in [`planning/matrix-interface-improvements.md`](/planning/matrix-interface-improvements.md)
 
-5. **Integration with PKM Tools**: Add support for other personal knowledge management tools
+6. **Integration with PKM Tools**: Add support for other personal knowledge management tools
    - Implement import/export for tools like Obsidian or Logseq
    - Support standard markdown formats with frontmatter
    - Create bidirectional linking capabilities
-   - See detailed plan in `planning/import-export-capabilities.md`
+   - See detailed plan in [`planning/import-export-capabilities.md`](/planning/import-export-capabilities.md)
 
-6. **Knowledge Navigation Enhancements**: Improve discovery and browsing experience
+7. **Knowledge Navigation Enhancements**: Improve discovery and browsing experience
    - Implement advanced search with filters for tags and content types
    - Improve preview formatting for search results
    - Add "Related notes" suggestions when viewing content
    - Create multiple navigation paths (tags, similarity, timeline)
-   - See detailed plan in `planning/knowledge-navigation-enhancements.md`
+   - See detailed plan in [`planning/knowledge-navigation-enhancements.md`](/planning/knowledge-navigation-enhancements.md)
 
 ## Future Development
 
