@@ -52,8 +52,8 @@ export class ClaudeModel {
       ClaudeModel.instance = new ClaudeModel(options?.apiKey, options?.model);
       logger.debug('ClaudeModel singleton instance created');
     } else if (options && Object.keys(options).length > 0) {
-      // Log a warning if trying to get instance with different config
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      // Log at debug level if trying to get instance with different config
+      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
     return ClaudeModel.instance;

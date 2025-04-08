@@ -197,7 +197,7 @@ export class EmbeddingService {
       }
     } else if (config) {
       // Log a warning if trying to get instance with different config
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     return EmbeddingService.instance;
   }

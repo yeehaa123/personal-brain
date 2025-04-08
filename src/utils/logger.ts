@@ -147,8 +147,8 @@ export class Logger {
     if (!Logger.instance) {
       Logger.instance = new Logger(config);
     } else if (config) {
-      // Log a warning if trying to get instance with different config
-      Logger.instance.warn('getInstance called with config but instance already exists. Config ignored.');
+      // Silent mode - only log this at debug level instead of warning
+      Logger.instance.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     return Logger.instance;
   }

@@ -90,9 +90,9 @@ export class ProfileContext extends BaseContext {
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileContext singleton instance created');
     } else if (Object.keys(options).length > 0) {
-      // Log a warning if trying to get instance with different config
+      // Log at debug level if trying to get instance with different config
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
     return ProfileContext.instance;

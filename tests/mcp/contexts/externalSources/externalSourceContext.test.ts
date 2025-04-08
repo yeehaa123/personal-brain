@@ -30,12 +30,12 @@ const mockEmbeddingService = {
 
 // Spy on the getInstance method
 const origEmbeddingServiceGetInstance = EmbeddingService.getInstance;
-const embeddingServiceGetInstanceSpy = mock(() => mockEmbeddingService);
+const embeddingServiceGetInstanceSpy = mock<typeof EmbeddingService.getInstance>(() => mockEmbeddingService as unknown as EmbeddingService);
 
 // Mock the storage adapter's getInstance method
 const origStorageAdapterGetInstance = ExternalSourceStorageAdapter.getInstance;
 const mockStorageAdapter = MockExternalSourceStorageAdapter.createFresh();
-const storageAdapterGetInstanceSpy = mock(() => mockStorageAdapter);
+const storageAdapterGetInstanceSpy = mock<typeof ExternalSourceStorageAdapter.getInstance>(() => mockStorageAdapter as unknown as ExternalSourceStorageAdapter);
 
 describe('ExternalSourceContext', () => {
   // Set up before each test to ensure isolation
@@ -163,7 +163,7 @@ describe('ExternalSourceContext', () => {
     ];
     
     // Set up search method spy
-    const searchSpy = mock(criteria => Promise.resolve(mockResults));
+    const searchSpy = mock((_criteria) => Promise.resolve(mockResults));
     mockStorageAdapter.search = searchSpy;
     
     // Create a context with our mocked storage
