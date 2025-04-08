@@ -235,7 +235,7 @@ export class ConversationToNoteService {
   private formatConversationAsNote(turns: ConversationTurn[], userEdits?: string): string {
     // Use userEdits content if provided (user has edited the conversation)
     if (userEdits) {
-      return this.addAttributionHeader(userEdits, turns);
+      return this.addAttributionFooter(userEdits, turns);
     }
     
     // Group the turns into question-answer pairs for proper formatting
@@ -313,26 +313,28 @@ export class ConversationToNoteService {
       }
     }
     
-    return this.addAttributionHeader(formattedContent, turns);
+    return this.addAttributionFooter(formattedContent, turns);
   }
   
   /**
-   * Add attribution header to note content
+   * Add attribution footer to note content
    */
-  private addAttributionHeader(content: string, turns: ConversationTurn[]): string {
+  private addAttributionFooter(content: string, turns: ConversationTurn[]): string {
     const firstTurn = turns[0];
     // We don't need lastTurn for now
     const dateStr = firstTurn.timestamp ? 
       firstTurn.timestamp.toISOString().split('T')[0] : 
       new Date().toISOString().split('T')[0];
     
-    const header = `> **Note**: This content was derived from a conversation on ${dateStr}.
-> **Source**: Conversation with AI assistant
-> **Original Query**: "${firstTurn.query}"
+    const footer = `
 
-`;
+---
+
+> **Note**: This content was derived from a conversation on ${dateStr}.
+> **Source**: Conversation with AI assistant
+> **Original Query**: "${firstTurn.query}"`;
     
-    return header + content;
+    return content + footer;
   }
   
   /**

@@ -178,7 +178,7 @@ describe('ConversationToNoteService', () => {
     expect(insertCall.title).toBe('What is ecosystem architecture?');
   });
 
-  test('should format conversation with attribution header', async () => {
+  test('should format conversation with attribution footer', async () => {
     const result = await service.prepareNotePreview(
       sampleConversation,
       sampleTurns,
@@ -191,7 +191,11 @@ describe('ConversationToNoteService', () => {
     // Should contain formatted turns
     expect(result.content).toContain('**Question**: What is ecosystem architecture?');
     expect(result.content).toContain('**Answer**: Ecosystem architecture refers to...');
-
+    
+    // The attribution should be at the end (after the content)
+    const contentParts = result.content.split('---');
+    expect(contentParts.length).toBeGreaterThan(1);
+    expect(contentParts[contentParts.length - 1]).toContain('**Note**: This content was derived from a conversation');
   });
 
   test('should handle user-edited content', async () => {
