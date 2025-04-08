@@ -3,6 +3,11 @@
  * 
  * This version extends BaseContext to ensure consistent behavior
  * with other context implementations.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance 
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
@@ -19,7 +24,7 @@ import type {
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
 import { DependencyContainer } from '@/utils/dependencyContainer';
 import { getService } from '@/utils/dependencyContainer';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 
 import { ProfileStorageAdapter } from '../adapters/profileStorageAdapter';
@@ -53,6 +58,9 @@ export interface ProfileContextConfig {
  * services, repositories, and MCP components.
  */
 export class ProfileContext extends BaseContext {
+  /** Logger instance - overrides the protected one from BaseContext */
+  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   // Dependencies
   private repository: ProfileRepository;
   private embeddingService: ProfileEmbeddingService;
@@ -71,34 +79,57 @@ export class ProfileContext extends BaseContext {
   
   /**
    * Get singleton instance of ProfileContext
-   * @param config Optional configuration for the context
-   * @returns The ProfileContext instance
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  static override getInstance(config: ProfileContextConfig = {}): ProfileContext {
+  static override getInstance(options: ProfileContextConfig = {}): ProfileContext {
     if (!ProfileContext.instance) {
-      ProfileContext.instance = new ProfileContext(config);
+      ProfileContext.instance = new ProfileContext(options);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileContext singleton instance created');
+    } else if (Object.keys(options).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ProfileContext.instance;
   }
   
   /**
-   * Create a fresh instance of ProfileContext (for testing)
-   * @param config Optional configuration for the context
-   * @returns A new ProfileContext instance
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
-  static override createFresh(config: ProfileContextConfig = {}): ProfileContext {
-    return new ProfileContext(config);
+  static override resetInstance(): void {
+    if (ProfileContext.instance) {
+      // Any cleanup needed before destroying the instance
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileContext singleton instance reset');
+      
+      ProfileContext.instance = null;
+    }
   }
   
   /**
-   * Reset the singleton instance (for testing)
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new ProfileContext instance
    */
-  static override resetInstance(): void {
-    ProfileContext.instance = null;
+  static override createFresh(options: ProfileContextConfig = {}): ProfileContext {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileContext instance');
+    
+    return new ProfileContext(options);
   }
 
   /**
-   * Create a new ProfileContext
+   * Constructor for ProfileContext
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
    * @param config Configuration for the context
    */
   constructor(config: ProfileContextConfig = {}) {
@@ -120,7 +151,7 @@ export class ProfileContext extends BaseContext {
     // Initialize formatter
     this.formatter = new ProfileFormatter();
     
-    logger.debug('ProfileContext initialized with BaseContext architecture', { context: 'ProfileContext' });
+    this.logger.debug('ProfileContext initialized with BaseContext architecture', { context: 'ProfileContext' });
   }
 
   /**
@@ -246,7 +277,7 @@ export class ProfileContext extends BaseContext {
       // Use the adapter's getProfile method as a convenience
       return await (this.storage as ProfileStorageAdapter).getProfile();
     } catch (error) {
-      logger.error('Failed to retrieve profile', { error, context: 'ProfileContext' });
+      this.logger.error('Failed to retrieve profile', { error, context: 'ProfileContext' });
       return undefined;
     }
   }
@@ -300,7 +331,7 @@ export class ProfileContext extends BaseContext {
         return this.storage.create(newProfile);
       }
     } catch (error) {
-      logger.error('Failed to save profile', { error, context: 'ProfileContext' });
+      this.logger.error('Failed to save profile', { error, context: 'ProfileContext' });
       throw error;
     }
   }

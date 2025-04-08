@@ -16,7 +16,7 @@ import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/source
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { Profile } from '@models/profile';
-import logger from '@utils/logger';
+import { Logger } from '@utils/logger';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
 
 import { ExternalSourceService } from './components/externalSourceService';
@@ -40,6 +40,17 @@ export interface BrainProtocolOptions {
 }
 
 export class BrainProtocol {
+  /**
+   * Singleton instance of BrainProtocol
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: BrainProtocol | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   // Core services
   private model: ClaudeModel;
   private context: NoteContext;
@@ -68,44 +79,77 @@ export class BrainProtocol {
   private currentConversationId: string | null = null;
 
   /**
-   * Creates a new instance of the BrainProtocol
-   * @param options Options or legacy API key parameter
-   * @param newsApiKey Legacy news API key parameter
-   * @param useExternalSources Legacy external sources flag
+   * Get the singleton instance of BrainProtocol
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  // Singleton instance
-  private static instance: BrainProtocol | null = null;
-
-  /**
-   * Get singleton instance of BrainProtocol
-   * @param options Configuration options
-   * @param forceNew Create a new instance (for testing)
-   * @returns The BrainProtocol instance
-   */
-  public static getInstance(options?: BrainProtocolOptions, forceNew = false): BrainProtocol {
-    if (!BrainProtocol.instance || forceNew) {
+  public static getInstance(options?: BrainProtocolOptions): BrainProtocol {
+    if (!BrainProtocol.instance) {
       BrainProtocol.instance = new BrainProtocol(options);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('BrainProtocol singleton instance created');
+    } else if (options && Object.keys(options).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return BrainProtocol.instance;
   }
 
   /**
-   * Reset the singleton instance (for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    BrainProtocol.instance = null;
+    try {
+      // Close/cleanup if needed
+      if (BrainProtocol.instance) {
+        // No cleanup needed currently
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during BrainProtocol instance reset:', error);
+    } finally {
+      BrainProtocol.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('BrainProtocol singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh instance (primarily for testing)
+   * Create a fresh instance without affecting the singleton
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to create isolated instances.
+   * 
    * @param options Configuration options
    * @returns A new BrainProtocol instance
    */
   public static createFresh(options?: BrainProtocolOptions): BrainProtocol {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh BrainProtocol instance');
     return new BrainProtocol(options);
   }
 
-  constructor(
+  /**
+   * Private constructor to enforce factory method usage
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Users should call getInstance() or createFresh() instead.
+   * 
+   * @param optionsOrApiKey Configuration options or legacy API key parameter
+   * @param newsApiKey Legacy news API key parameter
+   * @param useExternalSources Legacy external sources flag
+   */
+  private constructor(
     optionsOrApiKey?: BrainProtocolOptions | string,
     newsApiKey?: string,
     useExternalSources: boolean = false,
@@ -176,9 +220,9 @@ export class BrainProtocol {
     // Load profile asynchronously
     this.loadProfile();
 
-    logger.info(`Brain protocol initialized with external sources ${useExternalSourcesValue ? 'enabled' : 'disabled'}`);
-    logger.info(`Using interface type: ${this.interfaceType}`);
-    logger.info('Using unified MCP server for all contexts');
+    this.logger.info(`Brain protocol initialized with external sources ${useExternalSourcesValue ? 'enabled' : 'disabled'}`);
+    this.logger.info(`Using interface type: ${this.interfaceType}`);
+    this.logger.info('Using unified MCP server for all contexts');
   }
 
   /**
@@ -291,7 +335,7 @@ export class BrainProtocol {
    */
   setUseExternalSources(enabled: boolean): void {
     this.useExternalSources = enabled;
-    logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
+    this.logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   /**
@@ -331,12 +375,12 @@ export class BrainProtocol {
       
       // Log which room we're using
       if (this.interfaceType === 'matrix') {
-        logger.info(`Started Matrix conversation for room ${roomId}: ${this.currentConversationId}`);
+        this.logger.info(`Started Matrix conversation for room ${roomId}: ${this.currentConversationId}`);
       } else {
-        logger.info(`Started CLI conversation for room ${roomId}: ${this.currentConversationId}`);
+        this.logger.info(`Started CLI conversation for room ${roomId}: ${this.currentConversationId}`);
       }
     } catch (error) {
-      logger.error('Failed to initialize conversation:', error);
+      this.logger.error('Failed to initialize conversation:', error);
     }
   }
 
@@ -355,9 +399,9 @@ export class BrainProtocol {
     
     // Log with interface type for clarity
     if (this.interfaceType === 'matrix') {
-      logger.debug(`Switched to Matrix room ${roomId}: ${this.currentConversationId}`);
+      this.logger.debug(`Switched to Matrix room ${roomId}: ${this.currentConversationId}`);
     } else {
-      logger.debug(`Switched to CLI room ${roomId}: ${this.currentConversationId}`);
+      this.logger.debug(`Switched to CLI room ${roomId}: ${this.currentConversationId}`);
     }
   }
 
@@ -371,12 +415,12 @@ export class BrainProtocol {
       if (isDefined(profileResult)) {
         // Set profile only if we got a valid result
         this.profile = profileResult;
-        logger.info('Profile loaded successfully');
+        this.logger.info('Profile loaded successfully');
       } else {
-        logger.info('No profile found');
+        this.logger.info('No profile found');
       }
     } catch (error) {
-      logger.error('Error loading profile:', error);
+      this.logger.error('Error loading profile:', error);
       // Explicitly set profile to undefined in case of error
       this.profile = undefined;
     }
@@ -403,11 +447,11 @@ export class BrainProtocol {
   ): Promise<ProtocolResponse> {
     // Validate input
     if (!isNonEmptyString(query)) {
-      logger.warn('Empty query received, using default question');
+      this.logger.warn('Empty query received, using default question');
       query = 'What information do you have in this brain?';
     }
 
-    logger.info(`Processing query: "${query}"`);
+    this.logger.info(`Processing query: "${query}"`);
 
     // If roomId is provided, ensure we're using the right conversation
     if (options?.roomId) {
@@ -431,11 +475,11 @@ export class BrainProtocol {
     // Get the profile relevance score for contextual prompting
     if (isDefined(this.profile) && isDefined(this.profile.embedding)) {
       profileRelevance = await this.profileAnalyzer.getProfileRelevance(query, this.profile);
-      logger.debug(`Profile semantic relevance: ${profileRelevance.toFixed(2)}`);
+      this.logger.debug(`Profile semantic relevance: ${profileRelevance.toFixed(2)}`);
 
       // If relevance is high enough, consider it a profile query
       if (profileRelevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
-        logger.info('Query is semantically relevant to profile');
+        this.logger.info('Query is semantically relevant to profile');
         isProfileQuery = true;
       }
     }
@@ -443,12 +487,12 @@ export class BrainProtocol {
     // 2. Retrieve relevant context from the database
     const relevantNotes = await this.noteService.fetchRelevantContext(query);
     const notesFound = Array.isArray(relevantNotes) ? relevantNotes.length : 0;
-    logger.info(`Found ${notesFound} relevant notes`);
+    this.logger.info(`Found ${notesFound} relevant notes`);
 
     // Safely log the top note if available
     if (notesFound > 0 && isDefined(relevantNotes[0])) {
       const topNoteTitle = relevantNotes[0].title || 'Untitled Note';
-      logger.debug(`Top note: "${topNoteTitle}"`);
+      this.logger.debug(`Top note: "${topNoteTitle}"`);
     }
 
     // 3. Fetch relevant external knowledge if enabled
@@ -460,14 +504,14 @@ export class BrainProtocol {
       const shouldQueryExternal = this.externalSourceService.shouldQueryExternalSources(query, relevantNotes);
 
       if (shouldQueryExternal) {
-        logger.info('Querying external sources for additional context');
+        this.logger.info('Querying external sources for additional context');
         const fetchedResults = await this.externalSourceService.fetchExternalContext(query);
 
         // Ensure results is an array
         externalResults = Array.isArray(fetchedResults) ? fetchedResults : [];
 
         if (externalResults.length > 0) {
-          logger.info(`Found ${externalResults.length} relevant external sources`);
+          this.logger.info(`Found ${externalResults.length} relevant external sources`);
 
           // Convert to citations format with safe access to properties
           externalCitations = externalResults.map(result => ({
@@ -489,13 +533,13 @@ export class BrainProtocol {
       if (this.currentConversationId) {
         conversationHistory = await this.conversationContext.formatHistoryForPrompt(this.currentConversationId);
         if (conversationHistory.length > 0) {
-          logger.debug('Including conversation history in prompt');
+          this.logger.debug('Including conversation history in prompt');
         }
       } else {
-        logger.debug('No active conversation, continuing without history');
+        this.logger.debug('No active conversation, continuing without history');
       }
     } catch (error) {
-      logger.warn('Failed to get conversation history:', error);
+      this.logger.warn('Failed to get conversation history:', error);
       // Continue without history if there's an error
     }
 
@@ -576,7 +620,7 @@ export class BrainProtocol {
         '', // No response for user turn
         userTurnOptions,
       );
-      logger.debug(`Saved user turn with userId: ${options?.userId || 'matrix-user'}`);
+      this.logger.debug(`Saved user turn with userId: ${options?.userId || 'matrix-user'}`);
       
       // Add assistant response turn
       await this.conversationContext.addTurn(
@@ -585,13 +629,13 @@ export class BrainProtocol {
         responseText,
         assistantTurnOptions,
       );
-      logger.debug('Saved assistant turn with userId: assistant');
+      this.logger.debug('Saved assistant turn with userId: assistant');
       
       // Check if we should summarize
       await this.conversationContext.forceSummarize(this.currentConversationId);
       
     } catch (error) {
-      logger.warn('Failed to save conversation turn:', error);
+      this.logger.warn('Failed to save conversation turn:', error);
       // Continue even if saving fails
     }
 

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ExternalSourceContext } from '@/mcp';
+import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
 import { setupMcpServerMocks as createMockServerMock } from '@test/__mocks__/utils/mcpUtils';
 import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/__mocks__/utils/mcpUtils';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
@@ -65,7 +66,7 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
     });
     
     // Create a mock custom source
-    const mockSource = {
+    const mockSource: ExternalSourceInterface = {
       name: 'CustomSource',
       search: () => Promise.resolve([]),
       checkAvailability: () => Promise.resolve(true),
@@ -77,7 +78,7 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
     
     // Get all sources from the context (they should all be enabled since enabledSources is empty)
     const enabledSources = customContext.getEnabledSources();
-    const sourceNames = enabledSources.map(source => source.name);
+    const sourceNames = enabledSources.map((source: ExternalSourceInterface) => source.name);
     
     // We know our mock will return MockSource - since we're not actually testing the implementation
     // but just that the interface works, we'll just check that we got a source

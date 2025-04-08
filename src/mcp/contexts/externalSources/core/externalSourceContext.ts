@@ -3,6 +3,11 @@
  * 
  * This version extends BaseContext to ensure consistent behavior
  * with other context implementations.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance 
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { z } from 'zod';
@@ -10,7 +15,7 @@ import { z } from 'zod';
 import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import type { StorageInterface } from '@/mcp/contexts/core/storageInterface';
 import { EmbeddingService } from '@/mcp/model';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import { 
   ExternalSourceStorageAdapter, 
@@ -44,6 +49,9 @@ export interface ExternalSourceContextConfig extends ExternalSourceStorageConfig
  * sources, embedding service, and MCP components.
  */
 export class ExternalSourceContext extends BaseContext {
+  /** Logger instance - overrides the protected one from BaseContext */
+  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   // Dependencies
   private embeddingService: EmbeddingService;
   
@@ -55,34 +63,57 @@ export class ExternalSourceContext extends BaseContext {
   
   /**
    * Get singleton instance of ExternalSourceContext 
-   * @param config Configuration for the context
-   * @returns The ExternalSourceContext instance
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  static override getInstance(config: Record<string, unknown> = {}): ExternalSourceContext {
+  static override getInstance(options: Record<string, unknown> = {}): ExternalSourceContext {
     if (!ExternalSourceContext.instance) {
-      ExternalSourceContext.instance = new ExternalSourceContext(config as ExternalSourceContextConfig);
+      ExternalSourceContext.instance = new ExternalSourceContext(options as ExternalSourceContextConfig);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ExternalSourceContext singleton instance created');
+    } else if (Object.keys(options).length > 0) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ExternalSourceContext.instance;
   }
   
   /**
-   * Create a fresh instance of ExternalSourceContext (for testing)
-   * @param config Configuration for the context
-   * @returns A new ExternalSourceContext instance
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
-  static override createFresh(config: Record<string, unknown> = {}): ExternalSourceContext {
-    return new ExternalSourceContext(config as ExternalSourceContextConfig);
+  static override resetInstance(): void {
+    if (ExternalSourceContext.instance) {
+      // Any cleanup needed before destroying the instance
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ExternalSourceContext singleton instance reset');
+      
+      ExternalSourceContext.instance = null;
+    }
   }
   
   /**
-   * Reset the singleton instance (for testing)
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new ExternalSourceContext instance
    */
-  static override resetInstance(): void {
-    ExternalSourceContext.instance = null;
+  static override createFresh(options: Record<string, unknown> = {}): ExternalSourceContext {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ExternalSourceContext instance');
+    
+    return new ExternalSourceContext(options as ExternalSourceContextConfig);
   }
 
   /**
-   * Create a new ExternalSourceContext
+   * Constructor for ExternalSourceContext
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
    * @param config Configuration for the context
    */
   constructor(config: ExternalSourceContextConfig = {}) {
@@ -100,7 +131,7 @@ export class ExternalSourceContext extends BaseContext {
     // Initialize embedding service
     this.embeddingService = EmbeddingService.getInstance({ apiKey: config.apiKey });
     
-    logger.debug('ExternalSourceContext initialized with BaseContext architecture', { context: 'ExternalSourceContext' });
+    this.logger.debug('ExternalSourceContext initialized with BaseContext architecture', { context: 'ExternalSourceContext' });
   }
 
   /**
@@ -160,7 +191,7 @@ export class ExternalSourceContext extends BaseContext {
             })),
           };
         } catch (error) {
-          logger.error('Error in external search resource', { error, context: 'ExternalSourceContext' });
+          this.logger.error('Error in external search resource', { error, context: 'ExternalSourceContext' });
           return {
             contents: [{
               uri: 'external://search',
@@ -196,7 +227,7 @@ export class ExternalSourceContext extends BaseContext {
             }],
           };
         } catch (error) {
-          logger.error('Error in external sources resource', { error, context: 'ExternalSourceContext' });
+          this.logger.error('Error in external sources resource', { error, context: 'ExternalSourceContext' });
           return {
             contents: [{
               uri: 'external://sources',
@@ -239,7 +270,7 @@ export class ExternalSourceContext extends BaseContext {
             })),
           };
         } catch (error) {
-          logger.error('Error searching external sources via MCP tool', { error, context: 'ExternalSourceContext' });
+          this.logger.error('Error searching external sources via MCP tool', { error, context: 'ExternalSourceContext' });
           return {
             content: [{
               type: 'text',
@@ -300,7 +331,7 @@ export class ExternalSourceContext extends BaseContext {
             }],
           };
         } catch (error) {
-          logger.error('Error toggling external source via MCP tool', { error, context: 'ExternalSourceContext' });
+          this.logger.error('Error toggling external source via MCP tool', { error, context: 'ExternalSourceContext' });
           return {
             content: [{
               type: 'text',
@@ -353,7 +384,7 @@ export class ExternalSourceContext extends BaseContext {
       const resultsWithEmbeddings = results.filter(result => result.embedding);
       
       if (resultsWithEmbeddings.length === 0) {
-        logger.warn('No external results with embeddings found', { context: 'ExternalSourceContext' });
+        this.logger.warn('No external results with embeddings found', { context: 'ExternalSourceContext' });
         return results.slice(0, limit); // Return basic results instead
       }
       
@@ -383,7 +414,7 @@ export class ExternalSourceContext extends BaseContext {
       // Remove the similarity score property before returning
       return sortedResults.map(({ similarityScore: _score, ...result }) => result);
     } catch (error) {
-      logger.error('Error in semantic search for external sources', { error, context: 'ExternalSourceContext' });
+      this.logger.error('Error in semantic search for external sources', { error, context: 'ExternalSourceContext' });
       // Fall back to regular search
       return this.search(query, { limit });
     }

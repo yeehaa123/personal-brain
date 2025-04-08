@@ -43,7 +43,7 @@ export class MockLogger implements Logger {
     // Store config
     this.config = {
       silent: config.silent || false,
-      ...config
+      ...config,
     };
     
     // Initialize empty message tracking
@@ -91,7 +91,7 @@ export class MockLogger implements Logger {
   private updateConfig(config: MockLoggerConfig): void {
     this.config = {
       ...this.config,
-      ...config
+      ...config,
     };
   }
   

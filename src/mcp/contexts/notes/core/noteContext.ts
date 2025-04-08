@@ -3,6 +3,11 @@
  * 
  * This version extends BaseContext to ensure consistent behavior
  * with other context implementations.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance 
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { textConfig } from '@/config';
@@ -18,7 +23,7 @@ import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
 import { DependencyContainer } from '@/utils/dependencyContainer';
 import { getService } from '@/utils/dependencyContainer';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteStorageAdapter } from '../adapters/noteStorageAdapter';
@@ -50,6 +55,9 @@ export interface NoteContextConfig {
  * services, repositories, and MCP components.
  */
 export class NoteContext extends BaseContext {
+  /** Logger instance - overrides the protected one from BaseContext */
+  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   // Dependencies
   private repository: NoteRepository;
   private embeddingService: NoteEmbeddingService;
@@ -63,38 +71,62 @@ export class NoteContext extends BaseContext {
   
   /**
    * Get singleton instance of NoteContext
-   * @param config Configuration or API key for the context
-   * @returns The NoteContext instance
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  static override getInstance(config?: NoteContextConfig | string): NoteContext {
+  static override getInstance(options?: NoteContextConfig | string): NoteContext {
     if (!NoteContext.instance) {
       // Handle legacy string-only API key parameter
-      if (typeof config === 'string') {
-        config = { apiKey: config };
+      if (typeof options === 'string') {
+        options = { apiKey: options };
       }
-      NoteContext.instance = new NoteContext(config);
+      
+      NoteContext.instance = new NoteContext(options);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteContext singleton instance created');
+    } else if (options) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return NoteContext.instance;
   }
   
   /**
-   * Create a fresh instance of NoteContext (for testing)
-   * @param config Configuration for the context
-   * @returns A new NoteContext instance
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
-  static override createFresh(config?: NoteContextConfig): NoteContext {
-    return new NoteContext(config);
+  static override resetInstance(): void {
+    if (NoteContext.instance) {
+      // Any cleanup needed before destroying the instance
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteContext singleton instance reset');
+      
+      NoteContext.instance = null;
+    }
   }
   
   /**
-   * Reset the singleton instance (for testing)
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new NoteContext instance
    */
-  static override resetInstance(): void {
-    NoteContext.instance = null;
+  static override createFresh(options?: NoteContextConfig | string): NoteContext {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh NoteContext instance');
+    
+    return new NoteContext(options);
   }
 
   /**
-   * Create a new NoteContext
+   * Constructor for NoteContext
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
    * @param config Configuration or API key for the context
    */
   constructor(config?: NoteContextConfig | string) {
@@ -117,7 +149,7 @@ export class NoteContext extends BaseContext {
     // Initialize storage adapter
     this.storage = new NoteStorageAdapter(this.repository);
     
-    logger.debug('NoteContext initialized with BaseContext architecture', { context: 'NoteContext' });
+    this.logger.debug('NoteContext initialized with BaseContext architecture', { context: 'NoteContext' });
   }
 
   /**
@@ -354,7 +386,7 @@ export class NoteContext extends BaseContext {
             embedding = await this.embeddingService.generateEmbedding(combinedText);
           }
         } catch (error) {
-          logger.error(`Error generating embedding for new note: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+          this.logger.error(`Error generating embedding for new note: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
         }
       }
 
@@ -375,13 +407,13 @@ export class NoteContext extends BaseContext {
         try {
           await this.embeddingService.createNoteChunks(noteId, content);
         } catch (error) {
-          logger.error(`Failed to create chunks for note ${noteId}: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+          this.logger.error(`Failed to create chunks for note ${noteId}: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
         }
       }
 
       return noteId;
     } catch (error) {
-      logger.error(`Failed to create note: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+      this.logger.error(`Failed to create note: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
       throw error;
     }
   }
@@ -414,7 +446,7 @@ export class NoteContext extends BaseContext {
    */
   async searchNotesWithEmbedding(embedding: number[], maxResults = 5): Promise<Note[]> {
     if (!isDefined(embedding) || !Array.isArray(embedding)) {
-      logger.error('Invalid embedding provided to searchNotesWithEmbedding', { context: 'NoteContext' });
+      this.logger.error('Invalid embedding provided to searchNotesWithEmbedding', { context: 'NoteContext' });
       return [];
     }
 
@@ -424,7 +456,7 @@ export class NoteContext extends BaseContext {
       // Return notes without the score property
       return scoredNotes.map(({ score: _score, ...note }) => note);
     } catch (error) {
-      logger.error(`Error searching notes with embedding: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+      this.logger.error(`Error searching notes with embedding: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
       return [];
     }
   }

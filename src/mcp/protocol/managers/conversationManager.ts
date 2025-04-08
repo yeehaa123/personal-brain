@@ -1,11 +1,16 @@
 /**
  * Conversation Manager for BrainProtocol
  * Manages conversation history and persistence
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { ConversationContext, InMemoryStorage } from '@/mcp/contexts/conversations';
 import type { ConversationStorage } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import type { IConversationManager, TurnOptions } from '../types';
@@ -22,8 +27,16 @@ export interface ConversationManagerConfig {
  * Manages conversation history and persistence
  */
 export class ConversationManager implements IConversationManager {
-  // Singleton instance
+  /**
+   * Singleton instance of ConversationManager
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ConversationManager | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   private conversationContext: ConversationContext;
   private currentRoomId?: string;
@@ -31,34 +44,72 @@ export class ConversationManager implements IConversationManager {
 
   /**
    * Get the singleton instance of ConversationManager
-   * @param options Configuration options
-   * @returns The shared ConversationManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
   public static getInstance(options: ConversationManagerConfig): ConversationManager {
     if (!ConversationManager.instance) {
       ConversationManager.instance = new ConversationManager(options.config);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationManager singleton instance created');
+    } else if (options) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ConversationManager.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ConversationManager.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ConversationManager.instance) {
+        // No cleanup needed currently
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ConversationManager instance reset:', error);
+    } finally {
+      ConversationManager.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ConversationManager singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh ConversationManager instance (primarily for testing)
+   * Create a fresh instance without affecting the singleton
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to create isolated instances.
+   * 
    * @param options Configuration options
    * @returns A new ConversationManager instance
    */
   public static createFresh(options: ConversationManagerConfig): ConversationManager {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ConversationManager instance');
+    
     return new ConversationManager(options.config);
   }
 
   /**
-   * Create a new conversation manager
+   * Private constructor to enforce factory method usage
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Users should call getInstance() or createFresh() instead.
+   * 
    * @param config Configuration for the brain protocol
    */
   private constructor(config: BrainProtocolConfig) {
@@ -80,7 +131,7 @@ export class ConversationManager implements IConversationManager {
     // Initialize conversation
     this.initializeConversation();
     
-    logger.debug('Conversation manager initialized with BaseContext architecture');
+    this.logger.debug('Conversation manager initialized with BaseContext architecture');
   }
 
   /**
@@ -102,7 +153,7 @@ export class ConversationManager implements IConversationManager {
       'cli',
     );
     
-    logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId}`);
+    this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId}`);
   }
 
   /**
@@ -116,12 +167,12 @@ export class ConversationManager implements IConversationManager {
           'cli',
         );
         
-        logger.debug(`Initialized conversation ${this.currentConversationId} for room: ${this.currentRoomId}`);
+        this.logger.debug(`Initialized conversation ${this.currentConversationId} for room: ${this.currentRoomId}`);
       } else {
-        logger.warn('No room ID provided, cannot initialize conversation');
+        this.logger.warn('No room ID provided, cannot initialize conversation');
       }
     } catch (error) {
-      logger.error('Failed to initialize conversation:', error);
+      this.logger.error('Failed to initialize conversation:', error);
     }
   }
 
@@ -172,9 +223,9 @@ export class ConversationManager implements IConversationManager {
         options,
       );
       
-      logger.debug(`Saved turn with userId: ${options?.userId || 'unknown'}`);
+      this.logger.debug(`Saved turn with userId: ${options?.userId || 'unknown'}`);
     } catch (error) {
-      logger.warn('Failed to save conversation turn:', error);
+      this.logger.warn('Failed to save conversation turn:', error);
     }
   }
 
@@ -190,7 +241,7 @@ export class ConversationManager implements IConversationManager {
       
       return await this.conversationContext.formatHistoryForPrompt(this.currentConversationId);
     } catch (error) {
-      logger.warn('Failed to get conversation history:', error);
+      this.logger.warn('Failed to get conversation history:', error);
       return '';
     }
   }
