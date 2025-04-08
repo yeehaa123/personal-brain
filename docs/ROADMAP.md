@@ -33,11 +33,22 @@ This document outlines the development plan for the Personal Brain project, focu
    - Support Markdown rendering in Matrix
    - Add image embedding in responses
    - Improve formatting of citations and external sources
+   - Create visually distinct bot messages
+   - Implement Matrix "slack-like blocks" if viable
+   - See detailed plan in `planning/matrix-interface-improvements.md`
 
 5. **Integration with PKM Tools**: Add support for other personal knowledge management tools
    - Implement import/export for tools like Obsidian or Logseq
    - Support standard markdown formats with frontmatter
    - Create bidirectional linking capabilities
+   - See detailed plan in `planning/import-export-capabilities.md`
+
+6. **Knowledge Navigation Enhancements**: Improve discovery and browsing experience
+   - Implement advanced search with filters for tags and content types
+   - Improve preview formatting for search results
+   - Add "Related notes" suggestions when viewing content
+   - Create multiple navigation paths (tags, similarity, timeline)
+   - See detailed plan in `planning/knowledge-navigation-enhancements.md`
 
 ## Future Development
 
