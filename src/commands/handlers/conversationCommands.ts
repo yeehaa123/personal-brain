@@ -174,23 +174,24 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get all active turns from the conversation - don't rely on conversation.activeTurns
-    // which may not be populated correctly, instead get turns directly from the conversation context
+    // Get the conversation context to access memory services
     const conversationContext = this.brainProtocol.getConversationContext();
-    let turns: ConversationTurn[] = [];
     
-    try {
-      // Fetch turns directly from the context
-      turns = await conversationContext.getTurns(conversationId);
-      this.logger.debug(`Retrieved ${turns.length} turns from conversation context`);
-    } catch (error) {
-      this.logger.warn(`Error getting turns directly: ${error instanceof Error ? error.message : String(error)}`);
-      
-      // Fallback to activeTurns if available, but log a warning
-      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
-        turns = conversation.activeTurns;
-        this.logger.warn(`Falling back to conversation.activeTurns (${turns.length} turns)`);
-      }
+    // Get tiered memory history which properly separates active, summarized, and archived turns
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    
+    // Use the active turns from tiered memory, which follows the tiered memory management rules
+    const turns: ConversationTurn[] = tieredHistory.activeTurns;
+    this.logger.debug(`Retrieved ${turns.length} active turns from tiered memory manager`);
+    
+    // For debugging, also check if summaries exist
+    if (tieredHistory.summaries.length > 0) {
+      this.logger.debug(`Conversation has ${tieredHistory.summaries.length} summaries`);
+    }
+    
+    // For debugging, also check if archived turns exist
+    if (tieredHistory.archivedTurns.length > 0) {
+      this.logger.debug(`Conversation has ${tieredHistory.archivedTurns.length} archived turns`);
     }
     
     // Enhanced debugging for conversation content
@@ -256,23 +257,15 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get all active turns from the conversation using conversation context
+    // Get the conversation context to access memory services
     const conversationContext = this.brainProtocol.getConversationContext();
-    let turns: ConversationTurn[] = [];
     
-    try {
-      // Fetch turns directly from the context
-      turns = await conversationContext.getTurns(conversationId);
-      this.logger.debug(`Retrieved ${turns.length} turns from conversation context for confirmation`);
-    } catch (error) {
-      this.logger.warn(`Error getting turns directly for confirmation: ${error instanceof Error ? error.message : String(error)}`);
-      
-      // Fallback to activeTurns if available, but log a warning
-      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
-        turns = conversation.activeTurns;
-        this.logger.warn(`Falling back to conversation.activeTurns for confirmation (${turns.length} turns)`);
-      }
-    }
+    // Get tiered memory history which properly separates active, summarized, and archived turns
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    
+    // Use the active turns from tiered memory, which follows the tiered memory management rules
+    const turns: ConversationTurn[] = tieredHistory.activeTurns;
+    this.logger.debug(`Retrieved ${turns.length} active turns from tiered memory manager for confirmation`);
     
     if (turns.length === 0) {
       return this.formatError('Conversation has no turns to save.');

@@ -92,6 +92,11 @@ const mockConversationToNoteService = {
 // Mock for ConversationContext 
 const mockConversationContext = {
   getTurns: mock(async (_conversationId: string) => mockConversationTurns),
+  getTieredHistory: mock(async (_conversationId: string) => ({
+    activeTurns: mockConversationTurns,
+    summaries: [],
+    archivedTurns: []
+  })),
 };
 
 // Mock BrainProtocol
@@ -155,17 +160,10 @@ describe('Conversation Notes Commands', () => {
       return { type: 'error', message: 'Conversation not found.' };
     }
 
-    // Get turns through conversation context rather than relying on conversation.activeTurns
-    let turns = [];
-    try {
-      const conversationContext = mockBrainProtocol.getConversationContext();
-      turns = await conversationContext.getTurns(conversationId);
-    } catch (error) {
-      // Fallback to activeTurns if available
-      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
-        turns = conversation.activeTurns;
-      }
-    }
+    // Get tiered memory history from conversation context
+    const conversationContext = mockBrainProtocol.getConversationContext();
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    const turns = tieredHistory.activeTurns;
 
     if (turns.length === 0) {
       return { type: 'error', message: 'Conversation has no turns to save.' };
@@ -190,17 +188,10 @@ describe('Conversation Notes Commands', () => {
       return { type: 'error', message: 'Conversation not found.' };
     }
 
-    // Get turns through conversation context rather than relying on conversation.activeTurns
-    let turns = [];
-    try {
-      const conversationContext = mockBrainProtocol.getConversationContext();
-      turns = await conversationContext.getTurns(conversationId);
-    } catch (error) {
-      // Fallback to activeTurns if available
-      if (conversation.activeTurns && Array.isArray(conversation.activeTurns)) {
-        turns = conversation.activeTurns;
-      }
-    }
+    // Get tiered memory history from conversation context
+    const conversationContext = mockBrainProtocol.getConversationContext();
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    const turns = tieredHistory.activeTurns;
 
     if (turns.length === 0) {
       return { type: 'error', message: 'Conversation has no turns to save.' };
@@ -265,7 +256,7 @@ describe('Conversation Notes Commands', () => {
       expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
     });
 
-    test('should handle save-note command when activeTurns is empty but turns are in context', async () => {
+    test('should handle save-note command when activeTurns is empty but turns are in tiered history', async () => {
       // Create a conversation with empty activeTurns
       const emptyTurnsConversation = {
         ...mockConversation,
@@ -275,20 +266,24 @@ describe('Conversation Notes Commands', () => {
       // Override getConversation to return conversation with empty activeTurns
       mockBrainProtocol.getConversation.mockImplementationOnce(async () => emptyTurnsConversation);
       
-      // Ensure context.getTurns still returns valid turns
-      mockConversationContext.getTurns.mockImplementationOnce(async () => mockConversationTurns);
+      // Ensure tieredHistory returns valid turns even when activeTurns is empty
+      mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
+        activeTurns: mockConversationTurns,
+        summaries: [],
+        archivedTurns: []
+      }));
       
       // Execute the save-note command
       const result = await commandHandler.processCommand('save-note', '');
 
-      // Verify the command still succeeds using turns from context
+      // Verify the command still succeeds using turns from tiered history
       expect(result.type).toBe('save-note-preview');
       if (result.type === 'save-note-preview') {
         expect(result.conversationId).toBe('conv123');
       }
       
-      // Verify context.getTurns was called instead of using activeTurns
-      expect(mockConversationContext.getTurns).toHaveBeenCalledWith('conv123');
+      // Verify context.getTieredHistory was called instead of using activeTurns
+      expect(mockConversationContext.getTieredHistory).toHaveBeenCalledWith('conv123');
       expect(mockConversationToNoteService.prepareNotePreview).toHaveBeenCalled();
     });
 
@@ -318,7 +313,7 @@ describe('Conversation Notes Commands', () => {
       expect(notesWithMetadata.length).toBeGreaterThan(0);
     });
     
-    test('should handle confirmation when activeTurns is empty but turns are in context', async () => {
+    test('should handle confirmation when activeTurns is empty but turns are in tiered history', async () => {
       // Create a conversation with empty activeTurns
       const emptyTurnsConversation = {
         ...mockConversation,
@@ -328,17 +323,21 @@ describe('Conversation Notes Commands', () => {
       // Override getConversation to return conversation with empty activeTurns
       mockBrainProtocol.getConversation.mockImplementationOnce(async () => emptyTurnsConversation);
       
-      // Ensure context.getTurns still returns valid turns
-      mockConversationContext.getTurns.mockImplementationOnce(async () => mockConversationTurns);
+      // Ensure tieredHistory returns valid turns even when activeTurns is empty
+      mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
+        activeTurns: mockConversationTurns,
+        summaries: [],
+        archivedTurns: []
+      }));
       
       // Execute the confirmation
       const result = await commandHandler.confirmSaveNote('conv123', 'Final Title');
 
-      // Verify the command still succeeds using turns from context
+      // Verify the command still succeeds using turns from tiered history
       expect(result.type).toBe('save-note-confirm');
       
-      // Verify context.getTurns was called instead of using activeTurns
-      expect(mockConversationContext.getTurns).toHaveBeenCalledWith('conv123');
+      // Verify context.getTieredHistory was called instead of using activeTurns
+      expect(mockConversationContext.getTieredHistory).toHaveBeenCalledWith('conv123');
     });
   });
 
