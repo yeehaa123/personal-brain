@@ -34,7 +34,8 @@ function formatNotePreviewInternal(note: NotePreview, index: number, includeNewl
   let cleanContent = note.content.replace(/<!--\\s*source:[^>]+-->\\n?/, '');
   
   // Remove attribution/footnote sections that appear at the end of conversation notes
-  cleanContent = cleanContent.replace(/\n+---\n+>\s*\*\*Note\*\*: This content was derived from a conversation.*$/s, '');
+  // The /s flag allows . to match newlines, so we can match across multiple lines
+  cleanContent = cleanContent.replace(/(?:\n+---\n+)?>\s*\*\*Note\*\*: This content was derived from a conversation[\s\S]*$/m, '');
   
   // Get a preview of just the clean content
   const preview = cleanContent.length > 100
@@ -129,7 +130,13 @@ export class MatrixResponseFormatter {
    * @returns Formatted response
    */
   formatNote(note: NotePreview): string {
-    // Format the note content
+    // Debug: Check if this note has an attribution footer
+    if (note.content.includes('**Note**: This content was derived from a conversation')) {
+      logger.debug(`Note ${note.id} has an attribution footer in formatNote`);
+    }
+    
+    // Format the note content - no need to remove attributions here 
+    // as this is showing the full note content
     const formattedContent = note.content
       // Remove source comment if present
       .replace(/<!--\s*source:[^>]+-->\n?/, '')
@@ -186,6 +193,22 @@ export class MatrixResponseFormatter {
       return 'No notes found.';
     }
     
+    // Debug: log if we see any notes with attribution footers
+    const notesWithAttributions = notes.filter(note => 
+      note.content.includes('**Note**: This content was derived from a conversation')
+    );
+    
+    if (notesWithAttributions.length > 0) {
+      logger.debug(`Found ${notesWithAttributions.length} notes with attribution footers in formatNotesList`);
+      
+      // Log preview of the first note to help debugging
+      if (notesWithAttributions[0]) {
+        const firstNoteId = notesWithAttributions[0].id;
+        const contentPreview = notesWithAttributions[0].content.substring(0, 100) + '...';
+        logger.debug(`Note ${firstNoteId} content preview: ${contentPreview}`);
+      }
+    }
+    
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -193,7 +216,9 @@ export class MatrixResponseFormatter {
       builder.addDivider();
       
       notes.forEach((note, index) => {
-        builder.addSection(formatNotePreviewInternal(note, index + 1));
+        // Process each note to remove attribution footer
+        const formattedNote = formatNotePreviewInternal(note, index + 1);
+        builder.addSection(formattedNote);
       });
       
       return builder.build() as string;
