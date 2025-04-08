@@ -60,14 +60,16 @@ describe('NewsApiSource', () => {
   });
   
   test('should initialize correctly', () => {
-    const source = new NewsApiSource('mock-newsapi-key', 'mock-openai-key');
+    // Reset singleton before test
+    NewsApiSource.resetInstance();
+    const source = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
     expect(source).toBeDefined();
     expect(source.name).toBe('NewsAPI');
   });
   
   test('should handle search properly', async () => {
     // Create a custom source with mocked methods
-    const customSource = new NewsApiSource('mock-api-key', 'mock-openai-key');
+    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
     
     // Create the mock article object
     const mockArticle = {
@@ -108,7 +110,7 @@ describe('NewsApiSource', () => {
   
   test('should handle search with embedding generation', async () => {
     // Create a custom source with mocked methods
-    const customSource = new NewsApiSource('mock-api-key', 'mock-openai-key');
+    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
     
     // Create the mock article object
     const mockArticle = {
@@ -160,7 +162,7 @@ describe('NewsApiSource', () => {
   
   test('should handle API errors gracefully', async () => {
     // Create an isolated instance
-    const testSource = new NewsApiSource('mock-newsapi-key', 'mock-openai-key');
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
     
     // Directly mock the searchEverything method to simulate API error
     const originalMethod = getPrivateProperty(testSource, 'searchEverything');
@@ -179,7 +181,7 @@ describe('NewsApiSource', () => {
   
   test('should handle empty results gracefully', async () => {
     // Create an isolated instance
-    const testSource = new NewsApiSource('mock-newsapi-key', 'mock-openai-key');
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
     
     // Directly mock the searchEverything method to return empty results
     const originalMethod = getPrivateProperty(testSource, 'searchEverything');
@@ -198,7 +200,7 @@ describe('NewsApiSource', () => {
   
   test('should fail search with missing API key', async () => {
     // Create a new source without API key
-    const sourceWithoutKey = new NewsApiSource('', '');
+    const sourceWithoutKey = NewsApiSource.createFresh('', '');
     
     // Mock the searchEverything method directly to simulate what happens without API key
     const originalSearchMethod = getPrivateProperty(sourceWithoutKey, 'searchEverything');
@@ -217,7 +219,7 @@ describe('NewsApiSource', () => {
   
   test('should check availability correctly', async () => {
     // Create a custom source
-    const customSource = new NewsApiSource('mock-api-key', 'mock-openai-key');
+    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
     
     // Override the checkAvailability method to return true
     const originalMethod = customSource.checkAvailability;
@@ -235,7 +237,7 @@ describe('NewsApiSource', () => {
   
   test('should report unavailability when API is down', async () => {
     // Create a new instance with our direct mock
-    const testSourceForError = new NewsApiSource('mock-api-key', 'mock-openai-key');
+    const testSourceForError = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
     
     // Override checkAvailability method temporarily
     const originalCheckMethod = testSourceForError.checkAvailability;
@@ -252,7 +254,7 @@ describe('NewsApiSource', () => {
   
   test('should report unavailability with missing API key', async () => {
     // Create a source without API key
-    const sourceWithoutKey = new NewsApiSource('', '');
+    const sourceWithoutKey = NewsApiSource.createFresh('', '');
     
     // Directly override the API key property to ensure it's empty
     Object.defineProperty(sourceWithoutKey, 'apiKey', { 
@@ -280,7 +282,7 @@ describe('NewsApiSource', () => {
   
   test('should provide source metadata', async () => {
     // Create a fresh source instance
-    const testSource = new NewsApiSource('mock-newsapi-key', 'mock-openai-key');
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
     
     const metadata = await testSource.getSourceMetadata();
     
@@ -289,7 +291,7 @@ describe('NewsApiSource', () => {
     expect(metadata['type']).toBe('news');
     
     // Create a custom source with controlled implementation
-    const customSource = new NewsApiSource('explicit-api-key', '');
+    const customSource = NewsApiSource.createFresh('explicit-api-key', '');
     
     // Override the getSourceMetadata method to return what we expect
     const originalMethod = customSource.getSourceMetadata;

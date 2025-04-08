@@ -42,13 +42,15 @@ describe('WikipediaSource', () => {
   });
   
   test('should initialize correctly', () => {
-    const source = new WikipediaSource('mock-api-key');
+    // Reset singleton before testing
+    WikipediaSource.resetInstance();
+    const source = WikipediaSource.createFresh('mock-api-key');
     expect(source).toBeDefined();
     expect(source.name).toBe('Wikipedia');
   });
   
   test('should handle search properly', async () => {
-    const customSource = new WikipediaSource('mock-api-key');
+    const customSource = WikipediaSource.createFresh('mock-api-key');
     
     // Create mock search and fetch functions - explicitly using the WikipediaSearchResult type
     const mockSearchWikipedia = async (): Promise<WikipediaSearchResult[]> => {
@@ -93,7 +95,7 @@ describe('WikipediaSource', () => {
   
   test('should handle search with embedding generation', async () => {
     // Create a source instance for this test
-    const source = new WikipediaSource('mock-api-key');
+    const source = WikipediaSource.createFresh('mock-api-key');
     
     // Mock search response with proper Response object
     const mockResponse = {
@@ -171,7 +173,7 @@ describe('WikipediaSource', () => {
   
   test('should handle API errors gracefully', async () => {
     // Create a custom source with mocked methods
-    const errorSource = new WikipediaSource('mock-api-key');
+    const errorSource = WikipediaSource.createFresh('mock-api-key');
     
     // Mock the searchWikipedia method to simulate an error
     const originalSearchMethod = getPrivateProperty(errorSource, 'searchWikipedia');
@@ -192,7 +194,7 @@ describe('WikipediaSource', () => {
   
   test('should handle empty results gracefully', async () => {
     // Create a custom source
-    const emptySource = new WikipediaSource('mock-api-key');
+    const emptySource = WikipediaSource.createFresh('mock-api-key');
     
     // Mock the searchWikipedia method to return empty results
     const originalSearchMethod = getPrivateProperty(emptySource, 'searchWikipedia');
@@ -213,7 +215,7 @@ describe('WikipediaSource', () => {
   
   test('should check availability correctly', async () => {
     // Create an isolated instance
-    const testSource = new WikipediaSource('mock-api-key');
+    const testSource = WikipediaSource.createFresh('mock-api-key');
     
     // Override checkAvailability method to directly return true
     const originalMethod = testSource.checkAvailability;
@@ -231,7 +233,7 @@ describe('WikipediaSource', () => {
   
   test('should handle different response formats in checkAvailability', async () => {
     // Create an isolated instance
-    const testSource = new WikipediaSource('mock-api-key');
+    const testSource = WikipediaSource.createFresh('mock-api-key');
     
     // Override checkAvailability method to directly return true
     const originalMethod = testSource.checkAvailability;
@@ -249,7 +251,7 @@ describe('WikipediaSource', () => {
   
   test('should report unavailability when API is down', async () => {
     // Create an isolated instance to avoid state interference
-    const testSource = new WikipediaSource('mock-api-key');
+    const testSource = WikipediaSource.createFresh('mock-api-key');
     
     // Directly mock the checkAvailability method to simulate API being down
     const originalMethod = testSource.checkAvailability;
@@ -267,7 +269,7 @@ describe('WikipediaSource', () => {
   
   test('should provide source metadata', async () => {
     // Create an isolated instance
-    const testSource = new WikipediaSource('mock-api-key');
+    const testSource = WikipediaSource.createFresh('mock-api-key');
     
     const metadata = await testSource.getSourceMetadata();
     
