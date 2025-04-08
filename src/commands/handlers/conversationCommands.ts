@@ -1,6 +1,11 @@
 /**
  * Conversation commands handler
  * Handles conversation-related commands like ask, save-note, and conversation-notes
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { NoteContext } from '@/mcp';
@@ -8,7 +13,6 @@ import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import { DependencyContainer } from '@/utils/dependencyContainer';
-import logger from '@/utils/logger';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -17,11 +21,52 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
  * Handler for conversation-related commands
  */
 export class ConversationCommandHandler extends BaseCommandHandler {
+  /** The singleton instance */
+  private static instance: ConversationCommandHandler | null = null;
+  
+  /** Note context for accessing note-related functionality */
   private noteContext: NoteContext;
 
+  /**
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param brainProtocol - The BrainProtocol instance
+   */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getNoteContext();
+  }
+  
+  /**
+   * Get the singleton instance of ConversationCommandHandler
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
+   * @returns The shared ConversationCommandHandler instance
+   */
+  public static getInstance(brainProtocol: BrainProtocol): ConversationCommandHandler {
+    if (!ConversationCommandHandler.instance) {
+      ConversationCommandHandler.instance = new ConversationCommandHandler(brainProtocol);
+    }
+    return ConversationCommandHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationCommandHandler.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use
+   * @returns A new ConversationCommandHandler instance
+   */
+  public static createFresh(brainProtocol: BrainProtocol): ConversationCommandHandler {
+    return new ConversationCommandHandler(brainProtocol);
   }
 
   /**
@@ -90,9 +135,9 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       const result = await this.brainProtocol.processQuery(question);
       
       // DEBUG: Log the answer to check for HTML content
-      logger.debug(`[DEBUG ASK] Raw answer from processQuery: ${result.answer.substring(0, 100)}...`);
+      this.logger.debug(`[DEBUG ASK] Raw answer from processQuery: ${result.answer.substring(0, 100)}...`);
       if (result.answer.includes('<') && result.answer.includes('>')) {
-        logger.warn(`[DEBUG ASK] Found HTML tags in answer: ${result.answer.substring(0, 200)}...`);
+        this.logger.warn(`[DEBUG ASK] Found HTML tags in answer: ${result.answer.substring(0, 200)}...`);
       }
 
       return {
@@ -133,31 +178,31 @@ export class ConversationCommandHandler extends BaseCommandHandler {
     const turns: ConversationTurn[] = conversation.activeTurns;
     
     // Enhanced debugging for conversation content
-    logger.debug(`Conversation ID: ${conversationId}`);
-    logger.debug(`Interface type: ${conversation.interfaceType}`);
-    logger.debug(`Number of turns: ${turns.length}`);
+    this.logger.debug(`Conversation ID: ${conversationId}`);
+    this.logger.debug(`Interface type: ${conversation.interfaceType}`);
+    this.logger.debug(`Number of turns: ${turns.length}`);
     
     // Log details about all turns to diagnose issues
     turns.forEach((turn, index) => {
       const isUser = !turn.userId?.startsWith('assistant');
       const role = isUser ? 'User' : 'Assistant';
       
-      logger.debug(`Turn ${index + 1} (${role}):`);
+      this.logger.debug(`Turn ${index + 1} (${role}):`);
       if (isUser) {
-        logger.debug(`  Query: ${turn.query.substring(0, 50)}...`);
+        this.logger.debug(`  Query: ${turn.query.substring(0, 50)}...`);
       } else {
-        logger.debug(`  Response length: ${turn.response?.length || 0}`);
+        this.logger.debug(`  Response length: ${turn.response?.length || 0}`);
         
         if (turn.response) {
           // Check for HTML content
           const responsePreview = turn.response.substring(0, 100);
-          logger.debug(`  Response preview: ${responsePreview}`);
+          this.logger.debug(`  Response preview: ${responsePreview}`);
           
           if (responsePreview.includes('<') && responsePreview.includes('>')) {
-            logger.warn(`  Found potential HTML in response: ${responsePreview}`);
+            this.logger.warn(`  Found potential HTML in response: ${responsePreview}`);
           }
         } else {
-          logger.warn(`  Empty response in turn ${index + 1}`);
+          this.logger.warn(`  Empty response in turn ${index + 1}`);
         }
       }
     });

@@ -1,11 +1,15 @@
 /**
  * System commands handler
  * Handles system-related commands like help, status, and external sources
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { ExternalSourceContext, NoteContext } from '@/mcp';
 import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
-import logger from '@/utils/logger';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -14,13 +18,56 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
  * Handler for system-related commands
  */
 export class SystemCommandHandler extends BaseCommandHandler {
+  /** The singleton instance */
+  private static instance: SystemCommandHandler | null = null;
+  
+  /** Note context for accessing note-related functionality */
   private noteContext: NoteContext;
+  
+  /** External source context for accessing external data sources */
   private externalContext: ExternalSourceContext;
 
+  /**
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param brainProtocol - The BrainProtocol instance
+   */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getNoteContext();
     this.externalContext = brainProtocol.getExternalSourceContext();
+  }
+  
+  /**
+   * Get the singleton instance of SystemCommandHandler
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
+   * @returns The shared SystemCommandHandler instance
+   */
+  public static getInstance(brainProtocol: BrainProtocol): SystemCommandHandler {
+    if (!SystemCommandHandler.instance) {
+      SystemCommandHandler.instance = new SystemCommandHandler(brainProtocol);
+    }
+    return SystemCommandHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    SystemCommandHandler.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use
+   * @returns A new SystemCommandHandler instance
+   */
+  public static createFresh(brainProtocol: BrainProtocol): SystemCommandHandler {
+    return new SystemCommandHandler(brainProtocol);
   }
 
   /**
@@ -124,10 +171,10 @@ export class SystemCommandHandler extends BaseCommandHandler {
       } catch (countError) {
         // If count fails but we got notes, use the notes array length as fallback
         noteCount = notes.length;
-        logger.error(`Error getting note count, using fallback: ${countError}`);
+        this.logger.error(`Error getting note count, using fallback: ${countError}`);
       }
     } catch (error) {
-      logger.error(`Error checking database connection: ${error}`);
+      this.logger.error(`Error checking database connection: ${error}`);
       dbConnected = false;
     }
 
@@ -136,7 +183,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
     try {
       externalSources = await this.externalContext.checkSourcesAvailability();
     } catch (error) {
-      logger.error(`Error checking external sources: ${error}`);
+      this.logger.error(`Error checking external sources: ${error}`);
       // Failed to check external sources, continue with empty object
     }
 

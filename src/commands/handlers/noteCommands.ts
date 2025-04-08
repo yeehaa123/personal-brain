@@ -1,11 +1,15 @@
 /**
  * Note commands handler
  * Handles note-related commands
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { NoteContext } from '@/mcp';
 import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
-import logger from '@/utils/logger';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -14,11 +18,52 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
  * Handler for note-related commands
  */
 export class NoteCommandHandler extends BaseCommandHandler {
+  /** The singleton instance */
+  private static instance: NoteCommandHandler | null = null;
+  
+  /** Note context for accessing note-related functionality */
   private noteContext: NoteContext;
 
+  /**
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param brainProtocol - The BrainProtocol instance
+   */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getNoteContext();
+  }
+  
+  /**
+   * Get the singleton instance of NoteCommandHandler
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
+   * @returns The shared NoteCommandHandler instance
+   */
+  public static getInstance(brainProtocol: BrainProtocol): NoteCommandHandler {
+    if (!NoteCommandHandler.instance) {
+      NoteCommandHandler.instance = new NoteCommandHandler(brainProtocol);
+    }
+    return NoteCommandHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    NoteCommandHandler.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param brainProtocol - The BrainProtocol instance to use
+   * @returns A new NoteCommandHandler instance
+   */
+  public static createFresh(brainProtocol: BrainProtocol): NoteCommandHandler {
+    return new NoteCommandHandler(brainProtocol);
   }
 
   /**
@@ -121,7 +166,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
       return this.formatError('Please provide a search query');
     }
 
-    logger.info(`Searching for notes with query: ${query}`);
+    this.logger.info(`Searching for notes with query: ${query}`);
     const notes = await this.noteContext.searchNotes({ query, limit: 10 });
     return { type: 'search', query, notes };
   }
