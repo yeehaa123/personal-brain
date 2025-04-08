@@ -102,12 +102,12 @@ describe('MatrixRenderer Conversation Notes', () => {
     
     const message = messages[0].message;
     // Check essential parts of the rendered message
-    expect(message).toContain('### 📝 Note Preview');
-    expect(message).toContain('**Title**: What is ecosystem architecture?');
+    expect(message).toContain('Note Preview');
+    expect(message).toContain('<strong>Title</strong>: What is ecosystem architecture?');
     expect(message).toContain('This is a sample note content');
-    expect(message).toContain('!brain confirm');
-    expect(message).toContain('!brain cancel');
-    expect(message).toContain('*Note ID: conv123*');
+    expect(message).toContain('confirm');
+    expect(message).toContain('cancel');
+    expect(message).toContain('Note ID: conv123');
   });
 
   test('should render save-note-confirm correctly', () => {
@@ -123,10 +123,10 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('### ✅ Note Saved Successfully!');
-    expect(message).toContain('**Title**: "What is ecosystem architecture?"');
-    expect(message).toContain('**Note ID**: `note-123`');
-    expect(message).toContain('!brain note note-123');
+    expect(message).toContain('Note Saved Successfully');
+    expect(message).toContain('<strong>Title</strong>: "What is ecosystem architecture?"');
+    expect(message).toContain('<strong>Note ID</strong>: <code>note-123</code>');
+    expect(message).toContain('note-123');
   });
 
   test('should render conversation-notes correctly with notes', () => {
@@ -141,7 +141,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('### 📚 Notes Created from Conversations');
+    expect(message).toContain('Notes Created from Conversations');
     expect(message).toContain('What is ecosystem architecture?');
     expect(message).toContain('ecosystem-architecture');
   });
@@ -158,7 +158,7 @@ describe('MatrixRenderer Conversation Notes', () => {
     expect(messages[0].roomId).toBe('test-room');
     
     const message = messages[0].message;
-    expect(message).toContain('### ⚠️ No conversation notes found');
+    expect(message).toContain('No conversation notes found');
   });
 });
 

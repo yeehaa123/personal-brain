@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import { marked } from 'marked';
 import * as sdk from 'matrix-js-sdk';
 import { ClientEvent } from 'matrix-js-sdk';
 import type { MatrixEvent, Room, RoomMember } from 'matrix-js-sdk';
@@ -8,13 +7,14 @@ import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
-import { sanitizeHtml } from '@/utils/textUtils';
 
 import { createCommandHandler } from '../commands';
 import type { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
 import { getEnv } from '../utils/configUtils';
 import logger from '../utils/logger';
+
+import { getMarkdownFormatter } from './matrix/formatters';
 
 
 
@@ -426,10 +426,16 @@ export class MatrixBrainInterface {
    * @returns HTML representation of the markdown
    */
   private markdownToHtml(markdown: string): string {
-    // Use the marked library to convert markdown to HTML
-    const html = marked.parse(markdown);
-    // Sanitize the HTML to prevent XSS
-    return sanitizeHtml(html.toString());
+    // Use the MarkdownFormatter from our formatters
+    
+    // Use our enhanced formatter with bot styling
+    const formatter = getMarkdownFormatter({
+      applyBotStyling: true,
+      enableCustomStyles: true,
+    });
+    
+    // Format the markdown to HTML with all enhancements
+    return formatter.format(markdown);
   }
 }
 
