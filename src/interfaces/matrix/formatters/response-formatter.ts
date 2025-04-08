@@ -12,7 +12,14 @@ import { getCitationFormatter } from './citation-formatter';
 import { getMarkdownFormatter } from './markdown-formatter';
 import type { CitationReference, NotePreview, SaveNoteConfirmResult, SaveNotePreviewResult, SystemStatus } from './types';
 
-// Define our own note preview formatting to avoid type issues with existing utils
+/**
+ * Format a note preview for display in lists, removing attribution footers
+ * 
+ * @param note The note to format
+ * @param index Display index number
+ * @param includeNewlines Whether to include newlines in the output
+ * @returns Formatted preview string
+ */
 function formatNotePreviewInternal(note: NotePreview, index: number, includeNewlines = true): string {
   const nl = includeNewlines ? '\n' : ' ';
   const title = `**${index}. ${note.title}**`;
@@ -23,10 +30,16 @@ function formatNotePreviewInternal(note: NotePreview, index: number, includeNewl
     : 'No tags';
   
   // Extract a content preview
-  const contentWithoutSource = note.content.replace(/<!--\\s*source:[^>]+-->\\n?/, '');
-  const preview = contentWithoutSource.length > 100
-    ? contentWithoutSource.substring(0, 100) + '...'
-    : contentWithoutSource;
+  // First, remove source comments
+  let cleanContent = note.content.replace(/<!--\\s*source:[^>]+-->\\n?/, '');
+  
+  // Remove attribution/footnote sections that appear at the end of conversation notes
+  cleanContent = cleanContent.replace(/\n+---\n+>\s*\*\*Note\*\*: This content was derived from a conversation.*$/s, '');
+  
+  // Get a preview of just the clean content
+  const preview = cleanContent.length > 100
+    ? cleanContent.substring(0, 100) + '...'
+    : cleanContent;
   
   return `${title}${nl}${id} - ${tags}${nl}${preview}`;
 }

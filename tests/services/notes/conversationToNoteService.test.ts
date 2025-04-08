@@ -214,8 +214,57 @@ describe('ConversationToNoteService', () => {
     const insertCall = insertNoteCalls[0];
     expect(insertCall.title).toBe('Custom Title');
     expect(insertCall.content).toContain('This is my custom edited content');
-    // Should still include attribution header even with user edits
+    
+    // Should still include attribution footer even with user edits
     expect(insertCall.content).toContain('**Note**: This content was derived from a conversation');
+    
+    // Verify attribution is at the end of the content
+    const contentLines = insertCall.content.split('\n');
+    const lastContentSection = contentLines.slice(-5).join('\n');
+    expect(lastContentSection).toContain('**Note**: This content was derived from a conversation');
+  });
+  
+  test('should always place attribution at the end of note content', async () => {
+    // Create a complex user edit with multiple sections, headers and lists
+    const complexUserEdits = `# Complex Note Structure
+
+## First Section
+This is the first section of content.
+
+## Second Section
+- Item 1
+- Item 2
+- Item 3
+
+## Final Section
+This is the final section with some concluding thoughts.`;
+
+    // Act
+    await service.createNoteFromConversation(
+      sampleConversation,
+      sampleTurns,
+      'Complex Note',
+      complexUserEdits,
+    );
+
+    // Assert
+    expect(insertNoteCalls.length).toBe(1);
+    const insertCall = insertNoteCalls[0];
+    
+    // The content should start with our complex structure
+    expect(insertCall.content.startsWith('# Complex Note Structure')).toBe(true);
+    
+    // The content should end with the attribution footer
+    const lastLine = insertCall.content.split('\n').pop();
+    expect(lastLine).toContain('Original Query');
+    
+    // Verify proper ordering - "Final Section" should come before attribution
+    const finalSectionPos = insertCall.content.indexOf('## Final Section');
+    const attributionPos = insertCall.content.indexOf('**Note**: This content was derived');
+    
+    expect(finalSectionPos).toBeGreaterThan(0);
+    expect(attributionPos).toBeGreaterThan(0);
+    expect(finalSectionPos).toBeLessThan(attributionPos);
   });
 
   test('should generate tags from conversation content', async () => {

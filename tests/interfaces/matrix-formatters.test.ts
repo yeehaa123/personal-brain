@@ -148,5 +148,68 @@ describe('Matrix Formatters', () => {
       expect(result).toContain('Source 1');
       expect(result).toContain('Source 2');
     });
+    
+    test('should put Sources section after Related Notes in answer', () => {
+      const formatter = getResponseFormatter();
+      const answer = 'This is the answer with some markdown.';
+      const citations = [
+        { noteId: 'note-1', noteTitle: 'Source 1', excerpt: 'Excerpt 1' },
+      ];
+      const relatedNotes = [
+        { 
+          id: 'note-3', 
+          title: 'Related Note', 
+          content: 'Related content', 
+          tags: ['tag3'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ];
+      
+      const result = formatter.formatAnswer(answer, citations, relatedNotes);
+      
+      // Validate that Related Notes appears before Sources in the content
+      const relatedNotesPos = result.indexOf('Related Notes');
+      const sourcesPos = result.indexOf('Sources');
+      
+      // Both sections should exist
+      expect(relatedNotesPos).toBeGreaterThan(-1);
+      expect(sourcesPos).toBeGreaterThan(-1);
+      
+      // Related Notes should come before Sources
+      expect(relatedNotesPos).toBeLessThan(sourcesPos);
+    });
+    
+    test('should filter out footer attributions from note previews', () => {
+      const formatter = getResponseFormatter();
+      
+      // Create a note with attribution footer (like those created from conversations)
+      const noteWithAttribution = {
+        id: 'note-attr',
+        title: 'Note with Attribution',
+        content: `This is regular content.
+
+---
+
+> **Note**: This content was derived from a conversation on 2025-04-08.
+> **Source**: Conversation with AI assistant
+> **Original Query**: "test query"`,
+        tags: ['tag1'],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
+      const notes = [noteWithAttribution];
+      
+      // Test in notes list
+      const result = formatter.formatNotesList(notes);
+      
+      // The preview should only contain the regular content, not the attribution
+      expect(result).toContain('This is regular content');
+      
+      // The position of the attribution should not be in the preview
+      // (This is a crude test but should catch obvious regressions)
+      expect(result).not.toContain('derived from a conversation');
+    });
   });
 });
