@@ -13,7 +13,7 @@ import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { DependencyContainer } from '@/utils/dependencyContainer';
 import type { ServiceFactory } from '@/utils/dependencyContainer';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
 import type { IRepository } from './interfaces/IRepository';
@@ -58,6 +58,9 @@ export const ServiceIdentifiers = {
 
 // Track if services have been registered to avoid duplicate logs
 let servicesRegistered = false;
+
+// Logger instance for service registry operations
+const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
 
 /**
  * Reset service registration state (for testing)

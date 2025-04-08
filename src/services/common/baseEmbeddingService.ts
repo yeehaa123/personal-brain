@@ -1,10 +1,15 @@
 /**
  * Base embedding service that provides shared functionality for entity-specific embedding services
+ * 
+ * Derived classes should implement the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { EmbeddingService } from '@/mcp/model/embeddings';
 import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
 import { ApiError, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 
@@ -12,6 +17,12 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
  * Base embedding service with common functionality
  */
 export abstract class BaseEmbeddingService implements IEmbeddingService {
+  /**
+   * Logger instance for this class and its derived classes
+   * Each instance of BaseEmbeddingService has its own logger
+   */
+  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   protected embeddingService: EmbeddingService;
 
   /**
@@ -45,7 +56,7 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
       
       return result.embedding;
     } catch (error) {
-      logger.error(`Error generating embedding: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error generating embedding: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -60,7 +71,7 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
     try {
       return this.embeddingService.cosineSimilarity(embedding1, embedding2);
     } catch (error) {
-      logger.error(`Error calculating similarity: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error calculating similarity: ${error instanceof Error ? error.message : String(error)}`);
       return 0;
     }
   }

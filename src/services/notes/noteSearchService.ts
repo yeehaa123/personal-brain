@@ -35,9 +35,10 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
   private static instance: NoteSearchService | null = null;
   
   /**
-   * Logger instance for this class
+   * Override the logger from the base class with protected visibility
+   * This allows the derived class to use the logger directly
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   /**
    * Get the singleton instance of the service

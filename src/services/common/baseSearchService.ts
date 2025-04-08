@@ -1,6 +1,11 @@
 /**
  * Base search service for common search functionality
  * Provides shared search patterns for different entity types
+ * 
+ * Derived classes should implement the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -9,9 +14,8 @@ import type { BaseRepository } from '@/services/BaseRepository';
 import type { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import type { ISearchService, SearchOptions } from '@/services/interfaces/ISearchService';
 import { safeExec, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
-
 
 
 
@@ -38,6 +42,12 @@ export abstract class BaseSearchService<
   TRepository extends BaseRepository<SQLiteTable, TEntity>,
   TEmbeddingService extends BaseEmbeddingService
 > implements ISearchService<TEntity> {
+  /**
+   * Logger instance for this class and its derived classes
+   * Each instance of BaseSearchService has its own logger
+   */
+  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   protected abstract entityName: string;
   protected abstract repository: TRepository;
   protected abstract embeddingService: TEmbeddingService;
@@ -67,7 +77,7 @@ export abstract class BaseSearchService<
         ? options.tags.filter(isNonEmptyString)
         : undefined;
         
-      logger.debug(`Searching ${this.entityName}s with: ${JSON.stringify({
+      this.logger.debug(`Searching ${this.entityName}s with: ${JSON.stringify({
         query: query?.substring(0, 30) + (query && query.length > 30 ? '...' : ''),
         tagsCount: tags?.length,
         limit,
@@ -78,14 +88,14 @@ export abstract class BaseSearchService<
       // If semantic search is enabled and there's a query, perform vector search
       if (semanticSearch && query) {
         const results = await this.semanticSearch(query, tags, limit, offset);
-        logger.info(`Semantic search found ${results.length} ${this.entityName} results`);
+        this.logger.info(`Semantic search found ${results.length} ${this.entityName} results`);
         return results;
       }
 
       // Otherwise, fall back to keyword search
       const results = await this.keywordSearch(query, tags, limit, offset);
       
-      logger.info(`Keyword search found ${results.length} ${this.entityName} results`);
+      this.logger.info(`Keyword search found ${results.length} ${this.entityName} results`);
       return results;
     }, [], 'warn');  // Use 'warn' level and return empty array on error
   }
