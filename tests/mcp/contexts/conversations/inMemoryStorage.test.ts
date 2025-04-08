@@ -12,19 +12,21 @@ describe('InMemoryStorage', () => {
   describe('Component Interface Standardization pattern', () => {
     beforeEach(() => {
       // Reset singleton for each test
+      // Get the instance with silent mode first to prevent logging during reset
+      InMemoryStorage.getInstance({ silent: true });
       InMemoryStorage.resetInstance();
     });
     
     test('getInstance should return the same instance when called multiple times', () => {
-      const instance1 = InMemoryStorage.getInstance();
-      const instance2 = InMemoryStorage.getInstance();
+      const instance1 = InMemoryStorage.getInstance({ silent: true });
+      const instance2 = InMemoryStorage.getInstance({ silent: true });
       
       expect(instance1).toBe(instance2);
     });
     
     test('getInstance should accept configuration when creating a new instance', async () => {
-      // Initial config with verbose mode enabled
-      const config: InMemoryStorageConfig = { verbose: true };
+      // Initial config with verbose mode enabled but also silent to avoid logging
+      const config: InMemoryStorageConfig = { verbose: true, silent: true };
       const instance = InMemoryStorage.getInstance(config);
       
       // Add a conversation to verify it works
@@ -42,37 +44,37 @@ describe('InMemoryStorage', () => {
     });
     
     test('resetInstance should clear the singleton instance', () => {
-      // Get an instance
-      const instance1 = InMemoryStorage.getInstance();
+      // Get an instance with silent mode
+      const instance1 = InMemoryStorage.getInstance({ silent: true });
       
       // Reset the instance
       InMemoryStorage.resetInstance();
       
-      // Get a new instance
-      const instance2 = InMemoryStorage.getInstance();
+      // Get a new instance with silent mode
+      const instance2 = InMemoryStorage.getInstance({ silent: true });
       
       // They should be different objects
       expect(instance1).not.toBe(instance2);
     });
     
     test('createFresh should create new instances separate from the singleton', () => {
-      // Get the singleton
-      const singleton = InMemoryStorage.getInstance();
+      // Get the singleton with silent mode
+      const singleton = InMemoryStorage.getInstance({ silent: true });
       
-      // Create a fresh instance
-      const fresh = InMemoryStorage.createFresh();
+      // Create a fresh instance with silent mode
+      const fresh = InMemoryStorage.createFresh({ silent: true });
       
       // They should be different objects
       expect(singleton).not.toBe(fresh);
       
       // The singleton should still be accessible
-      const singletonAgain = InMemoryStorage.getInstance();
+      const singletonAgain = InMemoryStorage.getInstance({ silent: true });
       expect(singletonAgain).toBe(singleton);
     });
     
     test('getInstance with config should warn but not change existing instance', async () => {
-      // Create first instance
-      const instance1 = InMemoryStorage.getInstance();
+      // Create first instance with silent mode
+      const instance1 = InMemoryStorage.getInstance({ silent: true });
       
       // Add data to first instance
       const roomId = 'warning-test-room';
@@ -86,6 +88,7 @@ describe('InMemoryStorage', () => {
       // Try to get instance with new config - should return same instance
       const newConfig: InMemoryStorageConfig = { 
         initialConversations: new Map(),
+        silent: true,
       };
       const instance2 = InMemoryStorage.getInstance(newConfig);
       
@@ -101,7 +104,7 @@ describe('InMemoryStorage', () => {
   // Tests specifically for the createFresh fix to ensure complete isolation between instances
   describe('createFresh isolation (cross-test contamination fix)', () => {
     test('should create instances with completely empty data structures', () => {
-      const instance = InMemoryStorage.createFresh();
+      const instance = InMemoryStorage.createFresh({ silent: true });
       
       // Access private fields for testing - since this test is specifically checking implementation
       // @ts-expect-error - Accessing private field for testing
@@ -115,8 +118,8 @@ describe('InMemoryStorage', () => {
     });
     
     test('should create instances with no shared state', async () => {
-      const instance1 = InMemoryStorage.createFresh();
-      const instance2 = InMemoryStorage.createFresh();
+      const instance1 = InMemoryStorage.createFresh({ silent: true });
+      const instance2 = InMemoryStorage.createFresh({ silent: true });
       
       // Add data to first instance
       const roomId = 'unique-test-room-123';
@@ -138,7 +141,7 @@ describe('InMemoryStorage', () => {
     
     test('clear() should clear all data from the instance', async () => {
       // Create two instances and verify they're isolated
-      const instance1 = InMemoryStorage.createFresh();
+      const instance1 = InMemoryStorage.createFresh({ silent: true });
       
       // Add data to first instance
       const roomId = 'test-room-clear';
@@ -161,8 +164,8 @@ describe('InMemoryStorage', () => {
   let storage: InMemoryStorage;
 
   beforeEach(() => {
-    // Create a fresh instance for each test
-    storage = InMemoryStorage.createFresh();
+    // Create a fresh instance for each test with silent mode to avoid excessive logging
+    storage = InMemoryStorage.createFresh({ silent: true });
   });
   
   afterEach(() => {

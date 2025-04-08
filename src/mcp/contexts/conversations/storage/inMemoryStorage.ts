@@ -42,6 +42,11 @@ export interface InMemoryStorageConfig {
    * Whether to log verbose debug information
    */
   verbose?: boolean;
+  
+  /**
+   * Whether to disable all logging (useful for tests)
+   */
+  silent?: boolean;
 }
 
 /**
@@ -59,6 +64,7 @@ export class InMemoryStorage implements ConversationStorage {
   private summaries: Map<string, ConversationSummary[]> = new Map();
   private roomIndex: Map<string, string> = new Map();
   private verbose: boolean = false;
+  private silent: boolean = false;
   
   private logger = Logger.getInstance();
 
@@ -82,15 +88,20 @@ export class InMemoryStorage implements ConversationStorage {
         this.summaries = new Map(config.initialSummaries);
       }
       
-      if (config.verbose) {
+      if (config.verbose !== undefined) {
         this.verbose = config.verbose;
+      }
+      
+      if (config.silent !== undefined) {
+        this.silent = config.silent;
       }
       
       // Rebuild room index from conversations
       this.rebuildRoomIndex();
     }
     
-    if (this.verbose) {
+    // Only log if not in silent mode
+    if (this.verbose && !this.silent) {
       this.logger.debug('InMemoryStorage instance created');
     }
   }
@@ -102,14 +113,18 @@ export class InMemoryStorage implements ConversationStorage {
    * @returns The singleton instance
    */
   public static getInstance(config?: InMemoryStorageConfig): InMemoryStorage {
+    const isSilent = config?.silent === true;
+    
     if (!InMemoryStorage.instance) {
       InMemoryStorage.instance = new InMemoryStorage(config);
       
-      // Log instance creation but only on first creation
-      const logger = Logger.getInstance();
-      logger.debug('InMemoryStorage singleton instance created');
-    } else if (config) {
-      // Log a warning if trying to get instance with different config
+      // Log instance creation but only on first creation and if not silent
+      if (!isSilent) {
+        const logger = Logger.getInstance();
+        logger.debug('InMemoryStorage singleton instance created');
+      }
+    } else if (config && !isSilent) {
+      // Log a warning if trying to get instance with different config (and not silent)
       const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
@@ -123,12 +138,17 @@ export class InMemoryStorage implements ConversationStorage {
    */
   public static resetInstance(): void {
     if (InMemoryStorage.instance) {
+      const isSilent = InMemoryStorage.instance.silent;
+      
       // Clear all data before resetting
       InMemoryStorage.instance.clear();
       InMemoryStorage.instance = null;
       
-      const logger = Logger.getInstance();
-      logger.debug('InMemoryStorage singleton instance reset');
+      // Only log if not in silent mode
+      if (!isSilent) {
+        const logger = Logger.getInstance();
+        logger.debug('InMemoryStorage singleton instance reset');
+      }
     }
   }
   
@@ -140,8 +160,13 @@ export class InMemoryStorage implements ConversationStorage {
    * @returns A new InMemoryStorage instance
    */
   public static createFresh(config?: InMemoryStorageConfig): InMemoryStorage {
-    const logger = Logger.getInstance();
-    logger.debug('Creating fresh InMemoryStorage instance');
+    const isSilent = config?.silent === true;
+    
+    // Only log if not in silent mode
+    if (!isSilent) {
+      const logger = Logger.getInstance();
+      logger.debug('Creating fresh InMemoryStorage instance');
+    }
     
     // Create a new instance and explicitly initialize according to config
     return new InMemoryStorage(config);
@@ -193,7 +218,8 @@ export class InMemoryStorage implements ConversationStorage {
     const roomKey = this.getRoomKey(conversation.roomId, conversation.interfaceType);
     this.roomIndex.set(roomKey, id);
     
-    if (this.verbose) {
+    // Only log if not in silent mode and verbose logging is enabled
+    if (this.verbose && !this.silent) {
       this.logger.debug(`Created conversation ${id} for room ${conversation.roomId}`);
     }
     return id;
@@ -621,7 +647,8 @@ export class InMemoryStorage implements ConversationStorage {
     this.summaries.clear();
     this.roomIndex.clear();
     
-    if (this.verbose) {
+    // Only log if not in silent mode and verbose logging is enabled
+    if (this.verbose && !this.silent) {
       this.logger.debug('Cleared all data from InMemoryStorage');
     }
   }
