@@ -2,9 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
+import { MockNewsApiSource, MockWikipediaSource } from '@test/__mocks__/contexts/externalSources/sources';
 import { MockEmbeddingService } from '@test/__mocks__/model/embeddings';
 // Import mock implementations instead of real sources
-import { MockNewsApiSource, MockWikipediaSource } from '@test/__mocks__/contexts/externalSources/sources';
 import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 import { setupMcpServerMocks as createMockServerMock } from '@test/__mocks__/utils/mcpUtils';
 import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/__mocks__/utils/mcpUtils';
@@ -17,10 +17,6 @@ createMockServerMock();
 
 // Setup Anthropic mocks
 setupAnthropicMocks(mock);
-
-// Setup embedding mocks to prevent OpenAI API calls
-// Make sure to do this BEFORE creating any ExternalSourceContext instances
-setupEmbeddingMocks(mock);
 
 // Setup dependency container with all mock services
 setupDependencyContainerMocks(mock);

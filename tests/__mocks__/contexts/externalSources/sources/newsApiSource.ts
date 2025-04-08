@@ -2,7 +2,7 @@
  * Mock implementation of NewsApiSource
  * Following the Component Interface Standardization pattern
  */
-import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSearchOptions, ExternalSourceInterface, ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
 
 export class MockNewsApiSource implements ExternalSourceInterface {
   private static instance: MockNewsApiSource | null = null;

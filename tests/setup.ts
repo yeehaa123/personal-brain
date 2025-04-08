@@ -11,13 +11,15 @@ import { afterAll, afterEach, beforeAll, beforeEach, mock } from 'bun:test';
 
 // Import singleton reset functions and mocks
 import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
+import { ExternalSourceStorageAdapter } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
 import { NewsApiSource, WikipediaSource } from '@/mcp/contexts/externalSources/sources';
 import { NoteContext } from '@/mcp/contexts/notes';
 import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
-import { MockEmbeddingService } from '@test/__mocks__/model/embeddings';
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
+import { MockEmbeddingService } from '@test/__mocks__/model/embeddings';
+
 
 import { setupLoggerMocks } from './__mocks__';
 import {
@@ -27,6 +29,9 @@ import {
   MockNoteContext,
   MockProfileContext,
 } from './__mocks__/contexts';
+import { MockExternalSourceStorageAdapter } from './__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import { MockNewsApiSource } from './__mocks__/contexts/externalSources/sources/newsApiSource';
+import { MockWikipediaSource } from './__mocks__/contexts/externalSources/sources/wikipediaSource';
 import { MockConversationStorage } from './__mocks__/storage';
 import { setupEmbeddingMocks } from './__mocks__/utils/embeddingUtils';
 import { setupMockFetch } from './__mocks__/utils/fetchUtils';
@@ -72,6 +77,10 @@ beforeEach(() => {
 
   if (typeof NewsApiSource?.resetInstance === 'function') {
     NewsApiSource.resetInstance();
+  }
+  
+  if (typeof ExternalSourceStorageAdapter?.resetInstance === 'function') {
+    ExternalSourceStorageAdapter.resetInstance();
   }
 
   // Reset model services
@@ -134,16 +143,21 @@ beforeEach(() => {
 
   // Use our proper mock implementations for external sources
   mock.module('@/mcp/contexts/externalSources/sources/wikipediaSource', () => {
-    const { MockWikipediaSource } = require('@test/__mocks__/contexts/externalSources/sources/wikipediaSource');
     return {
       WikipediaSource: MockWikipediaSource,
     };
   });
 
   mock.module('@/mcp/contexts/externalSources/sources/newsApiSource', () => {
-    const { MockNewsApiSource } = require('@test/__mocks__/contexts/externalSources/sources/newsApiSource');
     return {
       NewsApiSource: MockNewsApiSource,
+    };
+  });
+  
+  // Mock the ExternalSourceStorageAdapter
+  mock.module('@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter', () => {
+    return {
+      ExternalSourceStorageAdapter: MockExternalSourceStorageAdapter,
     };
   });
 

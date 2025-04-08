@@ -23,6 +23,14 @@
  * @param dimensions Number of dimensions for the embedding (default: 1536)
  * @returns Normalized embedding vector with the specified dimensions
  */
+/**
+ * Set up embedding mocks for tests
+ * 
+ * @param mockFn Bun's mock function
+ */
+// Import the MockEmbeddingService for use in setupEmbeddingMocks
+import { MockEmbeddingService } from '@test/__mocks__/model/embeddings';
+
 export function createMockEmbedding(input: string, dimensions: number = 1536): number[] {
   // Create a deterministic embedding based on the input
   const seed = hashString(input);
@@ -52,44 +60,11 @@ export function hashString(str: string): number {
   return hash;
 }
 
-/**
- * Set up embedding mocks for tests
- * 
- * @param mockFn Bun's mock function
- */
 export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
-  // Mock the embedding module
+  // Mock the embedding module with our MockEmbeddingService class
   mockFn.module('@/mcp/model/embeddings', () => {
     return {
-      getEmbedding: async (text: string) => {
-        return {
-          embedding: createMockEmbedding(text),
-          truncated: false,
-        };
-      },
-      getBatchEmbeddings: async (texts: string[]) => {
-        return texts.map(text => ({
-          embedding: createMockEmbedding(text),
-          truncated: false,
-        }));
-      },
-      cosineSimilarity: (_vec1: number[], _vec2: number[]) => {
-        // Simple deterministic similarity calculation for tests
-        return 0.85;
-      },
-      chunkText: (text: string, _chunkSize: number = 1000, _overlap: number = 200) => {
-        // Simple implementation that just splits by sentences for testing
-        const sentences = text.split(/[.!?]+\s+/);
-        // If there are fewer sentences than would make a chunk, return the whole text
-        if (sentences.length <= 2) {
-          return [text];
-        }
-        // Otherwise create 2 chunks for testing
-        return [
-          sentences.slice(0, Math.ceil(sentences.length / 2)).join('. ') + '.',
-          sentences.slice(Math.floor(sentences.length / 2) - 1).join('. ') + '.',
-        ];
-      },
+      EmbeddingService: MockEmbeddingService,
     };
   });
   

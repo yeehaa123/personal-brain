@@ -10,7 +10,7 @@ export { MockBaseContext } from './baseContext';
 export { MockConversationContext } from './conversationContext';
 export { MockNoteContext } from './noteContext';
 export { MockProfileContext } from './profileContext';
-export { MockExternalSourceContext } from './externalSourceContext';
+export { MockExternalSourceContext } from './externalSources';
 
 // Service mocks
 export {

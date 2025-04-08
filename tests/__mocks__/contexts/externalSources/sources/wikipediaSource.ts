@@ -2,7 +2,7 @@
  * Mock implementation of WikipediaSource
  * Following the Component Interface Standardization pattern
  */
-import type { ExternalSourceInterface, ExternalSourceResult, ExternalSearchOptions } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSearchOptions, ExternalSourceInterface, ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
 
 export class MockWikipediaSource implements ExternalSourceInterface {
   private static instance: MockWikipediaSource | null = null;
