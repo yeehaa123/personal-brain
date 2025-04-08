@@ -8,17 +8,56 @@ import type { ConversationSummary, ConversationTurn } from '@/mcp/protocol/schem
 import logger from '@/utils/logger';
 
 /**
+ * Configuration options for ConversationSummarizer
+ */
+export interface ConversationSummarizerOptions {
+  apiKey?: string;
+}
+
+/**
  * Service for summarizing conversation turns
  */
 export class ConversationSummarizer {
+  private static instance: ConversationSummarizer | null = null;
   private model: ClaudeModel;
 
   /**
-   * Create a new summarizer
-   * @param apiKey Optional API key for Claude
+   * Get the singleton instance of ConversationSummarizer
+   * @param options Configuration options
+   * @returns The shared instance
    */
-  constructor(apiKey?: string) {
-    this.model = new ClaudeModel(apiKey);
+  public static getInstance(options?: ConversationSummarizerOptions): ConversationSummarizer {
+    if (!ConversationSummarizer.instance) {
+      ConversationSummarizer.instance = new ConversationSummarizer(options);
+    }
+    return ConversationSummarizer.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationSummarizer.instance = null;
+  }
+
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * @param options Configuration options
+   * @returns A new instance
+   */
+  public static createFresh(options?: ConversationSummarizerOptions): ConversationSummarizer {
+    return new ConversationSummarizer(options);
+  }
+
+  /**
+   * Create a new summarizer
+   * @param options Configuration options including optional API key for Claude
+   * @private Private constructor to enforce getInstance() usage
+   */
+  private constructor(options?: ConversationSummarizerOptions) {
+    this.model = new ClaudeModel(options?.apiKey);
   }
 
   /**

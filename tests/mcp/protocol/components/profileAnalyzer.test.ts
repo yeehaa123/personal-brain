@@ -21,7 +21,7 @@ describe('ProfileAnalyzer', () => {
     cosineSimilarity: mockCosineSimilarity,
   } as unknown as EmbeddingService;
 
-  const profileAnalyzer = new ProfileAnalyzer(mockEmbeddingService);
+  const profileAnalyzer = ProfileAnalyzer.createFresh({ embeddingService: mockEmbeddingService });
 
   // Sample profile
   const sampleProfile = createMockProfile('profile-1');
@@ -87,7 +87,9 @@ describe('ProfileAnalyzer', () => {
       cosineSimilarity: mockCosineSimilarity,
     } as unknown as EmbeddingService;
     
-    const analyzer = new ProfileAnalyzer(failingEmbeddingService);
+    const analyzer = ProfileAnalyzer.createFresh({
+      embeddingService: failingEmbeddingService,
+    });
     
     // Should not throw and should fall back to keyword matching
     const relevance = await analyzer.getProfileRelevance('Tell me about my skills', sampleProfile);

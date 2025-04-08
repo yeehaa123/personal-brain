@@ -152,8 +152,8 @@ describe('NoteService', () => {
 
     // Create fresh context and service
     mockContext = new MockNoteContext();
-    // Use type assertion for compatibility
-    noteService = new NoteService(mockContext as unknown as NoteContext);
+    // Use factory method instead of constructor with type assertion for compatibility
+    noteService = NoteService.createFresh({ context: mockContext as unknown as NoteContext });
   });
 
   test('should initialize correctly', () => {
@@ -222,7 +222,9 @@ describe('NoteService', () => {
       return [];
     };
 
-    const service = new NoteService(customContext as unknown as NoteContext);
+    const service = NoteService.createFresh({
+      context: customContext as unknown as NoteContext,
+    });
     const results = await service.fetchRelevantContext('#test query with tags');
 
     expect(results).toBeDefined();
@@ -245,7 +247,9 @@ describe('NoteService', () => {
       }
     };
 
-    const service = new NoteService(customContext as unknown as NoteContext);
+    const service = NoteService.createFresh({
+      context: customContext as unknown as NoteContext,
+    });
     const results = await service.fetchRelevantContext('keyword search');
 
     expect(results).toBeDefined();
@@ -261,7 +265,9 @@ describe('NoteService', () => {
       createMockNote('recent-note', 'Recent Note'),
     ].slice(0, limit);
 
-    const service = new NoteService(customContext as unknown as NoteContext);
+    const service = NoteService.createFresh({
+      context: customContext as unknown as NoteContext,
+    });
     const results = await service.fetchRelevantContext('query with no results');
 
     expect(results).toBeDefined();

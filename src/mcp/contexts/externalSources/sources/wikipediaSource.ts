@@ -60,6 +60,39 @@ export class WikipediaSource implements ExternalSourceInterface {
   private embeddingService: EmbeddingService | null = null;
   private baseUrl = 'https://en.wikipedia.org/w/api.php';
   private userAgent = 'PersonalBrain/1.0 (personal use)';
+  
+  // Singleton instance
+  private static instance: WikipediaSource | null = null;
+  
+  /**
+   * Get singleton instance of WikipediaSource
+   * 
+   * @param apiKey Optional OpenAI API key for embeddings
+   * @returns The shared WikipediaSource instance
+   */
+  public static getInstance(apiKey?: string): WikipediaSource {
+    if (!WikipediaSource.instance) {
+      WikipediaSource.instance = new WikipediaSource(apiKey);
+    }
+    return WikipediaSource.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    WikipediaSource.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * 
+   * @param apiKey Optional OpenAI API key for embeddings
+   * @returns A new WikipediaSource instance
+   */
+  public static createFresh(apiKey?: string): WikipediaSource {
+    return new WikipediaSource(apiKey);
+  }
 
   constructor(apiKey?: string) {
     if (apiKey) {

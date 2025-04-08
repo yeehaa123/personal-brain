@@ -4,23 +4,82 @@
 import { relevanceConfig } from '@/config';
 import type { EmbeddingService } from '@/mcp/model';
 import type { Profile } from '@models/profile';
-import logger from '@utils/logger';
+import { Logger } from '@utils/logger';
 
-
-
+/**
+ * Configuration options for ProfileAnalyzer
+ */
+export interface ProfileAnalyzerConfig {
+  /** Embedding service for semantic similarity */
+  embeddingService: EmbeddingService;
+}
 
 /**
  * Handles profile-related query analysis
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class ProfileAnalyzer {
+  /** The singleton instance */
+  private static instance: ProfileAnalyzer | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   private embeddingService: EmbeddingService;
 
   /**
-   * Create a new profile analyzer
+   * Get the singleton instance of ProfileAnalyzer
+   * 
+   * @param config Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(config: ProfileAnalyzerConfig): ProfileAnalyzer {
+    if (!ProfileAnalyzer.instance) {
+      ProfileAnalyzer.instance = new ProfileAnalyzer(config.embeddingService);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileAnalyzer singleton instance created');
+    }
+    
+    return ProfileAnalyzer.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state
+   */
+  public static resetInstance(): void {
+    ProfileAnalyzer.instance = null;
+    
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('ProfileAnalyzer singleton instance reset');
+  }
+
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @param config Configuration options
+   * @returns A new ProfileAnalyzer instance
+   */
+  public static createFresh(config: ProfileAnalyzerConfig): ProfileAnalyzer {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileAnalyzer instance');
+    
+    return new ProfileAnalyzer(config.embeddingService);
+  }
+
+  /**
+   * Private constructor to enforce factory method usage
+   * 
    * @param embeddingService The embedding service to use for semantic similarity
    */
-  constructor(embeddingService: EmbeddingService) {
+  private constructor(embeddingService: EmbeddingService) {
     this.embeddingService = embeddingService;
+    this.logger.debug('ProfileAnalyzer initialized');
   }
 
   /**
@@ -69,7 +128,7 @@ export class ProfileAnalyzer {
       // (values closer to 0 or 1 rather than middle range)
       return Math.pow(similarity * relevanceConfig.fallback.similarityScaleFactor + 0.5, 2);
     } catch (error) {
-      logger.error('Error calculating profile relevance:', { error, context: 'ProfileAnalyzer' });
+      this.logger.error('Error calculating profile relevance:', { error, context: 'ProfileAnalyzer' });
       // Fall back to keyword matching
       return this.isProfileQuery(query) ? 
         relevanceConfig.fallback.highRelevance : 

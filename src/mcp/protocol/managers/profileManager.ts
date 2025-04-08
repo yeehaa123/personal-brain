@@ -119,9 +119,11 @@ export class ProfileManager implements IProfileManager {
   public constructor(config: ProfileManagerConfig) {
     this.profileContext = config.profileContext;
     
-    // Initialize the profile analyzer
+    // Initialize the profile analyzer using Component Interface Standardization pattern
     const embeddingService = EmbeddingService.getInstance(config.apiKey ? { apiKey: config.apiKey } : undefined);
-    this.profileAnalyzer = new ProfileAnalyzer(embeddingService);
+    this.profileAnalyzer = ProfileAnalyzer.getInstance({
+      embeddingService,
+    });
     
     // Load profile asynchronously
     this.loadProfile();

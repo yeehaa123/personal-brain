@@ -164,11 +164,13 @@ export class BrainProtocol {
       });
       
       // Initialize prompt formatter and profile analyzer for external source manager
-      const promptFormatter = new PromptFormatter();
+      const promptFormatter = PromptFormatter.getInstance();
       const embeddingService = EmbeddingService.getInstance(
         this.config.getApiKey() ? { apiKey: this.config.getApiKey() } : undefined,
       );
-      const profileAnalyzer = new ProfileAnalyzer(embeddingService);
+      const profileAnalyzer = ProfileAnalyzer.getInstance({
+        embeddingService,
+      });
       
       // Initialize external source manager
       this.externalSourceManager = ExternalSourceManager.getInstance({
@@ -179,13 +181,13 @@ export class BrainProtocol {
       });
       
       // Initialize query processor
-      this.queryProcessor = new QueryProcessor(
-        this.contextManager,
-        this.conversationManager,
-        this.profileManager,
-        this.externalSourceManager,
-        this.config.getApiKey(),
-      );
+      this.queryProcessor = QueryProcessor.getInstance({
+        contextManager: this.contextManager,
+        conversationManager: this.conversationManager,
+        profileManager: this.profileManager,
+        externalSourceManager: this.externalSourceManager,
+        apiKey: this.config.getApiKey(),
+      });
       
       this.logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
       this.logger.info(`Using interface type: ${this.config.interfaceType}`);

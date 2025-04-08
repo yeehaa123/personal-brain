@@ -155,17 +155,17 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       }
     };
 
-    // Register Wikipedia source
+    // Register Wikipedia source using singleton pattern
     registerIfNeeded(
       SERVICE_WIKIPEDIA,
-      () => new WikipediaSource(this.options.apiKey),
+      () => WikipediaSource.getInstance(this.options.apiKey),
     );
 
     // Register NewsAPI source if key is provided
     if (this.options.newsApiKey) {
       registerIfNeeded(
         SERVICE_NEWSAPI,
-        () => new NewsApiSource(this.options.newsApiKey, this.options.apiKey),
+        () => NewsApiSource.getInstance(this.options.newsApiKey, this.options.apiKey),
       );
 
       if (!this.diContainer.has(SERVICE_NEWSAPI)) {

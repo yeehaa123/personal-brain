@@ -12,7 +12,7 @@ import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 
 describe('PromptFormatter', () => {
-  const promptFormatter = new PromptFormatter();
+  const promptFormatter = PromptFormatter.createFresh();
 
   // Test data
   const sampleNotes: Note[] = [

@@ -142,11 +142,11 @@ export class ExternalSourceManager implements IExternalSourceManager {
     
     // Initialize the service if we have a context
     if (externalSourceContext) {
-      this.externalSourceService = new ExternalSourceService(
-        externalSourceContext,
+      this.externalSourceService = ExternalSourceService.getInstance({
+        externalContext: externalSourceContext,
         profileAnalyzer,
         promptFormatter,
-      );
+      });
       this.logger.debug('External source manager initialized with service');
     } else {
       this.externalSourceService = null;

@@ -11,10 +11,6 @@ import type {
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
-
-// Import summarizer for conversation summarization
-
-
 /**
  * Configuration for TieredMemoryManager
  */
@@ -37,26 +33,78 @@ export interface TieredHistory {
 }
 
 /**
+ * Options for TieredMemoryManager
+ */
+export interface TieredMemoryManagerOptions {
+  storage: ConversationStorage;
+  config?: Partial<TieredMemoryConfig>;
+}
+
+/**
  * Manager for tiered conversation memory (active, summary, archive)
  */
 export class TieredMemoryManager {
+  private static instance: TieredMemoryManager | null = null;
   private storage: ConversationStorage;
   private summarizer: ConversationSummarizer;
   private config: TieredMemoryConfig;
 
   /**
-   * Create a new TieredMemoryManager
+   * Get the singleton instance of TieredMemoryManager
+   * @param options Configuration options
+   * @returns The shared instance
    */
-  constructor(storage: ConversationStorage, config?: Partial<TieredMemoryConfig>) {
-    this.storage = storage;
-    this.summarizer = new ConversationSummarizer();
+  public static getInstance(options?: TieredMemoryManagerOptions): TieredMemoryManager {
+    if (!TieredMemoryManager.instance) {
+      if (!options?.storage) {
+        throw new Error('TieredMemoryManager requires a storage implementation');
+      }
+      TieredMemoryManager.instance = new TieredMemoryManager(options);
+    } else if (options) {
+      // If instance exists and options are provided, update the config
+      if (options.config) {
+        TieredMemoryManager.instance.setConfig(options.config);
+      }
+    }
+    return TieredMemoryManager.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    TieredMemoryManager.instance = null;
+  }
+
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * @param options Configuration options
+   * @returns A new instance
+   */
+  public static createFresh(options: TieredMemoryManagerOptions): TieredMemoryManager {
+    return new TieredMemoryManager(options);
+  }
+
+  /**
+   * Create a new TieredMemoryManager
+   * @private Private constructor to enforce getInstance() usage
+   */
+  private constructor(options?: TieredMemoryManagerOptions) {
+    if (!options?.storage) {
+      throw new Error('TieredMemoryManager requires a storage implementation');
+    }
+    
+    this.storage = options.storage;
+    this.summarizer = ConversationSummarizer.getInstance();
     this.config = {
-      maxActiveTurns: config?.maxActiveTurns || 10,
-      maxSummaries: config?.maxSummaries || 3,
-      summaryTurnCount: config?.summaryTurnCount || 5,
-      maxArchivedTurns: config?.maxArchivedTurns || 50,
-      maxTokens: config?.maxTokens || 2000,
-      relevanceDecay: config?.relevanceDecay || 0.9,
+      maxActiveTurns: options.config?.maxActiveTurns || 10,
+      maxSummaries: options.config?.maxSummaries || 3,
+      summaryTurnCount: options.config?.summaryTurnCount || 5,
+      maxArchivedTurns: options.config?.maxArchivedTurns || 50,
+      maxTokens: options.config?.maxTokens || 2000,
+      relevanceDecay: options.config?.relevanceDecay || 0.9,
     };
   }
 

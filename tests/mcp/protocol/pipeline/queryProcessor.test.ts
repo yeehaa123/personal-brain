@@ -181,13 +181,13 @@ describe('QueryProcessor', () => {
     const externalGetSpy = spyOn(externalSourceManager, 'getExternalResults');
     const turnSaveSpy = spyOn(conversationManager, 'saveTurn');
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     const result = await processor.processQuery('What is ecosystem architecture?');
@@ -217,13 +217,13 @@ describe('QueryProcessor', () => {
     // Set up spies
     const profileGetSpy = spyOn(profileManager, 'getProfile');
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     const result = await processor.processQuery('Tell me about my profile');
@@ -252,13 +252,13 @@ describe('QueryProcessor', () => {
     // Override for this test
     spyOn(conversationManager, 'hasActiveConversation').mockImplementation(() => false);
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     await processor.processQuery('What is ecosystem architecture?', {
@@ -280,13 +280,13 @@ describe('QueryProcessor', () => {
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     const result = await processor.processQuery('What is ecosystem architecture in external sources?');
@@ -314,13 +314,13 @@ describe('QueryProcessor', () => {
       return analyzeProfileRelevanceOriginal(query);
     };
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     const result = await processor.processQuery('');
@@ -348,13 +348,13 @@ describe('QueryProcessor', () => {
 
     // Temporarily mock the logger to avoid warning noise in test output
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act - Should not throw despite the saveTurn error
     const result = await processor.processQuery('What is ecosystem architecture?');
@@ -378,13 +378,13 @@ describe('QueryProcessor', () => {
     // Set up spy
     const initSpy = spyOn(conversationManager, 'initializeConversation');
 
-    const processor = new QueryProcessor(
+    const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
       externalSourceManager,
-      'mock-api-key',
-    );
+      apiKey: 'mock-api-key',
+    });
 
     // Act
     await processor.processQuery('What is ecosystem architecture?');

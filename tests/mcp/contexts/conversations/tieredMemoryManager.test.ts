@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
+import { ConversationSummarizer } from '@/mcp/contexts/conversations/memory/summarizer';
 import { TieredMemoryManager } from '@/mcp/contexts/conversations/memory/tieredMemoryManager';
 import { MockConversationStorage } from '@test/__mocks__/storage';
 
@@ -10,13 +11,20 @@ describe('TieredMemoryManager', () => {
   let conversationId: string;
 
   beforeEach(async () => {
+    // Reset the singleton instances before each test
+    TieredMemoryManager.resetInstance();
+    ConversationSummarizer.resetInstance();
+    
     // Create a fresh storage instance
     storage = MockConversationStorage.createFresh();
     
     // Create the tiered memory manager
-    manager = new TieredMemoryManager(storage, {
-      maxActiveTurns: 5,
-      summaryTurnCount: 3,
+    manager = TieredMemoryManager.createFresh({
+      storage,
+      config: {
+        maxActiveTurns: 5,
+        summaryTurnCount: 3,
+      },
     });
     
     // Create a test conversation

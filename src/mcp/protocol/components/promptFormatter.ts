@@ -5,17 +5,71 @@
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '@models/profile';
+import { Logger } from '@utils/logger';
 import { getExcerpt as noteExcerpt } from '@utils/noteUtils';
 
 import type { Citation } from '../types';
 
-
-
-
 /**
  * Formats prompts and context for LLM interactions
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class PromptFormatter {
+  /** The singleton instance */
+  private static instance: PromptFormatter | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+
+  /**
+   * Get the singleton instance of PromptFormatter
+   * 
+   * @returns The singleton instance
+   */
+  public static getInstance(): PromptFormatter {
+    if (!PromptFormatter.instance) {
+      PromptFormatter.instance = new PromptFormatter();
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('PromptFormatter singleton instance created');
+    }
+    
+    return PromptFormatter.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state
+   */
+  public static resetInstance(): void {
+    PromptFormatter.instance = null;
+    
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('PromptFormatter singleton instance reset');
+  }
+
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @returns A new PromptFormatter instance
+   */
+  public static createFresh(): PromptFormatter {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh PromptFormatter instance');
+    
+    return new PromptFormatter();
+  }
+
+  /**
+   * Private constructor to enforce factory method usage
+   */
+  private constructor() {
+    this.logger.debug('PromptFormatter initialized');
+  }
   /**
    * Format the prompt with retrieved context
    * @param query User query

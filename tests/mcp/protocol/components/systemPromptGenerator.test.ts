@@ -4,7 +4,7 @@ import { relevanceConfig } from '@/config';
 import { SystemPromptGenerator } from '@/mcp/protocol/components';
 
 describe('SystemPromptGenerator', () => {
-  const systemPromptGenerator = new SystemPromptGenerator();
+  const systemPromptGenerator = SystemPromptGenerator.createFresh();
 
   test('should generate a default system prompt', () => {
     const systemPrompt = systemPromptGenerator.getSystemPrompt();

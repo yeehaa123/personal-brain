@@ -2,6 +2,9 @@ import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'b
 
 import { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
+import { NewsApiSource, WikipediaSource } from '@/mcp/contexts/externalSources/sources';
+import { EmbeddingService } from '@/mcp/model';
+import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 import { setupMcpServerMocks as createMockServerMock } from '@test/__mocks__/utils/mcpUtils';
 import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/__mocks__/utils/mcpUtils';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
@@ -14,27 +17,74 @@ createMockServerMock();
 // Setup Anthropic mocks
 setupAnthropicMocks(mock);
 
+// Setup embedding mocks to prevent OpenAI API calls
+// Make sure to do this BEFORE creating any ExternalSourceContext instances
+setupEmbeddingMocks(mock);
+
 // Setup dependency container with all mock services
 setupDependencyContainerMocks(mock);
 
 describe('ExternalSourceContext MCP SDK Implementation', () => {
   let externalSourceContext: ExternalSourceContext;
   
-  // We don't need additional test setup since we're handling it manually
+  // Properly control the test environment
   
   beforeAll(() => {
     // Set up mock environment using centralized function
     setMockEnv();
+    
+    // Reset singleton instances before tests
+    // Important: Do this BEFORE any test creates instances
+    EmbeddingService.resetInstance();
+    ExternalSourceContext.resetInstance();
+    
+    // Also reset the source instances - these are now singletons too
+    if (typeof WikipediaSource?.resetInstance === 'function') {
+      WikipediaSource.resetInstance();
+    }
+    if (typeof NewsApiSource?.resetInstance === 'function') {
+      NewsApiSource.resetInstance();
+    }
+    
+    // Ensure embeddings are properly mocked
+    setupEmbeddingMocks(mock);
   });
   
   afterAll(() => {
     // Clean up mock environment using centralized function
     clearMockEnv();
+    
+    // Reset service instances to ensure clean state for other tests
+    EmbeddingService.resetInstance();
+    ExternalSourceContext.resetInstance();
+    
+    // Also reset the source instances
+    if (typeof WikipediaSource?.resetInstance === 'function') {
+      WikipediaSource.resetInstance();
+    }
+    if (typeof NewsApiSource?.resetInstance === 'function') {
+      NewsApiSource.resetInstance();
+    }
   });
   
   beforeEach(() => {
-    // Create a new context with mock API keys for each test
-    externalSourceContext = new ExternalSourceContext({
+    // Reset singleton instances before each test to ensure clean slate
+    EmbeddingService.resetInstance();
+    ExternalSourceContext.resetInstance();
+    
+    // Also reset the source instances
+    if (typeof WikipediaSource?.resetInstance === 'function') {
+      WikipediaSource.resetInstance();
+    }
+    if (typeof NewsApiSource?.resetInstance === 'function') {
+      NewsApiSource.resetInstance();
+    }
+    
+    // Ensure embeddings are properly mocked for each test
+    setupEmbeddingMocks(mock);
+    
+    // Use ExternalSourceContext.createFresh to ensure a clean instance for each test
+    externalSourceContext = ExternalSourceContext.createFresh({
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-newsapi-key',
     });
@@ -59,7 +109,7 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
   
   test('should allow registering custom sources', () => {
     // Create a new ExternalSourceContext with custom options
-    const customContext = new ExternalSourceContext({
+    const customContext = ExternalSourceContext.createFresh({
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-newsapi-key',
       enabledSources: [], // Start with no enabled sources
@@ -122,7 +172,7 @@ describe('ExternalSourceContext MCP SDK Implementation', () => {
   test('should check sources availability', async () => {
     // Create a test-specific isolated context to avoid state sharing
     // with a unique timestamp to ensure isolation
-    const testContext = new ExternalSourceContext({
+    const testContext = ExternalSourceContext.createFresh({
       apiKey: 'isolated-api-key-' + Date.now(),
       newsApiKey: 'isolated-newsapi-key-' + Date.now(),
     });

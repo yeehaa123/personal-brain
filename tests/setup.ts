@@ -11,8 +11,10 @@ import { afterAll, afterEach, beforeAll, beforeEach, mock } from 'bun:test';
 
 // Import singleton reset functions and mocks
 import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
+import { NewsApiSource, WikipediaSource } from '@/mcp/contexts/externalSources/sources';
 import { NoteContext } from '@/mcp/contexts/notes';
 import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
+import { EmbeddingService } from '@/mcp/model';
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { resetServiceRegistration } from '@/services/serviceRegistry';
 
@@ -62,6 +64,20 @@ beforeEach(() => {
     ExternalSourceContext.resetInstance();
   }
   
+  // Reset external source singletons
+  if (typeof WikipediaSource?.resetInstance === 'function') {
+    WikipediaSource.resetInstance();
+  }
+  
+  if (typeof NewsApiSource?.resetInstance === 'function') {
+    NewsApiSource.resetInstance();
+  }
+  
+  // Reset embedding service
+  if (typeof EmbeddingService?.resetInstance === 'function') {
+    EmbeddingService.resetInstance();
+  }
+  
   // Reset our standardized mock contexts
   MockBaseContext.resetInstance();
   MockConversationContext.resetInstance();
@@ -84,6 +100,48 @@ beforeEach(() => {
   
   // Setup embedding mocks for consistent vector operations
   setupEmbeddingMocks(mock);
+  
+  // Explicitly mock OpenAI to prevent any API calls
+  mock.module('openai', () => {
+    return {
+      OpenAI: class MockOpenAI {
+        constructor() {}
+        embeddings = {
+          create: async ({ input }: { input: string | string[] }) => {
+            if (Array.isArray(input)) {
+              return {
+                data: input.map((_, idx) => ({
+                  embedding: Array(1536).fill(0).map((_, i) => Math.sin(i * 0.1 + idx) * 0.1),
+                  object: 'embedding',
+                  index: idx,
+                })),
+                model: 'text-embedding-3-small',
+                object: 'list',
+                usage: {
+                  prompt_tokens: input.reduce((acc, text) => acc + text.length, 0),
+                  total_tokens: input.reduce((acc, text) => acc + text.length, 0),
+                },
+              };
+            } else {
+              return {
+                data: [{
+                  embedding: Array(1536).fill(0).map((_, i) => Math.sin(i * 0.1) * 0.1),
+                  object: 'embedding',
+                  index: 0,
+                }],
+                model: 'text-embedding-3-small',
+                object: 'list',
+                usage: {
+                  prompt_tokens: input.length,
+                  total_tokens: input.length,
+                },
+              };
+            }
+          },
+        };
+      },
+    };
+  });
   
   // Setup ConversationStorage mock
   mock.module('@/mcp/contexts/conversations/storage/inMemoryStorage', () => {
@@ -114,6 +172,57 @@ beforeEach(() => {
   mock.module('@/mcp/contexts/externalSources/core/externalSourceContext', () => {
     return {
       ExternalSourceContext: MockExternalSourceContext,
+    };
+  });
+  
+  // Mock the external sources to prevent real API calls
+  mock.module('@/mcp/contexts/externalSources/sources/wikipediaSource', () => {
+    return {
+      WikipediaSource: class MockWikipediaSource {
+        name = 'Wikipedia';
+        constructor() {}
+        search = async () => {
+          return [
+            {
+              id: 'wiki-1',
+              title: 'Mock Wikipedia Article',
+              content: 'Mock content from Wikipedia source',
+              url: 'https://wikipedia.org/wiki/Mock',
+              source: 'Wikipedia',
+              sourceType: 'encyclopedia',
+              timestamp: new Date(),
+              confidence: 0.9,
+            },
+          ];
+        };
+        checkAvailability = async () => true;
+        getSourceMetadata = async () => ({ name: 'Wikipedia', type: 'encyclopedia' });
+      },
+    };
+  });
+  
+  mock.module('@/mcp/contexts/externalSources/sources/newsApiSource', () => {
+    return {
+      NewsApiSource: class MockNewsApiSource {
+        name = 'NewsAPI';
+        constructor() {}
+        search = async () => {
+          return [
+            {
+              id: 'news-1',
+              title: 'Mock News Article',
+              content: 'Mock content from NewsAPI source',
+              url: 'https://example.com/news/1',
+              source: 'NewsAPI',
+              sourceType: 'news',
+              timestamp: new Date(),
+              confidence: 0.8,
+            },
+          ];
+        };
+        checkAvailability = async () => true;
+        getSourceMetadata = async () => ({ name: 'NewsAPI', type: 'news' });
+      },
     };
   });
   
@@ -183,8 +292,27 @@ beforeEach(() => {
     };
   });
   
-  // Setup default fetch mock for network isolation
-  global.fetch = setupMockFetch({});
+  const mockFetchFn = setupMockFetch({});
+  
+  // Track fetch calls to help diagnose test slowness
+  
+  global.fetch = async (url: URL | RequestInfo, options?: RequestInit): Promise<Response> => {
+    const urlString = url instanceof URL ? url.toString() : 
+      url instanceof Request ? url.url : String(url);
+    
+    // Log all external API calls to help diagnose test slowness
+    console.warn(`[TEST] Fetch call: ${urlString}`);
+    
+    // Add a stack trace to help identify where this call is coming from
+    console.warn(`[TEST] Fetch call stack: ${new Error().stack}`);
+    
+    // If this is an OpenAI API call, log extra details
+    if (urlString.includes('api.openai.com')) {
+      console.error(`[TEST] ⚠️ OPENAI API CALL DETECTED ⚠️: ${urlString}`);
+    }
+    
+    return mockFetchFn(url, options);
+  };
 });
 
 // Cleanup after each test

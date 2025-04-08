@@ -83,11 +83,11 @@ export class ConversationMemoryService {
     private storageAdapter: ConversationStorageAdapter,
     tieredMemoryConfig: Partial<TieredMemoryConfig> = {},
   ) {
-    // Initialize the tiered memory manager
-    this.tieredMemoryManager = new TieredMemoryManager(
-      this.getStorageImplementation(),
-      tieredMemoryConfig,
-    );
+    // Initialize the tiered memory manager using Component Interface Standardization pattern
+    this.tieredMemoryManager = TieredMemoryManager.getInstance({
+      storage: this.getStorageImplementation(),
+      config: tieredMemoryConfig,
+    });
 
     this.logger.debug('ConversationMemoryService initialized', { context: 'ConversationMemoryService' });
   }

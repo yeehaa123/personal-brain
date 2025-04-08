@@ -2,11 +2,68 @@
  * Generates system prompts for LLM interactions based on query context
  */
 import { relevanceConfig } from '@/config';
+import { Logger } from '@utils/logger';
 
 /**
  * Handles the generation of system prompts for different types of queries
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class SystemPromptGenerator {
+  /** The singleton instance */
+  private static instance: SystemPromptGenerator | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+
+  /**
+   * Get the singleton instance of SystemPromptGenerator
+   * 
+   * @returns The singleton instance
+   */
+  public static getInstance(): SystemPromptGenerator {
+    if (!SystemPromptGenerator.instance) {
+      SystemPromptGenerator.instance = new SystemPromptGenerator();
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('SystemPromptGenerator singleton instance created');
+    }
+    
+    return SystemPromptGenerator.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state
+   */
+  public static resetInstance(): void {
+    SystemPromptGenerator.instance = null;
+    
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('SystemPromptGenerator singleton instance reset');
+  }
+
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @returns A new SystemPromptGenerator instance
+   */
+  public static createFresh(): SystemPromptGenerator {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh SystemPromptGenerator instance');
+    
+    return new SystemPromptGenerator();
+  }
+
+  /**
+   * Private constructor to enforce factory method usage
+   */
+  private constructor() {
+    this.logger.debug('SystemPromptGenerator initialized');
+  }
   /**
    * Generate the system prompt based on query analysis
    * @param isProfileQuery Whether the query is profile-related

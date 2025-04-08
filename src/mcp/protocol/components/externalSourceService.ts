@@ -6,22 +6,99 @@ import { relevanceConfig } from '@/config';
 import type { ExternalSourceContext } from '@/mcp';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import type { Note } from '@models/note';
-import logger from '@utils/logger';
+import { Logger } from '@utils/logger';
 
 import type { ProfileAnalyzer } from './profileAnalyzer';
 import type { PromptFormatter } from './promptFormatter';
 
-
+/**
+ * Configuration options for ExternalSourceService
+ */
+export interface ExternalSourceServiceConfig {
+  /** External source context for fetching information */
+  externalContext: ExternalSourceContext;
+  /** Profile analyzer for determining query relevance */
+  profileAnalyzer: ProfileAnalyzer;
+  /** Prompt formatter for calculating coverage */
+  promptFormatter: PromptFormatter;
+}
 
 /**
  * Handles fetching and processing of external information
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class ExternalSourceService {
+  /** The singleton instance */
+  private static instance: ExternalSourceService | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   private externalContext: ExternalSourceContext;
   private profileAnalyzer: ProfileAnalyzer;
   private promptFormatter: PromptFormatter;
 
-  constructor(
+  /**
+   * Get the singleton instance of ExternalSourceService
+   * 
+   * @param config Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(config: ExternalSourceServiceConfig): ExternalSourceService {
+    if (!ExternalSourceService.instance) {
+      ExternalSourceService.instance = new ExternalSourceService(
+        config.externalContext,
+        config.profileAnalyzer,
+        config.promptFormatter,
+      );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ExternalSourceService singleton instance created');
+    }
+    
+    return ExternalSourceService.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state
+   */
+  public static resetInstance(): void {
+    ExternalSourceService.instance = null;
+    
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('ExternalSourceService singleton instance reset');
+  }
+
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @param config Configuration options
+   * @returns A new ExternalSourceService instance
+   */
+  public static createFresh(config: ExternalSourceServiceConfig): ExternalSourceService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ExternalSourceService instance');
+    
+    return new ExternalSourceService(
+      config.externalContext,
+      config.profileAnalyzer,
+      config.promptFormatter,
+    );
+  }
+
+  /**
+   * Private constructor to enforce factory method usage
+   * 
+   * @param externalContext External source context
+   * @param profileAnalyzer Profile analyzer for relevance checks
+   * @param promptFormatter Prompt formatter for coverage calculation
+   */
+  private constructor(
     externalContext: ExternalSourceContext, 
     profileAnalyzer: ProfileAnalyzer,
     promptFormatter: PromptFormatter,
@@ -29,6 +106,8 @@ export class ExternalSourceService {
     this.externalContext = externalContext;
     this.profileAnalyzer = profileAnalyzer;
     this.promptFormatter = promptFormatter;
+    
+    this.logger.debug('ExternalSourceService initialized');
   }
 
   /**
@@ -43,7 +122,7 @@ export class ExternalSourceService {
       const results = await this.externalContext.semanticSearch(query, limit);
       return results;
     } catch (error) {
-      logger.error('Error fetching external context:', error);
+      this.logger.error('Error fetching external context:', error);
       return [];
     }
   }

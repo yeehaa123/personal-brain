@@ -28,8 +28,7 @@ interface ArticleType {
   urlToImage?: string;
 }
 
-// Mock fetch for controlled testing
-const originalFetch = global.fetch;
+// Use the global mock fetch from setup.ts
 
 // Mock the configUtils functions
 mock.module('@/utils/configUtils', () => {
@@ -58,9 +57,6 @@ describe('NewsApiSource', () => {
   afterEach(() => {
     // Clear environment variables using the centralized function
     clearMockEnv();
-    
-    // Restore fetch for other tests
-    global.fetch = originalFetch;
   });
   
   test('should initialize correctly', () => {
@@ -379,7 +375,3 @@ describe('NewsApiSource', () => {
   });
 });
 
-// Restore the original fetch implementation after all tests
-afterEach(() => {
-  global.fetch = originalFetch;
-});

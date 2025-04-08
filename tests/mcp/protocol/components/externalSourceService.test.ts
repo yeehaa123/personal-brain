@@ -79,11 +79,12 @@ describe('ExternalSourceService', () => {
     getExcerpt: mockGetExcerpt,
   } as unknown as PromptFormatter;
 
-  const externalSourceService = new ExternalSourceService(
-    mockExternalSourceContext,
-    mockProfileAnalyzer,
-    mockPromptFormatter,
-  );
+  // Use the factory method instead of the constructor
+  const externalSourceService = ExternalSourceService.createFresh({
+    externalContext: mockExternalSourceContext,
+    profileAnalyzer: mockProfileAnalyzer,
+    promptFormatter: mockPromptFormatter,
+  });
 
   // Create a mock shouldQueryExternalSources that uses the threshold directly
   const shouldQueryExternalSourcesWithThreshold = (
@@ -146,11 +147,11 @@ describe('ExternalSourceService', () => {
       semanticSearch: mockSearchFn,
     } as unknown as ExternalSourceContext;
     
-    const service = new ExternalSourceService(
-      errorContext,
-      mockProfileAnalyzer,
-      mockPromptFormatter,
-    );
+    const service = ExternalSourceService.createFresh({
+      externalContext: errorContext,
+      profileAnalyzer: mockProfileAnalyzer,
+      promptFormatter: mockPromptFormatter,
+    });
     
     // Should not throw and return empty array
     const results = await service.fetchExternalContext('Test query');

@@ -24,7 +24,7 @@ Assistant: Classical computing uses classical bits that can be either 0 or 1, wh
 `;
 
     // Create prompt formatter
-    const promptFormatter = new PromptFormatter();
+    const promptFormatter = PromptFormatter.createFresh();
 
     // Format the new query with notes
     const query = 'Tell me about quantum entanglement.';

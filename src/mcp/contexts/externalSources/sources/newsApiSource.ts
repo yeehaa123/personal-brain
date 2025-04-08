@@ -40,6 +40,51 @@ export class NewsApiSource implements ExternalSourceInterface {
   private apiKey: string;
   private baseUrl = 'https://newsapi.org/v2';
   private maxAgeHours = 24 * 7; // 1 week by default
+  
+  // Singleton instance
+  private static instance: NewsApiSource | null = null;
+  
+  /**
+   * Get singleton instance of NewsApiSource
+   * 
+   * @param apiKey Optional NewsAPI key
+   * @param openAiKey Optional OpenAI API key for embeddings
+   * @param maxAgeHours Maximum age of news articles in hours
+   * @returns The shared NewsApiSource instance
+   */
+  public static getInstance(
+    apiKey?: string,
+    openAiKey?: string,
+    maxAgeHours = 24 * 7,
+  ): NewsApiSource {
+    if (!NewsApiSource.instance) {
+      NewsApiSource.instance = new NewsApiSource(apiKey, openAiKey, maxAgeHours);
+    }
+    return NewsApiSource.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    NewsApiSource.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * 
+   * @param apiKey Optional NewsAPI key
+   * @param openAiKey Optional OpenAI API key for embeddings
+   * @param maxAgeHours Maximum age of news articles in hours
+   * @returns A new NewsApiSource instance
+   */
+  public static createFresh(
+    apiKey?: string,
+    openAiKey?: string,
+    maxAgeHours = 24 * 7,
+  ): NewsApiSource {
+    return new NewsApiSource(apiKey, openAiKey, maxAgeHours);
+  }
 
   constructor(apiKey?: string, openAiKey?: string, maxAgeHours = 24 * 7) {
     this.apiKey = apiKey || getEnv('NEWSAPI_KEY');

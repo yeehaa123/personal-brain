@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { WikipediaSource } from '@/mcp/contexts/externalSources/sources/wikipediaSource';
 import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
@@ -25,9 +25,8 @@ interface WikipediaSearchResult {
   timestamp: string;
 }
 
-// Mock fetch for controlled testing
-const originalFetch = global.fetch;
-let mockFetchResponse: Response | null = null;
+// Use our global mock fetch - the one set up in tests/setup.ts
+// This ensures no real network requests are made during tests
 
 // Set up embedding service mocks
 setupEmbeddingMocks(mock);
@@ -36,18 +35,10 @@ setupEmbeddingMocks(mock);
 describe('WikipediaSource', () => {
   // No shared state between tests
   beforeEach(() => {
-    // Reset the mock response for each test
-    mockFetchResponse = null;
-    
-    // Setup mock fetch with default responses
-    // Using a proper type for the mock parameter
+    // Setup mock fetch with default responses for this test
+    // The global setup in tests/setup.ts already ensures no real network requests
+    // but we reinstall it here for test isolation
     global.fetch = setupMockFetch({} as Record<string, unknown>);
-  });
-  
-  afterEach(() => {
-    // Reset the mock response and restore fetch
-    mockFetchResponse = null;
-    global.fetch = originalFetch;
   });
   
   test('should initialize correctly', () => {
@@ -120,7 +111,7 @@ describe('WikipediaSource', () => {
       },
     };
     
-    mockFetchResponse = new Response(JSON.stringify(mockResponse), {
+    const mockFetchResponse = new Response(JSON.stringify(mockResponse), {
       status: 200,
       statusText: 'OK',
       headers: new Headers({
@@ -286,7 +277,3 @@ describe('WikipediaSource', () => {
   });
 });
 
-// Restore the original fetch implementation after all tests
-afterEach(() => {
-  global.fetch = originalFetch;
-});

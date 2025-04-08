@@ -9,7 +9,7 @@ import { NoteService } from '@/mcp/protocol/components/noteService';
 import { PromptFormatter } from '@/mcp/protocol/components/promptFormatter';
 import { SystemPromptGenerator } from '@/mcp/protocol/components/systemPromptGenerator';
 import type { Note } from '@/models/note';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import type { 
@@ -28,9 +28,36 @@ import type {
 } from '../types';
 
 /**
+ * Configuration options for QueryProcessor
+ */
+export interface QueryProcessorConfig {
+  /** Context manager for accessing contexts */
+  contextManager: IContextManager;
+  /** Conversation manager for history */
+  conversationManager: IConversationManager;
+  /** Profile manager for profile analysis */
+  profileManager: IProfileManager;
+  /** External source manager for external knowledge */
+  externalSourceManager: IExternalSourceManager;
+  /** API key for model access */
+  apiKey?: string;
+}
+
+/**
  * Processes queries through a structured pipeline
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class QueryProcessor implements IQueryProcessor {
+  /** The singleton instance */
+  private static instance: QueryProcessor | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   private conversationManager: IConversationManager;
   private profileManager: IProfileManager;
   private externalSourceManager: IExternalSourceManager;
@@ -41,14 +68,68 @@ export class QueryProcessor implements IQueryProcessor {
   private model: ClaudeModel;
 
   /**
-   * Create a new query processor
+   * Get the singleton instance of QueryProcessor
+   * 
+   * @param config Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(config: QueryProcessorConfig): QueryProcessor {
+    if (!QueryProcessor.instance) {
+      QueryProcessor.instance = new QueryProcessor(
+        config.contextManager,
+        config.conversationManager,
+        config.profileManager,
+        config.externalSourceManager,
+        config.apiKey,
+      );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('QueryProcessor singleton instance created');
+    }
+    
+    return QueryProcessor.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state
+   */
+  public static resetInstance(): void {
+    QueryProcessor.instance = null;
+    
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('QueryProcessor singleton instance reset');
+  }
+
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @param config Configuration options
+   * @returns A new QueryProcessor instance
+   */
+  public static createFresh(config: QueryProcessorConfig): QueryProcessor {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh QueryProcessor instance');
+    
+    return new QueryProcessor(
+      config.contextManager,
+      config.conversationManager,
+      config.profileManager,
+      config.externalSourceManager,
+      config.apiKey,
+    );
+  }
+
+  /**
+   * Private constructor to enforce factory method usage
+   * 
    * @param contextManager Context manager
    * @param conversationManager Conversation manager
    * @param profileManager Profile manager
    * @param externalSourceManager External source manager
    * @param apiKey API key for model
    */
-  constructor(
+  private constructor(
     contextManager: IContextManager,
     conversationManager: IConversationManager,
     profileManager: IProfileManager,
@@ -59,13 +140,15 @@ export class QueryProcessor implements IQueryProcessor {
     this.profileManager = profileManager;
     this.externalSourceManager = externalSourceManager;
     
-    // Initialize helpers
-    this.noteService = new NoteService(contextManager.getNoteContext());
-    this.promptFormatter = new PromptFormatter();
-    this.systemPromptGenerator = new SystemPromptGenerator();
+    // Initialize helpers using their getInstance methods
+    this.noteService = NoteService.getInstance({
+      context: contextManager.getNoteContext(),
+    });
+    this.promptFormatter = PromptFormatter.getInstance();
+    this.systemPromptGenerator = SystemPromptGenerator.getInstance();
     this.model = new ClaudeModel(apiKey);
     
-    logger.debug('Query processor initialized');
+    this.logger.debug('Query processor initialized');
   }
 
   /**
@@ -77,11 +160,11 @@ export class QueryProcessor implements IQueryProcessor {
   async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
     // Validate input
     if (!isNonEmptyString(query)) {
-      logger.warn('Empty query received, using default question');
+      this.logger.warn('Empty query received, using default question');
       query = 'What information do you have in this brain?';
     }
 
-    logger.info(`Processing query: "${query}"`);
+    this.logger.info(`Processing query: "${query}"`);
 
     // If roomId is provided, ensure we're using the right conversation
     if (options?.roomId) {
@@ -162,12 +245,12 @@ export class QueryProcessor implements IQueryProcessor {
     const relevantNotes = await this.noteService.fetchRelevantContext(query);
     const notesFound = Array.isArray(relevantNotes) ? relevantNotes.length : 0;
     
-    logger.info(`Found ${notesFound} relevant notes`);
+    this.logger.info(`Found ${notesFound} relevant notes`);
     
     // Safely log the top note if available
     if (notesFound > 0 && isDefined(relevantNotes[0])) {
       const topNoteTitle = relevantNotes[0].title || 'Untitled Note';
-      logger.debug(`Top note: "${topNoteTitle}"`);
+      this.logger.debug(`Top note: "${topNoteTitle}"`);
     }
     
     // Extract citations from notes
@@ -292,7 +375,7 @@ export class QueryProcessor implements IQueryProcessor {
       };
       
       await this.conversationManager.saveTurn(query, '', userTurnOptions);
-      logger.debug(`Saved user turn with userId: ${userTurnOptions.userId}`);
+      this.logger.debug(`Saved user turn with userId: ${userTurnOptions.userId}`);
       
       // Then, add the assistant's response with 'assistant' as userId
       const assistantTurnOptions: TurnOptions = {
@@ -304,9 +387,9 @@ export class QueryProcessor implements IQueryProcessor {
       };
       
       await this.conversationManager.saveTurn(query, response, assistantTurnOptions);
-      logger.debug('Saved assistant turn with userId: assistant');
+      this.logger.debug('Saved assistant turn with userId: assistant');
     } catch (error) {
-      logger.warn('Failed to save conversation turn:', error);
+      this.logger.warn('Failed to save conversation turn:', error);
       // Continue even if saving fails
     }
   }

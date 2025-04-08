@@ -196,16 +196,20 @@ export class BrainProtocol {
       anchorId: options.anchorId,
     });
 
-    // Initialize component classes
-    this.promptFormatter = new PromptFormatter();
-    this.systemPromptGenerator = new SystemPromptGenerator();
-    this.profileAnalyzer = new ProfileAnalyzer(this.embeddingService);
-    this.externalSourceService = new ExternalSourceService(
-      this.externalContext,
-      this.profileAnalyzer,
-      this.promptFormatter,
-    );
-    this.noteService = new NoteService(this.context);
+    // Initialize component classes using the Component Interface Standardization pattern
+    this.promptFormatter = PromptFormatter.getInstance();
+    this.systemPromptGenerator = SystemPromptGenerator.getInstance();
+    this.profileAnalyzer = ProfileAnalyzer.getInstance({
+      embeddingService: this.embeddingService,
+    });
+    this.externalSourceService = ExternalSourceService.getInstance({
+      externalContext: this.externalContext,
+      profileAnalyzer: this.profileAnalyzer,
+      promptFormatter: this.promptFormatter,
+    });
+    this.noteService = NoteService.getInstance({
+      context: this.context,
+    });
 
     // Initialize the conversation context
     // The conversation context is already initialized earlier in this constructor

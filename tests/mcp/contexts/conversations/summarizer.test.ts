@@ -7,10 +7,46 @@ import { nanoid } from 'nanoid';
 import { ConversationSummarizer } from '@/mcp/contexts/conversations/memory/summarizer';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
+// Define interface for test purposes
+interface ConversationSummarizerOptions {
+  apiKey?: string;
+}
+
 // Manual mock for the ConversationSummarizer class
 mock.module('@/mcp/contexts/conversations/memory/summarizer', () => {
-  return {
-    ConversationSummarizer: function() {
+  let mockInstance: Record<string, unknown> | null = null;
+  
+  const MockSummarizer = {
+    getInstance: (_options?: ConversationSummarizerOptions) => {
+      if (!mockInstance) {
+        mockInstance = {
+          summarizeTurns: async (turns: ConversationTurn[]) => {
+            if (!turns || turns.length === 0) {
+              throw new Error('Cannot summarize empty turns array');
+            }
+            
+            return {
+              id: 'mock-summary-id',
+              timestamp: new Date(),
+              content: 'Summary of 3 conversation turns discussing conversation summarization and the tiered memory system.',
+              startTurnIndex: 0,
+              endTurnIndex: turns.length - 1,
+              startTimestamp: turns[0].timestamp,
+              endTimestamp: turns[turns.length - 1].timestamp,
+              turnCount: turns.length,
+              metadata: {
+                originalTurnIds: turns.map((t: ConversationTurn) => t.id),
+              },
+            };
+          },
+        };
+      }
+      return mockInstance;
+    },
+    resetInstance: () => {
+      mockInstance = null;
+    },
+    createFresh: (_options?: ConversationSummarizerOptions) => {
       return {
         summarizeTurns: async (turns: ConversationTurn[]) => {
           if (!turns || turns.length === 0) {
@@ -34,6 +70,11 @@ mock.module('@/mcp/contexts/conversations/memory/summarizer', () => {
       };
     },
   };
+
+  return {
+    ConversationSummarizer: MockSummarizer,
+    ConversationSummarizerOptions: {},
+  };
 });
 
 describe('ConversationSummarizer', () => {
@@ -41,7 +82,10 @@ describe('ConversationSummarizer', () => {
   let sampleTurns: ConversationTurn[];
 
   beforeEach(() => {
-    summarizer = new ConversationSummarizer();
+    // Reset the singleton instance before each test
+    ConversationSummarizer.resetInstance();
+    // Get a fresh instance for testing
+    summarizer = ConversationSummarizer.createFresh();
 
     // Create some sample turns
     const now = new Date();
