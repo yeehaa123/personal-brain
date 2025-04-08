@@ -157,18 +157,25 @@ interface OpenAIEmbeddingParams {
 
 /**
  * Service for generating and working with text embeddings
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class EmbeddingService {
+  /** Configuration values */
   private readonly apiKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
   private readonly batchSize: number;
   
-  // Singleton instance
+  /** Singleton instance */
   private static instance: EmbeddingService | null = null;
   
   /**
    * Get the singleton instance of EmbeddingService
+   * 
    * @param config Optional configuration to override defaults
    * @returns The shared EmbeddingService instance
    */
@@ -182,19 +189,26 @@ export class EmbeddingService {
       } else {
         logger.warn('No API key available, will use fallback embeddings');
       }
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return EmbeddingService.instance;
   }
   
   /**
    * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
    */
   public static resetInstance(): void {
+    // No special cleanup needed for this service
     EmbeddingService.instance = null;
   }
   
   /**
    * Create a fresh service instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
    * @param config Optional configuration to override defaults
    * @returns A new EmbeddingService instance
    */
@@ -204,8 +218,9 @@ export class EmbeddingService {
 
   /**
    * Create a new embedding service
+   * 
    * @param config Optional configuration to override defaults
-   * @private Use getInstance() instead of constructor directly
+   * @private Use getInstance() or createFresh() instead of constructor directly
    */
   private constructor(config?: EmbeddingConfig) {
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
