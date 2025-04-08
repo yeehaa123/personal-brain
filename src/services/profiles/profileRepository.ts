@@ -1,5 +1,10 @@
 /**
  * Repository for profile data operations
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -12,39 +17,78 @@ import {
 } from '@/models/profile';
 import { BaseRepository } from '@/services/BaseRepository';
 import { DatabaseError, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
 
 /**
  * Repository for profile data operations
  */
 export class ProfileRepository extends BaseRepository<typeof profiles, Profile> {
-  // Singleton instance
+  /**
+   * Singleton instance of ProfileRepository
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ProfileRepository | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
 
   /**
    * Get the singleton instance of the repository
-   * @returns The shared ProfileRepository instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @returns The singleton instance
    */
   public static getInstance(): ProfileRepository {
     if (!ProfileRepository.instance) {
       ProfileRepository.instance = new ProfileRepository();
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileRepository singleton instance created');
     }
+    
     return ProfileRepository.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ProfileRepository.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ProfileRepository.instance) {
+        // No specific cleanup needed for this repository
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ProfileRepository instance reset:', error);
+    } finally {
+      ProfileRepository.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileRepository singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh repository instance (primarily for testing)
+   * Create a fresh ProfileRepository instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @returns A new ProfileRepository instance
    */
   public static createFresh(): ProfileRepository {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileRepository instance');
+    
     return new ProfileRepository();
   }
   /**
@@ -74,10 +118,12 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
    */
   async getProfile(): Promise<Profile | undefined> {
     try {
+      this.logger.debug('Retrieving user profile');
       const result = await db.select().from(profiles).limit(1);
+      this.logger.debug(`Profile found: ${Boolean(result[0])}`);
       return result[0];
     } catch (error) {
-      logger.error(`Failed to retrieve profile: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Failed to retrieve profile: ${error instanceof Error ? error.message : String(error)}`);
       return undefined;
     }
   }
@@ -90,11 +136,14 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
   async insertProfile(profileData: Profile): Promise<string> {
     try {
       if (!isDefined(profileData)) {
+        this.logger.warn('Profile data is undefined or null');
         throw new ValidationError('Profile data is required');
       }
 
       const id = profileData.id || nanoid();
       const now = new Date();
+      
+      this.logger.debug(`Creating new profile with ID: ${id}`);
       
       // Ensure experiences is a string if it's an object
       const experiences = typeof profileData.experiences === 'object' 
@@ -110,9 +159,10 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
       });
       
       await db.insert(profiles).values(insertData);
+      this.logger.info(`Profile created with ID: ${id}`);
       return id;
     } catch (error) {
-      logger.error(`Failed to insert profile: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Failed to insert profile: ${error instanceof Error ? error.message : String(error)}`);
       throw new DatabaseError('Failed to create profile', { originalError: error });
     }
   }
@@ -126,9 +176,12 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
   async updateProfile(id: string, profileData: Partial<Profile>): Promise<boolean> {
     try {
       if (!isDefined(id) || !isDefined(profileData)) {
+        this.logger.warn(`Invalid update request: ID defined: ${Boolean(id)}, data defined: ${Boolean(profileData)}`);
         throw new ValidationError('Profile ID and data are required');
       }
 
+      this.logger.debug(`Updating profile with ID: ${id}`);
+      
       const now = new Date();
       // Process profile data to handle experiences correctly
       const processedData = { ...profileData, updatedAt: now };
@@ -160,9 +213,10 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
         .set(safeData)
         .where(eq(profiles.id, id));
 
+      this.logger.info(`Profile ${id} updated successfully`);
       return true;
     } catch (error) {
-      logger.error(`Failed to update profile ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Failed to update profile ${id}: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   }
@@ -173,6 +227,15 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
    * @returns true if successful
    */
   async deleteProfile(id: string): Promise<boolean> {
-    return this.deleteById(id);
+    this.logger.debug(`Attempting to delete profile with ID: ${id}`);
+    const result = await this.deleteById(id);
+    
+    if (result) {
+      this.logger.info(`Profile ${id} deleted successfully`);
+    } else {
+      this.logger.warn(`Failed to delete profile ${id} or profile not found`);
+    }
+    
+    return result;
   }
 }
