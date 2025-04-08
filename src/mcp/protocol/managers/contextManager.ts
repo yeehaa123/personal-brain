@@ -1,6 +1,11 @@
 /**
  * Context Manager for BrainProtocol
  * Manages access to note, profile, conversation, and external source contexts
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import {
   ConversationContext,
@@ -9,7 +14,7 @@ import {
   ProfileContext,
 } from '@/mcp';
 import { ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
@@ -31,6 +36,11 @@ export interface ContextManagerConfig {
  * 2. Providing access to these contexts for other components
  * 3. Managing external source state (enabled/disabled)
  * 4. Ensuring contexts are properly initialized before use
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class ContextManager implements IContextManager {
   // Singleton instance
@@ -46,38 +56,62 @@ export class ContextManager implements IContextManager {
   private useExternalSources: boolean;
   private initialized: boolean = false;
   private initializationError: Error | null = null;
+  
+  // Logger instance
+  private logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of ContextManager
-   * @param options Configuration options
-   * @returns The shared ContextManager instance
+   * 
+   * @param options - Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
   public static getInstance(options: ContextManagerConfig): ContextManager {
     if (!ContextManager.instance) {
       ContextManager.instance = new ContextManager(options.config);
+      
+      const logger = Logger.getInstance();
+      logger.debug('ContextManager singleton instance created');
+    } else if (options) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return ContextManager.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state between tests
    */
   public static resetInstance(): void {
-    ContextManager.instance = null;
+    if (ContextManager.instance) {
+      ContextManager.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('ContextManager singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh ContextManager instance (primarily for testing)
-   * @param options Configuration options
+   * Create a fresh instance that is not the singleton
+   * This method is primarily used for testing to create isolated instances
+   * 
+   * @param options - Configuration options
    * @returns A new ContextManager instance
    */
   public static createFresh(options: ContextManagerConfig): ContextManager {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh ContextManager instance');
+    
     return new ContextManager(options.config);
   }
 
   /**
-   * Create a new context manager
-   * @param config Configuration for the brain protocol
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param config - Configuration for the brain protocol
    */
   private constructor(config: BrainProtocolConfig) {
     const apiKey = config.getApiKey();
@@ -110,20 +144,20 @@ export class ContextManager implements IContextManager {
       if (roomId) {
         this.conversationContext.getOrCreateConversationForRoom(roomId, interfaceType)
           .then(conversationId => {
-            logger.debug(`Initialized conversation for room ${roomId}: ${conversationId}`);
+            this.logger.debug(`Initialized conversation for room ${roomId}: ${conversationId}`);
           })
           .catch(error => {
-            logger.warn(`Failed to initialize conversation for room ${roomId}:`, error);
+            this.logger.warn(`Failed to initialize conversation for room ${roomId}:`, error);
           });
       }
       
       // Mark as successfully initialized
       this.initialized = true;
       
-      logger.debug('Context manager successfully initialized');
+      this.logger.debug('Context manager successfully initialized');
     } catch (error) {
       this.initializationError = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to initialize one or more contexts:', error);
+      this.logger.error('Failed to initialize one or more contexts:', error);
       throw new ValidationError(
         'Context manager failed to initialize',
         { apiKey: !!apiKey, newsApiKey: !!newsApiKey, interfaceType, error },
@@ -179,7 +213,7 @@ export class ContextManager implements IContextManager {
     // Only log if there's an actual change
     if (this.useExternalSources !== enabled) {
       this.useExternalSources = enabled;
-      logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
+      this.logger.info(`External sources ${enabled ? 'enabled' : 'disabled'}`);
     }
   }
 
@@ -225,9 +259,9 @@ export class ContextManager implements IContextManager {
     if (this.areContextsReady()) {
       // Connect NoteContext to ProfileContext for related note operations
       this.profileContext.setNoteContext(this.noteContext);
-      logger.debug('Context links initialized');
+      this.logger.debug('Context links initialized');
     } else {
-      logger.warn('Cannot initialize context links: contexts not ready');
+      this.logger.warn('Cannot initialize context links: contexts not ready');
     }
   }
 
@@ -236,6 +270,8 @@ export class ContextManager implements IContextManager {
    * This resets the singleton instances to ensure clean state
    */
   static resetContexts(): void {
+    const logger = Logger.getInstance();
+    
     NoteContext.resetInstance();
     ProfileContext.resetInstance();
     ExternalSourceContext.resetInstance();

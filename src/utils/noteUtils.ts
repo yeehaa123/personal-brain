@@ -2,7 +2,7 @@
 import type { Note } from '../models/note';
 
 import { CLIInterface } from './cliInterface';
-import logger from './logger';
+import { Logger } from './logger';
 
 
 
@@ -14,6 +14,9 @@ import logger from './logger';
  * Display a collection of notes in the console
  */
 export function displayNotes(notes: Note[]) {
+  // Create a logger instance with silent mode in tests
+  const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   if (notes.length === 0) {
     CLIInterface.warn('No notes found.');
     return;

@@ -1,6 +1,11 @@
 /**
  * BrainProtocol Main Class
  * Orchestrates the interaction between models and contexts through specialized managers
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
@@ -11,7 +16,7 @@ import { EmbeddingService } from '@/mcp/model';
 import { ProfileAnalyzer } from '@/mcp/protocol/components/profileAnalyzer';
 import { PromptFormatter } from '@/mcp/protocol/components/promptFormatter';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import { ContextManager } from '../managers/contextManager';
@@ -23,6 +28,17 @@ import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
 
 /**
  * Main BrainProtocol class that orchestrates all components
+ * 
+ * This is the central class of the personal-brain application, responsible for:
+ * - Coordinating interactions between all component managers
+ * - Processing user queries through the query pipeline
+ * - Managing conversation and profile data
+ * - Providing access to external knowledge sources
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class BrainProtocol {
   // Core configuration
@@ -40,51 +56,82 @@ export class BrainProtocol {
   
   // Singleton instance
   private static instance: BrainProtocol | null = null;
+  
+  // Logger instance
+  private logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of BrainProtocol
-   * @param options Configuration options
-   * @param forceNew Force creation of a new instance (for testing)
-   * @returns BrainProtocol instance
+   * 
+   * @param options - Configuration options (only used when creating a new instance)
+   * @returns The singleton instance
    */
-  public static getInstance(options?: BrainProtocolOptions, forceNew = false): BrainProtocol {
-    if (!BrainProtocol.instance || forceNew) {
+  public static getInstance(options?: BrainProtocolOptions): BrainProtocol {
+    if (!BrainProtocol.instance) {
       BrainProtocol.instance = new BrainProtocol(options);
+      
+      const logger = Logger.getInstance();
+      logger.debug('BrainProtocol singleton instance created');
+    } else if (options) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return BrainProtocol.instance;
   }
 
   /**
-   * Reset the singleton instance (for testing)
+   * Reset the singleton instance
+   * This is primarily used for testing to ensure a clean state between tests
    * Also resets all manager singletons to ensure a clean state
    */
   public static resetInstance(): void {
+    const logger = Logger.getInstance();
+    
     // Reset all manager singletons
-    if (ContextManager.resetInstance) ContextManager.resetInstance();
-    if (ConversationManager.resetInstance) ConversationManager.resetInstance();
-    if (ProfileManager.resetInstance) ProfileManager.resetInstance();
-    if (ExternalSourceManager.resetInstance) ExternalSourceManager.resetInstance();
+    if (ContextManager.resetInstance) {
+      ContextManager.resetInstance();
+    }
+    if (ConversationManager.resetInstance) {
+      ConversationManager.resetInstance();
+    }
+    if (ProfileManager.resetInstance) {
+      ProfileManager.resetInstance();
+    }
+    if (ExternalSourceManager.resetInstance) {
+      ExternalSourceManager.resetInstance();
+    }
     
     // Finally reset the BrainProtocol instance
-    BrainProtocol.instance = null;
+    if (BrainProtocol.instance) {
+      BrainProtocol.instance = null;
+      logger.debug('BrainProtocol singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh instance (primarily for testing)
-   * @param options Configuration options
+   * Create a fresh instance that is not the singleton
+   * This method is primarily used for testing to create isolated instances
+   * 
+   * @param options - Configuration options
    * @returns A new BrainProtocol instance
    */
   public static createFresh(options?: BrainProtocolOptions): BrainProtocol {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh BrainProtocol instance');
+    
     return new BrainProtocol(options);
   }
 
   /**
-   * Create a new BrainProtocol instance
-   * @param optionsOrApiKey Options object or legacy API key string
-   * @param newsApiKey Legacy news API key parameter
-   * @param useExternalSources Legacy external sources flag
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param optionsOrApiKey - Options object or legacy API key string
+   * @param newsApiKey - Legacy news API key parameter
+   * @param useExternalSources - Legacy external sources flag
    */
-  constructor(
+  private constructor(
     optionsOrApiKey?: BrainProtocolOptions | string,
     newsApiKey?: string,
     useExternalSources: boolean = false,
@@ -140,11 +187,11 @@ export class BrainProtocol {
         this.config.getApiKey(),
       );
       
-      logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
-      logger.info(`Using interface type: ${this.config.interfaceType}`);
+      this.logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
+      this.logger.info(`Using interface type: ${this.config.interfaceType}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error(`Failed to initialize BrainProtocol: ${errorMessage}`);
+      this.logger.error(`Failed to initialize BrainProtocol: ${errorMessage}`);
       throw new Error(`BrainProtocol initialization failed: ${errorMessage}`);
     }
   }
@@ -232,7 +279,7 @@ export class BrainProtocol {
     this.externalSourceManager.setEnabled(enabled);
     
     // This ensures both components stay in sync
-    logger.debug('External sources setting updated in both managers');
+    this.logger.debug('External sources setting updated in both managers');
   }
 
   /**

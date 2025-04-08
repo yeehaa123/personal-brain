@@ -113,10 +113,17 @@ export function setupLoggerMocks(mockFn: { module: (name: string, factory: () =>
   // Create a default mock logger
   const mockLogger = createMockLogger();
   
-  // Mock the logger module
+  // Mock the logger module for both implementations:
+  // 1. Old logger (default export)
+  // 2. New Logger class (named export)
   mockFn.module('@/utils/logger', () => ({
     default: mockLogger,
     createLogger: () => mockLogger,
+    Logger: {
+      getInstance: () => mockLogger,
+      resetInstance: () => MockLogger.resetInstance(),
+      createFresh: () => createMockLogger(),
+    },
   }));
 }
 

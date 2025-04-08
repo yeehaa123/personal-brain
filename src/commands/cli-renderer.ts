@@ -7,7 +7,7 @@
 import type { Note } from '../models/note';
 import type { EnhancedProfile, ProfileExperience } from '../models/profile';
 import { CLIInterface } from '../utils/cliInterface';
-import logger from '../utils/logger';
+import { Logger } from '../utils/logger';
 import { displayNotes } from '../utils/noteUtils';
 
 import type { CommandHandler } from '.';
@@ -18,6 +18,8 @@ import type { CommandInfo, CommandResult } from './index';
  * Render command results for the CLI
  */
 export class CLIRenderer {
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   /**
    * Render help command
    */
@@ -51,7 +53,7 @@ export class CLIRenderer {
 
     case 'search':
       CLIInterface.displayTitle(`Search Results for "${result.query}"`);
-      logger.info(`Searching for: ${result.query}`);
+      this.logger.info(`Searching for: ${result.query}`);
 
       if (result.notes.length === 0) {
         CLIInterface.warn('No results found.');

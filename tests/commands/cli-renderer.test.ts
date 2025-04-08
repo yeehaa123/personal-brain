@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import type { Note } from '@models/note';
+import { createMockLogger, MockLogger } from '@test/__mocks__/core/logger';
 import { createMockNotes } from '@test/__mocks__/models/note';
 import { createTrackers, mockCLIInterface, mockDisplayNotes, restoreCLIInterface } from '@test/__mocks__/utils/cliUtils';
 import { displayNotes } from '@utils/noteUtils';
@@ -14,6 +15,17 @@ describe('CLIRenderer', () => {
   let originalCLI: Record<string, unknown>;
 
   beforeEach(() => {
+    // Mock the Logger class to prevent logging
+    const mockLogger = createMockLogger();
+    mock.module('@/utils/logger', () => ({
+      Logger: {
+        getInstance: () => mockLogger,
+        resetInstance: () => MockLogger.resetInstance(),
+        createFresh: () => createMockLogger(),
+      },
+      default: mockLogger,
+    }));
+    
     renderer = new CLIRenderer();
     mockNotes = createMockNotes();
 

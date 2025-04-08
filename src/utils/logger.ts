@@ -24,6 +24,8 @@ export interface LoggerConfig {
   combinedLogPath?: string;
   /** Path to debug log file */
   debugLogPath?: string;
+  /** Whether to disable all logging (useful for tests) */
+  silent?: boolean;
 }
 
 /**
@@ -54,6 +56,16 @@ export class Logger {
    * @param config Optional configuration to override default settings
    */
   private constructor(config?: LoggerConfig) {
+    // Check for silent mode first
+    if (config?.silent) {
+      // Create a silent logger with no transports
+      this.winstonLogger = winston.createLogger({
+        silent: true,
+        transports: [],
+      });
+      return;
+    }
+    
     // Merge provided config with defaults
     const mergedConfig = {
       consoleLevel: config?.consoleLevel || logConfig.consoleLevel,
