@@ -168,8 +168,8 @@ export class BrainProtocol {
     this.interfaceType = options.interfaceType || 'cli';
     this.currentRoomId = options.roomId;
 
-    // Initialize core services
-    this.model = new ClaudeModel(apiKey);
+    // Initialize core services using Component Interface Standardization pattern
+    this.model = ClaudeModel.getInstance({ apiKey });
 
     // Get the singleton instance of EmbeddingService
     this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);

@@ -146,7 +146,7 @@ export class QueryProcessor implements IQueryProcessor {
     });
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
-    this.model = new ClaudeModel(apiKey);
+    this.model = ClaudeModel.getInstance({ apiKey });
     
     this.logger.debug('Query processor initialized');
   }

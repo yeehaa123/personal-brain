@@ -57,7 +57,7 @@ export class ConversationSummarizer {
    * @private Private constructor to enforce getInstance() usage
    */
   private constructor(options?: ConversationSummarizerOptions) {
-    this.model = new ClaudeModel(options?.apiKey);
+    this.model = ClaudeModel.getInstance({ apiKey: options?.apiKey });
   }
 
   /**
