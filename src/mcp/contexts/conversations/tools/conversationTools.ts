@@ -3,6 +3,11 @@
  * 
  * This file contains the tool definitions for the ConversationContext
  * extracted to follow the single responsibility principle.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { z } from 'zod';
@@ -13,11 +18,55 @@ import type { ConversationFormatter, FormattingOptions } from '@/mcp/contexts/co
 import type { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { ResourceDefinition } from '@/mcp/contexts/core/contextInterface';
+import { Logger } from '@/utils/logger';
 
 /**
  * Service responsible for providing MCP tools for conversations
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationToolService {
+  /** The singleton instance */
+  private static instance: ConversationToolService | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Get the singleton instance of ConversationToolService
+   * 
+   * @returns The shared ConversationToolService instance
+   */
+  public static getInstance(): ConversationToolService {
+    if (!ConversationToolService.instance) {
+      ConversationToolService.instance = new ConversationToolService();
+    }
+    return ConversationToolService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationToolService.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @returns A new ConversationToolService instance
+   */
+  public static createFresh(): ConversationToolService {
+    return new ConversationToolService();
+  }
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() {
+    this.logger.debug('ConversationToolService initialized', { context: 'ConversationToolService' });
+  }
   /**
    * Get the MCP tools for the conversation context
    * 

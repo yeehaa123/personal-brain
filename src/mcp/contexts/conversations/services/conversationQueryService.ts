@@ -2,6 +2,11 @@
  * Conversation Query Service
  * 
  * Handles conversation searches and retrieval operations.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { nanoid } from 'nanoid';
@@ -9,19 +14,58 @@ import { nanoid } from 'nanoid';
 import type { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ConversationInfo, SearchCriteria } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 /**
  * Service for handling conversation queries and retrieval
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationQueryService {
+  /** The singleton instance */
+  private static instance: ConversationQueryService | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+
+  /**
+   * Get the singleton instance of ConversationQueryService
+   * 
+   * @param storageAdapter The storage adapter to use (only used when creating a new instance)
+   * @returns The shared ConversationQueryService instance
+   */
+  public static getInstance(storageAdapter: ConversationStorageAdapter): ConversationQueryService {
+    if (!ConversationQueryService.instance) {
+      ConversationQueryService.instance = new ConversationQueryService(storageAdapter);
+    }
+    return ConversationQueryService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationQueryService.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param storageAdapter The storage adapter to use
+   * @returns A new ConversationQueryService instance
+   */
+  public static createFresh(storageAdapter: ConversationStorageAdapter): ConversationQueryService {
+    return new ConversationQueryService(storageAdapter);
+  }
+  
   /**
    * Constructor
    * 
    * @param storageAdapter The storage adapter to use
    */
-  constructor(private storageAdapter: ConversationStorageAdapter) {
-    logger.debug('ConversationQueryService initialized', { context: 'ConversationQueryService' });
+  private constructor(private storageAdapter: ConversationStorageAdapter) {
+    this.logger.debug('ConversationQueryService initialized', { context: 'ConversationQueryService' });
   }
 
   /**

@@ -35,7 +35,12 @@ describe('ConversationContext Module', () => {
 
   test('should export the ConversationMcpFormatter class', () => {
     expect(ConversationContextModule.ConversationMcpFormatter).toBeDefined();
-    const formatter = new ConversationContextModule.ConversationMcpFormatter();
+    
+    // Reset before test
+    ConversationContextModule.ConversationMcpFormatter.resetInstance();
+    
+    // Use createFresh instead of constructor
+    const formatter = ConversationContextModule.ConversationMcpFormatter.createFresh();
     expect(typeof formatter.formatConversationForMcp).toBe('function');
   });
 });

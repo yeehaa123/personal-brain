@@ -1,7 +1,7 @@
 /**
  * Tests for ConversationMcpFormatter
  */
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { ConversationMcpFormatter, type McpFormattedConversation, type McpFormattedSummaries, type McpFormattedTurns } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
@@ -70,7 +70,13 @@ describe('ConversationMcpFormatter', () => {
     },
   ];
 
-  const formatter = new ConversationMcpFormatter();
+  // Reset the instance before each test to ensure clean state
+  beforeEach(() => {
+    ConversationMcpFormatter.resetInstance();
+  });
+  
+  // Get a fresh instance for testing
+  const formatter = ConversationMcpFormatter.createFresh();
 
   test('formatConversationForMcp should format a conversation with basic options', () => {
     const result: McpFormattedConversation = formatter.formatConversationForMcp(

@@ -2,6 +2,11 @@
  * ProfileFormatter class
  * 
  * Responsible for formatting profile data into human-readable text formats
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { 
   Profile, 
@@ -13,15 +18,51 @@ import type {
   ProfilePublication,
   ProfileVolunteerWork,
 } from '@/models/profile';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import type { ProfileFormattingOptions } from '../types/profileTypes';
 
 /**
  * ProfileFormatter handles converting profile objects to human-readable text
+ * Follows the Component Interface Standardization pattern
  */
 export class ProfileFormatter {
+  /** The singleton instance */
+  private static instance: ProfileFormatter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Get the singleton instance of ProfileFormatter
+   * 
+   * @returns The shared ProfileFormatter instance
+   */
+  public static getInstance(): ProfileFormatter {
+    if (!ProfileFormatter.instance) {
+      ProfileFormatter.instance = new ProfileFormatter();
+    }
+    return ProfileFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ProfileFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @returns A new ProfileFormatter instance
+   */
+  public static createFresh(): ProfileFormatter {
+    return new ProfileFormatter();
+  }
   /**
    * Formats a profile for display to users
    * 
@@ -220,7 +261,7 @@ export class ProfileFormatter {
       
       return formatted.trim();
     } catch (error) {
-      logger.error('Error formatting profile for display:', error);
+      this.logger.error('Error formatting profile for display:', error);
       return 'Error formatting profile.';
     }
   }

@@ -2,6 +2,11 @@
  * Conversation Memory Service
  * 
  * Handles conversation memory management operations.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
@@ -9,13 +14,64 @@ import type { TieredHistory, TieredMemoryConfig } from '@/mcp/contexts/conversat
 import { TieredMemoryManager } from '@/mcp/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationStorage, ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 /**
  * Service for handling conversation memory management
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationMemoryService {
+  /** The singleton instance */
+  private static instance: ConversationMemoryService | null = null;
+
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /** The tiered memory manager */
   private tieredMemoryManager: TieredMemoryManager;
+
+  /**
+   * Get the singleton instance of ConversationMemoryService
+   * 
+   * @param storageAdapter The storage adapter to use (only used when creating a new instance)
+   * @param tieredMemoryConfig Configuration for tiered memory management (only used when creating a new instance)
+   * @returns The shared ConversationMemoryService instance
+   */
+  public static getInstance(
+    storageAdapter: ConversationStorageAdapter,
+    tieredMemoryConfig: Partial<TieredMemoryConfig> = {},
+  ): ConversationMemoryService {
+    if (!ConversationMemoryService.instance) {
+      ConversationMemoryService.instance = new ConversationMemoryService(
+        storageAdapter,
+        tieredMemoryConfig,
+      );
+    }
+    return ConversationMemoryService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationMemoryService.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param storageAdapter The storage adapter to use
+   * @param tieredMemoryConfig Configuration for tiered memory management
+   * @returns A new ConversationMemoryService instance
+   */
+  public static createFresh(
+    storageAdapter: ConversationStorageAdapter,
+    tieredMemoryConfig: Partial<TieredMemoryConfig> = {},
+  ): ConversationMemoryService {
+    return new ConversationMemoryService(storageAdapter, tieredMemoryConfig);
+  }
 
   /**
    * Constructor
@@ -23,7 +79,7 @@ export class ConversationMemoryService {
    * @param storageAdapter The storage adapter to use
    * @param tieredMemoryConfig Configuration for tiered memory management
    */
-  constructor(
+  private constructor(
     private storageAdapter: ConversationStorageAdapter,
     tieredMemoryConfig: Partial<TieredMemoryConfig> = {},
   ) {
@@ -33,7 +89,7 @@ export class ConversationMemoryService {
       tieredMemoryConfig,
     );
 
-    logger.debug('ConversationMemoryService initialized', { context: 'ConversationMemoryService' });
+    this.logger.debug('ConversationMemoryService initialized', { context: 'ConversationMemoryService' });
   }
 
   /**

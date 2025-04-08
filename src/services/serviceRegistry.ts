@@ -152,29 +152,29 @@ export function registerServices(
     ServiceIdentifiers.ConversationStorageAdapter,
     () => {
       const storage = InMemoryStorage.getInstance();
-      return new ConversationStorageAdapter(storage);
+      return ConversationStorageAdapter.getInstance(storage);
     },
   );
   
   registerIfNeeded(
     ServiceIdentifiers.ConversationFormatter,
-    () => new ConversationFormatter(),
+    () => ConversationFormatter.getInstance(),
   );
   
   registerIfNeeded(
     ServiceIdentifiers.ConversationMcpFormatter,
-    () => new ConversationMcpFormatter(),
+    () => ConversationMcpFormatter.getInstance(),
   );
   
   // Register resource and tool services
   registerIfNeeded(
     ServiceIdentifiers.ConversationResourceService,
-    () => new ConversationResourceService(),
+    () => ConversationResourceService.getInstance(),
   );
   
   registerIfNeeded(
     ServiceIdentifiers.ConversationToolService,
-    () => new ConversationToolService(),
+    () => ConversationToolService.getInstance(),
   );
   
   // Register query service with its dependencies
@@ -184,7 +184,7 @@ export function registerServices(
       const storageAdapter = container.resolve<ConversationStorageAdapter>(
         ServiceIdentifiers.ConversationStorageAdapter,
       );
-      return new ConversationQueryService(storageAdapter);
+      return ConversationQueryService.getInstance(storageAdapter);
     },
   );
   
@@ -195,7 +195,7 @@ export function registerServices(
       const storageAdapter = container.resolve<ConversationStorageAdapter>(
         ServiceIdentifiers.ConversationStorageAdapter,
       );
-      return new ConversationMemoryService(storageAdapter);
+      return ConversationMemoryService.getInstance(storageAdapter);
     },
   );
 

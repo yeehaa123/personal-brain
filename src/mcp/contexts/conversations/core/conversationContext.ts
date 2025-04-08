@@ -267,15 +267,17 @@ export class ConversationContext extends BaseContext {
       });
       
       // Create services directly as a fallback
-      this.storageAdapter = new ConversationStorageAdapter(this.contextConfig.storage || InMemoryStorage.getInstance());
-      this.formatter = new ConversationFormatter();
-      this.mcpFormatter = new ConversationMcpFormatter();
-      this.resourceService = new ConversationResourceService();
-      this.toolService = new ConversationToolService();
-      this.queryService = new ConversationQueryService(this.storageAdapter);
-      this.memoryService = new ConversationMemoryService(
+      this.storageAdapter = ConversationStorageAdapter.getInstance(
+        this.contextConfig.storage || InMemoryStorage.getInstance()
+      );
+      this.formatter = ConversationFormatter.getInstance();
+      this.mcpFormatter = ConversationMcpFormatter.getInstance();
+      this.resourceService = ConversationResourceService.getInstance();
+      this.toolService = ConversationToolService.getInstance();
+      this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
+      this.memoryService = ConversationMemoryService.getInstance(
         this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig,
+        this.contextConfig.tieredMemoryConfig
       );
     }
 
@@ -402,10 +404,10 @@ export class ConversationContext extends BaseContext {
           this.tools = this.toolService.getTools(this);
         } else {
           // Fall back to direct instantiation
-          this.queryService = new ConversationQueryService(this.storageAdapter);
-          this.memoryService = new ConversationMemoryService(
+          this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
+          this.memoryService = ConversationMemoryService.getInstance(
             this.storageAdapter,
-            this.contextConfig.tieredMemoryConfig,
+            this.contextConfig.tieredMemoryConfig
           );
           
           // Update resources and tools with new services
@@ -418,10 +420,10 @@ export class ConversationContext extends BaseContext {
           context: 'ConversationContext', 
         });
         
-        this.queryService = new ConversationQueryService(this.storageAdapter);
-        this.memoryService = new ConversationMemoryService(
+        this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
+        this.memoryService = ConversationMemoryService.getInstance(
           this.storageAdapter,
-          this.contextConfig.tieredMemoryConfig,
+          this.contextConfig.tieredMemoryConfig
         );
         
         // Refresh MCP components
@@ -434,10 +436,10 @@ export class ConversationContext extends BaseContext {
         context: 'ConversationContext',
       });
       
-      this.queryService = new ConversationQueryService(this.storageAdapter);
-      this.memoryService = new ConversationMemoryService(
+      this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
+      this.memoryService = ConversationMemoryService.getInstance(
         this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig,
+        this.contextConfig.tieredMemoryConfig
       );
       
       // Refresh MCP components

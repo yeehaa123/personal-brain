@@ -1,7 +1,13 @@
 /**
  * ConversationFormatter for formatting conversations
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import { Logger } from '@/utils/logger';
 
 import type { ConversationSummary } from '../storage/conversationStorage';
 
@@ -45,8 +51,51 @@ interface FormattedSummary {
 
 /**
  * Service for formatting conversations in different output formats
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationFormatter {
+  /** The singleton instance */
+  private static instance: ConversationFormatter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() {
+    this.logger.debug('ConversationFormatter initialized', { context: 'ConversationFormatter' });
+  }
+  
+  /**
+   * Get the singleton instance of ConversationFormatter
+   * 
+   * @returns The shared ConversationFormatter instance
+   */
+  public static getInstance(): ConversationFormatter {
+    if (!ConversationFormatter.instance) {
+      ConversationFormatter.instance = new ConversationFormatter();
+    }
+    return ConversationFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @returns A new ConversationFormatter instance
+   */
+  public static createFresh(): ConversationFormatter {
+    return new ConversationFormatter();
+  }
   /**
    * Format turns for display or export
    * @param turns Turns to format

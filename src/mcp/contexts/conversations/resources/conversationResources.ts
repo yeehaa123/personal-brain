@@ -3,18 +3,66 @@
  * 
  * This file contains the resource definitions for the ConversationContext
  * extracted to follow the single responsibility principle.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
-
 
 import type { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ConversationContext } from '@/mcp/contexts/conversations/core/conversationContext';
 import type { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ResourceDefinition } from '@/mcp/contexts/core/contextInterface';
+import { Logger } from '@/utils/logger';
 
 /**
  * Service responsible for providing MCP resources for conversations
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationResourceService {
+  /** The singleton instance */
+  private static instance: ConversationResourceService | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Get the singleton instance of ConversationResourceService
+   * 
+   * @returns The shared ConversationResourceService instance
+   */
+  public static getInstance(): ConversationResourceService {
+    if (!ConversationResourceService.instance) {
+      ConversationResourceService.instance = new ConversationResourceService();
+    }
+    return ConversationResourceService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationResourceService.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @returns A new ConversationResourceService instance
+   */
+  public static createFresh(): ConversationResourceService {
+    return new ConversationResourceService();
+  }
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() {
+    this.logger.debug('ConversationResourceService initialized', { context: 'ConversationResourceService' });
+  }
   /**
    * Get MCP resources for Conversation Context
    * 

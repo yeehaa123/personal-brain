@@ -1,7 +1,13 @@
 /**
  * ConversationMcpFormatter for formatting conversations specifically for MCP responses
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import { Logger } from '@/utils/logger';
 
 import type { ConversationSummary } from '../storage/conversationStorage';
 
@@ -51,8 +57,51 @@ export interface McpFormattingOptions {
 
 /**
  * Specialized formatter for MCP protocol responses
+ * Follows the Component Interface Standardization pattern
  */
 export class ConversationMcpFormatter {
+  /** The singleton instance */
+  private static instance: ConversationMcpFormatter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() {
+    this.logger.debug('ConversationMcpFormatter initialized', { context: 'ConversationMcpFormatter' });
+  }
+  
+  /**
+   * Get the singleton instance of ConversationMcpFormatter
+   * 
+   * @returns The shared ConversationMcpFormatter instance
+   */
+  public static getInstance(): ConversationMcpFormatter {
+    if (!ConversationMcpFormatter.instance) {
+      ConversationMcpFormatter.instance = new ConversationMcpFormatter();
+    }
+    return ConversationMcpFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationMcpFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @returns A new ConversationMcpFormatter instance
+   */
+  public static createFresh(): ConversationMcpFormatter {
+    return new ConversationMcpFormatter();
+  }
   /**
    * Format a conversation for MCP resource response
    * @param conversation The conversation to format

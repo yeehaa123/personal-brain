@@ -1,11 +1,17 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 
 describe('ConversationFormatter', () => {
-  const formatter = new ConversationFormatter();
+  // Reset the instance before each test to ensure clean state
+  beforeEach(() => {
+    ConversationFormatter.resetInstance();
+  });
+  
+  // Get a fresh instance for testing
+  const formatter = ConversationFormatter.createFresh();
   
   const mockTurns: ConversationTurn[] = [
     {

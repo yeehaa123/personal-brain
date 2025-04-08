@@ -22,13 +22,13 @@ import { MockConversationStorage } from '@test/__mocks__/storage';
 mock.module('@/services/serviceRegistry', () => {
   // Create instances to return from getService
   const storage = MockConversationStorage.createFresh();
-  const adapter = new ConversationStorageAdapter(storage);
-  const formatter = new ConversationFormatter();
-  const mcpFormatter = new ConversationMcpFormatter();
-  const resourceService = new MockResourceService();
-  const toolService = new MockToolService();
-  const queryService = new MockQueryService();
-  const memoryService = new MockMemoryService();
+  const adapter = ConversationStorageAdapter.getInstance(storage);
+  const formatter = ConversationFormatter.createFresh();
+  const mcpFormatter = ConversationMcpFormatter.createFresh();
+  const resourceService = MockResourceService.createFresh();
+  const toolService = MockToolService.createFresh();
+  const queryService = MockQueryService.createFresh();
+  const memoryService = MockMemoryService.createFresh();
 
   // Mock getService to return appropriate instances
   const mockGetService = mock((serviceId: string) => {
