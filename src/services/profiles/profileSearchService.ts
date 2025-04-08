@@ -1,11 +1,16 @@
 /**
  * Service for profile-related search functionality
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { Profile } from '@/models/profile';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 import { extractKeywords } from '@/utils/textUtils';
 
@@ -51,15 +56,26 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
   protected embeddingService: ProfileEmbeddingService;
   private tagService: ProfileTagService;
   
-  // Singleton instance
+  /**
+   * Singleton instance of ProfileSearchService
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: ProfileSearchService | null = null;
   
   /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
    * Get the singleton instance of the service
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
    * @param repository Repository for accessing profiles (defaults to singleton instance)
    * @param embeddingService Service for profile embeddings (defaults to singleton instance)
    * @param tagService Service for profile tag operations (defaults to a new instance)
-   * @returns The shared ProfileSearchService instance
+   * @returns The singleton instance
    */
   public static getInstance(
     repository?: ProfileRepository,
@@ -72,19 +88,48 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
         embeddingService || ProfileEmbeddingService.getInstance(),
         tagService || new ProfileTagService(),
       );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileSearchService singleton instance created');
+    } else if (repository || embeddingService || tagService) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
     }
+    
     return ProfileSearchService.instance;
   }
   
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    ProfileSearchService.instance = null;
+    try {
+      // Clean up resources if needed
+      if (ProfileSearchService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during ProfileSearchService instance reset:', error);
+    } finally {
+      ProfileSearchService.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('ProfileSearchService singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh service instance (primarily for testing)
+   * Create a fresh ProfileSearchService instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @param repository Repository for accessing profiles
    * @param embeddingService Service for profile embeddings
    * @param tagService Service for profile tag operations
@@ -95,11 +140,18 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     embeddingService: ProfileEmbeddingService,
     tagService: ProfileTagService,
   ): ProfileSearchService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh ProfileSearchService instance');
+    
     return new ProfileSearchService(repository, embeddingService, tagService);
   }
 
   /**
    * Create a new ProfileSearchService with injected dependencies
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * 
    * @param repository Repository for accessing profiles
    * @param embeddingService Service for profile embeddings
    * @param tagService Service for profile tag operations
@@ -113,17 +165,26 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     this.repository = repository;
     this.embeddingService = embeddingService;
     this.tagService = tagService;
+    
+    this.logger.debug('ProfileSearchService instance created');
   }
   
   /**
    * Legacy constructor support for backwards compatibility
-   * @deprecated Use getInstance instead
+   * @deprecated Use getInstance or createFresh instead
    * @param apiKey Optional API key for embeddings
+   * @returns ProfileSearchService instance
    */
   static createWithApiKey(apiKey?: string): ProfileSearchService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.warn('createWithApiKey is deprecated, use getInstance() or createFresh() instead');
+    
     const repository = ProfileRepository.getInstance();
-    const embeddingService = ProfileEmbeddingService.getInstance(apiKey);
+    const embeddingService = apiKey ? 
+      ProfileEmbeddingService.createFresh(apiKey) : 
+      ProfileEmbeddingService.getInstance();
     const tagService = new ProfileTagService();
+    
     return ProfileSearchService.getInstance(repository, embeddingService, tagService);
   }
 
@@ -177,7 +238,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
 
       return (matchesQuery && matchesTags) ? [profile] : [];
     } catch (error) {
-      logger.error(`Profile keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Profile keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
@@ -223,7 +284,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       
       return (similarity >= threshold && matchesTags) ? [profile] : [];
     } catch (error) {
-      logger.error(`Profile semantic search failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Profile semantic search failed: ${error instanceof Error ? error.message : String(error)}`);
       return this.keywordSearch(query, tags, _limit, _offset);
     }
   }
@@ -259,7 +320,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
           return tagResults;
         }
       } catch (error) {
-        logger.error('Error finding notes with similar tags', { 
+        this.logger.error('Error finding notes with similar tags', { 
           error: error instanceof Error ? error.message : String(error),
           context: 'ProfileSearchService',
         });
@@ -283,7 +344,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
         limit,
       });
     } catch (error) {
-      logger.error('Error finding notes related to profile:', { 
+      this.logger.error('Error finding notes related to profile:', { 
         error: error instanceof Error ? error.message : String(error),
         context: 'ProfileSearchService',
       });
@@ -365,7 +426,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       // Ensure we return a valid array
       return Array.isArray(keywords) ? keywords.filter(isNonEmptyString) : [];
     } catch (error) {
-      logger.warn(`Error extracting profile keywords: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(`Error extracting profile keywords: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
