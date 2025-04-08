@@ -3,6 +3,11 @@
  * 
  * Adapts the ConversationStorage interface to the standard StorageInterface
  * used by the BaseContext architecture.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { nanoid } from 'nanoid';
@@ -15,18 +20,56 @@ import type {
 } from '@/mcp/contexts/conversations/storage/conversationStorage';
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contexts/core/storageInterface';
 import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 
 /**
  * Adapter to provide standard StorageInterface for conversations
  */
 export class ConversationStorageAdapter implements StorageInterface<Conversation> {
+  /** The singleton instance */
+  private static instance: ConversationStorageAdapter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   /**
    * Create a new ConversationStorageAdapter
    * @param storage The underlying storage implementation 
    */
   constructor(private storage: ConversationStorage) {}
+  
+  /**
+   * Get the singleton instance of ConversationStorageAdapter
+   * 
+   * @param storage The storage implementation to use (only used when creating a new instance)
+   * @returns The shared ConversationStorageAdapter instance
+   */
+  public static getInstance(storage: ConversationStorage): ConversationStorageAdapter {
+    if (!ConversationStorageAdapter.instance) {
+      ConversationStorageAdapter.instance = new ConversationStorageAdapter(storage);
+    }
+    return ConversationStorageAdapter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ConversationStorageAdapter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param storage The storage implementation to use
+   * @returns A new ConversationStorageAdapter instance
+   */
+  public static createFresh(storage: ConversationStorage): ConversationStorageAdapter {
+    return new ConversationStorageAdapter(storage);
+  }
 
   /**
    * Create a new conversation
@@ -109,7 +152,7 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
       
       return results;
     } catch (error) {
-      logger.error('Error searching conversations', { error, context: 'ConversationStorageAdapter' });
+      this.logger.error('Error searching conversations', { error, context: 'ConversationStorageAdapter' });
       return [];
     }
   }
@@ -146,7 +189,7 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
       
       return results;
     } catch (error) {
-      logger.error('Error listing conversations', { error, context: 'ConversationStorageAdapter' });
+      this.logger.error('Error listing conversations', { error, context: 'ConversationStorageAdapter' });
       return [];
     }
   }
@@ -168,7 +211,7 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
       const conversations = await this.search(criteria);
       return conversations.length;
     } catch (error) {
-      logger.error('Error counting conversations', { error, context: 'ConversationStorageAdapter' });
+      this.logger.error('Error counting conversations', { error, context: 'ConversationStorageAdapter' });
       return 0;
     }
   }

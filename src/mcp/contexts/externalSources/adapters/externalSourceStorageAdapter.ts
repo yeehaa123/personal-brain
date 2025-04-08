@@ -3,11 +3,16 @@
  * 
  * This adapter bridges the StorageInterface pattern with specific 
  * external source implementations like Wikipedia and NewsAPI.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { getEnv } from '@/utils/configUtils';
 import { DependencyContainer } from '@/utils/dependencyContainer';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
 import type {
@@ -63,9 +68,20 @@ export interface ExternalSourceStorageConfig {
  * Adapter to provide standard StorageInterface for external sources
  */
 export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSourceResult> {
+  /** The singleton instance */
+  private static instance: ExternalSourceStorageAdapter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /** Registered external source instances */
   private sources: Map<string, ExternalSourceInterface> = new Map();
+  
+  /** Cache for storing search results */
   private sourceCache: Map<string, CacheItem> = new Map();
-  private diContainer: DependencyContainer;
+  
+  /** Dependency injection container */
+  private diContainer: DependencyContainer = DependencyContainer.getInstance();
 
   /**
    * Options with defaults
@@ -85,10 +101,48 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       apiKey: config.apiKey || '',
       newsApiKey: config.newsApiKey || getEnv('NEWSAPI_KEY') || '',
     };
-
-    // Set up DI container
-    this.diContainer = DependencyContainer.getInstance();
-
+    
+    // Initialize the adapter
+    this.initializeSources();
+  }
+  
+  /**
+   * Get the singleton instance of ExternalSourceStorageAdapter
+   * 
+   * @param config Optional configuration for the adapter
+   * @returns The shared ExternalSourceStorageAdapter instance
+   */
+  public static getInstance(config?: ExternalSourceStorageConfig): ExternalSourceStorageAdapter {
+    if (!ExternalSourceStorageAdapter.instance) {
+      ExternalSourceStorageAdapter.instance = new ExternalSourceStorageAdapter(config);
+    }
+    return ExternalSourceStorageAdapter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ExternalSourceStorageAdapter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param config Optional configuration for the adapter
+   * @returns A new ExternalSourceStorageAdapter instance
+   */
+  public static createFresh(config?: ExternalSourceStorageConfig): ExternalSourceStorageAdapter {
+    return new ExternalSourceStorageAdapter(config);
+  }
+  
+  /**
+   * Initialize the sources based on configuration
+   * @private
+   */
+  private initializeSources(): void {
     // Helper function to avoid duplicate registrations
     const registerIfNeeded = (
       serviceId: string,
@@ -115,7 +169,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       );
 
       if (!this.diContainer.has(SERVICE_NEWSAPI)) {
-        logger.debug('NewsAPI source registered in container', { context: 'ExternalSourceStorage' });
+        this.logger.debug('NewsAPI source registered in container', { context: 'ExternalSourceStorage' });
       }
     }
 
@@ -134,7 +188,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    */
   registerSource(source: ExternalSourceInterface): void {
     this.sources.set(source.name, source);
-    logger.debug(`Registered external source: ${source.name}`, { context: 'ExternalSourceStorage' });
+    this.logger.debug(`Registered external source: ${source.name}`, { context: 'ExternalSourceStorage' });
   }
 
   /**
@@ -212,19 +266,19 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       addEmbeddings: (criteria['addEmbeddings'] as boolean) || false,
     };
 
-    logger.info(`Searching external sources for: "${query}"`, { context: 'ExternalSourceStorage' });
+    this.logger.info(`Searching external sources for: "${query}"`, { context: 'ExternalSourceStorage' });
 
     // Check cache first
     const cacheKey = this.getCacheKey(query, options);
     const cachedResults = this.getCachedResults(cacheKey);
     if (cachedResults) {
-      logger.debug(`Using cached results for: "${query}"`, { context: 'ExternalSourceStorage' });
+      this.logger.debug(`Using cached results for: "${query}"`, { context: 'ExternalSourceStorage' });
       return cachedResults;
     }
 
     const enabledSources = this.getEnabledSources();
     if (enabledSources.length === 0) {
-      logger.warn('No enabled external sources found', { context: 'ExternalSourceStorage' });
+      this.logger.warn('No enabled external sources found', { context: 'ExternalSourceStorage' });
       return [];
     }
 
@@ -232,7 +286,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     const searchPromises = enabledSources.map(source =>
       source.search(options)
         .catch(error => {
-          logger.error(`Error searching ${source.name}`, { error, context: 'ExternalSourceStorage' });
+          this.logger.error(`Error searching ${source.name}`, { error, context: 'ExternalSourceStorage' });
           return [] as ExternalSourceResult[];
         }),
     );
@@ -248,7 +302,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
     // Cache results
     this.cacheResults(cacheKey, sortedResults);
 
-    logger.info(`Found ${sortedResults.length} results from external sources`, { context: 'ExternalSourceStorage' });
+    this.logger.info(`Found ${sortedResults.length} results from external sources`, { context: 'ExternalSourceStorage' });
     return sortedResults;
   }
 
@@ -375,6 +429,6 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
       }
     }
 
-    logger.debug(`Pruned ${removeCount} items from external source cache`, { context: 'ExternalSourceStorage' });
+    this.logger.debug(`Pruned ${removeCount} items from external source cache`, { context: 'ExternalSourceStorage' });
   }
 }

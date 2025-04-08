@@ -3,22 +3,65 @@
  * 
  * This adapter wraps the existing ProfileRepository implementation to
  * make it compatible with the new StorageInterface standard.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contexts/core/storageInterface';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 
 /**
  * Adapter to provide StorageInterface for Profile entities
  */
 export class ProfileStorageAdapter implements StorageInterface<Profile> {
+  /** The singleton instance */
+  private static instance: ProfileStorageAdapter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
   /**
    * Creates a new ProfileStorageAdapter
    * @param repository The underlying ProfileRepository to adapt
    */
   constructor(private repository: ProfileRepository) {}
+  
+  /**
+   * Get the singleton instance of ProfileStorageAdapter
+   * 
+   * @param repository The repository implementation to use (only used when creating a new instance)
+   * @returns The shared ProfileStorageAdapter instance
+   */
+  public static getInstance(repository: ProfileRepository): ProfileStorageAdapter {
+    if (!ProfileStorageAdapter.instance) {
+      ProfileStorageAdapter.instance = new ProfileStorageAdapter(repository);
+    }
+    return ProfileStorageAdapter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    ProfileStorageAdapter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param repository The repository implementation to use
+   * @returns A new ProfileStorageAdapter instance
+   */
+  public static createFresh(repository: ProfileRepository): ProfileStorageAdapter {
+    return new ProfileStorageAdapter(repository);
+  }
 
   /**
    * Create a new profile (equivalent to insertProfile)
@@ -31,7 +74,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       const profile = this.prepareProfileForCreate(item);
       return await this.repository.insertProfile(profile);
     } catch (error) {
-      logger.error('Failed to create profile in adapter', { error, context: 'ProfileStorageAdapter' });
+      this.logger.error('Failed to create profile in adapter', { error, context: 'ProfileStorageAdapter' });
       throw error;
     }
   }
@@ -53,7 +96,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return null;
     } catch (error) {
-      logger.error(`Failed to read profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
+      this.logger.error(`Failed to read profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return null;
     }
   }
@@ -68,7 +111,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
     try {
       return await this.repository.updateProfile(id, updates);
     } catch (error) {
-      logger.error(`Failed to update profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
+      this.logger.error(`Failed to update profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return false;
     }
   }
@@ -82,7 +125,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
     try {
       return await this.repository.deleteProfile(id);
     } catch (error) {
-      logger.error(`Failed to delete profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
+      this.logger.error(`Failed to delete profile with ID ${id}`, { error, context: 'ProfileStorageAdapter' });
       return false;
     }
   }
@@ -116,7 +159,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return matches ? [profile] : [];
     } catch (error) {
-      logger.error('Failed to search profiles', { error, context: 'ProfileStorageAdapter' });
+      this.logger.error('Failed to search profiles', { error, context: 'ProfileStorageAdapter' });
       return [];
     }
   }
@@ -140,7 +183,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return [profile];
     } catch (error) {
-      logger.error('Failed to list profiles', { error, context: 'ProfileStorageAdapter' });
+      this.logger.error('Failed to list profiles', { error, context: 'ProfileStorageAdapter' });
       return [];
     }
   }
@@ -171,7 +214,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       
       return matches ? 1 : 0;
     } catch (error) {
-      logger.error('Failed to count profiles', { error, context: 'ProfileStorageAdapter' });
+      this.logger.error('Failed to count profiles', { error, context: 'ProfileStorageAdapter' });
       return 0;
     }
   }

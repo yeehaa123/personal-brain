@@ -3,12 +3,17 @@
  * 
  * This adapter provides a bridge between the generic StorageInterface pattern
  * and the specific implementation details of the NoteRepository.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
@@ -17,6 +22,13 @@ import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/s
  * Adapter to provide standard StorageInterface for notes
  */
 export class NoteStorageAdapter implements StorageInterface<Note> {
+  /** The singleton instance */
+  private static instance: NoteStorageAdapter | null = null;
+  
+  /** Logger instance for this class */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /** The note repository instance */
   private repository: NoteRepository;
 
   /**
@@ -25,6 +37,38 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
    */
   constructor(repository?: NoteRepository) {
     this.repository = repository || getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
+  }
+  
+  /**
+   * Get the singleton instance of NoteStorageAdapter
+   * 
+   * @param repository Optional repository to use (useful for testing)
+   * @returns The shared NoteStorageAdapter instance
+   */
+  public static getInstance(repository?: NoteRepository): NoteStorageAdapter {
+    if (!NoteStorageAdapter.instance) {
+      NoteStorageAdapter.instance = new NoteStorageAdapter(repository);
+    }
+    return NoteStorageAdapter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    NoteStorageAdapter.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param repository Optional repository to use
+   * @returns A new NoteStorageAdapter instance
+   */
+  public static createFresh(repository?: NoteRepository): NoteStorageAdapter {
+    return new NoteStorageAdapter(repository);
   }
 
   /**
@@ -49,7 +93,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       
       return await this.repository.insertNote(noteData);
     } catch (error) {
-      logger.error('Failed to create note', { error, context: 'NoteStorageAdapter' });
+      this.logger.error('Failed to create note', { error, context: 'NoteStorageAdapter' });
       throw error;
     }
   }
@@ -64,7 +108,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       const note = await this.repository.getNoteById(id);
       return note || null;
     } catch (error) {
-      logger.error(`Failed to read note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
+      this.logger.error(`Failed to read note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return null;
     }
   }
@@ -95,7 +139,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       
       return true;
     } catch (error) {
-      logger.error(`Failed to update note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
+      this.logger.error(`Failed to update note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return false;
     }
   }
@@ -109,7 +153,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
     try {
       return await this.repository.deleteById(id);
     } catch (error) {
-      logger.error(`Failed to delete note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
+      this.logger.error(`Failed to delete note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return false;
     }
   }
@@ -135,7 +179,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       // Otherwise, just return recent notes
       return await this.list({ limit, offset });
     } catch (error) {
-      logger.error('Failed to search notes', { error, context: 'NoteStorageAdapter' });
+      this.logger.error('Failed to search notes', { error, context: 'NoteStorageAdapter' });
       return [];
     }
   }
@@ -152,7 +196,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       
       return await this.repository.getRecentNotes(limit);
     } catch (error) {
-      logger.error('Failed to list notes', { error, context: 'NoteStorageAdapter' });
+      this.logger.error('Failed to list notes', { error, context: 'NoteStorageAdapter' });
       return [];
     }
   }
@@ -167,7 +211,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       // For now, just return total count
       return await this.repository.getNoteCount();
     } catch (error) {
-      logger.error('Failed to count notes', { error, context: 'NoteStorageAdapter' });
+      this.logger.error('Failed to count notes', { error, context: 'NoteStorageAdapter' });
       return 0;
     }
   }
@@ -187,7 +231,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
       // Fallback if the method doesn't exist
       return [];
     } catch (error) {
-      logger.error(`Failed to find notes with source ${source}`, { error, context: 'NoteStorageAdapter' });
+      this.logger.error(`Failed to find notes with source ${source}`, { error, context: 'NoteStorageAdapter' });
       return [];
     }
   }
