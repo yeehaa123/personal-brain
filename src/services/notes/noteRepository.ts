@@ -28,11 +28,6 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
   private static instance: NoteRepository | null = null;
-  
-  /**
-   * Logger instance for this class
-   */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
 
   /**
    * Get the singleton instance of the repository

@@ -29,11 +29,6 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
   private static instance: ProfileRepository | null = null;
-  
-  /**
-   * Logger instance for this class
-   */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
 
   /**
    * Get the singleton instance of the repository
