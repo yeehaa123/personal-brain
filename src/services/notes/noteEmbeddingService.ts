@@ -1,11 +1,16 @@
 /**
  * Service for managing note embeddings and vector operations
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { textConfig } from '@/config';
 import type { Note } from '@/models/note';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ApiError, tryExec, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { assertDefined, isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteRepository } from './noteRepository';
@@ -17,40 +22,92 @@ import { NoteRepository } from './noteRepository';
 export class NoteEmbeddingService extends BaseEmbeddingService {
   private noteRepository: NoteRepository;
   
-  // Singleton instance
+  /**
+   * Singleton instance of NoteEmbeddingService
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: NoteEmbeddingService | null = null;
   
   /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
    * Get the singleton instance of the service
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
    * @param apiKey Optional API key for the embedding service
    * @returns The shared NoteEmbeddingService instance
    */
   public static getInstance(apiKey?: string): NoteEmbeddingService {
     if (!NoteEmbeddingService.instance) {
       NoteEmbeddingService.instance = new NoteEmbeddingService(apiKey);
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteEmbeddingService singleton instance created');
+    } else if (apiKey) {
+      // Log a warning if trying to get instance with different API key
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with apiKey but instance already exists. API key ignored.');
     }
+    
     return NoteEmbeddingService.instance;
   }
   
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    NoteEmbeddingService.instance = null;
+    try {
+      // Clean up resources if needed
+      if (NoteEmbeddingService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during NoteEmbeddingService instance reset:', error);
+    } finally {
+      NoteEmbeddingService.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteEmbeddingService singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh service instance (primarily for testing)
+   * Create a fresh service instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @param apiKey Optional API key for the embedding service
    * @returns A new NoteEmbeddingService instance
    */
   public static createFresh(apiKey?: string): NoteEmbeddingService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh NoteEmbeddingService instance');
+    
     return new NoteEmbeddingService(apiKey);
   }
 
+  /**
+   * Create a new NoteEmbeddingService
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * 
+   * @param apiKey Optional API key for the embeddings service
+   */
   constructor(apiKey?: string) {
     super(apiKey);
     this.noteRepository = NoteRepository.getInstance();
+    this.logger.debug('NoteEmbeddingService instance created');
   }
 
   /**
@@ -109,11 +166,11 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       );
       
       if (!Array.isArray(chunks) || chunks.length === 0) {
-        logger.warn(`No chunks were generated for note ${noteId}`);
+        this.logger.warn(`No chunks were generated for note ${noteId}`);
         return [];
       }
       
-      logger.info(`Generated ${chunks.length} chunks for note ${noteId}`);
+      this.logger.info(`Generated ${chunks.length} chunks for note ${noteId}`);
       
       // Generate embeddings for all chunks in batch
       const embeddingResults = await this.embeddingService.getBatchEmbeddings(chunks);
@@ -143,7 +200,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
           !Array.isArray(embeddingResult.embedding) || 
           embeddingResult.embedding.length === 0
         ) {
-          logger.warn(`Invalid chunk or embedding at index ${i} for note ${noteId}, skipping`);
+          this.logger.warn(`Invalid chunk or embedding at index ${i} for note ${noteId}, skipping`);
           continue;
         }
         
@@ -158,7 +215,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
         chunkIds.push(chunkId);
       }
       
-      logger.info(`Successfully stored ${chunkIds.length} chunks for note ${noteId}`);
+      this.logger.info(`Successfully stored ${chunkIds.length} chunks for note ${noteId}`);
       return chunkIds;
     }, `Error creating note chunks for note ${noteId}`);
   }
@@ -175,7 +232,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       // Get all notes without embeddings
       const notesWithoutEmbeddings = await this.noteRepository.getNotesWithoutEmbeddings();
       
-      logger.info(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
+      this.logger.info(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
       
       if (notesWithoutEmbeddings.length === 0) {
         return { updated, failed };
@@ -185,7 +242,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       for (const note of notesWithoutEmbeddings) {
         try {
           if (!isDefined(note) || !isNonEmptyString(note.id)) {
-            logger.warn('Found invalid note in database, skipping');
+            this.logger.warn('Found invalid note in database, skipping');
             failed++;
             continue;
           }
@@ -196,7 +253,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
           
           // Skip notes with no content
           if (title.length === 0 && content.length === 0) {
-            logger.warn(`Note ${note.id} has no content to embed, skipping`);
+            this.logger.warn(`Note ${note.id} has no content to embed, skipping`);
             failed++;
             continue;
           }
@@ -213,19 +270,19 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
             await this.createNoteChunks(note.id, content)
               .catch(chunkError => {
                 // Log but don't fail the whole operation
-                logger.error(`Failed to create chunks for note ${note.id}: ${chunkError instanceof Error ? chunkError.message : String(chunkError)}`);
+                this.logger.error(`Failed to create chunks for note ${note.id}: ${chunkError instanceof Error ? chunkError.message : String(chunkError)}`);
               });
           }
           
           updated++;
-          logger.info(`Updated embedding for note: ${note.id}`);
+          this.logger.info(`Updated embedding for note: ${note.id}`);
         } catch (error) {
           failed++;
-          logger.error(`Failed to update embedding for note ${note.id}: ${error instanceof Error ? error.message : String(error)}`);
+          this.logger.error(`Failed to update embedding for note ${note.id}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
     } catch (error) {
-      logger.error(`Error in embedding generation: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error in embedding generation: ${error instanceof Error ? error.message : String(error)}`);
     }
     
     return { updated, failed };
@@ -253,7 +310,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       // Get all notes with embeddings
       const notesWithEmbeddings = await this.noteRepository.getNotesWithEmbeddings();
       
-      logger.debug(`Found ${notesWithEmbeddings.length} notes with embeddings for similarity search`);
+      this.logger.debug(`Found ${notesWithEmbeddings.length} notes with embeddings for similarity search`);
       
       if (notesWithEmbeddings.length === 0) {
         return [];
@@ -273,12 +330,12 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
             });
           } catch (similarityError) {
             // Skip notes where similarity calculation fails
-            logger.debug(`Error calculating similarity for note ${note.id}: ${similarityError}`);
+            this.logger.debug(`Error calculating similarity for note ${note.id}: ${similarityError}`);
           }
         }
       }
       
-      logger.debug(`Calculated similarity scores for ${scoredNotes.length} notes`);
+      this.logger.debug(`Calculated similarity scores for ${scoredNotes.length} notes`);
       
       // Sort by similarity score (highest first)
       scoredNotes.sort((a, b) => b.score - a.score);
@@ -286,7 +343,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       // Return top matches
       return scoredNotes.slice(0, safeMaxResults);
     } catch (error) {
-      logger.error(`Error in similarity search: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error in similarity search: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
@@ -311,19 +368,19 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       const sourceNote = await this.noteRepository.getNoteById(noteId);
       
       if (!isDefined(sourceNote)) {
-        logger.warn(`Source note not found: ${noteId}`);
+        this.logger.warn(`Source note not found: ${noteId}`);
         return [];
       }
       
       if (!Array.isArray(sourceNote.embedding) || sourceNote.embedding.length === 0) {
-        logger.debug(`Source note has no embedding for similarity search: ${noteId}`);
+        this.logger.debug(`Source note has no embedding for similarity search: ${noteId}`);
         return [];
       }
       
       // Get all other notes with embeddings
       const otherNotes = await this.noteRepository.getOtherNotesWithEmbeddings(noteId);
       
-      logger.debug(`Found ${otherNotes.length} other notes with embeddings`);
+      this.logger.debug(`Found ${otherNotes.length} other notes with embeddings`);
       
       if (otherNotes.length === 0) {
         return [];
@@ -346,12 +403,12 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
             });
           } catch (similarityError) {
             // Skip notes where similarity calculation fails
-            logger.debug(`Error calculating similarity between notes ${noteId} and ${note.id}: ${similarityError}`);
+            this.logger.debug(`Error calculating similarity between notes ${noteId} and ${note.id}: ${similarityError}`);
           }
         }
       }
       
-      logger.debug(`Calculated similarity scores for ${scoredNotes.length} notes`);
+      this.logger.debug(`Calculated similarity scores for ${scoredNotes.length} notes`);
       
       // Sort by similarity score (highest first)
       scoredNotes.sort((a, b) => b.score - a.score);
@@ -359,7 +416,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
       // Return top matches
       return scoredNotes.slice(0, safeMaxResults);
     } catch (error) {
-      logger.error(`Error finding related notes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error finding related notes: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
