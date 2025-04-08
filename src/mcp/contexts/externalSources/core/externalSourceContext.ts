@@ -120,7 +120,7 @@ export class ExternalSourceContext extends BaseContext {
     super(config as Record<string, unknown>);
     
     // Initialize storage adapter
-    this.storage = new ExternalSourceStorageAdapter({
+    this.storage = ExternalSourceStorageAdapter.getInstance({
       apiKey: config.apiKey,
       newsApiKey: config.newsApiKey,
       enabledSources: config.enabledSources,

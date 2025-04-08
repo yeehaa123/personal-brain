@@ -268,7 +268,7 @@ export class ConversationContext extends BaseContext {
       
       // Create services directly as a fallback
       this.storageAdapter = ConversationStorageAdapter.getInstance(
-        this.contextConfig.storage || InMemoryStorage.getInstance()
+        this.contextConfig.storage || InMemoryStorage.getInstance(),
       );
       this.formatter = ConversationFormatter.getInstance();
       this.mcpFormatter = ConversationMcpFormatter.getInstance();
@@ -277,7 +277,7 @@ export class ConversationContext extends BaseContext {
       this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
       this.memoryService = ConversationMemoryService.getInstance(
         this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig
+        this.contextConfig.tieredMemoryConfig,
       );
     }
 
@@ -407,7 +407,7 @@ export class ConversationContext extends BaseContext {
           this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
           this.memoryService = ConversationMemoryService.getInstance(
             this.storageAdapter,
-            this.contextConfig.tieredMemoryConfig
+            this.contextConfig.tieredMemoryConfig,
           );
           
           // Update resources and tools with new services
@@ -423,7 +423,7 @@ export class ConversationContext extends BaseContext {
         this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
         this.memoryService = ConversationMemoryService.getInstance(
           this.storageAdapter,
-          this.contextConfig.tieredMemoryConfig
+          this.contextConfig.tieredMemoryConfig,
         );
         
         // Refresh MCP components
@@ -439,7 +439,7 @@ export class ConversationContext extends BaseContext {
       this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
       this.memoryService = ConversationMemoryService.getInstance(
         this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig
+        this.contextConfig.tieredMemoryConfig,
       );
       
       // Refresh MCP components
