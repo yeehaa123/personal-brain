@@ -1,6 +1,11 @@
 /**
  * Repository for managing Note storage and retrieval
  * Centralizes database access for notes
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { and, desc, eq, isNull, like, not, or, sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -10,7 +15,7 @@ import { noteChunks, notes } from '@/db/schema';
 import type { Note } from '@/models/note';
 import { BaseRepository } from '@/services/BaseRepository';
 import { DatabaseError, tryExec, ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 
@@ -18,32 +23,71 @@ import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
  * Repository for accessing and managing notes in the database
  */
 export class NoteRepository extends BaseRepository<typeof notes, Note> {
-  // Singleton instance
+  /**
+   * Singleton instance of NoteRepository
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: NoteRepository | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
 
   /**
    * Get the singleton instance of the repository
-   * @returns The shared NoteRepository instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @returns The singleton instance
    */
   public static getInstance(): NoteRepository {
     if (!NoteRepository.instance) {
       NoteRepository.instance = new NoteRepository();
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteRepository singleton instance created');
     }
+    
     return NoteRepository.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    NoteRepository.instance = null;
+    try {
+      // Clean up resources if needed
+      if (NoteRepository.instance) {
+        // No specific cleanup needed for this repository
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during NoteRepository instance reset:', error);
+    } finally {
+      NoteRepository.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteRepository singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh repository instance (primarily for testing)
+   * Create a fresh NoteRepository instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @returns A new NoteRepository instance
    */
   public static createFresh(): NoteRepository {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh NoteRepository instance');
+    
     return new NoteRepository();
   }
   // New methods for conversation-to-notes feature
@@ -268,7 +312,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
       // Apply safe limits
       const safeLimit = Math.max(1, Math.min(limit || 5, 100));
       
-      logger.debug(`Fetching ${safeLimit} recent notes`);
+      this.logger.debug(`Fetching ${safeLimit} recent notes`);
       
       // Query recent notes ordered by update time
       const recentNotes = await db
@@ -277,7 +321,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
         .orderBy(desc(notes.updatedAt))
         .limit(safeLimit);
       
-      logger.debug(`Found ${recentNotes.length} recent notes`);
+      this.logger.debug(`Found ${recentNotes.length} recent notes`);
       
       // Apply consistent typing to source field
       return recentNotes.map(note => ({
@@ -398,7 +442,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
 
         // If we have actual keywords, search for them
         if (keywords.length > 0) {
-          logger.debug(`Searching with ${keywords.length} extracted keywords`);
+          this.logger.debug(`Searching with ${keywords.length} extracted keywords`);
           
           const keywordConditions = keywords.map(keyword => {
             // Sanitize the keyword for SQL LIKE pattern
@@ -415,7 +459,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
           conditions.push(or(...keywordConditions));
         } else {
           // Fallback to original query if no keywords extracted
-          logger.debug('No keywords extracted, using original query');
+          this.logger.debug('No keywords extracted, using original query');
           
           // Sanitize the query for SQL LIKE pattern
           const safeQuery = query.replace(/%/g, '\\%').replace(/_/g, '\\_');
@@ -433,7 +477,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
       if (Array.isArray(tags) && tags.length > 0) {
         const validTags = tags.filter(isNonEmptyString);
         if (validTags.length > 0) {
-          logger.debug(`Searching with ${validTags.length} tags`);
+          this.logger.debug(`Searching with ${validTags.length} tags`);
           
           // This assumes tags are stored as a JSON array in a TEXT field
           // Add a condition for each tag to search in the JSON array
@@ -447,7 +491,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
 
       // If no conditions, just get recent notes
       if (conditions.length === 0) {
-        logger.debug('No search conditions, returning recent notes');
+        this.logger.debug('No search conditions, returning recent notes');
         
         const results = await db
           .select()
