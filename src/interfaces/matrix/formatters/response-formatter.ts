@@ -244,7 +244,17 @@ export class MatrixResponseFormatter {
       builder.addHeader('Answer');
       builder.addSection(answer);
       
-      // Add citations if available
+      // Add related notes if available (moved above citations)
+      if (relatedNotes.length > 0) {
+        builder.addDivider();
+        builder.addHeader('Related Notes');
+        
+        relatedNotes.forEach((note, index) => {
+          builder.addSection(formatNotePreviewInternal(note, index + 1, false));
+        });
+      }
+      
+      // Add citations if available (moved after related notes)
       if (citations.length > 0) {
         builder.addDivider();
         builder.addHeader('Sources');
@@ -262,16 +272,6 @@ export class MatrixResponseFormatter {
         builder.addSection(citationsHtml);
       }
       
-      // Add related notes if available
-      if (relatedNotes.length > 0) {
-        builder.addDivider();
-        builder.addHeader('Related Notes');
-        
-        relatedNotes.forEach((note, index) => {
-          builder.addSection(formatNotePreviewInternal(note, index + 1, false));
-        });
-      }
-      
       return builder.build() as string;
     } else {
       const askMessage = [
@@ -280,7 +280,15 @@ export class MatrixResponseFormatter {
         answer,
       ];
       
-      // Add citations if available
+      // Add related notes if available (moved above citations)
+      if (relatedNotes.length > 0) {
+        askMessage.push('', '#### Related Notes');
+        relatedNotes.forEach((note, index) => {
+          askMessage.push(formatNotePreviewInternal(note, index + 1, false));
+        });
+      }
+      
+      // Add citations if available (moved after related notes)
       if (citations.length > 0) {
         askMessage.push('', '#### Sources');
         
@@ -296,14 +304,6 @@ export class MatrixResponseFormatter {
         // Format as HTML and add to message
         const citationsHtml = this.citations.formatCitationList(formattedCitations);
         askMessage.push(citationsHtml);
-      }
-      
-      // Add related notes if available
-      if (relatedNotes.length > 0) {
-        askMessage.push('', '#### Related Notes');
-        relatedNotes.forEach((note, index) => {
-          askMessage.push(formatNotePreviewInternal(note, index + 1, false));
-        });
       }
       
       const formattedMessage = askMessage.join('\n');
