@@ -1,11 +1,16 @@
 /**
  * Service for searching notes using various strategies
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { Note } from '@/models/note';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
-import logger from '@/utils/logger';
+import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 import { extractKeywords } from '@/utils/textUtils';
 
@@ -23,14 +28,25 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
   protected repository: NoteRepository;
   protected embeddingService: NoteEmbeddingService;
   
-  // Singleton instance
+  /**
+   * Singleton instance of NoteSearchService
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
   private static instance: NoteSearchService | null = null;
   
   /**
+   * Logger instance for this class
+   */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
    * Get the singleton instance of the service
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
    * @param repository Repository for accessing notes (defaults to singleton instance)
    * @param embeddingService Service for note embeddings (defaults to singleton instance)
-   * @returns The shared NoteSearchService instance
+   * @returns The singleton instance
    */
   public static getInstance(
     repository?: NoteRepository,
@@ -41,19 +57,48 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
         repository || NoteRepository.getInstance(),
         embeddingService || NoteEmbeddingService.getInstance(),
       );
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteSearchService singleton instance created');
+    } else if (repository || embeddingService) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
     }
+    
     return NoteSearchService.instance;
   }
   
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    NoteSearchService.instance = null;
+    try {
+      // Clean up resources if needed
+      if (NoteSearchService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.error('Error during NoteSearchService instance reset:', error);
+    } finally {
+      NoteSearchService.instance = null;
+      
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('NoteSearchService singleton instance reset');
+    }
   }
   
   /**
-   * Create a fresh service instance (primarily for testing)
+   * Create a fresh NoteSearchService instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
    * @param repository Repository for accessing notes
    * @param embeddingService Service for note embeddings
    * @returns A new NoteSearchService instance
@@ -62,31 +107,44 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     repository: NoteRepository,
     embeddingService: NoteEmbeddingService,
   ): NoteSearchService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating fresh NoteSearchService instance');
+    
     return new NoteSearchService(repository, embeddingService);
   }
 
   /**
    * Create a new NoteSearchService with injected dependencies
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
+   * 
    * @param repository Repository for accessing notes
    * @param embeddingService Service for note embeddings
    */
-  constructor(
+  public constructor(
     repository: NoteRepository,
     embeddingService: NoteEmbeddingService,
   ) {
     super();
     this.repository = repository;
     this.embeddingService = embeddingService;
+    this.logger.debug('NoteSearchService instance created with dependencies');
   }
 
   /**
    * Legacy constructor support for backwards compatibility
-   * @deprecated Use dependency injection instead
+   * @deprecated Use getInstance() or createFresh() instead
    * @param apiKey Optional API key for embeddings
    */
   static createWithApiKey(apiKey?: string): NoteSearchService {
-    const repository = new NoteRepository();
-    const embeddingService = new NoteEmbeddingService(apiKey);
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.warn('createWithApiKey is deprecated, use getInstance() or createFresh() instead');
+    
+    const repository = NoteRepository.getInstance();
+    const embeddingService = apiKey ? 
+      NoteEmbeddingService.createFresh(apiKey) : 
+      NoteEmbeddingService.getInstance();
+      
     return new NoteSearchService(repository, embeddingService);
   }
 
@@ -114,9 +172,10 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     offset = 0,
   ): Promise<Note[]> {
     try {
+      this.logger.debug(`Performing keyword search with query: ${query}, tags: ${tags?.join(', ')}`);
       return await this.repository.searchNotesByKeywords(query, tags, limit, offset);
     } catch (error) {
-      logger.error(`Keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
       return this.repository.getRecentNotes(limit);
     }
   }
@@ -165,9 +224,10 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       return paginatedNotes.map(({ score: _score, ...note }) => note);
     } catch (error) {
       // Log but don't fail - fall back to keyword search
-      logger.error(`Error in semantic search: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error in semantic search: ${error instanceof Error ? error.message : String(error)}`);
 
       // Try keyword search as fallback
+      this.logger.debug('Falling back to keyword search');
       return this.keywordSearch(query, tags, limit, offset);
     }
   }
@@ -191,7 +251,8 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       // Fall back to keyword-based related notes if no semantic results
       return this.getKeywordRelatedNotes(noteId, maxResults);
     } catch (error) {
-      logger.error(`Error finding related notes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error finding related notes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug('Falling back to keyword-based related notes');
       return this.getKeywordRelatedNotes(noteId, maxResults);
     }
   }
@@ -211,13 +272,13 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       const sourceNote = await this.repository.getNoteById(noteId);
 
       if (!isDefined(sourceNote)) {
-        logger.warn(`Source note not found for keyword relation: ${noteId}`);
+        this.logger.warn(`Source note not found for keyword relation: ${noteId}`);
         return [];
       }
 
       // Make sure the note has content
       if (!isNonEmptyString(sourceNote.content)) {
-        logger.debug(`Source note has no content for keyword extraction: ${noteId}`);
+        this.logger.debug(`Source note has no content for keyword extraction: ${noteId}`);
         return this.repository.getRecentNotes(safeMaxResults);
       }
 
@@ -225,11 +286,11 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       const keywords = this.extractKeywords(sourceNote.content);
 
       if (!Array.isArray(keywords) || keywords.length === 0) {
-        logger.debug(`No keywords extracted from note: ${noteId}`);
+        this.logger.debug(`No keywords extracted from note: ${noteId}`);
         return this.repository.getRecentNotes(safeMaxResults);
       }
 
-      logger.debug(`Extracted ${keywords.length} keywords from note ${noteId}: ${keywords.join(', ')}`);
+      this.logger.debug(`Extracted ${keywords.length} keywords from note ${noteId}: ${keywords.join(', ')}`);
 
       // Use each keyword as a search term
       const keywordPromises = keywords.map(keyword =>
@@ -248,7 +309,8 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
         noteId,
       ).slice(0, safeMaxResults);
     } catch (error) {
-      logger.error(`Error finding keyword-related notes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Error finding keyword-related notes: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.debug(`Falling back to recent notes with limit ${maxResults}`);
       return this.repository.getRecentNotes(maxResults);
     }
   }
@@ -261,7 +323,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    */
   protected extractKeywords(text: string, maxKeywords = 10): string[] {
     if (!isNonEmptyString(text)) {
-      logger.debug('Empty text provided for keyword extraction');
+      this.logger.debug('Empty text provided for keyword extraction');
       return [];
     }
 
@@ -271,11 +333,14 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
 
       // Use the utility function to extract keywords
       const keywords = extractKeywords(text, safeMaxKeywords);
+      
+      const validKeywords = Array.isArray(keywords) ? keywords.filter(isNonEmptyString) : [];
+      this.logger.debug(`Extracted ${validKeywords.length} keywords from text`);
 
       // Ensure we return a valid array
-      return Array.isArray(keywords) ? keywords.filter(isNonEmptyString) : [];
+      return validKeywords;
     } catch (error) {
-      logger.warn(`Error extracting keywords: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.warn(`Error extracting keywords: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
   }
