@@ -7,20 +7,20 @@
 
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
 import { ExternalSourceStorageAdapter } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
 import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import { EmbeddingService } from '@/mcp/model';
+import { Logger } from '@/utils/logger';
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
-import { Logger } from '@/utils/logger';
+
+// Mock dependencies with spies
 
 // Suppress logs in tests
 const origLoggerWarn = Logger.getInstance().warn;
 Logger.getInstance().warn = mock(() => {});
-
-// Mock dependencies with spies
-import { EmbeddingService } from '@/mcp/model';
 
 // Create mock for EmbeddingService
 const mockEmbeddingService = {
