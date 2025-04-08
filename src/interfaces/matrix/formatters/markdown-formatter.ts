@@ -83,58 +83,9 @@ export class MatrixMarkdownFormatter {
    * @returns Styled HTML
    */
   private applyCustomStyles(html: string): string {
-    // Add custom CSS styles
-    return `
-      <style>
-        .brain-message {
-          border-left: 4px solid #2196F3;
-          padding: 8px 12px;
-          background-color: rgba(33, 150, 243, 0.05);
-          margin: 8px 0;
-        }
-        .brain-message pre {
-          background-color: rgba(0, 0, 0, 0.05);
-          padding: 12px;
-          border-radius: 4px;
-          overflow-x: auto;
-        }
-        .brain-message code {
-          font-family: monospace;
-          background-color: rgba(0, 0, 0, 0.05);
-          padding: 2px 4px;
-          border-radius: 3px;
-        }
-        .brain-message blockquote {
-          border-left: 3px solid #9e9e9e;
-          margin-left: 0;
-          padding-left: 12px;
-          color: #616161;
-        }
-        .brain-message img {
-          max-width: 100%;
-          height: auto;
-        }
-        .brain-message table {
-          border-collapse: collapse;
-          width: 100%;
-        }
-        .brain-message th, .brain-message td {
-          border: 1px solid #e0e0e0;
-          padding: 8px;
-        }
-        .brain-message th {
-          background-color: rgba(0, 0, 0, 0.05);
-        }
-        .source-citation {
-          background-color: rgba(33, 150, 243, 0.1);
-          border-left: 3px solid #2196F3;
-          padding: 8px 12px;
-          margin: 8px 0;
-          font-style: italic;
-        }
-      </style>
-      <div class="brain-message">${html}</div>
-    `;
+    // For Matrix, we need to minimize styling and just return the HTML
+    // Matrix will handle most of the styling itself
+    return html;
   }
 
   /**
@@ -144,18 +95,9 @@ export class MatrixMarkdownFormatter {
    * @returns HTML with bot styling
    */
   private applyBotStyling(html: string): string {
-    // Add a bot header with styling
-    return `
-      <div class="bot-message">
-        <div class="bot-header" style="display: flex; align-items: center; margin-bottom: 8px;">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #2196F3; display: flex; justify-content: center; align-items: center; margin-right: 8px;">
-            <span style="color: white; font-weight: bold;">B</span>
-          </div>
-          <span style="font-weight: bold; color: #2196F3;">Brain Assistant</span>
-        </div>
-        ${html}
-      </div>
-    `;
+    // For Matrix client, we'll just return the HTML content without bot styling
+    // Matrix handles bot message styling differently
+    return html;
   }
 
   /**

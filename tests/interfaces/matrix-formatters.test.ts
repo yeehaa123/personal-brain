@@ -8,10 +8,8 @@ describe('Matrix Formatters', () => {
       const formatter = getMarkdownFormatter();
       const result = formatter.format('# Hello World');
       
-      // Should contain the header and bot styling
+      // Should contain the header with no styling
       expect(result).toContain('<h1>Hello World</h1>');
-      expect(result).toContain('brain-message');
-      expect(result).toContain('bot-message');
     });
     
     test('should format code blocks', () => {
@@ -20,7 +18,6 @@ describe('Matrix Formatters', () => {
       
       // Should contain the code and language formatting
       expect(result).toContain('console.log');
-      expect(result).toContain('brain-message');
     });
   });
   
@@ -91,8 +88,22 @@ describe('Matrix Formatters', () => {
     test('should format search results', () => {
       const formatter = getResponseFormatter();
       const notes = [
-        { id: 'note-1', title: 'Note 1', content: 'Content 1', tags: ['tag1'] },
-        { id: 'note-2', title: 'Note 2', content: 'Content 2', tags: ['tag2'] },
+        { 
+          id: 'note-1', 
+          title: 'Note 1', 
+          content: 'Content 1', 
+          tags: ['tag1'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { 
+          id: 'note-2', 
+          title: 'Note 2', 
+          content: 'Content 2', 
+          tags: ['tag2'],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
       ];
       
       const result = formatter.formatSearchResults('test', notes);
@@ -136,7 +147,6 @@ describe('Matrix Formatters', () => {
       expect(result).toContain('<em>markdown</em>');
       expect(result).toContain('Source 1');
       expect(result).toContain('Source 2');
-      expect(result).toContain('brain-message');
     });
   });
 });

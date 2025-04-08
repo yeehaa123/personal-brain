@@ -12,6 +12,7 @@
  */
 
 import { getResponseFormatter } from '../interfaces/matrix/formatters';
+import type { NotePreview } from '../interfaces/matrix/formatters/types';
 import logger from '../utils/logger';
 
 import type { CommandHandler } from '.';
@@ -80,7 +81,7 @@ export class MatrixRenderer {
           return;
         }
 
-        this.sendMessageFn(roomId, this.formatter.formatSearchResults(result.query, result.notes));
+        this.sendMessageFn(roomId, this.formatter.formatSearchResults(result.query, result.notes as unknown as NotePreview[]));
         break;
       }
 
@@ -90,12 +91,13 @@ export class MatrixRenderer {
           return;
         }
 
-        this.sendMessageFn(roomId, this.formatter.formatNotesList(result.notes, result.title));
+        this.sendMessageFn(roomId, this.formatter.formatNotesList(result.notes as unknown as NotePreview[], result.title));
         break;
       }
 
       case 'note': {
-        this.sendMessageFn(roomId, this.formatter.formatNote(result.note));
+        // Cast to NotePreview to satisfy the more flexible type system used by formatters
+        this.sendMessageFn(roomId, this.formatter.formatNote(result.note as unknown as NotePreview));
         break;
       }
 
@@ -112,7 +114,7 @@ export class MatrixRenderer {
       case 'profile-related': {
         this.sendMessageFn(
           roomId,
-          this.formatter.formatProfileRelated(result.profile, result.relatedNotes, result.matchType),
+          this.formatter.formatProfileRelated(result.profile, result.relatedNotes as unknown as NotePreview[], result.matchType),
         );
         break;
       }
@@ -123,7 +125,7 @@ export class MatrixRenderer {
         
         this.sendMessageFn(
           roomId, 
-          this.formatter.formatAnswer(result.answer, result.citations, result.relatedNotes),
+          this.formatter.formatAnswer(result.answer, result.citations, result.relatedNotes as unknown as NotePreview[]),
         );
         break;
       }
@@ -151,7 +153,7 @@ export class MatrixRenderer {
       }
       
       case 'conversation-notes': {
-        this.sendMessageFn(roomId, this.formatter.formatConversationNotes(result.notes));
+        this.sendMessageFn(roomId, this.formatter.formatConversationNotes(result.notes as unknown as (NotePreview & { createdAt: string | Date })[]));
         break;
       }
       }

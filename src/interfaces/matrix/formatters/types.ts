@@ -7,14 +7,28 @@
 /**
  * Note preview type for search results and related notes
  */
+/**
+ * Compatible with Note but with more flexible types for Matrix formatting
+ */
 export interface NotePreview {
   id: string;
   title: string;
   content: string;
-  tags?: string[] | null;
-  createdAt?: string | Date;
-  updatedAt?: string | Date;
+  tags: string[] | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
   similarity?: number;
+  // Additional properties used in Note type, all optional
+  embedding?: number[] | null;
+  source?: 'conversation' | 'import' | 'user-created';
+  conversationMetadata?: {
+    conversationId: string;
+    timestamp: Date;
+    userName?: string;
+    promptSegment?: string;
+  } | null;
+  confidence?: number | null;
+  verified?: boolean | null;
 }
 
 /**

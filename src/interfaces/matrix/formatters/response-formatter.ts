@@ -5,12 +5,47 @@
  */
 
 import logger from '@/utils/logger';
-import { formatNotePreview, getExcerpt } from '@/utils/noteUtils';
+import { getExcerpt } from '@/utils/noteUtils';
 
 import { MatrixBlockBuilder } from './block-formatter';
 import { getCitationFormatter } from './citation-formatter';
 import { getMarkdownFormatter } from './markdown-formatter';
 import type { CitationReference, NotePreview, SaveNoteConfirmResult, SaveNotePreviewResult, SystemStatus } from './types';
+
+// Define our own note preview formatting to avoid type issues with existing utils
+function formatNotePreviewInternal(note: NotePreview, index: number, includeNewlines = true): string {
+  const nl = includeNewlines ? '\n' : ' ';
+  const title = `**${index}. ${note.title}**`;
+  const id = `ID: \`${note.id}\``;
+  
+  const tags = note.tags && note.tags.length > 0
+    ? `Tags: ${note.tags.map(tag => `\`${tag}\``).join(', ')}`
+    : 'No tags';
+  
+  // Extract a content preview
+  const contentWithoutSource = note.content.replace(/<!--\\s*source:[^>]+-->\\n?/, '');
+  const preview = contentWithoutSource.length > 100
+    ? contentWithoutSource.substring(0, 100) + '...'
+    : contentWithoutSource;
+  
+  return `${title}${nl}${id} - ${tags}${nl}${preview}`;
+}
+
+/**
+ * Helper function to safely format a date
+ */
+function formatDate(dateValue: string | Date | undefined | null, formatFn: (date: Date) => string): string {
+  if (!dateValue) return 'Unknown';
+  
+  try {
+    if (dateValue instanceof Date) {
+      return formatFn(dateValue);
+    }
+    return formatFn(new Date(String(dateValue)));
+  } catch (error) {
+    return 'Invalid date';
+  }
+}
 
 // Response types
 export type ResponseType = 
@@ -59,7 +94,7 @@ export class MatrixResponseFormatter {
       builder.addDivider();
       
       notes.forEach((note, index) => {
-        builder.addSection(formatNotePreview(note, index + 1));
+        builder.addSection(formatNotePreviewInternal(note, index + 1));
       });
       
       return builder.build() as string;
@@ -67,7 +102,7 @@ export class MatrixResponseFormatter {
       const searchResults = [
         `### Search Results for "${query}"`,
         '',
-        ...notes.map((note, index) => formatNotePreview(note, index + 1)),
+        ...notes.map((note, index) => formatNotePreviewInternal(note, index + 1)),
       ].join('\n');
       
       return this.markdown.format(searchResults);
@@ -80,7 +115,7 @@ export class MatrixResponseFormatter {
    * @param note Note object
    * @returns Formatted response
    */
-  formatNote(note: NotePreview & { updatedAt?: string }): string {
+  formatNote(note: NotePreview): string {
     // Format the note content
     const formattedContent = note.content
       // Remove source comment if present
@@ -99,8 +134,8 @@ export class MatrixResponseFormatter {
       
       builder.addContext([
         `**ID**: \`${note.id}\``,
-        `**Created**: ${new Date(note.createdAt).toLocaleString()}`,
-        `**Updated**: ${new Date(note.updatedAt).toLocaleString()}`,
+        `**Created**: ${formatDate(note.createdAt, date => date.toLocaleString())}`,
+        `**Updated**: ${formatDate(note.updatedAt, date => date.toLocaleString())}`,
         tags,
       ]);
       
@@ -114,8 +149,8 @@ export class MatrixResponseFormatter {
         '',
         tags,
         `**ID**: \`${note.id}\``,
-        `**Created**: ${new Date(note.createdAt).toLocaleString()}`,
-        `**Updated**: ${new Date(note.updatedAt).toLocaleString()}`,
+        `**Created**: ${formatDate(note.createdAt, date => date.toLocaleString())}`,
+        `**Updated**: ${formatDate(note.updatedAt, date => date.toLocaleString())}`,
         '',
         '---',
         '',
@@ -145,7 +180,7 @@ export class MatrixResponseFormatter {
       builder.addDivider();
       
       notes.forEach((note, index) => {
-        builder.addSection(formatNotePreview(note, index + 1));
+        builder.addSection(formatNotePreviewInternal(note, index + 1));
       });
       
       return builder.build() as string;
@@ -153,7 +188,7 @@ export class MatrixResponseFormatter {
       const notesResults = [
         `### ${title || 'Notes'}`,
         '',
-        ...notes.map((note, index) => formatNotePreview(note, index + 1)),
+        ...notes.map((note, index) => formatNotePreviewInternal(note, index + 1)),
       ].join('\n');
       
       return this.markdown.format(notesResults);
@@ -233,7 +268,7 @@ export class MatrixResponseFormatter {
         builder.addHeader('Related Notes');
         
         relatedNotes.forEach((note, index) => {
-          builder.addSection(formatNotePreview(note, index + 1, false));
+          builder.addSection(formatNotePreviewInternal(note, index + 1, false));
         });
       }
       
@@ -267,7 +302,7 @@ export class MatrixResponseFormatter {
       if (relatedNotes.length > 0) {
         askMessage.push('', '#### Related Notes');
         relatedNotes.forEach((note, index) => {
-          askMessage.push(formatNotePreview(note, index + 1, false));
+          askMessage.push(formatNotePreviewInternal(note, index + 1, false));
         });
       }
       
@@ -441,7 +476,7 @@ export class MatrixResponseFormatter {
    * @param notes Array of notes
    * @returns Formatted response
    */
-  formatConversationNotes(notes: (NotePreview & { createdAt?: string })[]): string {
+  formatConversationNotes(notes: NotePreview[]): string {
     if (notes.length === 0) {
       return this.markdown.format('### ⚠️ No conversation notes found.');
     }
@@ -462,7 +497,7 @@ export class MatrixResponseFormatter {
         const preview = getExcerpt(note.content, 120);
         
         // Format date
-        const created = new Date(note.createdAt).toLocaleDateString();
+        const created = formatDate(note.createdAt, date => date.toLocaleDateString());
         
         // Create a section for each note
         builder.addSection(`
@@ -500,7 +535,7 @@ export class MatrixResponseFormatter {
         const preview = getExcerpt(note.content, 120);
         
         // Format date
-        const created = new Date(note.createdAt).toLocaleDateString();
+        const created = formatDate(note.createdAt, date => date.toLocaleDateString());
         
         // Create a formatted note block
         messageParts.push(
@@ -599,7 +634,7 @@ export class MatrixResponseFormatter {
       
       profileLines.push('');
       relatedNotes.forEach((note, index) => {
-        profileLines.push(formatNotePreview(note, index + 1));
+        profileLines.push(formatNotePreviewInternal(note, index + 1));
       });
     } else {
       profileLines.push('No related notes found. Try generating embeddings and tags for your notes and profile.');

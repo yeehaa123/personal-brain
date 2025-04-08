@@ -428,10 +428,11 @@ export class MatrixBrainInterface {
   private markdownToHtml(markdown: string): string {
     // Use the MarkdownFormatter from our formatters
     
-    // Use our enhanced formatter with bot styling
+    // Use our enhanced formatter but without bot styling
+    // Matrix will handle this itself
     const formatter = getMarkdownFormatter({
-      applyBotStyling: true,
-      enableCustomStyles: true,
+      applyBotStyling: false,
+      enableCustomStyles: false,
     });
     
     // Format the markdown to HTML with all enhancements
