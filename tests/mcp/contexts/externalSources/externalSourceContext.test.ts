@@ -1,174 +1,306 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+/**
+ * Tests for ExternalSourceContext
+ * 
+ * This test suite focuses on testing the ExternalSourceContext class in isolation,
+ * with all dependencies properly mocked.
+ */
 
-import { ExternalSourceContext } from '@/mcp';
-import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
-import { MockNewsApiSource, MockWikipediaSource } from '@test/__mocks__/contexts/externalSources/sources';
-import { MockEmbeddingService } from '@test/__mocks__/model/embeddings';
-// Import mock implementations instead of real sources
-import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
-import { setupMcpServerMocks as createMockServerMock } from '@test/__mocks__/utils/mcpUtils';
-import { setupAnthropicMocks, setupDependencyContainerMocks } from '@test/__mocks__/utils/mcpUtils';
+import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
+import { ExternalSourceStorageAdapter } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import type { ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
+import { Logger } from '@/utils/logger';
 
+// Suppress logs in tests
+const origLoggerWarn = Logger.getInstance().warn;
+Logger.getInstance().warn = mock(() => {});
 
-// Create a mock MCP server 
-// The global mock is used in the ExternalSourceContext
-createMockServerMock();
+// Mock dependencies with spies
+import { EmbeddingService } from '@/mcp/model';
 
-// Setup Anthropic mocks
-setupAnthropicMocks(mock);
+// Create mock for EmbeddingService
+const mockEmbeddingService = {
+  getEmbedding: mock(() => Promise.resolve({ embedding: [0.1, 0.2, 0.3] })),
+  cosineSimilarity: mock(() => 0.85),
+};
 
-// Setup dependency container with all mock services
-setupDependencyContainerMocks(mock);
+// Spy on the getInstance method
+const origEmbeddingServiceGetInstance = EmbeddingService.getInstance;
+const embeddingServiceGetInstanceSpy = mock(() => mockEmbeddingService);
 
-describe('ExternalSourceContext MCP SDK Implementation', () => {
-  let externalSourceContext: ExternalSourceContext;
+// Mock the storage adapter's getInstance method
+const origStorageAdapterGetInstance = ExternalSourceStorageAdapter.getInstance;
+const mockStorageAdapter = MockExternalSourceStorageAdapter.createFresh();
+const storageAdapterGetInstanceSpy = mock(() => mockStorageAdapter);
 
-  // Properly control the test environment
-
-  beforeAll(() => {
-    // Set up mock environment using centralized function
-    setMockEnv();
-
-    // Reset singleton instances before tests
-    // Important: Do this BEFORE any test creates instances
-    MockEmbeddingService.resetInstance();
-    ExternalSourceContext.resetInstance();
-
-    // Reset the mock source instances
-    MockWikipediaSource.resetInstance();
-    MockNewsApiSource.resetInstance();
-
-  });
-
-  afterAll(() => {
-    // Clean up mock environment using centralized function
-    clearMockEnv();
-
-    // Reset service instances to ensure clean state for other tests
-    MockEmbeddingService.resetInstance();
-    ExternalSourceContext.resetInstance();
-
-    // Reset the mock source instances
-    MockWikipediaSource.resetInstance();
-    MockNewsApiSource.resetInstance();
-  });
-
+describe('ExternalSourceContext', () => {
+  // Set up before each test to ensure isolation
   beforeEach(() => {
-    // Reset singleton instances before each test to ensure clean slate
-    MockEmbeddingService.resetInstance();
+    // Set up environment
+    setMockEnv();
+    
+    // Install spies/mocks
+    EmbeddingService.getInstance = embeddingServiceGetInstanceSpy;
+    ExternalSourceStorageAdapter.getInstance = storageAdapterGetInstanceSpy;
+    
+    // Reset instances
+    mockStorageAdapter.setMockResults([]);
+    MockExternalSourceStorageAdapter.resetInstance();
     ExternalSourceContext.resetInstance();
-
-    // Reset the mock source instances
-    MockWikipediaSource.resetInstance();
-    MockNewsApiSource.resetInstance();
-
-    // Ensure embeddings are properly mocked for each test
-    setupEmbeddingMocks(mock);
-
-    // Use ExternalSourceContext.createFresh to ensure a clean instance for each test
-    externalSourceContext = ExternalSourceContext.createFresh({
-      apiKey: 'mock-api-key',
-      newsApiKey: 'mock-newsapi-key',
-    });
   });
-
-  test('ExternalSourceContext properly initializes with MCP SDK', () => {
-    expect(externalSourceContext).toBeDefined();
-
-    // Check that basic methods are available
-    expect(typeof externalSourceContext.search).toBe('function');
-    expect(typeof externalSourceContext.semanticSearch).toBe('function');
-    expect(typeof externalSourceContext.checkSourcesAvailability).toBe('function');
-
-    // Check MCP SDK integration
-    expect(externalSourceContext.getMcpServer).toBeDefined();
-    expect(typeof externalSourceContext.getMcpServer).toBe('function');
-
-    // Verify MCP server can be obtained
-    const mcpServer = externalSourceContext.getMcpServer();
-    expect(mcpServer).toBeDefined();
+  
+  // Clean up after each test
+  afterEach(() => {
+    // Reset all instances to avoid test interference
+    MockExternalSourceStorageAdapter.resetInstance();
+    ExternalSourceContext.resetInstance();
+    
+    // Restore original implementations
+    EmbeddingService.getInstance = origEmbeddingServiceGetInstance;
+    ExternalSourceStorageAdapter.getInstance = origStorageAdapterGetInstance;
+    
+    // Clean up environment
+    clearMockEnv();
   });
-
-  test('should allow registering custom sources', () => {
-    // Create a new ExternalSourceContext with custom options
-    const customContext = ExternalSourceContext.createFresh({
-      apiKey: 'mock-api-key',
-      newsApiKey: 'mock-newsapi-key',
-      enabledSources: [], // Start with no enabled sources
+  
+  // Clean up after all tests
+  afterAll(() => {
+    // Restore original logger
+    Logger.getInstance().warn = origLoggerWarn;
+  });
+  
+  test('should initialize with proper configuration', () => {
+    // Create a fresh instance
+    const context = ExternalSourceContext.createFresh({
+      apiKey: 'test-api-key',
+      newsApiKey: 'test-news-api-key',
+      name: 'TestContext',
+      version: '2.0.0',
     });
-
+    
+    // Check context name and version
+    expect(context.getContextName()).toBe('TestContext');
+    expect(context.getContextVersion()).toBe('2.0.0');
+    
+    // Verify our mocks were called
+    expect(storageAdapterGetInstanceSpy).toHaveBeenCalled();
+    expect(embeddingServiceGetInstanceSpy).toHaveBeenCalled();
+  });
+  
+  test('should handle singleton pattern correctly', () => {
+    // Reset instance to ensure clean test
+    ExternalSourceContext.resetInstance();
+    
+    // Get the first instance
+    const instance1 = ExternalSourceContext.getInstance({
+      apiKey: 'test-api-key',
+    });
+    
+    // Get another instance without config - should be the same object
+    const instance2 = ExternalSourceContext.getInstance();
+    
+    // They should be the same instance
+    expect(instance1).toBe(instance2);
+    
+    // Reset the instance
+    ExternalSourceContext.resetInstance();
+    
+    // Get a new instance after reset
+    const instance3 = ExternalSourceContext.getInstance();
+    
+    // Should be a different instance
+    expect(instance1).not.toBe(instance3);
+  });
+  
+  test('should register a custom source', () => {
+    // Setup mock for registerSource
+    const registerSourceMock = mock(() => {});
+    mockStorageAdapter.registerSource = registerSourceMock;
+    
+    // Create a context with mock storage
+    const context = ExternalSourceContext.createFresh();
+    
     // Create a mock custom source
     const mockSource: ExternalSourceInterface = {
       name: 'CustomSource',
-      search: () => Promise.resolve([]),
-      checkAvailability: () => Promise.resolve(true),
-      getSourceMetadata: () => Promise.resolve({}),
+      search: mock(() => Promise.resolve([])),
+      checkAvailability: mock(() => Promise.resolve(true)),
+      getSourceMetadata: mock(() => Promise.resolve({})),
     };
-
+    
     // Register the custom source
-    customContext.registerSource(mockSource);
-
-    // Get all sources from the context (they should all be enabled since enabledSources is empty)
-    const enabledSources = customContext.getEnabledSources();
-    const sourceNames = enabledSources.map((source: ExternalSourceInterface) => source.name);
-
-    // We know our mock will return MockSource - since we're not actually testing the implementation
-    // but just that the interface works, we'll just check that we got a source
-    expect(sourceNames.length).toBeGreaterThan(0);
+    context.registerSource(mockSource);
+    
+    // Verify the source was registered
+    expect(registerSourceMock).toHaveBeenCalledWith(mockSource);
   });
-
-  test('should search across enabled sources', async () => {
-    const results = await externalSourceContext.search('test query');
-
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBeGreaterThan(0);
-
-    // Check that we have results from different sources
-    const sources = new Set(results.map(result => result.source));
-    expect(sources.size).toBeGreaterThan(0);
-  });
-
-  test('should perform semantic search', async () => {
-    const results = await externalSourceContext.semanticSearch('test query');
-
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBeGreaterThan(0);
-
-    // Make sure the results don't have similarityScore property (it should be removed)
-    const hasVisibleScores = results.some(result => 'similarityScore' in result);
-    expect(hasVisibleScores).toBe(false);
-  });
-
-  test('MCP Server has external search resource registered', () => {
-    const mcpServer = externalSourceContext.getMcpServer();
-    // This is a crude check since we can't directly inspect registered resources
-    expect(mcpServer).toBeDefined();
-  });
-
-  test('MCP Server has external source tools registered', () => {
-    const mcpServer = externalSourceContext.getMcpServer();
-    // This is a crude check since we can't directly inspect registered tools
-    expect(mcpServer).toBeDefined();
-  });
-
-  test('should check sources availability', async () => {
-    // Create a test-specific isolated context to avoid state sharing
-    // with a unique timestamp to ensure isolation
-    const testContext = ExternalSourceContext.createFresh({
-      apiKey: 'isolated-api-key-' + Date.now(),
-      newsApiKey: 'isolated-newsapi-key-' + Date.now(),
+  
+  test('should perform basic search', async () => {
+    // Set up mock results
+    const mockResults: ExternalSourceResult[] = [
+      {
+        title: 'Test Result 1',
+        content: 'This is a test result',
+        source: 'TestSource',
+        sourceType: 'test',
+        url: 'https://example.com/test1',
+        timestamp: new Date(),
+        confidence: 0.9,
+      },
+      {
+        title: 'Test Result 2',
+        content: 'This is another test result',
+        source: 'TestSource',
+        sourceType: 'test',
+        url: 'https://example.com/test2',
+        timestamp: new Date(),
+        confidence: 0.8,
+      },
+    ];
+    
+    // Set up search method spy
+    const searchSpy = mock(criteria => Promise.resolve(mockResults));
+    mockStorageAdapter.search = searchSpy;
+    
+    // Create a context with our mocked storage
+    const context = ExternalSourceContext.createFresh();
+    
+    // Perform a search
+    const results = await context.search('test query');
+    
+    // Verify our search was called with correct parameters
+    expect(searchSpy).toHaveBeenCalledWith({
+      query: 'test query',
+      limit: undefined,
+      addEmbeddings: undefined,
     });
-
-    // Use the mock availability implementation from our mock
-    const availability = await testContext.checkSourcesAvailability();
-
-    // Verify results, knowing that our mock implements a simple interface
-    expect(availability).toBeObject();
-    expect(Object.keys(availability).length).toBeGreaterThan(0);
-
-    // At least one source should be available
-    const firstSource = Object.keys(availability)[0];
-    expect(availability[firstSource]).toBe(true);
+    
+    // Verify results
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(2);
+    expect(results[0].title).toBe('Test Result 1');
+    expect(results[1].title).toBe('Test Result 2');
+  });
+  
+  test('should perform semantic search', async () => {
+    // Set up mock results with embeddings
+    const mockResults: ExternalSourceResult[] = [
+      {
+        title: 'Test Result 1',
+        content: 'This is a test result',
+        source: 'TestSource',
+        sourceType: 'test',
+        url: 'https://example.com/test1',
+        timestamp: new Date(),
+        confidence: 0.9,
+        embedding: [0.1, 0.2, 0.3],
+      },
+      {
+        title: 'Test Result 2',
+        content: 'This is another test result',
+        source: 'TestSource',
+        sourceType: 'test',
+        url: 'https://example.com/test2',
+        timestamp: new Date(),
+        confidence: 0.8,
+        embedding: [0.2, 0.3, 0.4],
+      },
+    ];
+    
+    // Set up search spy to return results with embeddings
+    const searchSpy = mock(() => Promise.resolve(mockResults));
+    mockStorageAdapter.search = searchSpy;
+    
+    // Create a context with our mocked dependencies
+    const context = ExternalSourceContext.createFresh();
+    
+    // Perform a semantic search
+    const results = await context.semanticSearch('test query', 2);
+    
+    // Verify search was called with the right parameters
+    expect(searchSpy).toHaveBeenCalledWith({
+      query: 'test query',
+      limit: undefined,
+      addEmbeddings: true,
+    });
+    
+    // Verify embedding service was used
+    expect(mockEmbeddingService.getEmbedding).toHaveBeenCalledWith('test query');
+    
+    // Verify results
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(2);
+    
+    // Make sure the results don't have a similarityScore property
+    const hasScores = results.some(result => 'similarityScore' in result);
+    expect(hasScores).toBe(false);
+  });
+  
+  test('should check sources availability', async () => {
+    // Set up availability result
+    const availabilityResult = {
+      'Wikipedia': true,
+      'NewsAPI': true,
+    };
+    
+    // Set up checkSourcesAvailability spy
+    const checkAvailabilitySpy = mock(() => Promise.resolve(availabilityResult));
+    mockStorageAdapter.checkSourcesAvailability = checkAvailabilitySpy;
+    
+    // Create a context with our mocked storage
+    const context = ExternalSourceContext.createFresh();
+    
+    // Check sources availability
+    const availability = await context.checkSourcesAvailability();
+    
+    // Verify our mock was called
+    expect(checkAvailabilitySpy).toHaveBeenCalled();
+    
+    // Verify the result matches our mock
+    expect(availability).toEqual(availabilityResult);
+    expect(Object.keys(availability).length).toBe(2);
+    expect(availability['Wikipedia']).toBe(true);
+    expect(availability['NewsAPI']).toBe(true);
+  });
+  
+  test('should provide access to enabled sources', () => {
+    // Set up mock enabled sources
+    const mockSources = [
+      {
+        name: 'Wikipedia',
+        search: mock(() => Promise.resolve([])),
+        checkAvailability: mock(() => Promise.resolve(true)),
+        getSourceMetadata: mock(() => Promise.resolve({})),
+      },
+      {
+        name: 'NewsAPI',
+        search: mock(() => Promise.resolve([])),
+        checkAvailability: mock(() => Promise.resolve(true)),
+        getSourceMetadata: mock(() => Promise.resolve({})),
+      },
+    ];
+    
+    // Set up getEnabledSources spy
+    const getEnabledSourcesSpy = mock(() => mockSources);
+    mockStorageAdapter.getEnabledSources = getEnabledSourcesSpy;
+    
+    // Create a context with our mocked storage
+    const context = ExternalSourceContext.createFresh();
+    
+    // Get enabled sources
+    const enabledSources = context.getEnabledSources();
+    
+    // Verify our mock was called
+    expect(getEnabledSourcesSpy).toHaveBeenCalled();
+    
+    // Verify the result matches our mock
+    expect(enabledSources).toEqual(mockSources);
+    expect(enabledSources.length).toBe(2);
+    expect(enabledSources[0].name).toBe('Wikipedia');
+    expect(enabledSources[1].name).toBe('NewsAPI');
   });
 });

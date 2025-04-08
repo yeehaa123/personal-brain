@@ -6,10 +6,11 @@
  */
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contexts/core/storageInterface';
-import type { ExternalSourceResult, ExternalSourceInterface } from '@/mcp/contexts/externalSources/sources';
 import type { ExternalSourceStorageConfig } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
-import { MockWikipediaSource } from '../sources/wikipediaSource';
+import type { ExternalSourceInterface, ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
+
 import { MockNewsApiSource } from '../sources/newsApiSource';
+import { MockWikipediaSource } from '../sources/wikipediaSource';
 
 /**
  * Mock adapter for external source storage
@@ -159,7 +160,7 @@ export class MockExternalSourceStorageAdapter implements StorageInterface<Extern
     if (query && query.length > 0) {
       return this.mockResults.filter(
         result => result.title.toLowerCase().includes(query.toLowerCase()) || 
-                 result.content.toLowerCase().includes(query.toLowerCase())
+                 result.content.toLowerCase().includes(query.toLowerCase()),
       );
     }
     

@@ -8,6 +8,7 @@
 import { mock } from 'bun:test';
 
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+
 import { MockBaseContext } from '../../baseContext';
 import { MockExternalSourceStorageAdapter } from '../adapters/externalSourceStorageAdapter';
 
@@ -59,7 +60,7 @@ export class MockExternalSourceContext extends MockBaseContext {
         protocol: 'externalSources',
         path: 'list',
         handler: mock(() => Promise.resolve(
-          this.storageAdapter.getEnabledSources().map(s => ({ name: s.name, available: true }))
+          this.storageAdapter.getEnabledSources().map(s => ({ name: s.name, available: true })),
         )),
         name: 'List Sources',
         description: 'List all available external sources',

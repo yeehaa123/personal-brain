@@ -10,8 +10,8 @@
 import { afterAll, afterEach, beforeAll, beforeEach, mock } from 'bun:test';
 
 // Import singleton reset functions and mocks
-import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
 import { ExternalSourceStorageAdapter } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import { ExternalSourceContext } from '@/mcp/contexts/externalSources/core/externalSourceContext';
 import { NewsApiSource, WikipediaSource } from '@/mcp/contexts/externalSources/sources';
 import { NoteContext } from '@/mcp/contexts/notes';
 import { ProfileContext } from '@/mcp/contexts/profiles/core/profileContext';
