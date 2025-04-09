@@ -13,26 +13,28 @@ This document outlines the development plan for the Personal Brain project, focu
 
 ## Current Priorities
 
-1. **[HIGH PRIORITY] Conversation Schema Refactoring**: Remove direct access to conversation turns data
+> **Note:** The current development focus is on the MVP implementation plan. For the most up-to-date status and detailed timeline, please refer to the [MVP Implementation Plan](/planning/mvp-implementation-plan.md).
+
+1. **Website Integration MVP**: 
+   - Currently in Phase 1 of implementation
+   - Website Context architecture implemented
+   - Basic Astro integration complete
+   - Working on Command Interface Integration
+   - GitHub Pages deployment upcoming
+   - See full details and current status in the [MVP Implementation Plan](/planning/mvp-implementation-plan.md)
+
+2. **CLI Interface Improvements**: Separate logger output from CLI content
+   - Create clear visual distinction between logs and actual content
+   - Add option to control log visibility (hide/show/log level)
+   - Implement consistent formatting across output types
+   - Part of MVP Phase 2 (See [MVP Implementation Plan](/planning/mvp-implementation-plan.md))
+
+3. **Conversation Schema Refactoring**: Remove direct access to conversation turns data
    - Eliminate direct access to conversation history data through Conversation object properties
    - Establish the TieredMemoryManager as the single source of truth for conversation history
    - Create a cleaner, more maintainable architecture with clear responsibilities
    - Prevent potential bugs from inconsistent access patterns
    - See detailed plan in [`planning/conversation-schema-refactoring.md`](/planning/conversation-schema-refactoring.md)
-
-2. **[HIGH PRIORITY] Website Landing Page Generation**: Create website landing page from profile data (Phase 1)
-   - Set up the Website Context architecture following the Component Interface Standardization pattern
-   - Integrate with Astro static site generator and configure content collections
-   - Generate a professional landing page from profile data
-   - Implement preview capability for the landing page
-   - Create CLI and Matrix commands for website management with feature parity
-   - See detailed plan in [`planning/website-integration-phase1.md`](/planning/website-integration-phase1.md)
-
-3. **CLI Interface Improvements**: Separate logger output from CLI content
-   - Create clear visual distinction between logs and actual content
-   - Add option to control log visibility (hide/show/log level)
-   - Implement consistent formatting across output types
-   - See detailed plan in [`planning/cli-logger-separation.md`](/planning/cli-logger-separation.md)
 
 4. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
    - Move from in-memory to database storage

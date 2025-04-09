@@ -1,0 +1,8 @@
+# Ignore auto-generated Astro files
+src/website/.astro/**/*
+src/website/src/env.d.ts
+
+# Other typical ignores
+node_modules
+dist
+.github

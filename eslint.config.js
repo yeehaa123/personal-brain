@@ -5,6 +5,17 @@ import importPlugin from 'eslint-plugin-import';
 import customRules from './.eslint/index.js';
 
 export default [
+  {
+    ignores: [
+      // Ignore auto-generated Astro files
+      'src/website/.astro/**/*',
+      'src/website/src/env.d.ts',
+      // Other typical ignores
+      'node_modules/**',
+      'dist/**',
+      '.github/**',
+    ],
+  },
   js.configs.recommended,
   {
     languageOptions: {
