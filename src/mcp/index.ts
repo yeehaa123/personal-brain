@@ -8,12 +8,14 @@ import { ConversationContext } from './contexts/conversations';
 import { ExternalSourceContext } from './contexts/externalSources';
 import { NoteContext } from './contexts/notes';
 import { ProfileContext } from './contexts/profiles';
+import { WebsiteContext } from './contexts/website';
 
 // Export all the context implementations from their respective directories
 export { ConversationContext } from './contexts/conversations';
 export { NoteContext } from './contexts/notes';
 export { ProfileContext } from './contexts/profiles';
 export { ExternalSourceContext } from './contexts/externalSources';
+export { WebsiteContext } from './contexts/website';
 
 // Export model implementations
 export * from './model';
@@ -63,12 +65,14 @@ export function createUnifiedMcpServer(config: UnifiedMcpServerConfig = {}): Mcp
     enabledSources: config.enableExternalSources === false ? [] : undefined,
   });
   const conversationContext = ConversationContext.getInstance();
+  const websiteContext = WebsiteContext.getInstance();
   
   // Register all contexts on the unified server
   noteContext.registerOnServer(mcpServer);
   profileContext.registerOnServer(mcpServer);
   externalSourceContext.registerOnServer(mcpServer);
   conversationContext.registerOnServer(mcpServer);
+  websiteContext.registerOnServer(mcpServer);
   
   return mcpServer;
 }

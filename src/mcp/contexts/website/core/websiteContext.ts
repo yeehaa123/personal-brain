@@ -231,7 +231,7 @@ export class WebsiteContext extends BaseContext {
    * Generate a landing page from profile data
    * @returns Result of the generation operation
    */
-  async generateLandingPage(): Promise<{ success: boolean; message: string }> {
+  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
@@ -251,6 +251,7 @@ export class WebsiteContext extends BaseContext {
       return {
         success: true,
         message: 'Successfully generated landing page from profile',
+        data: landingPageData,
       };
     } catch (error) {
       this.logger.error('Error generating landing page', {

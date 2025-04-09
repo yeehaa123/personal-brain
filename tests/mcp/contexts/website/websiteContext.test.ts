@@ -2,50 +2,19 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProfileContext } from '@/mcp/contexts/profiles';
 import { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
-import { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
-import { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
+import type { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
+import type { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
+import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
+// Import our mock implementations directly
+import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
+import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
 import { MockProfile } from '@test/__mocks__/models/profile';
-import { MockWebsiteStorageAdapter } from '@test/__mocks__/website/websiteStorageAdapter';
 
-// Create a properly typed mock AstroContentService
-class MockAstroContentService extends AstroContentService {
-  constructor() {
-    super('/mock/astro/path');
-  }
-  
-  override verifyAstroProject = mock(() => Promise.resolve(true));
-  override writeLandingPageContent = mock(() => Promise.resolve(true));
-  override readLandingPageContent = mock(() => Promise.resolve(null));
-  override runAstroCommand = mock(() => Promise.resolve({ success: true, output: 'Command executed successfully' }));
-}
-
-// Create our mock instance
-const mockAstroContentService = new MockAstroContentService();
-
-// Create a properly typed mock LandingPageGenerationService
-class MockLandingPageGenerationService extends LandingPageGenerationService {
-  override setProfileContext = mock(() => {});
-  override generateLandingPageData = mock(() => Promise.resolve({
-    name: 'Test User',
-    title: 'Test User - Developer',
-    tagline: 'Building great software',
-  }));
-}
-
-// Create our mock instance
-const mockLandingPageGenerationService = new MockLandingPageGenerationService();
-
-// Create a typed mock for the LandingPageGenerationService.getInstance
-const mockLandingPageGenerationServiceGetInstance = 
-  mock(() => mockLandingPageGenerationService);
-
-// Store original implementation
-const OriginalLandingPageGenerationService = {
-  getInstance: LandingPageGenerationService.getInstance,
-};
-
+// Create our mock instances with proper typings
+const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService;
+const mockLandingPageGenerationService = MockLandingPageGenerationService.createFresh() as unknown as LandingPageGenerationService;
 describe('WebsiteContext', () => {
   // Set up and tear down for each test
   beforeEach(() => {
@@ -53,24 +22,15 @@ describe('WebsiteContext', () => {
     WebsiteContext.resetInstance();
     MockWebsiteStorageAdapter.resetInstance();
 
-    // Reset mocks
-    mockAstroContentService.verifyAstroProject.mockClear();
-    mockAstroContentService.writeLandingPageContent.mockClear();
-    mockAstroContentService.readLandingPageContent.mockClear();
-    mockAstroContentService.runAstroCommand.mockClear();
-    mockLandingPageGenerationService.generateLandingPageData.mockClear();
-    mockLandingPageGenerationService.setProfileContext.mockClear();
-
-    // Mock the LandingPageGenerationService getInstance
-    LandingPageGenerationService.getInstance = mockLandingPageGenerationServiceGetInstance;
+    // Reset by creating fresh instances for each test instead of trying to clear mocks
+    // We're recasting to the correct types after creating fresh instances
+    MockAstroContentService.resetInstance();
+    MockLandingPageGenerationService.resetInstance();
   });
 
   afterEach(() => {
     WebsiteContext.resetInstance();
     MockWebsiteStorageAdapter.resetInstance();
-
-    // Restore the original implementations
-    LandingPageGenerationService.getInstance = OriginalLandingPageGenerationService.getInstance;
   });
 
   // Test Component Interface Standardization pattern

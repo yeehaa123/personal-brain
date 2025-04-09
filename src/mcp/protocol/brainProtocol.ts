@@ -11,6 +11,7 @@ import {
   ExternalSourceContext,
   NoteContext,
   ProfileContext,
+  WebsiteContext,
 } from '@/mcp'; // Import all MCP implementations
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
@@ -57,6 +58,7 @@ export class BrainProtocol {
   private profileContext: ProfileContext;
   private externalContext: ExternalSourceContext;
   private conversationContext: ConversationContext; // New conversation context
+  private websiteContext: WebsiteContext;
   private embeddingService: EmbeddingService;
 
   // Unified MCP server
@@ -195,6 +197,7 @@ export class BrainProtocol {
       anchorName: options.anchorName || 'Host',
       anchorId: options.anchorId,
     });
+    this.websiteContext = WebsiteContext.getInstance();
 
     // Initialize component classes using the Component Interface Standardization pattern
     this.promptFormatter = PromptFormatter.getInstance();
@@ -263,6 +266,13 @@ export class BrainProtocol {
    */
   getConversationContext(): ConversationContext {
     return this.conversationContext;
+  }
+  
+  /**
+   * Get the website context to allow access to website operations
+   */
+  getWebsiteContext(): WebsiteContext {
+    return this.websiteContext;
   }
   
   /**

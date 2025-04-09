@@ -6,6 +6,9 @@
 
 import logger from '@/utils/logger';
 import { getExcerpt } from '@/utils/noteUtils';
+import type { CommandInfo } from '@commands/core/commandTypes';
+import type { WebsiteConfig } from '@mcp/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@website/schemas';
 
 import { MatrixBlockBuilder } from './block-formatter';
 import { getCitationFormatter } from './citation-formatter';
@@ -65,7 +68,9 @@ function formatDate(dateValue: string | Date | undefined | null, formatFn: (date
 export type ResponseType = 
   'search' | 'note' | 'notes' | 'profile' | 
   'ask' | 'error' | 'status' | 'tags' |
-  'save-note-preview' | 'save-note-confirm' | 'conversation-notes';
+  'save-note-preview' | 'save-note-confirm' | 'conversation-notes' |
+  'website-help' | 'website-init' | 'website-config' | 'landing-page' |
+  'website-preview' | 'website-preview-stop' | 'website-build';
 
 // Response formatter options
 export interface ResponseFormatterOptions {
@@ -688,6 +693,309 @@ export class MatrixResponseFormatter {
       return builder.build() as string;
     } else {
       return this.markdown.format(profileLines.join('\n'));
+    }
+  }
+
+  /**
+   * Format website help information
+   */
+  formatWebsiteHelp(result: { type: 'website-help'; commands: CommandInfo[] }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Commands');
+      
+      // Format commands as a list
+      const commandsList = result.commands.map(cmd => {
+        const command = cmd['command'] as string;
+        const description = cmd['description'] as string;
+        const usage = cmd['usage'] as string;
+        
+        return `- **${command}**: ${description}\n  Usage: \`${usage}\``;
+      }).join('\n\n');
+      
+      builder.addSection(commandsList);
+      
+      return builder.build() as string;
+    } else {
+      const message = [
+        '### Website Commands',
+        '',
+        ...result.commands.map(cmd => {
+          const command = cmd['command'] as string;
+          const description = cmd['description'] as string;
+          const usage = cmd['usage'] as string;
+          
+          return `- **${command}**: ${description}\n  Usage: \`${usage}\``;
+        }),
+      ].join('\n\n');
+      
+      return this.markdown.format(message);
+    }
+  }
+  
+  /**
+   * Format website initialization result
+   */
+  formatWebsiteInit(result: { type: 'website-init'; success: boolean; message: string }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Initialization');
+      
+      const icon = result.success ? '✅' : '❌';
+      builder.addSection(`${icon} ${result.message}`);
+      
+      if (result.success) {
+        builder.addSection(`Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
+      }
+      
+      return builder.build() as string;
+    } else {
+      const icon = result.success ? '✅' : '❌';
+      const message = [
+        '### Website Initialization',
+        '',
+        `${icon} ${result.message}`,
+      ];
+      
+      if (result.success) {
+        message.push('', `Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
+      }
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Format website configuration result
+   */
+  formatWebsiteConfig(result: { type: 'website-config'; config?: WebsiteConfig; success?: boolean; message: string }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Configuration');
+      
+      // Add success/failure message if relevant
+      if (result.success !== undefined) {
+        const icon = result.success ? '✅' : '❌';
+        builder.addSection(`${icon} ${result.message}`);
+      } else {
+        builder.addSection(result.message);
+      }
+      
+      // Add config items if available
+      if (result.config && Object.keys(result.config).length > 0) {
+        builder.addDivider();
+        
+        // Format each config item
+        Object.entries(result.config).forEach(([key, value]) => {
+          builder.addSection(`**${key}**: ${value}`);
+        });
+      }
+      
+      return builder.build() as string;
+    } else {
+      const message = [
+        '### Website Configuration',
+        '',
+      ];
+      
+      // Add success/failure message if relevant
+      if (result.success !== undefined) {
+        const icon = result.success ? '✅' : '❌';
+        message.push(`${icon} ${result.message}`);
+      } else {
+        message.push(result.message);
+      }
+      
+      // Add config items if available
+      if (result.config && Object.keys(result.config).length > 0) {
+        message.push('', '---', '');
+        
+        // Format each config item
+        Object.entries(result.config).forEach(([key, value]) => {
+          message.push(`**${key}**: ${value}`);
+        });
+      }
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Format landing page result
+   */
+  formatLandingPage(result: { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      if (result.data) {
+        // View mode - display landing page content
+        builder.addHeader('Landing Page Content');
+        
+        // Format data properties
+        Object.entries(result.data).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            builder.addSection(`**${key}**: ${value}`);
+          } else if (Array.isArray(value)) {
+            builder.addSection(`**${key}**:`);
+            const items = (value as unknown[]).map(item => `- ${typeof item === 'string' ? item : JSON.stringify(item)}`).join('\n');
+            builder.addSection(items);
+          } else if (typeof value === 'object' && value !== null) {
+            builder.addSection(`**${key}**:`);
+            const items = Object.entries(value as Record<string, unknown>)
+              .map(([subKey, subValue]) => `- **${subKey}**: ${subValue}`)
+              .join('\n');
+            builder.addSection(items);
+          }
+        });
+      } else {
+        // Generate mode - display success/failure message
+        builder.addHeader('Landing Page');
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          builder.addSection(`${icon} ${result.message}`);
+          
+          if (result.success) {
+            builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the generated content.`);
+          }
+        }
+      }
+      
+      return builder.build() as string;
+    } else {
+      let message: string[];
+      
+      if (result.data) {
+        // View mode - display landing page content
+        message = [
+          '### Landing Page Content',
+          '',
+        ];
+        
+        // Format data properties
+        Object.entries(result.data).forEach(([key, value]) => {
+          if (typeof value === 'string') {
+            message.push(`**${key}**: ${value}`);
+          } else if (Array.isArray(value)) {
+            message.push(`**${key}**:`);
+            (value as unknown[]).forEach(item => {
+              message.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`);
+            });
+          } else if (typeof value === 'object' && value !== null) {
+            message.push(`**${key}**:`);
+            Object.entries(value as Record<string, unknown>).forEach(([subKey, subValue]) => {
+              message.push(`- **${subKey}**: ${subValue}`);
+            });
+          }
+          
+          message.push('');
+        });
+      } else {
+        // Generate mode - display success/failure message
+        message = [
+          '### Landing Page',
+          '',
+        ];
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          message.push(`${icon} ${result.message}`);
+          
+          if (result.success) {
+            message.push('', `Use \`${this.commandPrefix} landing-page view\` to view the generated content.`);
+          }
+        }
+      }
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Format website preview result
+   */
+  formatWebsitePreview(result: { type: 'website-preview'; success: boolean; url?: string; message: string }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Preview');
+      
+      const icon = result.success ? '✅' : '❌';
+      builder.addSection(`${icon} ${result.message}`);
+      
+      if (result.success && result.url) {
+        builder.addSection(`Website preview available at: ${result.url}`);
+        builder.addSection(`To stop the preview server, use: \`${this.commandPrefix} website-preview-stop\``);
+      }
+      
+      return builder.build() as string;
+    } else {
+      const icon = result.success ? '✅' : '❌';
+      const message = [
+        '### Website Preview',
+        '',
+        `${icon} ${result.message}`,
+      ];
+      
+      if (result.success && result.url) {
+        message.push('', `Website preview available at: ${result.url}`);
+        message.push('', `To stop the preview server, use: \`${this.commandPrefix} website-preview-stop\``);
+      }
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Format website preview stop result
+   */
+  formatWebsitePreviewStop(result: { type: 'website-preview-stop'; success: boolean; message: string }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Preview');
+      
+      const icon = result.success ? '✅' : '❌';
+      builder.addSection(`${icon} ${result.message}`);
+      
+      return builder.build() as string;
+    } else {
+      const icon = result.success ? '✅' : '❌';
+      const message = [
+        '### Website Preview',
+        '',
+        `${icon} ${result.message}`,
+      ];
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Format website build result
+   */
+  formatWebsiteBuild(result: { type: 'website-build'; success: boolean; message: string }): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Build');
+      
+      const icon = result.success ? '✅' : '❌';
+      builder.addSection(`${icon} ${result.message}`);
+      
+      return builder.build() as string;
+    } else {
+      const icon = result.success ? '✅' : '❌';
+      const message = [
+        '### Website Build',
+        '',
+        `${icon} ${result.message}`,
+      ];
+      
+      return this.markdown.format(message.join('\n'));
     }
   }
   

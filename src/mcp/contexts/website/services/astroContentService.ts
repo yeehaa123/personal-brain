@@ -2,7 +2,8 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { Logger } from '@/utils/logger';
-import type { LandingPageData } from '@website/schemas';
+
+import type { LandingPageData } from '../storage/websiteStorage';
 
 // Type for the spawn function we'll use to run Astro commands
 export type SpawnFunction = (options: {
@@ -160,6 +161,32 @@ export class AstroContentService {
         success: false,
         output: errorMessage,
       };
+    }
+  }
+  
+  /**
+   * Kill any running Astro process
+   * Primarily used to stop preview servers
+   */
+  async killProcess(): Promise<boolean> {
+    try {
+      // Simple implementation using pkill for now
+      // This assumes Astro is running as a separate process
+      const proc = this.spawnFunction({
+        cmd: ['pkill', '-f', 'astro.*--root'],
+        cwd: process.cwd(),
+        stdout: 'pipe',
+        stderr: 'pipe',
+      });
+      
+      // Check exit code - note that pkill returns 0 even if no processes were killed
+      await proc.exited;
+      
+      this.logger.info('Astro process killed successfully', { context: 'AstroContentService' });
+      return true;
+    } catch (error) {
+      this.logger.error('Error killing Astro process', { error, context: 'AstroContentService' });
+      return false;
     }
   }
 }

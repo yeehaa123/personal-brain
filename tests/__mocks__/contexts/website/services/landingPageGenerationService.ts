@@ -1,12 +1,16 @@
 import { mock } from 'bun:test';
 
-import type { LandingPageData } from '@website/schemas';
+import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
 
 /**
  * Mock implementation of LandingPageGenerationService for testing
  */
 export class MockLandingPageGenerationService {
   private static instance: MockLandingPageGenerationService | null = null;
+  
+  // Add properties required by the interface
+  private profileContext = null;
+  logger = { info: () => {}, error: () => {}, warn: () => {} };
   
   // Mock state
   private defaultLandingPageData: LandingPageData = {
@@ -25,6 +29,18 @@ export class MockLandingPageGenerationService {
   
   setProfileContext = mock(() => {
     // No-op in mock
+  });
+  
+  getProfileContext = mock(() => {
+    return this.profileContext;
+  });
+  
+  mapProfileToLandingPage = mock((profile: Record<string, unknown>) => {
+    return {
+      name: profile?.['fullName'] || 'Mock User',
+      title: `${profile?.['fullName'] || 'Mock User'} - ${profile?.['occupation'] || 'Developer'}`,
+      tagline: profile?.['headline'] || 'Mock tagline',
+    };
   });
   
   /**

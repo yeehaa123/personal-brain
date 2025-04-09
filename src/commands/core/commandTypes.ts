@@ -4,6 +4,7 @@
  */
 
 import type { ExternalCitation } from '@/mcp';
+import type { LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 
@@ -16,6 +17,18 @@ export interface CommandInfo {
   usage: string;
   examples?: string[];
 }
+
+/**
+ * Union type for all website command result types
+ */
+export type WebsiteCommandResult =
+  | { type: 'website-help'; commands: CommandInfo[] }
+  | { type: 'website-init'; success: boolean; message: string }
+  | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
+  | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
+  | { type: 'website-preview'; success: boolean; url?: string; message: string }
+  | { type: 'website-preview-stop'; success: boolean; message: string }
+  | { type: 'website-build'; success: boolean; message: string };
 
 /**
  * Union type for all possible command result types
@@ -42,4 +55,11 @@ export type CommandResult =
   }
   | { type: 'save-note-preview'; noteContent: string; title: string; conversationId: string }
   | { type: 'save-note-confirm'; noteId: string; title: string }
-  | { type: 'conversation-notes'; notes: Note[] };
+  | { type: 'conversation-notes'; notes: Note[] }
+  | { type: 'website-help'; commands: CommandInfo[] }
+  | { type: 'website-init'; success: boolean; message: string }
+  | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
+  | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
+  | { type: 'website-preview'; success: boolean; url?: string; message: string }
+  | { type: 'website-preview-stop'; success: boolean; message: string }
+  | { type: 'website-build'; success: boolean; message: string };

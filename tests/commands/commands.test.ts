@@ -1,9 +1,12 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { CommandHandler, CommandResult } from '@commands/index';
+import type { CommandHandler } from '@commands/index';
+import { MockCommandHandler } from '@test/__mocks__/commands/commandHandler';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { clearMockEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
+
+// Import our standardized mock
 
 
 // Import only the type for type checking
@@ -95,141 +98,6 @@ mock.module('@mcp/protocol/brainProtocol', () => {
     },
   };
 });
-
-// Instead of modifying the CommandHandler prototype, create a custom mock implementation
-// that we can use directly in our tests. This avoids issues with global state.
-/**
- * Mock CommandHandler implementation to test commands without modifying prototype
- */
-class MockCommandHandler {
-  private externalSourcesEnabled = false;
-
-  constructor() {}
-
-  getCommands() {
-    return [
-      { command: 'help', description: 'Show available commands', usage: 'help' },
-      { command: 'profile', description: 'View profile information', usage: 'profile [related]' },
-      { command: 'search', description: 'Search for notes', usage: 'search <query>' },
-      { command: 'list', description: 'List all notes or notes with a specific tag', usage: 'list [tag]' },
-      { command: 'note', description: 'Show a specific note by ID', usage: 'note <id>' },
-      { command: 'ask', description: 'Ask a question to your brain', usage: 'ask <question>' },
-      { command: 'external', description: 'Enable or disable external sources', usage: 'external <on|off>' },
-      { command: 'status', description: 'Check system status', usage: 'status' },
-    ];
-  }
-
-  async processCommand(command: string, args: string): Promise<CommandResult> {
-    switch (command) {
-    case 'help':
-      return { type: 'help' as const, commands: this.getCommands() };
-    
-    case 'search': {
-      if (!args) {
-        return { type: 'error' as const, message: 'Please provide a search query' };
-      }
-      const searchNotes = await mockNoteContext.searchNotes({ query: args, limit: 10 });
-      return { type: 'search' as const, query: args, notes: searchNotes };
-    }
-    
-    case 'list': {
-      // Declare variables in a block scope to avoid no-case-declarations
-      const result = await this.handleList(args);
-      return result;
-    }
-    
-    case 'note': {
-      if (!args) {
-        return { type: 'error' as const, message: 'Please provide a note ID' };
-      }
-      
-      const note = await mockNoteContext.getNoteById(args);
-      
-      if (!note) {
-        return { type: 'error' as const, message: `Note with ID ${args} not found` };
-      }
-      
-      return { type: 'note' as const, note };
-    }
-    
-    case 'profile': {
-      const profile = await mockProfileContext.getProfile();
-      
-      if (args && args.toLowerCase() === 'related') {
-        const relatedNotes = await mockProfileContext.findRelatedNotes();
-        return {
-          type: 'profile-related' as const,
-          profile,
-          relatedNotes,
-          matchType: 'tags' as const,
-        };
-      }
-      
-      return { type: 'profile' as const, profile };
-    }
-    
-    case 'ask': {
-      if (!args) {
-        return { type: 'error' as const, message: 'Please provide a question' };
-      }
-      
-      // Mock the brain's answer
-      return {
-        type: 'ask' as const,
-        answer: 'Mock answer',
-        citations: [],
-        relatedNotes: [],
-        profile: undefined,
-        externalSources: undefined,
-      };
-    }
-    
-    case 'status':
-      return {
-        type: 'status' as const,
-        status: {
-          apiConnected: true,
-          dbConnected: true,
-          noteCount: 10,
-          externalSources: {
-            'Wikipedia': true,
-            'NewsAPI': false,
-          },
-          externalSourcesEnabled: this.externalSourcesEnabled,
-        },
-      };
-    
-    case 'external': {
-      const enabled = args === 'on';
-      this.externalSourcesEnabled = enabled;
-      return {
-        type: 'external' as const,
-        enabled,
-        message: `External knowledge sources have been ${enabled ? 'enabled' : 'disabled'}.`,
-      };
-    }
-    
-    default:
-      return { type: 'error' as const, message: `Unknown command: ${command}` };
-    }
-  }
-
-  // Helper method to handle list command
-  private async handleList(tagFilter?: string): Promise<CommandResult> {
-    let notes;
-    let title;
-    
-    if (tagFilter) {
-      notes = await mockNoteContext.searchNotes({ tags: [tagFilter], limit: 10 });
-      title = `Notes with tag: ${tagFilter}`;
-    } else {
-      notes = await mockNoteContext.searchNotes({ limit: 10 });
-      title = 'Recent Notes';
-    }
-    
-    return { type: 'notes' as const, notes, title };
-  }
-}
 
 describe('CommandHandler', () => {
   // Use a more flexible type for our mock

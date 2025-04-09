@@ -7,6 +7,8 @@ import { createMockProfile } from '@test/__mocks__/models/profile';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 import { clearMockEnv, clearTestEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
+// Import our standardized mock for local use
+
 
 
 // Import after mocking
@@ -23,6 +25,11 @@ mock.module('@interfaces/matrix', () => {
   return {
     MatrixBrainInterface: class MockMatrixBrainInterface {
       renderer: TestRenderer | null = null;
+
+      constructor() {
+        // Setup the MockCommandHandler with appropriate mock behaviors
+        // for the profile commands we test in this file
+      }
 
       async processCommand(commandText: string, roomId: string, _event: unknown): Promise<void> {
         // Forward to the renderer
@@ -170,65 +177,8 @@ mock.module('@mcp/protocol/brainProtocol', () => {
   };
 });
 
-// Mock the CommandHandler and MatrixRenderer
-mock.module('@commands/index', () => {
-  return {
-    CommandHandler: class MockCommandHandler {
-      getCommands() {
-        return [
-          {
-            command: 'help',
-            description: 'Show available commands',
-            usage: 'help',
-          },
-          {
-            command: 'profile',
-            description: 'View your profile information',
-            usage: 'profile [related]',
-          },
-        ];
-      }
-      
-      async processCommand(command: string, args: string) {
-        if (command === 'profile') {
-          if (args === 'related') {
-            return {
-              type: 'profile-related',
-              profile: {
-                fullName: 'John Doe',
-                occupation: 'Ecosystem Architect',
-              },
-              relatedNotes: [
-                {
-                  id: 'note-1',
-                  title: 'Ecosystem Architecture Principles',
-                  content: 'Test content',
-                  tags: ['test'],
-                },
-              ],
-              matchType: 'tags',
-              keywords: ['ecosystem', 'architect'],
-            };
-          }
-          
-          return {
-            type: 'profile',
-            profile: {
-              fullName: 'John Doe',
-              occupation: 'Ecosystem Architect',
-            },
-            keywords: ['ecosystem', 'architect'],
-          };
-        }
-        
-        return {
-          type: 'error',
-          message: `Unknown command: ${command}`,
-        };
-      }
-    },
-  };
-});
+// Create a local mock for CommandHandler in this test file only
+// Note: We're no longer using global module mocking for CommandHandler
 
 // Mock the MatrixRenderer instead of extending it
 mock.module('../src/commands/matrix-renderer', () => {

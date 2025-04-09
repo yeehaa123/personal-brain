@@ -183,6 +183,92 @@ export class CLIRenderer {
     case 'conversation-notes':
       this.renderConversationNotes(result);
       break;
+      
+    // Website commands
+    case 'website-help':
+      CLIInterface.displayTitle('Website Commands');
+      CLIInterface.displayList(
+        result.commands,
+        (cmd) => `${CLIInterface.styles.subtitle(cmd.command)}: ${cmd.description}\n  Usage: ${cmd.usage}`,
+      );
+      break;
+      
+    case 'website-init':
+      if (result.success) {
+        CLIInterface.success(result.message);
+      } else {
+        CLIInterface.error(result.message);
+      }
+      break;
+      
+    case 'website-config':
+      if (result.success !== undefined) {
+        CLIInterface.displayTitle('Updated Configuration');
+        if (result.success) {
+          CLIInterface.success(result.message);
+        } else {
+          CLIInterface.error(result.message);
+        }
+      } else {
+        CLIInterface.displayTitle('Website Configuration');
+      }
+      
+      if (result.config) {
+        const configItems = Object.entries(result.config).map(([key, value]) => ({ key, value: String(value) }));
+        CLIInterface.displayList(configItems, item => `${CLIInterface.styles.subtitle(item.key)}: ${item.value}`);
+      }
+      break;
+      
+    case 'landing-page':
+      if (result.success !== undefined && result.message) {
+        if (result.success) {
+          CLIInterface.success(result.message);
+        } else {
+          CLIInterface.error(result.message);
+        }
+      }
+      
+      if (result.data) {
+        CLIInterface.displayTitle('Landing Page Content');
+        
+        // Display each field from the landing page data
+        Object.entries(result.data).forEach(([key, value]) => {
+          CLIInterface.displaySubtitle(key.charAt(0).toUpperCase() + key.slice(1));
+          CLIInterface.print(String(value));
+        });
+      }
+      break;
+      
+    case 'website-preview':
+      if (result.success) {
+        CLIInterface.success(result.message);
+        
+        if (result.url) {
+          CLIInterface.info('Website preview available at:');
+          CLIInterface.print(result.url);
+          CLIInterface.info('To stop the preview server, use:');
+          CLIInterface.print('website-preview-stop');
+        }
+      } else {
+        CLIInterface.error(result.message);
+      }
+      break;
+      
+    case 'website-preview-stop':
+      if (result.success) {
+        CLIInterface.success(result.message);
+      } else {
+        CLIInterface.error(result.message);
+      }
+      break;
+      
+    case 'website-build':
+      if (result.success) {
+        CLIInterface.success(result.message);
+      } else {
+        CLIInterface.error(result.message);
+      }
+      break;
 
     case 'status':
       CLIInterface.displayTitle('System Status');
