@@ -152,7 +152,7 @@ export default [
           }
         ]
       }],
-      'import/no-unresolved': ['error', { ignore: ['^bun:'] }],
+      'import/no-unresolved': ['error', { ignore: ['^bun:', '^astro:'] }],
       'import/first': 'error',
       
       // Custom rules

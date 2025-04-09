@@ -34,7 +34,10 @@
     "stop": "pm2 stop personal-brain",
     "restart": "pm2 describe personal-brain > /dev/null 2>&1 && pm2 restart personal-brain || bun run start",
     "test:coverage": "bun test --preload tests/setup.ts --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "website:dev": "astro dev --root ./src/website",
+    "website:build": "astro build --root ./src/website",
+    "website:preview": "astro preview --root ./src/website"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
@@ -49,7 +52,9 @@
     "eslint-import-resolver-typescript": "^4.3.1",
     "eslint-plugin-import": "^2.31.0",
     "husky": "^9.1.7",
-    "pm2": "^5.3.1"
+    "pm2": "^5.3.1",
+    "astro": "^4.5.0",
+    "@astrojs/check": "^0.5.0"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

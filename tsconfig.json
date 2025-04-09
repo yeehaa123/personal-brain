@@ -56,7 +56,8 @@
       "@mcp/*": ["src/mcp/*"],
       "@interfaces/*": ["src/interfaces/*"],
       "@db/*": ["src/db/*"],
-      "@importers/*": ["src/importers/*"]
+      "@importers/*": ["src/importers/*"],
+      "@website/*": ["src/website/src/*"]
     }
   },
   "exclude": ["node_modules"]

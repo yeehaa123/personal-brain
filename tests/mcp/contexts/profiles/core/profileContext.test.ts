@@ -103,12 +103,17 @@ describe('ProfileContext', () => {
   // Note: In Bun, we need to manually reset in each test
   
   test('getInstance should return a singleton instance', () => {
-    // Reset the singleton instance
+    // Ensure ProfileContext is completely reset
     ProfileContext.resetInstance();
+    
+    // Create a fresh instance and capture it
     const instance1 = ProfileContext.getInstance();
+    
+    // Get the instance again - should be the same object reference
     const instance2 = ProfileContext.getInstance();
     
-    expect(instance1).toBe(instance2);
+    // Compare directly using strict equality
+    expect(instance1 === instance2).toBe(true);
   });
   
   test('createFresh should return a new instance', () => {

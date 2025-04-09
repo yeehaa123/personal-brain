@@ -1,4 +1,4 @@
-import type { WebsiteConfig, LandingPageData } from '../storage/websiteStorage';
+import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
 /**
  * Storage adapter interface for the Website Context

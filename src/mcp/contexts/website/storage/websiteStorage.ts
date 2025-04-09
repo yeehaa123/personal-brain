@@ -1,5 +1,8 @@
-import { z } from 'zod';
 import path from 'path';
+
+import { z } from 'zod';
+
+import { type LandingPageData, LandingPageSchema } from '@website/schemas';
 
 // Default path for Astro project as a subdirectory within the project
 const defaultAstroPath = path.join('src', 'website');
@@ -19,13 +22,5 @@ export const WebsiteConfigSchema = z.object({
 
 export type WebsiteConfig = z.infer<typeof WebsiteConfigSchema>;
 
-/**
- * Simplified schema for landing page data (initial MVP)
- */
-export const LandingPageSchema = z.object({
-  name: z.string(),
-  title: z.string(),
-  tagline: z.string(),
-});
-
-export type LandingPageData = z.infer<typeof LandingPageSchema>;
+// Re-export the landing page schema and type from the shared location
+export { LandingPageSchema, type LandingPageData };

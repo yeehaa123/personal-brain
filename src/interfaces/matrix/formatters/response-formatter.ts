@@ -56,7 +56,7 @@ function formatDate(dateValue: string | Date | undefined | null, formatFn: (date
       return formatFn(dateValue);
     }
     return formatFn(new Date(String(dateValue)));
-  } catch (error) {
+  } catch (_error) {
     return 'Invalid date';
   }
 }

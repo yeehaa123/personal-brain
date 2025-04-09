@@ -9,17 +9,17 @@ export type { WebsiteContextOptions } from './core/websiteContext';
 // Storage types
 export { 
   WebsiteConfigSchema,
-  LandingPageSchema 
+  LandingPageSchema, 
 } from './storage/websiteStorage';
 export type { 
   WebsiteConfig,
-  LandingPageData 
+  LandingPageData, 
 } from './storage/websiteStorage';
 
 // Adapter exports
 export { 
-  InMemoryWebsiteStorageAdapter
+  InMemoryWebsiteStorageAdapter,
 } from './adapters/websiteStorageAdapter';
 export type {
-  WebsiteStorageAdapter
+  WebsiteStorageAdapter,
 } from './adapters/websiteStorageAdapter';

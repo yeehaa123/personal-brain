@@ -1,8 +1,9 @@
+import { beforeEach, describe, expect, test } from 'bun:test';
+
 import { 
-  InMemoryWebsiteStorageAdapter 
+  InMemoryWebsiteStorageAdapter, 
 } from '@/mcp/contexts/website/adapters/websiteStorageAdapter';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
-import { beforeEach, describe, test, expect } from 'bun:test';
 
 describe('WebsiteStorageAdapter', () => {
   describe('InMemoryWebsiteStorageAdapter', () => {
