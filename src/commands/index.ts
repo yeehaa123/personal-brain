@@ -12,6 +12,7 @@ import { NoteCommandHandler } from './handlers/noteCommands';
 import { ProfileCommandHandler } from './handlers/profileCommands';
 import { SystemCommandHandler } from './handlers/systemCommands';
 import { TagCommandHandler } from './handlers/tagCommands';
+import { WebsiteCommandHandler } from './handlers/websiteCommands';
 
 // Re-export types
 export { type CommandInfo, type CommandResult } from './core/commandTypes';
@@ -30,6 +31,7 @@ export function createCommandHandler(brainProtocol: BrainProtocol): CommandHandl
   commandHandler.registerHandler(new ProfileCommandHandler(brainProtocol));
   commandHandler.registerHandler(new SystemCommandHandler(brainProtocol));
   commandHandler.registerHandler(new ConversationCommandHandler(brainProtocol));
+  commandHandler.registerHandler(new WebsiteCommandHandler(brainProtocol));
   
   return commandHandler;
 }

@@ -156,6 +156,42 @@ export class MatrixRenderer {
         this.sendMessageFn(roomId, this.formatter.formatConversationNotes(result.notes as unknown as (NotePreview & { createdAt: string | Date })[]));
         break;
       }
+      
+      // Website commands
+      case 'website-help': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteHelp(result));
+        break;
+      }
+      
+      case 'website-init': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteInit(result));
+        break;
+      }
+      
+      case 'website-config': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteConfig(result));
+        break;
+      }
+      
+      case 'landing-page': {
+        this.sendMessageFn(roomId, this.formatter.formatLandingPage(result));
+        break;
+      }
+      
+      case 'website-preview': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsitePreview(result));
+        break;
+      }
+      
+      case 'website-preview-stop': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsitePreviewStop(result));
+        break;
+      }
+      
+      case 'website-build': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteBuild(result));
+        break;
+      }
       }
     } catch (error) {
       logger.error('Error rendering Matrix result:', error);
