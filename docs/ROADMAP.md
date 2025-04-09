@@ -69,8 +69,8 @@ This document outlines the development plan for the Personal Brain project, focu
 
 ### Website Integration (Phases 2-4)
 
-1. **Note Publishing System**: Extend website capabilities to publish notes as blog posts
-   - Create note selection and transformation pipeline into Astro content collections
+1. **Blog Publishing System**: Implement blog capabilities (moved from MVP to post-MVP)
+   - Create note-to-blog-post conversion pipeline
    - Implement Markdown processing with full feature support
    - Set up URL structure and permalinks
    - Create template for blog post pages

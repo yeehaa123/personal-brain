@@ -64,9 +64,9 @@ src/mcp/contexts/website/
    - Implement customizable sections based on profile data
    - Add automatic social links integration
 
-### Phase 2: Content Publishing and Series (4 days)
+### Phase 2: Blog Publishing System (4 days) - Post-MVP
 
-1. **Note Publishing System** (1.5 days)
+1. **Blog Publishing System** (1.5 days)
    - Create note selection and transformation pipeline into Astro content collections
    - Implement Markdown processing with full feature support
    - Set up URL structure and permalinks
