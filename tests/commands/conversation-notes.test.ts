@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
@@ -89,13 +90,23 @@ const mockConversationToNoteService = {
   }),
 };
 
+// Define the full type for Conversation Summary to avoid type errors
+interface ConversationSummaryMock {
+  id: string;
+  conversationId: string;
+  content: string;
+  createdAt: Date;
+  turnCount?: number;
+  metadata?: Record<string, unknown>;
+}
+
 // Mock for ConversationContext 
 const mockConversationContext = {
   getTurns: mock(async (_conversationId: string) => mockConversationTurns),
   getTieredHistory: mock(async (_conversationId: string) => ({
     activeTurns: mockConversationTurns,
-    summaries: [],
-    archivedTurns: [],
+    summaries: [] as ConversationSummaryMock[],
+    archivedTurns: [] as ConversationTurn[],
   })),
 };
 
@@ -269,8 +280,8 @@ describe('Conversation Notes Commands', () => {
       // Ensure tieredHistory returns valid turns even when activeTurns is empty
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: mockConversationTurns,
-        summaries: [],
-        archivedTurns: [],
+        summaries: [] as ConversationSummaryMock[],
+        archivedTurns: [] as ConversationTurn[],
       }));
       
       // Execute the save-note command
@@ -344,7 +355,7 @@ describe('Conversation Notes Commands', () => {
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: mockConversationTurns,
         summaries: [mockSummary],
-        archivedTurns: [mockArchivedTurn]
+        archivedTurns: [mockArchivedTurn],
       }));
       
       // Execute the save-note command
@@ -373,8 +384,8 @@ describe('Conversation Notes Commands', () => {
       // Ensure tieredHistory returns valid turns even when activeTurns is empty
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: mockConversationTurns,
-        summaries: [],
-        archivedTurns: [],
+        summaries: [] as ConversationSummaryMock[],
+        archivedTurns: [] as ConversationTurn[],
       }));
       
       // Execute the confirmation
@@ -411,7 +422,7 @@ describe('Conversation Notes Commands', () => {
           response: 'Another recent answer',
           userId: 'assistant',
           userName: 'Assistant',
-        }
+        },
       ];
       
       const oldSummaries = [
@@ -426,7 +437,7 @@ describe('Conversation Notes Commands', () => {
           conversationId: 'conv123',
           content: 'Second conversation summary covering mid-age turns',
           createdAt: new Date(Date.now() - 43200000), // 12 hours ago
-        }
+        },
       ];
       
       const archivedTurns = [
@@ -437,7 +448,7 @@ describe('Conversation Notes Commands', () => {
           response: 'This was the first answer',
           userId: 'user1',
           userName: 'User',
-        }
+        },
       ];
       
       // Override getConversation to return the complex conversation
@@ -446,8 +457,8 @@ describe('Conversation Notes Commands', () => {
       // Mock a rich tiered history with multiple levels
       mockConversationContext.getTieredHistory.mockImplementationOnce(async () => ({
         activeTurns: recentTurns, // Only recent turns are active
-        summaries: oldSummaries,
-        archivedTurns: archivedTurns
+        summaries: oldSummaries as ConversationSummaryMock[],
+        archivedTurns: archivedTurns as ConversationTurn[],
       }));
       
       // Execute the save-note command

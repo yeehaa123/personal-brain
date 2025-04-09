@@ -20,23 +20,31 @@ This document outlines the development plan for the Personal Brain project, focu
    - Prevent potential bugs from inconsistent access patterns
    - See detailed plan in [`planning/conversation-schema-refactoring.md`](/planning/conversation-schema-refactoring.md)
 
-2. **CLI Interface Improvements**: Separate logger output from CLI content
+2. **[HIGH PRIORITY] Website Landing Page Generation**: Create website landing page from profile data (Phase 1)
+   - Set up the Website Context architecture following the Component Interface Standardization pattern
+   - Integrate with Astro static site generator and configure content collections
+   - Generate a professional landing page from profile data
+   - Implement preview capability for the landing page
+   - Create CLI and Matrix commands for website management with feature parity
+   - See detailed plan in [`planning/website-integration-phase1.md`](/planning/website-integration-phase1.md)
+
+3. **CLI Interface Improvements**: Separate logger output from CLI content
    - Create clear visual distinction between logs and actual content
    - Add option to control log visibility (hide/show/log level)
    - Implement consistent formatting across output types
    - See detailed plan in [`planning/cli-logger-separation.md`](/planning/cli-logger-separation.md)
 
-3. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
+4. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
    - Move from in-memory to database storage
    - Support archiving and retrieval of old conversations
    - Implement cross-conversation knowledge transfer
 
-4. **Memory Usage Optimization**: Implement token counting for precise context management
+5. **Memory Usage Optimization**: Implement token counting for precise context management
    - Add token counting to replace turn counting for memory management
    - Optimize prompt formatting based on token usage
    - Add intelligent context selection based on relevance and token limits
 
-5. **Matrix Interface Enhancements**: Continue improving the Matrix interface
+6. **Matrix Interface Enhancements**: Continue improving the Matrix interface
    - Support Markdown rendering in Matrix
    - Add image embedding in responses
    - Improve formatting of citations and external sources
@@ -44,13 +52,13 @@ This document outlines the development plan for the Personal Brain project, focu
    - Implement Matrix "slack-like blocks" if viable
    - See detailed plan in [`planning/matrix-interface-improvements.md`](/planning/matrix-interface-improvements.md)
 
-6. **Integration with PKM Tools**: Add support for other personal knowledge management tools
+7. **Integration with PKM Tools**: Add support for other personal knowledge management tools
    - Implement import/export for tools like Obsidian or Logseq
    - Support standard markdown formats with frontmatter
    - Create bidirectional linking capabilities
    - See detailed plan in [`planning/import-export-capabilities.md`](/planning/import-export-capabilities.md)
 
-7. **Knowledge Navigation Enhancements**: Improve discovery and browsing experience
+8. **Knowledge Navigation Enhancements**: Improve discovery and browsing experience
    - Implement advanced search with filters for tags and content types
    - Improve preview formatting for search results
    - Add "Related notes" suggestions when viewing content
@@ -58,6 +66,32 @@ This document outlines the development plan for the Personal Brain project, focu
    - See detailed plan in [`planning/knowledge-navigation-enhancements.md`](/planning/knowledge-navigation-enhancements.md)
 
 ## Future Development
+
+### Website Integration (Phases 2-4)
+
+1. **Note Publishing System**: Extend website capabilities to publish notes as blog posts
+   - Create note selection and transformation pipeline into Astro content collections
+   - Implement Markdown processing with full feature support
+   - Set up URL structure and permalinks
+   - Create template for blog post pages
+   - See full roadmap in [`planning/website-integration-roadmap.md`](/planning/website-integration-roadmap.md)
+
+2. **Series and Content Organization**: Add series functionality for related content
+   - Design series data model as an Astro content collection
+   - Create UI for series pages
+   - Implement navigation between series posts
+   - Add series overview page
+
+3. **Website Deployment and SEO**: Add professional publishing capabilities
+   - Implement deployment adapters for common platforms
+   - Create self-hosted deployment option
+   - Set up CI/CD pipeline for automated builds
+   - Add advanced SEO features (structured data, sitemaps, etc.)
+
+4. **Content Scheduling and Analytics**: Complete the publishing workflow
+   - Add content scheduling system
+   - Integrate with privacy-focused analytics
+   - Implement social media sharing capabilities
 
 ### Knowledge Visualization
 
