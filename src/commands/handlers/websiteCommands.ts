@@ -60,18 +60,23 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   }
   
   /**
+   * List of commands supported by this handler
+   */
+  private static readonly SUPPORTED_COMMANDS = [
+    'website',
+    'website-init',
+    'website-config',
+    'landing-page',
+    'website-preview',
+    'website-preview-stop',
+    'website-build',
+  ];
+
+  /**
    * Check if this handler can process the given command
    */
   public canHandle(command: string): boolean {
-    return [
-      'website',
-      'website-init',
-      'website-config',
-      'landing-page',
-      'website-preview',
-      'website-preview-stop',
-      'website-build',
-    ].includes(command);
+    return WebsiteCommandHandler.SUPPORTED_COMMANDS.includes(command);
   }
 
   /**

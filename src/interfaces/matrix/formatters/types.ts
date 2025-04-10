@@ -2,6 +2,9 @@
  * Common types for Matrix formatters
  */
 
+import type { WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@website/schemas';
+
 // Note model properties we need for formatting
 
 /**
@@ -84,6 +87,76 @@ export interface CitationReference {
   noteId: string;
   noteTitle: string;
   excerpt?: string;
+}
+
+/**
+ * Website configuration result
+ */
+export interface WebsiteConfigResult {
+  type: 'website-config';
+  config?: WebsiteConfig;
+  success?: boolean;
+  message: string;
+}
+
+/**
+ * Website help result
+ */
+export interface WebsiteHelpResult {
+  type: 'website-help';
+  commands: Array<{
+    command: string;
+    description: string;
+    usage: string;
+    examples?: string[];
+  }>;
+}
+
+/**
+ * Website initialization result
+ */
+export interface WebsiteInitResult {
+  type: 'website-init';
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Landing page result
+ */
+export interface LandingPageResult {
+  type: 'landing-page';
+  success?: boolean;
+  message?: string;
+  data?: LandingPageData;
+}
+
+/**
+ * Website preview result
+ */
+export interface WebsitePreviewResult {
+  type: 'website-preview';
+  success: boolean;
+  url?: string;
+  message: string;
+}
+
+/**
+ * Website preview stop result
+ */
+export interface WebsitePreviewStopResult {
+  type: 'website-preview-stop';
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Website build result
+ */
+export interface WebsiteBuildResult {
+  type: 'website-build';
+  success: boolean;
+  message: string;
 }
 
 /**

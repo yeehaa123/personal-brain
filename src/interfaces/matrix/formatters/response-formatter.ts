@@ -6,14 +6,24 @@
 
 import logger from '@/utils/logger';
 import { getExcerpt } from '@/utils/noteUtils';
-import type { CommandInfo } from '@commands/core/commandTypes';
-import type { WebsiteConfig } from '@mcp/contexts/website/storage/websiteStorage';
-import type { LandingPageData } from '@website/schemas';
 
 import { MatrixBlockBuilder } from './block-formatter';
 import { getCitationFormatter } from './citation-formatter';
 import { getMarkdownFormatter } from './markdown-formatter';
-import type { CitationReference, NotePreview, SaveNoteConfirmResult, SaveNotePreviewResult, SystemStatus } from './types';
+import type { 
+  CitationReference, 
+  NotePreview, 
+  SaveNoteConfirmResult, 
+  SaveNotePreviewResult, 
+  SystemStatus,
+  WebsiteHelpResult,
+  WebsiteInitResult, 
+  WebsiteConfigResult,
+  LandingPageResult,
+  WebsitePreviewResult,
+  WebsitePreviewStopResult,
+  WebsiteBuildResult
+} from './types';
 
 /**
  * Format a note preview for display in lists, removing attribution footers
@@ -699,7 +709,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website help information
    */
-  formatWebsiteHelp(result: { type: 'website-help'; commands: CommandInfo[] }): string {
+  formatWebsiteHelp(result: WebsiteHelpResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -737,7 +747,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website initialization result
    */
-  formatWebsiteInit(result: { type: 'website-init'; success: boolean; message: string }): string {
+  formatWebsiteInit(result: WebsiteInitResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -770,7 +780,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website configuration result
    */
-  formatWebsiteConfig(result: { type: 'website-config'; config?: WebsiteConfig; success?: boolean; message: string }): string {
+  formatWebsiteConfig(result: WebsiteConfigResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -826,7 +836,7 @@ export class MatrixResponseFormatter {
   /**
    * Format landing page result
    */
-  formatLandingPage(result: { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }): string {
+  formatLandingPage(result: LandingPageResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -917,7 +927,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website preview result
    */
-  formatWebsitePreview(result: { type: 'website-preview'; success: boolean; url?: string; message: string }): string {
+  formatWebsitePreview(result: WebsitePreviewResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -952,7 +962,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website preview stop result
    */
-  formatWebsitePreviewStop(result: { type: 'website-preview-stop'; success: boolean; message: string }): string {
+  formatWebsitePreviewStop(result: WebsitePreviewStopResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
@@ -977,7 +987,7 @@ export class MatrixResponseFormatter {
   /**
    * Format website build result
    */
-  formatWebsiteBuild(result: { type: 'website-build'; success: boolean; message: string }): string {
+  formatWebsiteBuild(result: WebsiteBuildResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
