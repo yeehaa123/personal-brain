@@ -294,22 +294,18 @@ export class WebsiteContext extends BaseContext {
   }
   
   /**
-   * Preview the website using Astro dev server
+   * Preview the website using Astro dev server managed by PM2
    * @returns Result of the preview operation, including URL if successful
    */
   async previewWebsite(): Promise<{ success: boolean; message: string; url?: string; output?: string }> {
     try {
       const astroService = await this.getAstroContentService();
-      const result = await astroService.runAstroCommand('dev');
-      
-      // Extract URL from output
-      const urlMatch = result.output.match(/Local:\s+(http:\/\/[^\s]+)/);
-      const url = urlMatch ? urlMatch[1] : undefined;
+      const result = await astroService.startDevServer();
       
       return {
         success: result.success,
-        message: result.success ? 'Website preview started' : 'Failed to start website preview',
-        url,
+        message: result.success ? 'Website preview started with PM2' : 'Failed to start website preview',
+        url: result.url,
         output: result.output,
       };
     } catch (error) {
@@ -321,6 +317,32 @@ export class WebsiteContext extends BaseContext {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error previewing website',
+      };
+    }
+  }
+  
+  /**
+   * Stop the website preview server managed by PM2
+   * @returns Result of the stop operation
+   */
+  async stopPreviewWebsite(): Promise<{ success: boolean; message: string }> {
+    try {
+      const astroService = await this.getAstroContentService();
+      const result = await astroService.stopDevServer();
+      
+      return {
+        success: result,
+        message: result ? 'Website preview server stopped successfully' : 'Failed to stop website preview server',
+      };
+    } catch (error) {
+      this.logger.error('Error stopping website preview', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error stopping website preview',
       };
     }
   }

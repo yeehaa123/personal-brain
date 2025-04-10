@@ -233,7 +233,7 @@ export class MockWebsiteCommandHandler {
         };
       }
         
-      const stopResult = await websiteContext.stopPreview();
+      const stopResult = await websiteContext.stopPreviewWebsite();
       return {
         type: 'website-preview-stop',
         success: stopResult.success,

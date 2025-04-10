@@ -1,11 +1,12 @@
 import { mock } from 'bun:test';
 
+import type { AstroContentServiceTestHelpers } from '@/mcp/contexts/website/services/astroContentService';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
 
 /**
  * Mock implementation of AstroContentService for tests
  */
-export class MockAstroContentService {
+export class MockAstroContentService implements AstroContentServiceTestHelpers {
   private static instance: MockAstroContentService | null = null;
   
   // We don't need to mock private properties that aren't accessed
@@ -25,6 +26,17 @@ export class MockAstroContentService {
     return Promise.resolve({ success: true, output: `Command ${command} executed successfully` });
   });
   killProcess = mock(() => Promise.resolve(true));
+  
+  // PM2 methods
+  startDevServer = mock<() => Promise<{ success: boolean; output: string; url: string }>>(() => 
+    Promise.resolve({ 
+      success: true, 
+      output: 'PM2 started Astro dev server', 
+      url: 'http://localhost:4321' 
+    })
+  );
+  
+  stopDevServer = mock<() => Promise<boolean>>(() => Promise.resolve(true));
   
   /**
    * Get the singleton instance
@@ -46,6 +58,8 @@ export class MockAstroContentService {
       MockAstroContentService.instance.readLandingPageContent.mockClear();
       MockAstroContentService.instance.runAstroCommand.mockClear();
       MockAstroContentService.instance.killProcess.mockClear();
+      MockAstroContentService.instance.startDevServer.mockClear();
+      MockAstroContentService.instance.stopDevServer.mockClear();
     }
     MockAstroContentService.instance = null;
   }
@@ -70,4 +84,22 @@ export class MockAstroContentService {
   setSpawnFunction = mock(() => {
     // No-op in mock
   });
+  
+  /**
+   * Configure startDevServer mock to return failure
+   */
+  setStartDevServerFailure(errorMessage: string = 'Failed to start dev server'): void {
+    this.startDevServer = mock(() => Promise.resolve({ 
+      success: false, 
+      output: errorMessage, 
+      url: '' 
+    }));
+  }
+  
+  /**
+   * Configure stopDevServer mock to return failure
+   */
+  setStopDevServerFailure(): void {
+    this.stopDevServer = mock(() => Promise.resolve(false));
+  }
 }

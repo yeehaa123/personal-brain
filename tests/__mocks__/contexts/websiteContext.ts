@@ -152,7 +152,7 @@ export class MockWebsiteContext {
     };
   }
 
-  async previewWebsite(): Promise<{ success: boolean; url?: string; message: string }> {
+  async previewWebsite(): Promise<{ success: boolean; url?: string; message: string; output?: string }> {
     // Check if website is initialized
     if (!this.isReady()) {
       return {
@@ -169,28 +169,23 @@ export class MockWebsiteContext {
       };
     }
 
-    const result = await this.mockAstroContentService.runAstroCommand('dev');
+    // Use startDevServer for PM2-based preview
+    const result = await this.mockAstroContentService.startDevServer();
 
     // Set preview running state based on result
     if (result.success) {
       this.mockPreviewRunning = true;
     }
 
-    // Extract URL from the output
-    let url;
-    if (result.success && result.output.includes('Local:')) {
-      const match = result.output.match(/Local:\s+(https?:\/\/[^\s]+)/);
-      url = match ? match[1] : this.mockPreviewUrl;
-    }
-
     return {
       success: result.success,
-      url,
-      message: result.output,
+      url: result.url,
+      message: result.success ? 'Website preview started with PM2' : 'Failed to start website preview',
+      output: result.output,
     };
   }
 
-  async stopPreview(): Promise<{ success: boolean; message: string }> {
+  async stopPreviewWebsite(): Promise<{ success: boolean; message: string }> {
     // Check if website is initialized
     if (!this.isReady()) {
       return {
@@ -207,7 +202,8 @@ export class MockWebsiteContext {
       };
     }
 
-    const success = await this.mockAstroContentService.killProcess();
+    // Use stopDevServer for PM2-based management
+    const success = await this.mockAstroContentService.stopDevServer();
 
     // Update preview state
     if (success) {
@@ -216,7 +212,7 @@ export class MockWebsiteContext {
 
     return {
       success,
-      message: success ? 'Preview server stopped' : 'Failed to stop preview server',
+      message: success ? 'Website preview server stopped successfully' : 'Failed to stop website preview server',
     };
   }
 

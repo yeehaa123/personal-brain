@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProfileContext } from '@/mcp/contexts/profiles';
 import { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
-import type { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
+import type { AstroContentService, AstroContentServiceTestHelpers } from '@/mcp/contexts/website/services/astroContentService';
 import type { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
@@ -13,7 +13,7 @@ import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/websi
 import { MockProfile } from '@test/__mocks__/models/profile';
 
 // Create our mock instances with proper typings
-const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService;
+const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
 const mockLandingPageGenerationService = MockLandingPageGenerationService.createFresh() as unknown as LandingPageGenerationService;
 describe('WebsiteContext', () => {
   // Set up and tear down for each test
@@ -211,11 +211,7 @@ describe('WebsiteContext', () => {
     expect(mockAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
   });
 
-  test('previewWebsite should run the dev command through astro service', async () => {
-    mockAstroContentService.runAstroCommand = mock(() =>
-      Promise.resolve({ success: true, output: 'Local: http://localhost:4321' }),
-    );
-
+  test('previewWebsite should start the Astro dev server using PM2', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
@@ -224,7 +220,53 @@ describe('WebsiteContext', () => {
     const result = await context.previewWebsite();
 
     expect(result.success).toBe(true);
-    expect(result.url).toBeDefined();
-    expect(mockAstroContentService.runAstroCommand).toHaveBeenCalledWith('dev');
+    expect(result.url).toBe('http://localhost:4321');
+    expect(result.message).toBe('Website preview started with PM2');
+    expect(mockAstroContentService.startDevServer).toHaveBeenCalled();
+  });
+  
+  test('previewWebsite should handle errors when starting the server fails', async () => {
+    // Configure the mock to simulate failure
+    mockAstroContentService.setStartDevServerFailure('PM2 startup error');
+    
+    // Create context with mocked Astro service
+    const context = WebsiteContext.createFresh({
+      astroContentService: mockAstroContentService,
+    });
+
+    const result = await context.previewWebsite();
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Failed to start website preview');
+    expect(mockAstroContentService.startDevServer).toHaveBeenCalled();
+  });
+  
+  test('stopPreviewWebsite should stop the Astro dev server using PM2', async () => {
+    // Create context with mocked Astro service
+    const context = WebsiteContext.createFresh({
+      astroContentService: mockAstroContentService,
+    });
+
+    const result = await context.stopPreviewWebsite();
+
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('Website preview server stopped successfully');
+    expect(mockAstroContentService.stopDevServer).toHaveBeenCalled();
+  });
+  
+  test('stopPreviewWebsite should handle errors when stopping the server fails', async () => {
+    // Configure the mock to simulate failure
+    mockAstroContentService.setStopDevServerFailure();
+    
+    // Create context with mocked Astro service
+    const context = WebsiteContext.createFresh({
+      astroContentService: mockAstroContentService,
+    });
+
+    const result = await context.stopPreviewWebsite();
+
+    expect(result.success).toBe(false);
+    expect(result.message).toBe('Failed to stop website preview server');
+    expect(mockAstroContentService.stopDevServer).toHaveBeenCalled();
   });
 });

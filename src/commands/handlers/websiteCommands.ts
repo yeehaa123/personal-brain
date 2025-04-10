@@ -442,27 +442,18 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     }
     
     try {
-      // Create a temporary adapter method since WebsiteContext doesn't have stopPreview
-      // TODO: Add stopPreview() method to WebsiteContext
-      const astroService = await this.websiteContext.getAstroContentService();
-      
-      // Use the killProcess method that's now properly implemented
-      let success = false;
-      try {
-        success = await astroService.killProcess();
-      } catch (e) {
-        this.logger.error('Error stopping preview server process', { error: e });
-      }
+      // Use the new stopPreviewWebsite method in WebsiteContext
+      const result = await this.websiteContext.stopPreviewWebsite();
       
       // Update our running state
-      if (success) {
+      if (result.success) {
         this.setPreviewRunning(false);
       }
       
       return {
         type: 'website-preview-stop',
-        success: success,
-        message: success ? 'Preview server stopped successfully' : 'Failed to stop preview server',
+        success: result.success,
+        message: result.message,
       };
     } catch (error) {
       this.logger.error(`Error stopping preview server: ${error}`);

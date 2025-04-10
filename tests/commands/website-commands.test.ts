@@ -198,17 +198,18 @@ describe('WebsiteCommandHandler', () => {
     expect(landingPageResult.message).toContain('not initialized');
   });
 
-  test('should handle website-preview command', async () => {
+  test('should handle website-preview command with PM2', async () => {
     // First initialize the website
     mockWebsiteContext.setMockInitialized(true);
 
-    // Then start preview
+    // Then start preview with PM2
     const result = await commandHandler.processCommand('website-preview', '');
 
     expect(result.type).toBe('website-preview');
     const previewResult = result as Extract<WebsiteCommandResult, { type: 'website-preview' }>;
     expect(previewResult.success).toBe(true);
-    expect(previewResult.url).toBeDefined();
+    expect(previewResult.url).toBe('http://localhost:4321');
+    expect(previewResult.message).toBe('Website preview started with PM2');
 
     // Verify that preview is marked as running in the handler and context
     expect(mockWebsiteContext.isPreviewRunning()).toBe(true);
@@ -228,7 +229,7 @@ describe('WebsiteCommandHandler', () => {
     expect(previewResult.message).toContain('already running');
   });
 
-  test('should handle website-preview-stop command', async () => {
+  test('should handle website-preview-stop command with PM2', async () => {
     // First initialize the website and set preview as running
     mockWebsiteContext.setMockInitialized(true);
 
@@ -238,12 +239,13 @@ describe('WebsiteCommandHandler', () => {
     // Verify preview is running
     expect(mockWebsiteContext.isPreviewRunning()).toBe(true);
 
-    // Then stop preview
+    // Then stop preview with PM2
     const result = await commandHandler.processCommand('website-preview-stop', '');
 
     expect(result.type).toBe('website-preview-stop');
     const stopResult = result as Extract<WebsiteCommandResult, { type: 'website-preview-stop' }>;
     expect(stopResult.success).toBe(true);
+    expect(stopResult.message).toBe('Website preview server stopped successfully');
 
     // Verify that preview is marked as stopped
     expect(mockWebsiteContext.isPreviewRunning()).toBe(false);
