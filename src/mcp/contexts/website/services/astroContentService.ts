@@ -257,7 +257,7 @@ export class AstroContentService {
         // Don't throw if the process isn't found - it might already be stopped
         if (stderr.includes('not found') || stdout.includes('not found')) {
           this.logger.info('Astro dev server not found in PM2, assuming already stopped', { 
-            context: 'AstroContentService' 
+            context: 'AstroContentService', 
           });
           return true;
         }
@@ -266,7 +266,7 @@ export class AstroContentService {
       
       this.logger.info('Astro dev server stopped with PM2', { 
         context: 'AstroContentService',
-        output: stdout 
+        output: stdout, 
       });
       return true;
     } catch (error) {

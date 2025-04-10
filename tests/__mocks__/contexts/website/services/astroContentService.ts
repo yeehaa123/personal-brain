@@ -32,8 +32,8 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
     Promise.resolve({ 
       success: true, 
       output: 'PM2 started Astro dev server', 
-      url: 'http://localhost:4321' 
-    })
+      url: 'http://localhost:4321', 
+    }),
   );
   
   stopDevServer = mock<() => Promise<boolean>>(() => Promise.resolve(true));
@@ -92,7 +92,7 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
     this.startDevServer = mock(() => Promise.resolve({ 
       success: false, 
       output: errorMessage, 
-      url: '' 
+      url: '', 
     }));
   }
   

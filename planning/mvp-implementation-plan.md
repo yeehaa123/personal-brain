@@ -7,7 +7,7 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 ## MVP Components
 
 1. **Website Landing Page Generation**: Create a professional landing page from profile data
-2. **GitHub Pages Deployment**: Implement simple deployment process 
+2. **Netlify Deployment**: Implement flexible deployment architecture with Netlify as first provider
 3. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
 
 ## Scope Boundaries
@@ -21,8 +21,9 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 - Preview capability
 - CLI and Matrix command parity
 
-#### 2. GitHub Pages Deployment
-- GitHub Pages configuration
+#### 2. Flexible Deployment Architecture
+- Provider-agnostic deployment interface
+- Netlify integration as first deployment provider
 - Build process automation
 - Deployment commands for CLI and Matrix
 - Basic deployment status reporting
@@ -43,7 +44,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 4. **Content Scheduling**: No future post scheduling
 5. **Analytics Integration**: No visitor tracking or analytics
 6. **Social Media Integration**: No automatic social posting
-7. **Multiple Deployment Options**: GitHub Pages only (no Vercel, Netlify, self-hosted)
+7. **Multiple Active Deployment Providers**: Netlify only initially (architecture will support adding more later)
 8. **Theme Customization**: Single default theme only
 9. **Conversation Schema Refactoring**: Keep existing conversation schema
 10. **Database-backed Memory**: Keep in-memory storage
@@ -65,8 +66,15 @@ These features will NOT be included in the MVP, even if they seem tempting or re
           │               │
           ▼               │
 ┌───────────────────┐     │
-│ GitHub Pages      │     │
-│ Deployment        │     │
+│ Flexible Deploy   │     │
+│ Architecture      │     │
+└─────────┬─────────┘     │
+          │               │
+          │               │
+          ▼               │
+┌───────────────────┐     │
+│ Netlify Provider  │     │
+│ Implementation    │     │
 └─────────┬─────────┘     │
           │               │
           │               │
@@ -107,10 +115,10 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - ⏳ Add preview capability to interfaces
    - ⏳ Complete comprehensive test suite
 
-4. **GitHub Pages Integration** (Days 4-5) 🔜 Upcoming
-   - 🔜 Set up GitHub Pages configuration
-   - 🔜 Create deployment workflow
-   - 🔜 Implement deployment commands
+4. **Netlify Deployment Integration** (Days 4-5) 🔜 Upcoming
+   - 🔜 Design flexible deployment architecture
+   - 🔜 Implement Netlify provider
+   - 🔜 Create deployment commands
    - 🔜 Test end-to-end with generated landing page
    - 🔜 Verify automated build and deployment
 
@@ -135,6 +143,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - Improve deployment commands with error handling
    - Add deployment status reporting
    - Implement custom domain support
+   - Prepare architecture for additional providers
 
 8. **Integration & Performance** (Days 3-4)
    - Optimize build and preview performance
@@ -155,7 +164,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 | 1 | 1-2 | Website Context Setup | ✅ Completed |
 | 1 | 3 | Basic Astro Setup & Content Services | ✅ Completed |
 | 1 | 4 | Command Interface Integration | ⏳ In Progress |
-| 1 | 4-5 | GitHub Pages Integration | 🔜 Upcoming |
+| 1 | 4-5 | Netlify Deployment Integration | 🔜 Upcoming |
 | 2 | 1-2 | Landing Page Refinements | 🔜 Planned |
 | 2 | 3-5 | CLI Interface Improvements | 🔜 Planned |
 | 3 | 1-2 | Deployment Enhancements | 🔜 Planned |
@@ -182,8 +191,9 @@ For the MVP to be considered complete, all the following criteria must be met:
 - 🔜 Landing page displays correctly in preview
 - 🔜 All profile sections (bio, skills, projects, contact) render properly
 
-### GitHub Pages Deployment
-- 🔜 GitHub Pages configuration set up
+### Flexible Deployment Architecture
+- 🔜 Provider-agnostic architecture implemented
+- 🔜 Netlify provider fully implemented
 - 🔜 Automated build process implemented
 - 🔜 Deployment commands created for CLI and Matrix
 - 🔜 Status reporting on deployment success/failure
@@ -235,7 +245,8 @@ If a change to the MVP scope is considered necessary:
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| GitHub Pages automation issues | High | Medium | Test GitHub Actions early with minimal test page |
+| Netlify API integration issues | High | Medium | Test Netlify deployment early with minimal test page |
+| Deployment provider architecture complexity | Medium | Medium | Focus on clean abstractions with single provider first |
 | Astro integration complexity | Medium | Medium | Start with minimal Astro setup before content generation |
 | Profile data transformation edge cases | Medium | Medium | Add extensive testing for various profile formats |
 | Command interface inconsistencies | Low | Medium | Create strong abstractions for both interfaces |
@@ -257,10 +268,11 @@ These items are explicitly planned for after the MVP and should not be included 
 
 1. Blog publishing system for notes
 2. Series organization for blog posts
-3. Additional deployment options
+3. Additional deployment providers (Vercel, GitHub Pages, self-hosted)
 4. SEO optimization features
 5. Content scheduling
 6. Analytics integration
+7. Theme customization options
 
 ## Conclusion
 
