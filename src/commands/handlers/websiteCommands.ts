@@ -70,6 +70,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     'website-preview',
     'website-preview-stop',
     'website-build',
+    'website-deploy',
+    'website-deployment-status',
+    'website-deployment-config',
   ];
 
   /**
@@ -121,6 +124,25 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         description: 'Build the website for deployment',
         usage: 'website-build',
       },
+      {
+        command: 'website-deploy',
+        description: 'Deploy the website using the configured provider',
+        usage: 'website-deploy',
+      },
+      {
+        command: 'website-deployment-status',
+        description: 'Check the deployment status of the website',
+        usage: 'website-deployment-status',
+      },
+      {
+        command: 'website-deployment-config',
+        description: 'View or update deployment configuration',
+        usage: 'website-deployment-config [key=value ...]',
+        examples: [
+          'website-deployment-config', 
+          'website-deployment-config deploymentType="netlify" deploymentConfig.token="xyz" deploymentConfig.siteId="site-id"',
+        ],
+      },
     ];
   }
   
@@ -163,6 +185,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         return this.handleWebsitePreviewStop();
       case 'website-build':
         return this.handleWebsiteBuild();
+      case 'website-deploy':
+        return this.handleWebsiteDeploy();
+      case 'website-deployment-status':
+        return this.handleWebsiteDeploymentStatus();
+      case 'website-deployment-config':
+        return this.handleWebsiteDeploymentConfig(args);
       default:
         return {
           type: 'website-init',
@@ -498,6 +526,212 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       return {
         type: 'error',
         message: `Failed to build website: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+  
+  /**
+   * Handle website deploy command
+   */
+  private async handleWebsiteDeploy(): Promise<CommandResult> {
+    if (!this.websiteContext) {
+      return {
+        type: 'website-deploy',
+        success: false,
+        message: 'Website context not available',
+      };
+    }
+    
+    if (!this.websiteContext.isReady()) {
+      return {
+        type: 'website-deploy',
+        success: false,
+        message: 'Website not initialized. Run "website-init" first.',
+      };
+    }
+    
+    try {
+      const result = await this.websiteContext.deployWebsite();
+      
+      return {
+        type: 'website-deploy',
+        success: result.success,
+        message: result.message,
+        url: result.url,
+        logs: result.logs,
+      };
+    } catch (error) {
+      this.logger.error(`Error deploying website: ${error}`);
+      return {
+        type: 'website-deploy',
+        success: false,
+        message: `Failed to deploy website: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+  
+  /**
+   * Handle website deployment status command
+   */
+  private async handleWebsiteDeploymentStatus(): Promise<CommandResult> {
+    if (!this.websiteContext) {
+      return {
+        type: 'website-deployment-status',
+        success: false,
+        isDeployed: false,
+        message: 'Website context not available',
+      };
+    }
+    
+    if (!this.websiteContext.isReady()) {
+      return {
+        type: 'website-deployment-status',
+        success: false,
+        isDeployed: false,
+        message: 'Website not initialized. Run "website-init" first.',
+      };
+    }
+    
+    try {
+      const result = await this.websiteContext.getDeploymentStatus();
+      
+      return {
+        type: 'website-deployment-status',
+        success: result.success,
+        isDeployed: result.isDeployed,
+        provider: result.provider,
+        url: result.url,
+        message: result.message,
+      };
+    } catch (error) {
+      this.logger.error(`Error checking deployment status: ${error}`);
+      return {
+        type: 'website-deployment-status',
+        success: false,
+        isDeployed: false,
+        message: `Failed to check deployment status: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+  
+  /**
+   * Handle website deployment configuration command
+   */
+  private async handleWebsiteDeploymentConfig(args: string): Promise<CommandResult> {
+    if (!this.websiteContext) {
+      return {
+        type: 'website-deployment-config',
+        success: false,
+        message: 'Website context not available',
+      };
+    }
+    
+    if (!this.websiteContext.isReady()) {
+      return {
+        type: 'website-deployment-config',
+        success: false,
+        message: 'Website not initialized. Run "website-init" first.',
+      };
+    }
+    
+    // If no args, display current config
+    if (!args.trim()) {
+      const config = await this.websiteContext.getConfig();
+      
+      // Create a copy of the config to mask sensitive information
+      const displayConfig = { ...config };
+      
+      // Mask sensitive information like tokens
+      if (displayConfig['deploymentConfig'] && typeof displayConfig['deploymentConfig'] === 'object') {
+        const configCopy = { ...displayConfig['deploymentConfig'] };
+        
+        // Mask sensitive fields
+        if ('token' in configCopy) {
+          configCopy['token'] = '****';
+        }
+        
+        displayConfig['deploymentConfig'] = configCopy;
+      }
+      
+      return {
+        type: 'website-deployment-config',
+        success: true,
+        config: displayConfig,
+        message: 'Current deployment configuration',
+      };
+    }
+    
+    // Parse key=value pairs from arguments
+    try {
+      const configUpdates: Record<string, unknown> = {};
+      const keyValuePairs = args.match(/(\w+(?:\.\w+)*)="([^"]*)"/g) || [];
+      
+      for (const pair of keyValuePairs) {
+        const [keyPath, rawValue] = pair.split('=');
+        const cleanKeyPath = keyPath.trim();
+        const cleanValue = rawValue.replace(/"/g, '').trim();
+        
+        if (cleanKeyPath && cleanValue !== undefined) {
+          // Handle nested paths like deploymentConfig.token
+          if (cleanKeyPath.includes('.')) {
+            const [parent, child] = cleanKeyPath.split('.');
+            
+            if (parent === 'deploymentConfig') {
+              // Initialize deploymentConfig if it doesn't exist
+              if (!configUpdates['deploymentConfig']) {
+                configUpdates['deploymentConfig'] = {};
+              }
+              
+              // Add the child property
+              (configUpdates['deploymentConfig'] as Record<string, unknown>)[child] = cleanValue;
+            } else {
+              configUpdates[cleanKeyPath] = cleanValue;
+            }
+          } else {
+            configUpdates[cleanKeyPath] = cleanValue;
+          }
+        }
+      }
+      
+      if (Object.keys(configUpdates).length === 0) {
+        return {
+          type: 'error',
+          message: 'Invalid configuration format. Use key="value" format.',
+        };
+      }
+      
+      // Update configuration
+      await this.websiteContext.updateConfig(configUpdates);
+      
+      // Get updated config
+      const updatedConfig = await this.websiteContext.getConfig();
+      
+      // Create a copy of the config to mask sensitive information
+      const displayConfig = { ...updatedConfig };
+      
+      // Mask sensitive information like tokens
+      if (displayConfig['deploymentConfig'] && typeof displayConfig['deploymentConfig'] === 'object') {
+        const configCopy = { ...displayConfig['deploymentConfig'] };
+        
+        // Mask sensitive fields
+        if ('token' in configCopy) {
+          configCopy['token'] = '****';
+        }
+        
+        displayConfig['deploymentConfig'] = configCopy;
+      }
+      
+      return {
+        type: 'website-deployment-config',
+        success: true,
+        config: displayConfig,
+        message: 'Deployment configuration updated successfully',
+      };
+    } catch (error) {
+      this.logger.error(`Error updating deployment configuration: ${error}`);
+      return {
+        type: 'error',
+        message: `Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

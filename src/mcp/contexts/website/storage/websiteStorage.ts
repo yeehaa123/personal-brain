@@ -15,7 +15,7 @@ export const WebsiteConfigSchema = z.object({
   description: z.string().default('My personal website'),
   author: z.string(),
   baseUrl: z.string().url().default('http://localhost:4321'),
-  deploymentType: z.enum(['local', 'github']).default('local'),
+  deploymentType: z.enum(['local', 'netlify', 'github']).default('local'),
   deploymentConfig: z.record(z.unknown()).optional(),
   astroProjectPath: z.string().default(defaultAstroPath),
 });

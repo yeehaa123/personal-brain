@@ -2,6 +2,7 @@ import { mock } from 'bun:test';
 
 import type { AstroContentServiceTestHelpers } from '@/mcp/contexts/website/services/astroContentService';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
+import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
  * Mock implementation of AstroContentService for tests
@@ -9,9 +10,10 @@ import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStor
 export class MockAstroContentService implements AstroContentServiceTestHelpers {
   private static instance: MockAstroContentService | null = null;
   
-  // We don't need to mock private properties that aren't accessed
+  // Properties needed to match the interface
   astroProjectPath: string = '/mock/astro/path';
-  logger = { info: () => {}, error: () => {}, warn: () => {} };
+  contentCollectionPath: string = '/mock/astro/path/src/content';
+  logger = MockLogger.createFresh({ silent: true });
   spawnFunction = () => ({ 
     exited: Promise.resolve(0),
     stdout: new ReadableStream(),

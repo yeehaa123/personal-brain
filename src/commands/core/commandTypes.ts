@@ -28,7 +28,10 @@ export type WebsiteCommandResult =
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-preview'; success: boolean; url?: string; message: string }
   | { type: 'website-preview-stop'; success: boolean; message: string }
-  | { type: 'website-build'; success: boolean; message: string };
+  | { type: 'website-build'; success: boolean; message: string }
+  | { type: 'website-deploy'; success: boolean; message: string; url?: string; logs?: string }
+  | { type: 'website-deployment-status'; success: boolean; isDeployed: boolean; provider?: string; url?: string; message?: string }
+  | { type: 'website-deployment-config'; success?: boolean; message: string; config?: WebsiteConfig };
 
 /**
  * Union type for all possible command result types
@@ -62,4 +65,7 @@ export type CommandResult =
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-preview'; success: boolean; url?: string; message: string }
   | { type: 'website-preview-stop'; success: boolean; message: string }
-  | { type: 'website-build'; success: boolean; message: string };
+  | { type: 'website-build'; success: boolean; message: string }
+  | { type: 'website-deploy'; success: boolean; message: string; url?: string; logs?: string }
+  | { type: 'website-deployment-status'; success: boolean; isDeployed: boolean; provider?: string; url?: string; message?: string }
+  | { type: 'website-deployment-config'; success?: boolean; message: string; config?: WebsiteConfig };

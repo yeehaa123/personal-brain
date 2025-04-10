@@ -5,6 +5,8 @@ import { Logger } from '@/utils/logger';
 import { InMemoryWebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import { AstroContentService } from '../services/astroContentService';
+import { DeploymentServiceFactory } from '../services/deploymentService';
+import type { DeploymentService } from '../services/deploymentService';
 import { LandingPageGenerationService } from '../services/landingPageGenerationService';
 import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
@@ -18,6 +20,7 @@ export interface WebsiteContextOptions {
   astroContentService?: AstroContentService;
   landingPageGenerationService?: LandingPageGenerationService;
   profileContext?: ProfileContext;
+  deploymentServiceFactory?: DeploymentServiceFactory;
 }
 
 /**
@@ -32,6 +35,8 @@ export class WebsiteContext extends BaseContext {
   private astroContentService: AstroContentService | null = null;
   private landingPageGenerationService: LandingPageGenerationService | null = null;
   private profileContext: ProfileContext | null = null;
+  private deploymentServiceFactory: DeploymentServiceFactory | null = null;
+  private deploymentService: DeploymentService | null = null;
   
   /**
    * Create a new WebsiteContext instance
@@ -54,6 +59,10 @@ export class WebsiteContext extends BaseContext {
     
     if (options?.profileContext) {
       this.profileContext = options.profileContext;
+    }
+    
+    if (options?.deploymentServiceFactory) {
+      this.deploymentServiceFactory = options.deploymentServiceFactory;
     }
   }
   
@@ -343,6 +352,185 @@ export class WebsiteContext extends BaseContext {
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error stopping website preview',
+      };
+    }
+  }
+  
+  /**
+   * Get the deployment service factory
+   */
+  private getDeploymentServiceFactory(): DeploymentServiceFactory {
+    if (!this.deploymentServiceFactory) {
+      this.deploymentServiceFactory = DeploymentServiceFactory.getInstance();
+    }
+    return this.deploymentServiceFactory;
+  }
+  
+  /**
+   * Get a deployment service for the configured provider
+   */
+  private async getDeploymentService(): Promise<DeploymentService | null> {
+    // If we already have a deployment service, return it
+    if (this.deploymentService) {
+      return this.deploymentService;
+    }
+    
+    try {
+      // Get website configuration
+      const config = await this.getConfig();
+      
+      // If no deployment type is configured, we can't create a service
+      if (!config.deploymentType) {
+        return null;
+      }
+      
+      // Create a deployment service for the configured provider
+      const factory = this.getDeploymentServiceFactory();
+      const service = await factory.createDeploymentService(config.deploymentType);
+      
+      if (!service) {
+        this.logger.error(`Unknown deployment provider: ${config.deploymentType}`, {
+          context: 'WebsiteContext',
+        });
+        return null;
+      }
+      
+      // Initialize with configuration
+      const deploymentConfig = config.deploymentConfig || {};
+      const initialized = await service.initialize(deploymentConfig);
+      
+      if (!initialized) {
+        this.logger.error('Failed to initialize deployment service', {
+          context: 'WebsiteContext',
+          provider: config.deploymentType,
+        });
+        return null;
+      }
+      
+      // Cache the service
+      this.deploymentService = service;
+      return service;
+    } catch (error) {
+      this.logger.error('Error creating deployment service', {
+        error,
+        context: 'WebsiteContext',
+      });
+      return null;
+    }
+  }
+  
+  /**
+   * Deploy the website to the configured provider
+   * @returns Result of the deployment operation
+   */
+  async deployWebsite(): Promise<{ success: boolean; message: string; url?: string; logs?: string }> {
+    try {
+      // Get website configuration
+      const config = await this.getConfig();
+      
+      // Step 1: Build the website
+      this.logger.info('Building website for deployment', {
+        context: 'WebsiteContext',
+      });
+      
+      const buildResult = await this.buildWebsite();
+      
+      if (!buildResult.success) {
+        return {
+          success: false,
+          message: `Failed to build website for deployment: ${buildResult.message}`,
+          logs: buildResult.output,
+        };
+      }
+      
+      // Step 2: Get deployment service
+      const deploymentService = await this.getDeploymentService();
+      
+      if (!deploymentService) {
+        return {
+          success: false,
+          message: `Unknown deployment type: ${config.deploymentType}`,
+        };
+      }
+      
+      // Step 3: Deploy the website
+      this.logger.info(`Deploying website using ${deploymentService.getProviderName()}`, {
+        context: 'WebsiteContext',
+      });
+      
+      const deployResult = await deploymentService.deploy(config.astroProjectPath);
+      
+      return {
+        success: deployResult.success,
+        message: deployResult.message,
+        url: deployResult.url,
+        logs: deployResult.logs,
+      };
+    } catch (error) {
+      this.logger.error('Error deploying website', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error deploying website',
+      };
+    }
+  }
+  
+  /**
+   * Get the deployment status of the website
+   * @returns Deployment status information
+   */
+  async getDeploymentStatus(): Promise<{ 
+    success: boolean; 
+    isDeployed: boolean; 
+    provider?: string;
+    url?: string; 
+    message?: string;
+  }> {
+    try {
+      // Get deployment service
+      const deploymentService = await this.getDeploymentService();
+      
+      if (!deploymentService) {
+        return {
+          success: false,
+          isDeployed: false,
+          message: 'No deployment provider configured',
+        };
+      }
+      
+      // Get site info
+      const siteInfo = await deploymentService.getSiteInfo();
+      
+      if (!siteInfo) {
+        return {
+          success: true,
+          isDeployed: false,
+          provider: deploymentService.getProviderName(),
+          message: 'Website is not currently deployed',
+        };
+      }
+      
+      return {
+        success: true,
+        isDeployed: true,
+        provider: deploymentService.getProviderName(),
+        url: siteInfo.url,
+        message: `Website is deployed at ${siteInfo.url}`,
+      };
+    } catch (error) {
+      this.logger.error('Error checking deployment status', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        isDeployed: false,
+        message: error instanceof Error ? error.message : 'Error checking deployment status',
       };
     }
   }
