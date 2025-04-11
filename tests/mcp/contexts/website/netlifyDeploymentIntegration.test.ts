@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import fs from 'fs/promises';
 
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 import { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
-import { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
+import type { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
 import { DeploymentServiceFactory } from '@/mcp/contexts/website/services/deploymentService';
 import { NetlifyDeploymentService } from '@/mcp/contexts/website/services/netlifyDeploymentService';
 
@@ -89,8 +90,8 @@ describeOrSkip('Netlify Deployment Integration', () => {
         return Promise.resolve([
           {
             name: 'index.html',
-            isDirectory: () => false
-          }
+            isDirectory: () => false,
+          },
         ]);
       }
       return Promise.resolve(['index.html'] as string[]);

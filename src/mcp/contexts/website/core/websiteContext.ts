@@ -2,7 +2,7 @@ import { BaseContext } from '@/mcp/contexts/core/baseContext';
 import { ProfileContext } from '@/mcp/contexts/profiles';
 import { Logger } from '@/utils/logger';
 
-import { InMemoryWebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
+import { GlobalConfigWebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import { AstroContentService } from '../services/astroContentService';
 import { DeploymentServiceFactory } from '../services/deploymentService';
@@ -46,7 +46,7 @@ export class WebsiteContext extends BaseContext {
     
     this.contextName = options?.name || 'website';
     this.contextVersion = options?.version || '1.0.0';
-    this.storage = options?.storage || new InMemoryWebsiteStorageAdapter();
+    this.storage = options?.storage || new GlobalConfigWebsiteStorageAdapter();
     
     // Initialize services if provided (primarily for testing)
     if (options?.astroContentService) {

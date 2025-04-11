@@ -136,6 +136,43 @@ export const relevanceConfig = {
   },
 };
 
+// Website configuration
+export const websiteConfig = {
+  // Basic site info
+  title: getEnv('WEBSITE_TITLE', 'Personal Brain'),
+  description: getEnv('WEBSITE_DESCRIPTION', 'My personal website'),
+  author: getEnv('WEBSITE_AUTHOR', ''),
+  baseUrl: getEnv('WEBSITE_BASE_URL', 'http://localhost:4321'),
+  
+  // Project structure
+  astroProjectPath: getEnv('WEBSITE_PROJECT_PATH', './src/website'),
+  
+  // Deployment settings
+  deployment: {
+    // Default provider type (local, netlify, github)
+    provider: getEnv('WEBSITE_DEPLOYMENT_PROVIDER', 'local'),
+    
+    // Provider-specific configurations
+    providers: {
+      // Netlify deployment configuration
+      netlify: {
+        token: getEnv('NETLIFY_TOKEN', ''),
+        siteId: getEnv('NETLIFY_SITE_ID', ''),
+        siteName: getEnv('NETLIFY_SITE_NAME', ''),
+        team: getEnv('NETLIFY_TEAM', ''),
+        buildDir: getEnv('NETLIFY_BUILD_DIR', 'dist'),
+      },
+      
+      // GitHub Pages deployment configuration
+      github: {
+        token: getEnv('GITHUB_TOKEN', ''),
+        repository: getEnv('GITHUB_REPOSITORY', ''),
+        branch: getEnv('GITHUB_BRANCH', 'gh-pages'),
+      },
+    },
+  },
+};
+
 // Export the combined configuration
 export default {
   log: logConfig,
@@ -147,4 +184,5 @@ export default {
   server: serverConfig,
   conversation: conversationConfig,
   relevance: relevanceConfig,
+  website: websiteConfig,
 };
