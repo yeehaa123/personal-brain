@@ -1,5 +1,6 @@
 import config from '@/config';
 import { Logger } from '@/utils/logger';
+
 import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
 /**
@@ -94,12 +95,12 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
    */
   private validateDeploymentType(type: string): 'local' | 'netlify' | 'github' {
     switch (type) {
-      case 'netlify':
-        return 'netlify';
-      case 'github':
-        return 'github';
-      default:
-        return 'local';
+    case 'netlify':
+      return 'netlify';
+    case 'github':
+      return 'github';
+    default:
+      return 'local';
     }
   }
   
@@ -110,12 +111,12 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
     const { website } = config;
     
     switch (providerType) {
-      case 'netlify':
-        return website.deployment.providers.netlify;
-      case 'github':
-        return website.deployment.providers.github;
-      default:
-        return {};
+    case 'netlify':
+      return website.deployment.providers.netlify;
+    case 'github':
+      return website.deployment.providers.github;
+    default:
+      return {};
     }
   }
   
