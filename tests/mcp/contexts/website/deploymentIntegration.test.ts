@@ -160,7 +160,7 @@ describe('WebsiteContext Deployment Integration', () => {
     
     // Verify results
     expect(result.success).toBe(false);
-    expect(result.message).toContain('Unknown deployment type');
+    expect(result.message).toContain('Unknown or unconfigured deployment type');
     
     // Verify the factory was used with the unknown type
     expect(mockDeploymentFactory.createDeploymentService).toHaveBeenCalledWith('unknown');
@@ -200,7 +200,7 @@ describe('WebsiteContext Deployment Integration', () => {
     
     // Verify results
     expect(result.success).toBe(false);
-    expect(result.message).toContain('Unknown deployment type');
+    expect(result.message).toContain('Unknown or unconfigured deployment type');
     
     // Verify the service initialization was attempted
     expect(mockNetlifyService.initialize).toHaveBeenCalled();

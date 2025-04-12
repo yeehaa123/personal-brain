@@ -428,6 +428,21 @@ export class WebsiteContext extends BaseContext {
       // Get website configuration
       const config = await this.getConfig();
       
+      this.logger.info('Starting website deployment process', {
+        context: 'WebsiteContext',
+        deploymentType: config.deploymentType || 'not configured',
+        astroProjectPath: config.astroProjectPath,
+      });
+      
+      // Check if deployment configuration exists
+      if (!config.deploymentType) {
+        return {
+          success: false,
+          message: "Deployment type not configured. Run 'website-config' to set a deployment provider.",
+          logs: "Missing configuration. You need to set deploymentType in your website configuration."
+        };
+      }
+      
       // Step 1: Build the website
       this.logger.info('Building website for deployment', {
         context: 'WebsiteContext',
@@ -436,6 +451,11 @@ export class WebsiteContext extends BaseContext {
       const buildResult = await this.buildWebsite();
       
       if (!buildResult.success) {
+        this.logger.error('Website build failed', {
+          context: 'WebsiteContext',
+          buildOutput: buildResult.output,
+        });
+        
         return {
           success: false,
           message: `Failed to build website for deployment: ${buildResult.message}`,
@@ -443,22 +463,46 @@ export class WebsiteContext extends BaseContext {
         };
       }
       
+      this.logger.info('Website built successfully', {
+        context: 'WebsiteContext',
+      });
+      
       // Step 2: Get deployment service
       const deploymentService = await this.getDeploymentService();
       
       if (!deploymentService) {
+        this.logger.error('Failed to get deployment service', {
+          context: 'WebsiteContext',
+          deploymentType: config.deploymentType,
+        });
+        
         return {
           success: false,
-          message: `Unknown deployment type: ${config.deploymentType}`,
+          message: `Unknown or unconfigured deployment type: ${config.deploymentType}`,
+          logs: `Check your configuration settings with 'website-config' and ensure you have the required environment variables for ${config.deploymentType} deployment.`,
         };
       }
       
       // Step 3: Deploy the website
       this.logger.info(`Deploying website using ${deploymentService.getProviderName()}`, {
         context: 'WebsiteContext',
+        astroProjectPath: config.astroProjectPath,
       });
       
       const deployResult = await deploymentService.deploy(config.astroProjectPath);
+      
+      if (!deployResult.success) {
+        this.logger.error('Deployment failed', {
+          context: 'WebsiteContext',
+          message: deployResult.message,
+          logs: deployResult.logs,
+        });
+      } else {
+        this.logger.info('Deployment successful', {
+          context: 'WebsiteContext',
+          url: deployResult.url,
+        });
+      }
       
       return {
         success: deployResult.success,
@@ -470,11 +514,14 @@ export class WebsiteContext extends BaseContext {
       this.logger.error('Error deploying website', {
         error,
         context: 'WebsiteContext',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        errorStack: error instanceof Error ? error.stack : undefined,
       });
       
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error deploying website',
+        logs: error instanceof Error ? error.stack : 'No detailed error information available',
       };
     }
   }

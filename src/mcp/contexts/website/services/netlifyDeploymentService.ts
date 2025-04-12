@@ -212,12 +212,34 @@ export class NetlifyDeploymentService extends BaseDeploymentService implements D
     const config = this.config as NetlifyDeploymentConfig;
     const buildPath = path.resolve(sitePath, config.buildDir);
     
+    this.logger.info('Preparing site for deployment', {
+      context: 'NetlifyDeploymentService',
+      sitePath,
+      buildPath,
+      buildDir: config.buildDir,
+    });
+    
     try {
       // Check if build directory exists
-      await fs.access(buildPath);
+      try {
+        await fs.access(buildPath);
+        this.logger.info('Build directory exists', { buildPath });
+      } catch (accessError) {
+        this.logger.error('Build directory not found', { 
+          buildPath,
+          error: accessError,
+          errorCode: accessError instanceof Error && 'code' in accessError ? (accessError as {code: string}).code : 'unknown',
+        });
+        throw new Error(`Build directory not found: ${buildPath}. Make sure you've run 'website-build' first.`);
+      }
       
       // Get list of files in the build directory
       const files = await this.listFilesRecursively(buildPath);
+      
+      this.logger.info(`Found ${files.length} files for deployment`, { 
+        fileCount: files.length,
+        firstFewFiles: files.slice(0, 5),
+      });
       
       return {
         directory: buildPath,
@@ -335,64 +357,108 @@ export class NetlifyDeploymentService extends BaseDeploymentService implements D
     }
     
     if (!this.isConfigured()) {
+      const config = this.config as NetlifyDeploymentConfig;
+      this.logger.error('Netlify deployment service not properly configured', {
+        context: 'NetlifyDeploymentService',
+        hasToken: Boolean(config.token),
+        hasSiteId: Boolean(config.siteId),
+        hasSiteName: Boolean(config.siteName),
+        buildDir: config.buildDir,
+      });
+      
       return {
         success: false,
-        message: 'Netlify deployment service not properly configured',
+        message: 'Netlify deployment service not properly configured. Check your NETLIFY_TOKEN and either NETLIFY_SITE_ID or NETLIFY_SITE_NAME in your environment variables.',
+        logs: 'Missing required configuration. Please run "website-config" to check your current configuration.',
       };
     }
     
     try {
+      this.logger.info('Starting Netlify deployment process', {
+        context: 'NetlifyDeploymentService',
+        sitePath,
+        config: this.config,
+      });
+      
       // Step 1: Get or create the site
-      const site = await this.getOrCreateSite();
+      try {
+        const site = await this.getOrCreateSite();
+        this.logger.info('Successfully retrieved/created Netlify site', {
+          siteId: site.site_id,
+          siteUrl: site.ssl_url || site.url,
+        });
       
-      // Step 2: Prepare the site for deployment
-      const { directory, files } = await this.prepareSiteForDeployment(sitePath);
-      
-      if (files.length === 0) {
-        return {
-          success: false,
-          message: `No files found in build directory: ${directory}`,
-        };
+        // Step 2: Prepare the site for deployment
+        const { directory, files } = await this.prepareSiteForDeployment(sitePath);
+        
+        if (files.length === 0) {
+          return {
+            success: false,
+            message: `No files found in build directory: ${directory}. Make sure you've run 'website-build' first.`,
+            logs: `Build directory exists at ${directory} but contains no files.`,
+          };
+        }
+        
+        // Step 3: Create form data with all files
+        this.logger.info('Creating form data for deployment', {
+          fileCount: files.length,
+          directory,
+        });
+        
+        try {
+          const formData = await this.createDeployFormData(directory, files);
+          
+          // Step 4: Deploy the site
+          this.logger.info(`Deploying ${files.length} files to Netlify site ${site.site_id}`, {
+            context: 'NetlifyDeploymentService',
+            siteId: site.site_id,
+          });
+          
+          // Use the site deploy endpoint
+          const deployResult = await this.fetchApi(`/sites/${site.site_id}/deploys`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          this.logger.info('Netlify deployment created', {
+            context: 'NetlifyDeploymentService',
+            deployId: deployResult.id,
+            url: deployResult.ssl_url || deployResult.url,
+          });
+          
+          return {
+            success: true,
+            message: 'Successfully deployed to Netlify',
+            url: deployResult.ssl_url || deployResult.url,
+            logs: `Deployed ${files.length} files to ${deployResult.ssl_url || deployResult.url}`,
+          };
+        } catch (formError) {
+          this.logger.error('Error creating or sending form data', {
+            error: formError,
+            context: 'NetlifyDeploymentService',
+            fileCount: files.length,
+          });
+          throw new Error(`Failed to upload files to Netlify: ${formError instanceof Error ? formError.message : 'Unknown error'}`);
+        }
+      } catch (siteError) {
+        this.logger.error('Error with Netlify site', {
+          error: siteError,
+          context: 'NetlifyDeploymentService',
+        });
+        throw new Error(`Failed to prepare Netlify site: ${siteError instanceof Error ? siteError.message : 'Unknown error'}`);
       }
-      
-      // Step 3: Create form data with all files
-      const formData = await this.createDeployFormData(directory, files);
-      
-      // Step 4: Deploy the site
-      this.logger.info(`Deploying ${files.length} files to Netlify site ${site.site_id}`, {
-        context: 'NetlifyDeploymentService',
-        siteId: site.site_id,
-      });
-      
-      // Use the site deploy endpoint
-      const deployResult = await this.fetchApi(`/sites/${site.site_id}/deploys`, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      this.logger.info('Netlify deployment created', {
-        context: 'NetlifyDeploymentService',
-        deployId: deployResult.id,
-        url: deployResult.ssl_url || deployResult.url,
-      });
-      
-      return {
-        success: true,
-        message: 'Successfully deployed to Netlify',
-        url: deployResult.ssl_url || deployResult.url,
-        logs: `Deployed ${files.length} files to ${deployResult.ssl_url || deployResult.url}`,
-      };
     } catch (error) {
       this.logger.error('Error deploying to Netlify', {
         error,
         context: 'NetlifyDeploymentService',
         sitePath,
+        errorDetails: error instanceof Error ? { message: error.message, stack: error.stack } : 'Unknown error',
       });
       
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error during Netlify deployment',
-        logs: error instanceof Error ? error.stack : undefined,
+        logs: error instanceof Error ? error.stack : 'No detailed error information available.',
       };
     }
   }

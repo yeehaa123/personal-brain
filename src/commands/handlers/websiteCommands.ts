@@ -539,21 +539,43 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     }
     
     try {
+      this.logger.info('Starting website deployment process');
+      
       const result = await this.websiteContext.deployWebsite();
+      
+      if (!result.success) {
+        this.logger.error('Website deployment failed', {
+          message: result.message,
+          logs: result.logs,
+        });
+        
+        // Display more detailed error information in the command result
+        return {
+          type: 'website-deploy',
+          success: false,
+          message: result.message,
+          logs: result.logs ? `Deployment logs:\n${result.logs}` : 
+            'No detailed error logs available. Try running with debug logging enabled.',
+        };
+      }
       
       return {
         type: 'website-deploy',
-        success: result.success,
+        success: true,
         message: result.message,
         url: result.url,
         logs: result.logs,
       };
     } catch (error) {
-      this.logger.error(`Error deploying website: ${error}`);
+      this.logger.error(`Error deploying website: ${error}`, {
+        errorDetails: error instanceof Error ? { message: error.message, stack: error.stack } : 'Unknown error',
+      });
+      
       return {
         type: 'website-deploy',
         success: false,
         message: `Failed to deploy website: ${error instanceof Error ? error.message : String(error)}`,
+        logs: error instanceof Error ? `Error details:\n${error.stack}` : 'No detailed error information available',
       };
     }
   }

@@ -192,6 +192,46 @@ export class MatrixRenderer {
         this.sendMessageFn(roomId, this.formatter.formatWebsiteBuild(result));
         break;
       }
+      
+      case 'website-deploy': {
+        // Format website deployment result with detailed logs
+        const message = [
+          `### ${result.success ? '✅ Deployment Successful' : '❌ Deployment Failed'}`,
+          '',
+          result.message,
+        ];
+        
+        if (result.url) {
+          message.push('', `**Website URL**: ${result.url}`);
+        }
+        
+        if (result.logs) {
+          message.push('', '#### Deployment Logs', '', '```', result.logs, '```');
+        }
+        
+        this.sendMessageFn(roomId, message.join('\n'));
+        break;
+      }
+      
+      case 'website-deployment-status': {
+        const icon = result.isDeployed ? '✅' : '⚠️';
+        const message = [
+          '### Website Deployment Status',
+          '',
+          `${icon} ${result.message}`,
+        ];
+        
+        if (result.provider) {
+          message.push(`**Provider**: ${result.provider}`);
+        }
+        
+        if (result.isDeployed && result.url) {
+          message.push('', `**Website URL**: ${result.url}`);
+        }
+        
+        this.sendMessageFn(roomId, message.join('\n'));
+        break;
+      }
       }
     } catch (error) {
       logger.error('Error rendering Matrix result:', error);

@@ -402,7 +402,7 @@ describe('NetlifyDeploymentService', () => {
       
       // Verify result
       expect(result.success).toBe(false);
-      expect(result.message).toContain('Directory not found');
+      expect(result.message).toContain('Build directory not found');
     });
   });
   

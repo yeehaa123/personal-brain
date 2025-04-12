@@ -216,7 +216,7 @@ export class CLIRenderer {
       if (result.config) {
         const configItems = Object.entries(result.config).map(([key, value]) => ({ 
           key, 
-          value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value) 
+          value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value), 
         }));
         CLIInterface.displayList(configItems, item => `${CLIInterface.styles.subtitle(item.key)}: ${item.value}`);
       }
@@ -270,6 +270,48 @@ export class CLIRenderer {
         CLIInterface.success(result.message);
       } else {
         CLIInterface.error(result.message);
+      }
+      break;
+      
+    case 'website-deploy':
+      if (result.success) {
+        CLIInterface.success(result.message);
+        
+        if (result.url) {
+          CLIInterface.info('Website deployed to:');
+          CLIInterface.print(result.url);
+        }
+        
+        if (result.logs) {
+          CLIInterface.displayTitle('Deployment Logs');
+          CLIInterface.print(String(result.logs));
+        }
+      } else {
+        CLIInterface.error(result.message);
+        
+        // Display deployment logs if available for more detailed troubleshooting
+        if (result.logs) {
+          CLIInterface.displayTitle('Deployment Error Details');
+          CLIInterface.print(CLIInterface.styles.error(String(result.logs)));
+        }
+      }
+      break;
+      
+    case 'website-deployment-status':
+      if (result.success) {
+        const statusIcon = result.isDeployed ? '✅' : '⚠️';
+        const statusMsg = result.isDeployed 
+          ? `${statusIcon} Website is deployed with ${result.provider}`
+          : `${statusIcon} ${result.message || 'No deployment found'}`;
+        
+        CLIInterface.info(statusMsg);
+        
+        if (result.isDeployed && result.url) {
+          CLIInterface.info('Website URL:');
+          CLIInterface.print(result.url);
+        }
+      } else {
+        CLIInterface.error(result.message || 'Failed to get deployment status');
       }
       break;
 
