@@ -72,7 +72,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     'website-build',
     'website-deploy',
     'website-deployment-status',
-    'website-deployment-config',
   ];
 
   /**
@@ -134,15 +133,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         description: 'Check the deployment status of the website',
         usage: 'website-deployment-status',
       },
-      {
-        command: 'website-deployment-config',
-        description: 'View or update deployment configuration',
-        usage: 'website-deployment-config [key=value ...]',
-        examples: [
-          'website-deployment-config', 
-          'website-deployment-config deploymentType="netlify" deploymentConfig.token="xyz" deploymentConfig.siteId="site-id"',
-        ],
-      },
     ];
   }
   
@@ -189,8 +179,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         return this.handleWebsiteDeploy();
       case 'website-deployment-status':
         return this.handleWebsiteDeploymentStatus();
-      case 'website-deployment-config':
-        return this.handleWebsiteDeploymentConfig(args);
       default:
         return {
           type: 'website-init',
@@ -614,125 +602,5 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     }
   }
   
-  /**
-   * Handle website deployment configuration command
-   */
-  private async handleWebsiteDeploymentConfig(args: string): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-deployment-config',
-        success: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-deployment-config',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
-    // If no args, display current config
-    if (!args.trim()) {
-      const config = await this.websiteContext.getConfig();
-      
-      // Create a copy of the config to mask sensitive information
-      const displayConfig = { ...config };
-      
-      // Mask sensitive information like tokens
-      if (displayConfig['deploymentConfig'] && typeof displayConfig['deploymentConfig'] === 'object') {
-        const configCopy = { ...displayConfig['deploymentConfig'] };
-        
-        // Mask sensitive fields
-        if ('token' in configCopy) {
-          configCopy['token'] = '****';
-        }
-        
-        displayConfig['deploymentConfig'] = configCopy;
-      }
-      
-      return {
-        type: 'website-deployment-config',
-        success: true,
-        config: displayConfig,
-        message: 'Current deployment configuration',
-      };
-    }
-    
-    // Parse key=value pairs from arguments
-    try {
-      const configUpdates: Record<string, unknown> = {};
-      const keyValuePairs = args.match(/(\w+(?:\.\w+)*)="([^"]*)"/g) || [];
-      
-      for (const pair of keyValuePairs) {
-        const [keyPath, rawValue] = pair.split('=');
-        const cleanKeyPath = keyPath.trim();
-        const cleanValue = rawValue.replace(/"/g, '').trim();
-        
-        if (cleanKeyPath && cleanValue !== undefined) {
-          // Handle nested paths like deploymentConfig.token
-          if (cleanKeyPath.includes('.')) {
-            const [parent, child] = cleanKeyPath.split('.');
-            
-            if (parent === 'deploymentConfig') {
-              // Initialize deploymentConfig if it doesn't exist
-              if (!configUpdates['deploymentConfig']) {
-                configUpdates['deploymentConfig'] = {};
-              }
-              
-              // Add the child property
-              (configUpdates['deploymentConfig'] as Record<string, unknown>)[child] = cleanValue;
-            } else {
-              configUpdates[cleanKeyPath] = cleanValue;
-            }
-          } else {
-            configUpdates[cleanKeyPath] = cleanValue;
-          }
-        }
-      }
-      
-      if (Object.keys(configUpdates).length === 0) {
-        return {
-          type: 'error',
-          message: 'Invalid configuration format. Use key="value" format.',
-        };
-      }
-      
-      // Update configuration
-      await this.websiteContext.updateConfig(configUpdates);
-      
-      // Get updated config
-      const updatedConfig = await this.websiteContext.getConfig();
-      
-      // Create a copy of the config to mask sensitive information
-      const displayConfig = { ...updatedConfig };
-      
-      // Mask sensitive information like tokens
-      if (displayConfig['deploymentConfig'] && typeof displayConfig['deploymentConfig'] === 'object') {
-        const configCopy = { ...displayConfig['deploymentConfig'] };
-        
-        // Mask sensitive fields
-        if ('token' in configCopy) {
-          configCopy['token'] = '****';
-        }
-        
-        displayConfig['deploymentConfig'] = configCopy;
-      }
-      
-      return {
-        type: 'website-deployment-config',
-        success: true,
-        config: displayConfig,
-        message: 'Deployment configuration updated successfully',
-      };
-    } catch (error) {
-      this.logger.error(`Error updating deployment configuration: ${error}`);
-      return {
-        type: 'error',
-        message: `Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
+// Removed website-deployment-config command as it was redundant with website-config
 }
