@@ -86,7 +86,7 @@ describeOrSkip('Netlify Deployment Integration', () => {
     fs.access = mock(() => Promise.resolve(undefined));
     
     fs.readdir = mock((_, options) => {
-      if (options && (options as any).withFileTypes) {
+      if (options && options.withFileTypes) {
         return Promise.resolve([
           {
             name: 'index.html',

@@ -108,7 +108,11 @@ export class NetlifyDeploymentService extends BaseDeploymentService implements D
    */
   private async fetchApi(
     endpoint: string, 
-    options: { method?: string; body?: any; headers?: Record<string, string> } = {},
+    options: { 
+      method?: string; 
+      body?: FormData | string | object; 
+      headers?: Record<string, string> 
+    } = {},
   ) {
     const config = this.config as NetlifyDeploymentConfig;
     
@@ -178,7 +182,12 @@ export class NetlifyDeploymentService extends BaseDeploymentService implements D
       }
       
       // Otherwise, create a new site
-      const createSitePayload: Record<string, any> = {
+      type CreateSitePayload = {
+        name?: string;
+        team_id?: string;
+      };
+      
+      const createSitePayload: CreateSitePayload = {
         name: config.siteName,
       };
       
