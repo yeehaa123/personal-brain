@@ -800,7 +800,10 @@ export class MatrixResponseFormatter {
         
         // Format each config item
         Object.entries(result.config).forEach(([key, value]) => {
-          builder.addSection(`**${key}**: ${value}`);
+          const formattedValue = typeof value === 'object' && value !== null 
+            ? '```json\n' + JSON.stringify(value, null, 2) + '\n```' 
+            : String(value);
+          builder.addSection(`**${key}**: ${formattedValue}`);
         });
       }
       
@@ -825,7 +828,10 @@ export class MatrixResponseFormatter {
         
         // Format each config item
         Object.entries(result.config).forEach(([key, value]) => {
-          message.push(`**${key}**: ${value}`);
+          const formattedValue = typeof value === 'object' && value !== null 
+            ? '```json\n' + JSON.stringify(value, null, 2) + '\n```' 
+            : String(value);
+          message.push(`**${key}**: ${formattedValue}`);
         });
       }
       

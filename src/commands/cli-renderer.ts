@@ -214,7 +214,10 @@ export class CLIRenderer {
       }
       
       if (result.config) {
-        const configItems = Object.entries(result.config).map(([key, value]) => ({ key, value: String(value) }));
+        const configItems = Object.entries(result.config).map(([key, value]) => ({ 
+          key, 
+          value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value) 
+        }));
         CLIInterface.displayList(configItems, item => `${CLIInterface.styles.subtitle(item.key)}: ${item.value}`);
       }
       break;
