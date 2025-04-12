@@ -756,7 +756,22 @@ export class MatrixResponseFormatter {
       const icon = result.success ? '✅' : '❌';
       builder.addSection(`${icon} ${result.message}`);
       
-      if (result.success) {
+      // Display deployment info if available
+      if (result.success && result.deploymentInfo) {
+        const providerName = result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1);
+        builder.addSection(`**${providerName} Site Information**:`);
+        
+        if (result.deploymentInfo.siteId) {
+          builder.addSection(`**Site ID**: ${result.deploymentInfo.siteId}`);
+        }
+        
+        if (result.deploymentInfo.url) {
+          builder.addSection(`**Site URL**: ${result.deploymentInfo.url}`);
+          builder.addSection('Your site is ready to be deployed using:');
+          builder.addSection(`\`${this.commandPrefix} website-build\``);
+          builder.addSection(`\`${this.commandPrefix} website-deploy\``);
+        }
+      } else if (result.success) {
         builder.addSection(`Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
       }
       
@@ -769,7 +784,22 @@ export class MatrixResponseFormatter {
         `${icon} ${result.message}`,
       ];
       
-      if (result.success) {
+      // Display deployment info if available
+      if (result.success && result.deploymentInfo) {
+        const providerName = result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1);
+        message.push('', `#### ${providerName} Site Information`);
+        
+        if (result.deploymentInfo.siteId) {
+          message.push(`**Site ID**: ${result.deploymentInfo.siteId}`);
+        }
+        
+        if (result.deploymentInfo.url) {
+          message.push(`**Site URL**: ${result.deploymentInfo.url}`);
+          message.push('', 'Your site is ready to be deployed using:');
+          message.push(`\`${this.commandPrefix} website-build\``);
+          message.push(`\`${this.commandPrefix} website-deploy\``);
+        }
+      } else if (result.success) {
         message.push('', `Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
       }
       

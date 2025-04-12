@@ -2,7 +2,7 @@
  * Common types for Matrix formatters
  */
 
-import type { WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { DeploymentInfo, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
 
 // Note model properties we need for formatting
@@ -119,6 +119,7 @@ export interface WebsiteInitResult {
   type: 'website-init';
   success: boolean;
   message: string;
+  deploymentInfo?: DeploymentInfo;
 }
 
 /**

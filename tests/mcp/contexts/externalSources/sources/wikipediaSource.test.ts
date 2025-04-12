@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { WikipediaSource } from '@/mcp/contexts/externalSources/sources/wikipediaSource';
 import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
 import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
+import { mockFetch } from '@test/helpers/outputUtils';
 
 // Helper to access private methods safely without using intersection types
 // This approach avoids the "never" type issue
@@ -142,8 +143,11 @@ describe('WikipediaSource', () => {
       }),
     });
     
-    // Set up fetch to return different responses on successive calls
-    global.fetch = mock(async (url) => {
+    // Set up fetch to return different responses on successive calls using the typed mock
+    // Create new fetch mock for this test
+    const [restoreFn, mockedFetch] = mockFetch();
+    
+    mockedFetch.mockImplementation(async (url) => {
       const urlString = url.toString();
       if (urlString.includes('action=query') && urlString.includes('list=search')) {
         return mockFetchResponse;
@@ -157,18 +161,26 @@ describe('WikipediaSource', () => {
           'Content-Type': 'application/json',
         }),
       });
-    }) as unknown as typeof global.fetch;
-    
-    const results = await source.search({ 
-      query: 'test query', 
-      limit: 1,
-      addEmbeddings: true,
     });
     
-    expect(results).toBeDefined();
-    expect(results.length).toBe(1);
-    expect(results[0].embedding).toBeDefined();
-    expect(Array.isArray(results[0].embedding)).toBe(true);
+    // Perform the search
+    try {
+      const results = await source.search({ 
+        query: 'test query', 
+        limit: 1,
+        addEmbeddings: true,
+      });
+    
+      // Verify results
+      expect(results).toBeDefined();
+      expect(results.length).toBe(1);
+      expect(results[0].embedding).toBeDefined();
+      expect(Array.isArray(results[0].embedding)).toBe(true);
+    } finally {
+      // Always restore the original fetch
+      // Always restore the fetch mock
+      restoreFn();
+    }
   });
   
   test('should handle API errors gracefully', async () => {

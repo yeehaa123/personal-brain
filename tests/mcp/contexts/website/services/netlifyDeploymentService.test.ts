@@ -5,43 +5,32 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { NetlifyDeploymentService } from '@/mcp/contexts/website/services/netlifyDeploymentService';
+import { type MockedFetch, mockFetch } from '@test/helpers/outputUtils';
 
-// Mock global fetch with type assertion to avoid TypeScript errors
-// This is safe for tests as we're only using the parts of Response we define
-global.fetch = mock<typeof fetch>(() => Promise.resolve({
-  ok: true,
-  status: 200,
-  json: () => Promise.resolve({}),
-  headers: new Headers(),
-  redirected: false,
-  statusText: 'OK',
-  type: 'basic',
-  url: 'https://api.netlify.com',
-  clone: () => ({} as Response),
-  body: null,
-  bodyUsed: false,
-  arrayBuffer: async () => new ArrayBuffer(0),
-  blob: async () => new Blob(),
-  formData: async () => new FormData(),
-  text: async () => '',
-} as Response));
+
+// Store both the restore function and the mocked fetch
+let restoreFetch: () => void;
+let mockedFetch: MockedFetch;
 
 describe('NetlifyDeploymentService', () => {
   let service: NetlifyDeploymentService;
   let tempDir: string;
   
   beforeEach(async () => {
+    // Set up mock fetch with our enhanced version
+    [restoreFetch, mockedFetch] = mockFetch();
+    
     service = NetlifyDeploymentService.createFresh();
     
     // Create temp directory for testing
     tempDir = path.join(os.tmpdir(), `netlify-test-${Date.now()}`);
     await fs.mkdir(tempDir, { recursive: true });
-    
-    // Reset fetch mock
-    (global.fetch as any).mockReset();
   });
   
   afterEach(async () => {
+    // Restore original fetch
+    restoreFetch();
+    
     // Clean up temp directory
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
@@ -119,7 +108,7 @@ describe('NetlifyDeploymentService', () => {
     
     test('should get or create site via API', async () => {
       // Mock API responses
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation((url) => {
+      mockedFetch.mockImplementation((url) => {
         if (typeof url === 'string' && url.includes('/sites/test-site-id')) {
           return Promise.resolve({
             ok: true,
@@ -182,16 +171,16 @@ describe('NetlifyDeploymentService', () => {
       
       // Verify API calls
       expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect((global.fetch as any).mock.calls[0][0]).toContain('/sites/test-site-id');
+      expect(mockedFetch.mock.calls[0][0].toString()).toContain('/sites/test-site-id');
       
       // Verify authorization header was set
-      const headers = (global.fetch as any).mock.calls[0][1].headers;
-      expect(headers.Authorization).toBe('Bearer test-token');
+      const headers = mockedFetch.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer test-token');
     });
     
     test('should create site if no siteId is provided', async () => {
       // Mock API responses for site creation
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation((url, options) => {
+      mockedFetch.mockImplementation((url, options) => {
         if (typeof url === 'string' && url.includes('/sites') && options && options.method === 'POST') {
           return Promise.resolve({
             ok: true,
@@ -266,8 +255,8 @@ describe('NetlifyDeploymentService', () => {
       fs.access = mockAccess;
       
       // Mock directory listing with file entries (must return objects with isDirectory method)
-      const mockReaddir = mock((_, options) => {
-        if (options && (options as any).withFileTypes) {
+      const mockReaddir = mock((_, options: { withFileTypes?: boolean }) => {
+        if (options && options.withFileTypes) {
           return Promise.resolve([
             {
               name: 'index.html',
@@ -299,17 +288,17 @@ describe('NetlifyDeploymentService', () => {
       expect(global.fetch).toHaveBeenCalledTimes(2);
       
       // First call should be site creation
-      expect((global.fetch as any).mock.calls[0][0]).toContain('/sites');
-      expect((global.fetch as any).mock.calls[0][1].method).toBe('POST');
+      expect(mockedFetch.mock.calls[0][0].toString()).toContain('/sites');
+      expect(mockedFetch.mock.calls[0][1]?.method).toBe('POST');
       
       // Second call should be deploy
-      expect((global.fetch as any).mock.calls[1][0]).toContain('/deploys');
-      expect((global.fetch as any).mock.calls[1][1].method).toBe('POST');
+      expect(mockedFetch.mock.calls[1][0].toString()).toContain('/deploys');
+      expect(mockedFetch.mock.calls[1][1]?.method).toBe('POST');
     });
     
     test('should handle API errors', async () => {
       // Mock API error
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation(() => Promise.resolve({
+      mockedFetch.mockImplementation(() => Promise.resolve({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
@@ -347,7 +336,7 @@ describe('NetlifyDeploymentService', () => {
       fs.access = mockAccess;
       
       // Mock API to respond with site info
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation((url: string | URL | Request) => {
+      mockedFetch.mockImplementation((url: string | URL | Request) => {
         const urlString = url.toString();
         if (urlString.includes('/sites/test-site-id')) {
           return Promise.resolve({
@@ -438,7 +427,7 @@ describe('NetlifyDeploymentService', () => {
     
     test('should fetch site info via API', async () => {
       // Mock API response
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation(() => Promise.resolve({
+      mockedFetch.mockImplementation(() => Promise.resolve({
         ok: true,
         status: 200,
         json: () => Promise.resolve({
@@ -476,12 +465,12 @@ describe('NetlifyDeploymentService', () => {
       
       // Verify API call
       expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect((global.fetch as any).mock.calls[0][0]).toContain('/sites/test-site-id');
+      expect(mockedFetch.mock.calls[0][0].toString()).toContain('/sites/test-site-id');
     });
     
     test('should handle API errors', async () => {
       // Mock API error
-      (global.fetch as ReturnType<typeof mock<typeof fetch>>).mockImplementation(() => Promise.resolve({
+      mockedFetch.mockImplementation(() => Promise.resolve({
         ok: false,
         status: 404,
         statusText: 'Not Found',

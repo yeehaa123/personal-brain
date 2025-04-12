@@ -196,6 +196,20 @@ export class CLIRenderer {
     case 'website-init':
       if (result.success) {
         CLIInterface.success(result.message);
+        
+        // Display deployment info if available
+        if (result.deploymentInfo) {
+          CLIInterface.displaySubtitle(`${result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1)} Site Information`);
+          if (result.deploymentInfo.siteId) {
+            CLIInterface.printLabelValue('Site ID', result.deploymentInfo.siteId);
+          }
+          if (result.deploymentInfo.url) {
+            CLIInterface.printLabelValue('Site URL', result.deploymentInfo.url);
+            CLIInterface.info('Your site is ready to be deployed using:');
+            CLIInterface.print('  website-build');
+            CLIInterface.print('  website-deploy');
+          }
+        }
       } else {
         CLIInterface.error(result.message);
       }

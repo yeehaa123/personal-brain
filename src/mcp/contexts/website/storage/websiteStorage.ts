@@ -8,6 +8,17 @@ import { type LandingPageData, LandingPageSchema } from '@website/schemas';
 const defaultAstroPath = path.join('src', 'website');
 
 /**
+ * Schema for deployment information
+ */
+export const DeploymentInfoSchema = z.object({
+  type: z.string(), // Deployment provider type (netlify, github, etc.)
+  siteId: z.string().optional(), // Site ID in the provider's system
+  url: z.string().url().optional(), // Site URL
+});
+
+export type DeploymentInfo = z.infer<typeof DeploymentInfoSchema>;
+
+/**
  * Schema for website configuration
  */
 export const WebsiteConfigSchema = z.object({

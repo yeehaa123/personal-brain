@@ -4,7 +4,7 @@
  */
 
 import type { ExternalCitation } from '@/mcp';
-import type { LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { DeploymentInfo, LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 
@@ -23,7 +23,7 @@ export interface CommandInfo {
  */
 export type WebsiteCommandResult =
   | { type: 'website-help'; commands: CommandInfo[] }
-  | { type: 'website-init'; success: boolean; message: string }
+  | { type: 'website-init'; success: boolean; message: string; deploymentInfo?: DeploymentInfo }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-preview'; success: boolean; url?: string; message: string }
@@ -60,7 +60,7 @@ export type CommandResult =
   | { type: 'save-note-confirm'; noteId: string; title: string }
   | { type: 'conversation-notes'; notes: Note[] }
   | { type: 'website-help'; commands: CommandInfo[] }
-  | { type: 'website-init'; success: boolean; message: string }
+  | { type: 'website-init'; success: boolean; message: string; deploymentInfo?: DeploymentInfo }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-preview'; success: boolean; url?: string; message: string }

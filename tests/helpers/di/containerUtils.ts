@@ -58,7 +58,8 @@ export function setupDITestSuite(
     
     // Setup fetch mocking if requested
     if (options.mockFetch) {
-      fetchCleanup = mockFetch();
+      const [restoreFn] = mockFetch();
+      fetchCleanup = restoreFn;
     }
   });
   

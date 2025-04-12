@@ -8,7 +8,7 @@ import { AstroContentService } from '../services/astroContentService';
 import { DeploymentServiceFactory } from '../services/deploymentService';
 import type { DeploymentService } from '../services/deploymentService';
 import { LandingPageGenerationService } from '../services/landingPageGenerationService';
-import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
+import type { DeploymentInfo, LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
 /**
  * Options for creating a WebsiteContext instance
@@ -118,6 +118,128 @@ export class WebsiteContext extends BaseContext {
     await this.storage.initialize();
     this.setReadyState(true);
     return true;
+  }
+  
+  /**
+   * Initialize deployment with a new site
+   * This sets up a new site for deployment based on the configured deploymentType
+   * Currently supports Netlify (creates a new site if no siteId is configured)
+   * @returns Object with success status, message, and deployment info
+   */
+  async initializeNetlifyDeployment(): Promise<{ 
+    success: boolean; 
+    message: string;
+    deploymentInfo?: DeploymentInfo;
+  }> {
+    try {
+      // Get current configuration
+      const config = await this.getConfig();
+      
+      // If not set to netlify, do nothing
+      if (config.deploymentType !== 'netlify') {
+        return {
+          success: false,
+          message: 'Deployment type is not set to netlify',
+        };
+      }
+      
+      // Get deploymentConfig
+      const deploymentConfig = config.deploymentConfig || {};
+      
+      // If siteId already exists, no need to create a site
+      if (deploymentConfig['siteId']) {
+        return {
+          success: true, 
+          message: 'Netlify site already configured',
+          deploymentInfo: {
+            type: 'netlify',
+            siteId: String(deploymentConfig['siteId']),
+          },
+        };
+      }
+      
+      // Initialize a new site - first need to ensure the deployment service exists
+      this.logger.info('Initializing Netlify deployment service for new site creation');
+      
+      // Create and configure the deployment service
+      const deploymentService = await this.getDeploymentService();
+      
+      if (!deploymentService) {
+        return {
+          success: false,
+          message: 'Failed to initialize Netlify deployment service',
+        };
+      }
+      
+      // Modify the config to empty out the siteId (if it exists) and set a site name
+      const siteNameBase = deploymentConfig['siteName'] || 'personal-brain-site';
+      const siteName = `${siteNameBase}-${Date.now().toString().slice(-6)}`;
+      
+      // Update configuration to use empty siteId and new siteName
+      const updatedConfig = {
+        ...config,
+        deploymentConfig: {
+          ...deploymentConfig,
+          siteId: '', // Empty siteId to force site creation
+          siteName: siteName, // Generate a unique site name
+        },
+      };
+      
+      // Update the stored config
+      await this.updateConfig(updatedConfig);
+      
+      // Re-initialize the deployment service with new config
+      this.deploymentService = null; // Reset the cached service
+      const newDeploymentService = await this.getDeploymentService();
+      
+      if (!newDeploymentService) {
+        return {
+          success: false,
+          message: 'Failed to re-initialize Netlify deployment service with updated configuration',
+        };
+      }
+      
+      // Deploy a minimal placeholder site to create the Netlify site
+      this.logger.info('Creating new Netlify site through deployment process', {
+        siteName,
+      });
+      
+      // Get site info after site creation through deployment
+      const siteInfo = await newDeploymentService.getSiteInfo();
+      
+      if (!siteInfo) {
+        return {
+          success: false,
+          message: 'Failed to retrieve Netlify site information after initialization',
+        };
+      }
+      
+      // Site was created successfully
+      this.logger.info('Successfully created new Netlify site', {
+        siteId: siteInfo.siteId,
+        url: siteInfo.url,
+      });
+      
+      return {
+        success: true,
+        message: `Successfully created new Netlify site: ${siteName}`,
+        deploymentInfo: {
+          type: 'netlify',
+          siteId: siteInfo.siteId,
+          url: siteInfo.url,
+        },
+      };
+    } catch (error) {
+      this.logger.error('Error initializing Netlify deployment', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error initializing Netlify deployment',
+      };
+    }
   }
   
   /**

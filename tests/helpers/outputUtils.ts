@@ -45,10 +45,24 @@ export function mockFunction(
 }
 
 /**
- * Mock the global fetch function for tests
- * @returns A function to restore the original fetch
+ * Type definition for mocked fetch function
  */
-export function mockFetch(): () => void {
+export interface MockedFetch {
+  mockImplementation: (implementation: (url: RequestInfo | URL, init?: RequestInit) => Promise<Response>) => void;
+  mock: {
+    calls: Array<[url: RequestInfo | URL, init?: RequestInit]>;
+    instances: Array<unknown>;
+    invocationCallOrder: Array<number>;
+    results: Array<unknown>;
+    contexts: Array<unknown>;
+  };
+}
+
+/**
+ * Mock the global fetch function for tests
+ * @returns A tuple containing [restoreFunction, mockedFetch]
+ */
+export function mockFetch(): [() => void, MockedFetch] {
   const originalFetch = globalThis.fetch;
   
   // Create a mock that handles common test cases
@@ -149,10 +163,15 @@ export function mockFetch(): () => void {
   });
   
   // Replace the global fetch
-  globalThis.fetch = mockFn;
+  globalThis.fetch = mockFn as unknown as typeof fetch;
   
-  // Return a function to restore the original fetch
-  return () => {
-    globalThis.fetch = originalFetch;
-  };
+  // Return a tuple with [restoreFunction, mockedFetch]
+  return [
+    // Restore function
+    () => {
+      globalThis.fetch = originalFetch;
+    },
+    // Mocked fetch with proper typing
+    mockFn as unknown as MockedFetch,
+  ];
 }

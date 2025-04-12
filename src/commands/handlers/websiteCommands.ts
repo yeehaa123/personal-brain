@@ -219,8 +219,43 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
+      // Step 1: Initialize the basic website context
       await this.websiteContext.initialize();
+      this.logger.info('Website context initialized successfully');
       
+      // Step 2: Get current config and check if we need to auto-initialize Netlify
+      const config = await this.websiteContext.getConfig();
+      
+      // If deployment type is already set to netlify, try to initialize a new site
+      if (config.deploymentType === 'netlify') {
+        this.logger.info('Netlify deployment type detected, checking if site needs to be created');
+        
+        // Initialize Netlify deployment with a new site if needed
+        const netlifyResult = await this.websiteContext.initializeNetlifyDeployment();
+        
+        if (netlifyResult.success) {
+          // If we successfully created or found a site for deployment
+          return {
+            type: 'website-init',
+            success: true,
+            message: `Website initialized successfully with ${netlifyResult.deploymentInfo?.type || 'external'} deployment. ${netlifyResult.message}`,
+            deploymentInfo: netlifyResult.deploymentInfo,
+          };
+        } else {
+          // The initialization succeeded but Netlify setup had issues
+          this.logger.warn('Website initialized but Netlify setup had issues', {
+            message: netlifyResult.message,
+          });
+          
+          return {
+            type: 'website-init',
+            success: true,
+            message: `Website initialized, but Netlify setup had issues: ${netlifyResult.message}`,
+          };
+        }
+      }
+      
+      // Basic initialization succeeded
       return {
         type: 'website-init',
         success: true,
