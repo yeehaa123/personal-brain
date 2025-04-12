@@ -438,8 +438,8 @@ export class WebsiteContext extends BaseContext {
       if (!config.deploymentType) {
         return {
           success: false,
-          message: "Deployment type not configured. Run 'website-config' to set a deployment provider.",
-          logs: "Missing configuration. You need to set deploymentType in your website configuration."
+          message: 'Deployment type not configured. Run \'website-config\' to set a deployment provider.',
+          logs: 'Missing configuration. You need to set deploymentType in your website configuration.',
         };
       }
       
