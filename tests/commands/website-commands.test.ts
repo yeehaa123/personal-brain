@@ -96,7 +96,7 @@ describe('WebsiteCommandHandler', () => {
     expect(result.type).toBe('website-init');
     const initResult = result as Extract<WebsiteCommandResult, { type: 'website-init' }>;
     expect(initResult.success).toBe(true);
-    expect(initResult.message).toBe('Website initialized successfully');
+    expect(initResult.message).toBe('Website initialized successfully with local deployment type');
 
     // Verify that the website context is marked as initialized
     expect(mockWebsiteContext.isReady()).toBe(true);

@@ -95,6 +95,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         command: 'website-init',
         description: 'Initialize website configuration',
         usage: 'website-init',
+        examples: ['website-init'],
       },
       {
         command: 'website-config',
@@ -125,8 +126,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       },
       {
         command: 'website-deploy',
-        description: 'Deploy the website using the configured provider',
+        description: 'Deploy the website using the configured provider (creates site if needed)',
         usage: 'website-deploy',
+        examples: ['website-deploy'],
       },
       {
         command: 'website-deployment-status',
@@ -219,47 +221,24 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
-      // Step 1: Initialize the basic website context
+      // Initialize the website context
       await this.websiteContext.initialize();
       this.logger.info('Website context initialized successfully');
       
-      // Step 2: Get current config and check if we need to auto-initialize Netlify
+      // Get current config for logging purposes
       const config = await this.websiteContext.getConfig();
       
-      // If deployment type is already set to netlify, try to initialize a new site
-      if (config.deploymentType === 'netlify') {
-        this.logger.info('Netlify deployment type detected, checking if site needs to be created');
-        
-        // Initialize Netlify deployment with a new site if needed
-        const netlifyResult = await this.websiteContext.initializeNetlifyDeployment();
-        
-        if (netlifyResult.success) {
-          // If we successfully created or found a site for deployment
-          return {
-            type: 'website-init',
-            success: true,
-            message: `Website initialized successfully with ${netlifyResult.deploymentInfo?.type || 'external'} deployment. ${netlifyResult.message}`,
-            deploymentInfo: netlifyResult.deploymentInfo,
-          };
-        } else {
-          // The initialization succeeded but Netlify setup had issues
-          this.logger.warn('Website initialized but Netlify setup had issues', {
-            message: netlifyResult.message,
-          });
-          
-          return {
-            type: 'website-init',
-            success: true,
-            message: `Website initialized, but Netlify setup had issues: ${netlifyResult.message}`,
-          };
-        }
+      // Log deployment type information
+      if (config.deploymentType === 's3') {
+        this.logger.info('S3 deployment type detected.');
       }
       
       // Basic initialization succeeded
       return {
         type: 'website-init',
         success: true,
-        message: 'Website initialized successfully',
+        message: 'Website initialized successfully' + 
+          (config.deploymentType ? ` with ${config.deploymentType} deployment type` : ''),
       };
     } catch (error) {
       this.logger.error(`Error initializing website: ${error}`);
@@ -594,10 +573,13 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
+      // Use the original message for now
+      const message = result.message;
+      
       return {
         type: 'website-deploy',
         success: true,
-        message: result.message,
+        message: message,
         url: result.url,
         logs: result.logs,
       };
@@ -640,13 +622,39 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     try {
       const result = await this.websiteContext.getDeploymentStatus();
       
+      // Create informative message for any deployment provider
+      let message = result.message || '';
+      
+      if (result.isDeployed) {
+        if (result.status === 'ready') {
+          // For completed deployments
+          message = `${message}
+
+✅ The site is fully deployed and ready to view at ${result.url}
+
+- Deployed: ${result.deployTime || 'unknown time'}`;
+        } else if (result.status === 'error') {
+          // For failed deployments
+          message = `${message}
+
+❌ The deployment failed with an error.
+
+- Attempted: ${result.deployTime || 'unknown time'}
+- State: ${result.status}
+- Try running 'website-build' and then 'website-deploy' again`;
+        }
+      }
+      
       return {
         type: 'website-deployment-status',
         success: result.success,
         isDeployed: result.isDeployed,
         provider: result.provider,
         url: result.url,
-        message: result.message,
+        message: message,
+        // Additional properties not defined in type
+        ...(result.status ? { statusDetails: result.status } : {}),
+        ...(result.deployTime ? { deployTime: result.deployTime } : {}),
       };
     } catch (error) {
       this.logger.error(`Error checking deployment status: ${error}`);

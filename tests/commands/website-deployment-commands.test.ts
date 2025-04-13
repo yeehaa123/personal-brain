@@ -35,7 +35,7 @@ describe('WebsiteCommandHandler Deployment Commands', () => {
       websiteContext.deployWebsite = mock(() => Promise.resolve({
         success: true,
         message: 'Deployment successful',
-        url: 'https://test-site.netlify.app',
+        url: 'https://test-site.example.com',
       }));
       
       // Execute the deploy command
@@ -47,8 +47,10 @@ describe('WebsiteCommandHandler Deployment Commands', () => {
       // Type assertion for website-deploy result
       if (result.type === 'website-deploy') {
         expect(result.success).toBe(true);
+        // Message format has changed to be more informative
+        // The message now includes notes about cache and status checking
         expect(result.message).toContain('Deployment successful');
-        expect(result.url).toBe('https://test-site.netlify.app');
+        expect(result.url).toBe('https://test-site.example.com');
       }
       
       // Verify deployWebsite was called
@@ -99,8 +101,8 @@ describe('WebsiteCommandHandler Deployment Commands', () => {
       websiteContext.getDeploymentStatus = mock(() => Promise.resolve({
         success: true,
         isDeployed: true,
-        url: 'https://test-site.netlify.app',
-        provider: 'Netlify',
+        url: 'https://test-site.example.com',
+        provider: 'S3',
       }));
       
       // Execute the status command
@@ -113,8 +115,8 @@ describe('WebsiteCommandHandler Deployment Commands', () => {
       if (result.type === 'website-deployment-status') {
         expect(result.success).toBe(true);
         expect(result.isDeployed).toBe(true);
-        expect(result.url).toBe('https://test-site.netlify.app');
-        expect(result.provider).toBe('Netlify');
+        expect(result.url).toBe('https://test-site.example.com');
+        expect(result.provider).toBe('S3');
       }
       
       // Verify getDeploymentStatus was called

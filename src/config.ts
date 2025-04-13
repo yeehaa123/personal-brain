@@ -149,25 +149,19 @@ export const websiteConfig = {
   
   // Deployment settings
   deployment: {
-    // Default provider type (local, netlify, github)
+    // Default provider type (local, s3)
     provider: getEnv('WEBSITE_DEPLOYMENT_PROVIDER', 'local'),
     
     // Provider-specific configurations
     providers: {
-      // Netlify deployment configuration
-      netlify: {
-        token: getEnv('NETLIFY_TOKEN', ''),
-        siteId: getEnv('NETLIFY_SITE_ID', ''),
-        siteName: getEnv('NETLIFY_SITE_NAME', ''),
-        team: getEnv('NETLIFY_TEAM', ''),
-        buildDir: getEnv('NETLIFY_BUILD_DIR', 'dist'),
-      },
-      
-      // GitHub Pages deployment configuration
-      github: {
-        token: getEnv('GITHUB_TOKEN', ''),
-        repository: getEnv('GITHUB_REPOSITORY', ''),
-        branch: getEnv('GITHUB_BRANCH', 'gh-pages'),
+      // S3 deployment configuration (for Hetzner and similar services)
+      s3: {
+        endpoint: getEnv('S3_ENDPOINT', ''),
+        accessKey: getEnv('S3_ACCESS_KEY', ''),
+        secretKey: getEnv('S3_SECRET_KEY', ''),
+        bucketName: getEnv('S3_BUCKET_NAME', ''),
+        region: getEnv('S3_REGION', ''),
+        buildDir: getEnv('S3_BUILD_DIR', 'dist'),
       },
     },
   },

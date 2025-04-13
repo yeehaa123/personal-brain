@@ -8,7 +8,7 @@ import { AstroContentService } from '../services/astroContentService';
 import { DeploymentServiceFactory } from '../services/deploymentService';
 import type { DeploymentService } from '../services/deploymentService';
 import { LandingPageGenerationService } from '../services/landingPageGenerationService';
-import type { DeploymentInfo, LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
+import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
 /**
  * Options for creating a WebsiteContext instance
@@ -120,127 +120,6 @@ export class WebsiteContext extends BaseContext {
     return true;
   }
   
-  /**
-   * Initialize deployment with a new site
-   * This sets up a new site for deployment based on the configured deploymentType
-   * Currently supports Netlify (creates a new site if no siteId is configured)
-   * @returns Object with success status, message, and deployment info
-   */
-  async initializeNetlifyDeployment(): Promise<{ 
-    success: boolean; 
-    message: string;
-    deploymentInfo?: DeploymentInfo;
-  }> {
-    try {
-      // Get current configuration
-      const config = await this.getConfig();
-      
-      // If not set to netlify, do nothing
-      if (config.deploymentType !== 'netlify') {
-        return {
-          success: false,
-          message: 'Deployment type is not set to netlify',
-        };
-      }
-      
-      // Get deploymentConfig
-      const deploymentConfig = config.deploymentConfig || {};
-      
-      // If siteId already exists, no need to create a site
-      if (deploymentConfig['siteId']) {
-        return {
-          success: true, 
-          message: 'Netlify site already configured',
-          deploymentInfo: {
-            type: 'netlify',
-            siteId: String(deploymentConfig['siteId']),
-          },
-        };
-      }
-      
-      // Initialize a new site - first need to ensure the deployment service exists
-      this.logger.info('Initializing Netlify deployment service for new site creation');
-      
-      // Create and configure the deployment service
-      const deploymentService = await this.getDeploymentService();
-      
-      if (!deploymentService) {
-        return {
-          success: false,
-          message: 'Failed to initialize Netlify deployment service',
-        };
-      }
-      
-      // Modify the config to empty out the siteId (if it exists) and set a site name
-      const siteNameBase = deploymentConfig['siteName'] || 'personal-brain-site';
-      const siteName = `${siteNameBase}-${Date.now().toString().slice(-6)}`;
-      
-      // Update configuration to use empty siteId and new siteName
-      const updatedConfig = {
-        ...config,
-        deploymentConfig: {
-          ...deploymentConfig,
-          siteId: '', // Empty siteId to force site creation
-          siteName: siteName, // Generate a unique site name
-        },
-      };
-      
-      // Update the stored config
-      await this.updateConfig(updatedConfig);
-      
-      // Re-initialize the deployment service with new config
-      this.deploymentService = null; // Reset the cached service
-      const newDeploymentService = await this.getDeploymentService();
-      
-      if (!newDeploymentService) {
-        return {
-          success: false,
-          message: 'Failed to re-initialize Netlify deployment service with updated configuration',
-        };
-      }
-      
-      // Deploy a minimal placeholder site to create the Netlify site
-      this.logger.info('Creating new Netlify site through deployment process', {
-        siteName,
-      });
-      
-      // Get site info after site creation through deployment
-      const siteInfo = await newDeploymentService.getSiteInfo();
-      
-      if (!siteInfo) {
-        return {
-          success: false,
-          message: 'Failed to retrieve Netlify site information after initialization',
-        };
-      }
-      
-      // Site was created successfully
-      this.logger.info('Successfully created new Netlify site', {
-        siteId: siteInfo.siteId,
-        url: siteInfo.url,
-      });
-      
-      return {
-        success: true,
-        message: `Successfully created new Netlify site: ${siteName}`,
-        deploymentInfo: {
-          type: 'netlify',
-          siteId: siteInfo.siteId,
-          url: siteInfo.url,
-        },
-      };
-    } catch (error) {
-      this.logger.error('Error initializing Netlify deployment', {
-        error,
-        context: 'WebsiteContext',
-      });
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error initializing Netlify deployment',
-      };
-    }
-  }
   
   /**
    * Set the ready state
@@ -404,7 +283,69 @@ export class WebsiteContext extends BaseContext {
   async buildWebsite(): Promise<{ success: boolean; message: string; output?: string }> {
     try {
       const astroService = await this.getAstroContentService();
+      
+      // Check if Astro project exists
+      const projectExists = await astroService.verifyAstroProject();
+      if (!projectExists) {
+        this.logger.error('Cannot build website - Astro project not found', {
+          context: 'WebsiteContext',
+          astroProjectPath: this.getConfig().then(config => config.astroProjectPath),
+        });
+        
+        return {
+          success: false,
+          message: 'Cannot build website - Astro project not found. Check the astroProjectPath in your configuration.',
+        };
+      }
+
+      // Check if landing page data exists, and generate if not
+      try {
+        const landingPageData = await astroService.readLandingPageContent();
+        if (!landingPageData) {
+          this.logger.info('No landing page data found, generating it before build', {
+            context: 'WebsiteContext',
+          });
+          
+          // Generate landing page data
+          const generationResult = await this.generateLandingPage();
+          if (!generationResult.success) {
+            this.logger.warn('Could not generate landing page data before build', {
+              context: 'WebsiteContext',
+              message: generationResult.message,
+            });
+          } else {
+            this.logger.info('Successfully generated landing page data before build', {
+              context: 'WebsiteContext',
+            });
+          }
+        }
+      } catch (contentError) {
+        this.logger.warn('Error checking landing page content before build', {
+          error: contentError,
+          context: 'WebsiteContext',
+        });
+        // Continue with build even if this fails
+      }
+      
+      // Build the website
+      this.logger.info('Running Astro build command', {
+        context: 'WebsiteContext',
+        astroProjectPath: (await this.getConfig()).astroProjectPath,
+      });
+      
       const result = await astroService.runAstroCommand('build');
+      
+      if (result.success) {
+        this.logger.info('Website built successfully', {
+          context: 'WebsiteContext',
+          output: result.output,
+        });
+      } else {
+        this.logger.error('Failed to build website', {
+          context: 'WebsiteContext',
+          output: result.output,
+        });
+      }
       
       return {
         success: result.success,
@@ -606,8 +547,13 @@ export class WebsiteContext extends BaseContext {
       }
       
       // Step 3: Deploy the website
+      // Get deployment configuration
+      const deploymentConfig = config.deploymentConfig || {};
+      
+      // General deployment log for all provider types
       this.logger.info(`Deploying website using ${deploymentService.getProviderName()}`, {
         context: 'WebsiteContext',
+        deploymentType: config.deploymentType,
         astroProjectPath: config.astroProjectPath,
       });
       
@@ -620,6 +566,28 @@ export class WebsiteContext extends BaseContext {
           logs: deployResult.logs,
         });
       } else {
+        // Update the config with the new site info if the service created a site or updated the config
+        // This handles cases where the site ID in the service is different from our config
+        // Check if we have a URL and can update the site info
+        if (deployResult.url) {
+          // Extract siteId from the deployment service
+          const siteInfo = await deploymentService.getSiteInfo();
+          if (siteInfo && siteInfo.siteId) {
+            // Update the config with the site ID (which might be newly created or found by name)
+            await this.updateConfig({
+              deploymentConfig: {
+                ...deploymentConfig,
+                siteId: siteInfo.siteId,
+              },
+            });
+            this.logger.info('Updated configuration with newly created site information', {
+              context: 'WebsiteContext',
+              siteId: siteInfo.siteId,
+              url: siteInfo.url,
+            });
+          }
+        }
+        
         this.logger.info('Deployment successful', {
           context: 'WebsiteContext',
           url: deployResult.url,
@@ -658,6 +626,8 @@ export class WebsiteContext extends BaseContext {
     provider?: string;
     url?: string; 
     message?: string;
+    status?: string;
+    deployTime?: string;
   }> {
     try {
       // Get deployment service
@@ -683,6 +653,38 @@ export class WebsiteContext extends BaseContext {
         };
       }
       
+      // Try to get detailed deployment status from the service
+      try {
+        // Request detailed status from the deployment service
+        const detailedStatus = await deploymentService.getDetailedDeploymentStatus?.();
+        
+        if (detailedStatus) {
+          this.logger.info('Retrieved detailed deployment status', {
+            context: 'WebsiteContext',
+            provider: deploymentService.getProviderName(),
+            status: detailedStatus.status,
+            deployTime: detailedStatus.deployTime,
+          });
+          
+          return {
+            success: true,
+            isDeployed: true,
+            provider: deploymentService.getProviderName(),
+            url: siteInfo.url,
+            status: detailedStatus.status || 'unknown',
+            deployTime: detailedStatus.deployTime || 'unknown',
+            message: detailedStatus.message || `Website is deployed at ${siteInfo.url}`,
+          };
+        }
+      } catch (detailedStatusError) {
+        this.logger.warn('Could not get detailed deployment status', {
+          error: detailedStatusError,
+          context: 'WebsiteContext',
+        });
+        // Continue with basic site info response
+      }
+      
+      // Basic response if we couldn't get detailed status
       return {
         success: true,
         isDeployed: true,
@@ -703,6 +705,8 @@ export class WebsiteContext extends BaseContext {
       };
     }
   }
+  
+  // Moved provider-specific status message handling to the service implementations
 }
 
 /**

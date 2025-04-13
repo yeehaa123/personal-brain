@@ -93,12 +93,10 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
   /**
    * Validate that deployment type is one of the allowed values
    */
-  private validateDeploymentType(type: string): 'local' | 'netlify' | 'github' {
+  private validateDeploymentType(type: string): 'local' | 's3' {
     switch (type) {
-    case 'netlify':
-      return 'netlify';
-    case 'github':
-      return 'github';
+    case 's3':
+      return 's3';
     default:
       return 'local';
     }
@@ -111,10 +109,8 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
     const { website } = config;
     
     switch (providerType) {
-    case 'netlify':
-      return website.deployment.providers.netlify;
-    case 'github':
-      return website.deployment.providers.github;
+    case 's3':
+      return website.deployment.providers.s3;
     default:
       return {};
     }

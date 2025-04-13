@@ -11,7 +11,7 @@ const defaultAstroPath = path.join('src', 'website');
  * Schema for deployment information
  */
 export const DeploymentInfoSchema = z.object({
-  type: z.string(), // Deployment provider type (netlify, github, etc.)
+  type: z.string(), // Deployment provider type (s3, etc.)
   siteId: z.string().optional(), // Site ID in the provider's system
   url: z.string().url().optional(), // Site URL
 });
@@ -26,7 +26,7 @@ export const WebsiteConfigSchema = z.object({
   description: z.string().default('My personal website'),
   author: z.string(),
   baseUrl: z.string().url().default('http://localhost:4321'),
-  deploymentType: z.enum(['local', 'netlify', 'github']).default('local'),
+  deploymentType: z.enum(['local', 's3']).default('local'),
   deploymentConfig: z.record(z.unknown()).optional(),
   astroProjectPath: z.string().default(defaultAstroPath),
 });

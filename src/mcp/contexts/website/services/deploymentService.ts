@@ -37,6 +37,16 @@ export interface DeploymentServiceTestHelpers {
 }
 
 /**
+ * Detailed deployment status information
+ */
+export interface DetailedDeploymentStatus {
+  status: string;
+  deployTime?: string;
+  message: string;
+  logs?: string;
+}
+
+/**
  * Interface for deployment services that deploy websites
  */
 export interface DeploymentService {
@@ -66,13 +76,20 @@ export interface DeploymentService {
    * Get information about the deployed site
    */
   getSiteInfo(): Promise<{ siteId: string; url: string } | null>;
+  
+  /**
+   * Get detailed deployment status
+   * Optional method that implementations can provide for enhanced status information
+   */
+  getDetailedDeploymentStatus?(): Promise<DetailedDeploymentStatus | null>;
 }
 
 /**
  * Base implementation of deployment service with common functionality
  */
 export abstract class BaseDeploymentService implements DeploymentService {
-  protected config: DeploymentConfig = {};
+  // Make config public to allow WebsiteContext to check configuration
+  public config: DeploymentConfig = {};
   protected isInitialized = false;
   protected logger = Logger.getInstance();
   
@@ -165,19 +182,16 @@ export class DeploymentServiceFactory {
   
   /**
    * Create a deployment service for the given provider
-   * @param providerType Type of deployment provider (netlify, github, etc.)
+   * @param providerType Type of deployment provider (s3, etc.)
    */
   async createDeploymentService(providerType: string): Promise<DeploymentService | null> {
     // Import the appropriate service based on provider type
     try {
       const type = providerType.toLowerCase();
-      if (type === 'netlify') {
-        // Using dynamic import to avoid circular dependencies
-        const { NetlifyDeploymentService } = await import('./netlifyDeploymentService');
-        return NetlifyDeploymentService.getInstance();
-      } else if (type === 'github') {
-        // To be implemented in the future
-        throw new Error('GitHub Pages deployment not yet implemented');
+      if (type === 's3') {
+        // TODO: Implement S3 deployment service for Hetzner
+        // Will be implemented for S3-compatible storage services like Hetzner
+        throw new Error('S3 deployment service not yet implemented');
       } else {
         throw new Error(`Unknown deployment provider: ${providerType}`);
       }

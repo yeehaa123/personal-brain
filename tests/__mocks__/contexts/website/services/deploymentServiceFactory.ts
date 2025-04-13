@@ -3,8 +3,6 @@ import { mock } from 'bun:test';
 import type { DeploymentService } from '@/mcp/contexts/website/services/deploymentService';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
-import { MockNetlifyDeploymentService } from './netlifyDeploymentService';
-
 /**
  * Mock implementation of DeploymentServiceFactory for testing
  */
@@ -32,7 +30,6 @@ export class MockDeploymentServiceFactory {
    */
   static resetInstance(): void {
     MockDeploymentServiceFactory.instance = null;
-    MockNetlifyDeploymentService.resetInstance();
   }
   
   /**
@@ -43,23 +40,12 @@ export class MockDeploymentServiceFactory {
   }
   
   /**
-   * Create a deployment service for the given provider
+   * Create a mock deployment service
    */
-  createDeploymentService = mock((providerType: string): Promise<DeploymentService | null> => {
-    switch (providerType.toLowerCase()) {
-    case 'netlify':
-      return Promise.resolve(MockNetlifyDeploymentService.getInstance());
-    default:
-      return Promise.resolve(null);
-    }
+  createDeploymentService = mock((_providerType: string): Promise<DeploymentService | null> => {
+    // For now, always return null to indicate no deployment provider is implemented yet
+    return Promise.resolve(null);
   });
-  
-  /**
-   * Get the mock Netlify service
-   */
-  getMockNetlifyService(): MockNetlifyDeploymentService {
-    return MockNetlifyDeploymentService.getInstance();
-  }
 }
 
 export default MockDeploymentServiceFactory;
