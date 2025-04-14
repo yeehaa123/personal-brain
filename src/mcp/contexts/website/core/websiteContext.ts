@@ -31,11 +31,13 @@ export class WebsiteContext extends BaseContext {
   private storage: WebsiteStorageAdapter;
   private contextName: string;
   private contextVersion: string;
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance({ silent: process.env['NODE_ENV'] === 'test' });
   private astroContentService: AstroContentService | null = null;
   private landingPageGenerationService: LandingPageGenerationService | null = null;
   private profileContext: ProfileContext | null = null;
   private deploymentManager: WebsiteDeploymentManager | null = null;
+  
+  // No need to track server processes - the deployment manager handles that
   
   /**
    * Create a new WebsiteContext instance
@@ -100,8 +102,26 @@ export class WebsiteContext extends BaseContext {
    * Reset the singleton instance (primarily for testing)
    */
   static override resetInstance(): void {
+    // Stop any running servers before resetting the instance
+    if (WebsiteContext.instance && WebsiteContext.instance.deploymentManager) {
+      // Best-effort attempt to stop servers - we can't await here in a static method
+      if ('stopServers' in WebsiteContext.instance.deploymentManager) {
+        try {
+          // This is just a type assertion to access the method
+          const manager = WebsiteContext.instance.deploymentManager as unknown as { stopServers(): Promise<void> };
+          manager.stopServers().catch(error => {
+            console.error('Error stopping servers during reset:', error);
+          });
+        } catch (error) {
+          console.error('Error stopping servers during reset:', error);
+        }
+      }
+    }
     WebsiteContext.instance = null;
   }
+  
+  // Server management is now handled by the deployment manager
+  // The resetInstance method directly calls the deployment manager to stop servers
   
   /**
    * Create a fresh instance without affecting the singleton
@@ -115,9 +135,92 @@ export class WebsiteContext extends BaseContext {
    */
   override async initialize(): Promise<boolean> {
     await this.storage.initialize();
+    
+    // Log the current NODE_ENV and auto-start flag for debugging
+    this.logger.info('Initializing WebsiteContext', {
+      NODE_ENV: process.env['NODE_ENV'],
+      WEBSITE_AUTO_START_SERVERS: process.env['WEBSITE_AUTO_START_SERVERS'],
+      context: 'WebsiteContext',
+    });
+    
+    // Ensure production directory exists with default template
+    await this.ensureProductionDirectory();
+    
+    // Start local development servers
+    if (process.env['NODE_ENV'] === 'development' || process.env['WEBSITE_AUTO_START_SERVERS'] === 'true') {
+      this.logger.info('Auto-starting servers based on environment settings', {
+        context: 'WebsiteContext',
+      });
+      const deploymentManager = await this.getDeploymentManager();
+      
+      // Check if the deployment manager supports server management
+      if ('startServers' in deploymentManager) {
+        // This is just a type assertion to access the method
+        const manager = deploymentManager as unknown as { startServers(): Promise<boolean> };
+        await manager.startServers();
+      }
+    }
+    
     this.setReadyState(true);
     return true;
   }
+  
+  /**
+   * Ensure the production directory exists and has at least a basic HTML file
+   * This prevents errors when starting the production server before promotion
+   */
+  private async ensureProductionDirectory(): Promise<void> {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      
+      // Define the production directory
+      const rootDir = process.cwd();
+      const productionDir = path.join(rootDir, 'dist', 'production');
+      
+      this.logger.info(`Ensuring production directory exists: ${productionDir}`, {
+        context: 'WebsiteContext',
+      });
+      
+      // Create the directory if it doesn't exist
+      await fs.mkdir(productionDir, { recursive: true });
+      
+      // Check if index.html exists in the directory
+      let hasIndex = false;
+      try {
+        const files = await fs.readdir(productionDir);
+        hasIndex = files.includes('index.html') && files.length > 0;
+      } catch (_error) {
+        hasIndex = false;
+      }
+      
+      // Create a default index.html file if it doesn't exist
+      if (!hasIndex) {
+        this.logger.info('Creating default index.html in production directory', {
+          context: 'WebsiteContext',
+        });
+        
+        // Path to the template file
+        const templatePath = path.join(rootDir, 'src', 'mcp', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+        
+        // Read the template file and write it to the production directory
+        const template = await fs.readFile(templatePath, 'utf-8');
+        await fs.writeFile(path.join(productionDir, 'index.html'), template);
+        
+        this.logger.info('Default index.html created from template file', {
+          context: 'WebsiteContext',
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error ensuring production directory exists', {
+        error,
+        context: 'WebsiteContext',
+      });
+      // Continue even if this fails - the system will still function
+    }
+  }
+  
+  // Server management is now handled by the deployment manager
   
   
   /**
@@ -181,20 +284,34 @@ export class WebsiteContext extends BaseContext {
       // Check environment and configuration to determine which manager to use
       const factory = DeploymentManagerFactory.getInstance();
       
-      // Use environment variable to override the deployment manager type if set
-      if (process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev') {
+      this.logger.info('Initializing deployment manager', {
+        deploymentType: config.deployment.type,
+        context: 'WebsiteContext',
+      });
+      
+      // Always use LocalDevDeploymentManager for local-dev deployment type
+      // or when running in development/test environment
+      if (config.deployment.type === 'local-dev' || 
+          process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev' ||
+          process.env['NODE_ENV'] === 'development' || 
+          process.env['NODE_ENV'] === 'test') {
+        
+        this.logger.info('Using LocalDevDeploymentManager', {
+          context: 'WebsiteContext',
+        });
+        
         // Import the local development manager
-        const { LocalDevDeploymentManager } = await import('../services/deployment/localDevDeploymentManager');
-        factory.setDeploymentManagerClass(LocalDevDeploymentManager);
-      } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-        // In development and test environments, default to local development manager
         const { LocalDevDeploymentManager } = await import('../services/deployment/localDevDeploymentManager');
         factory.setDeploymentManagerClass(LocalDevDeploymentManager);
       }
       
-      // Create the deployment manager with appropriate base directory
+      // Create the deployment manager with appropriate configuration
       this.deploymentManager = factory.createDeploymentManager({
         baseDir: config.astroProjectPath,
+        deploymentConfig: {
+          previewPort: config.deployment.previewPort,
+          productionPort: config.deployment.productionPort,
+        },
       });
     }
     
@@ -414,13 +531,27 @@ export class WebsiteContext extends BaseContext {
       
       // Get current configuration for domain info
       const config = await this.getConfig();
-      const previewDomain = `preview.${new URL(config.baseUrl).hostname}`;
+      
+      // URL based on deployment type
+      let url: string;
+      let path: string;
+      
+      if (config.deployment.type === 'local-dev') {
+        // For local development, use localhost with configured port
+        url = `http://localhost:${config.deployment.previewPort}`;
+        path = `${config.astroProjectPath}/dist/preview`;
+      } else {
+        // For Caddy-based hosting, use the configured domain
+        const domain = config.deployment.domain || new URL(config.baseUrl).hostname;
+        url = `https://preview.${domain}`;
+        path = `${config.deployment.previewDir || '/opt/personal-brain-website/preview'}/dist`;
+      }
       
       return {
         success: true,
-        message: `Website built successfully to preview environment. Available at https://${previewDomain}`,
-        path: `${process.env['WEBSITE_BASE_DIR'] || '/opt/personal-brain-website'}/preview/dist`,
-        url: `https://${previewDomain}`,
+        message: `Website built successfully to preview environment. Available at ${url}`,
+        path,
+        url,
       };
     } catch (error) {
       this.logger.error('Error in direct website build', {
@@ -475,7 +606,7 @@ export class WebsiteContext extends BaseContext {
   }
   
   /**
-   * Get website environment status (for Caddy-based hosting)
+   * Get website environment status (for local development or Caddy-based hosting)
    * @param environment The environment to check (preview or production)
    * @returns Status information for the specified environment
    */
@@ -486,22 +617,23 @@ export class WebsiteContext extends BaseContext {
       environment: string;
       buildStatus: string;
       fileCount: number;
-      caddyStatus: string;
+      serverStatus: string;
       domain: string;
       accessStatus: string;
       url: string;
     }
   }> {
     try {
-      // Get the deployment manager
+      // Get the deployment manager - all status logic is now delegated here
       const deploymentManager = await this.getDeploymentManager();
       
       // Get environment status using the deployment manager
       const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
       
-      // Format a summary message
-      const statusMessage = `${environment} website status: ${status.buildStatus}, Caddy: ${status.caddyStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
+      // Create a comprehensive status message (the deployment manager handles PM2 status checks now)
+      const statusMessage = `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
       
+      // Return the status data
       return {
         success: true,
         message: statusMessage,
@@ -509,7 +641,7 @@ export class WebsiteContext extends BaseContext {
           environment: status.environment,
           buildStatus: status.buildStatus,
           fileCount: status.fileCount,
-          caddyStatus: status.caddyStatus,
+          serverStatus: status.serverStatus,
           domain: status.domain,
           accessStatus: status.accessStatus,
           url: status.url,
