@@ -175,9 +175,27 @@ export class WebsiteContext extends BaseContext {
    */
   async getDeploymentManager(): Promise<WebsiteDeploymentManager> {
     if (!this.deploymentManager) {
-      // Create a new deployment manager using the factory
+      // Get the configuration
+      const config = await this.getConfig();
+      
+      // Check environment and configuration to determine which manager to use
       const factory = DeploymentManagerFactory.getInstance();
-      this.deploymentManager = factory.createDeploymentManager();
+      
+      // Use environment variable to override the deployment manager type if set
+      if (process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev') {
+        // Import the local development manager
+        const { LocalDevDeploymentManager } = await import('../services/deployment/localDevDeploymentManager');
+        factory.setDeploymentManagerClass(LocalDevDeploymentManager);
+      } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+        // In development and test environments, default to local development manager
+        const { LocalDevDeploymentManager } = await import('../services/deployment/localDevDeploymentManager');
+        factory.setDeploymentManagerClass(LocalDevDeploymentManager);
+      }
+      
+      // Create the deployment manager with appropriate base directory
+      this.deploymentManager = factory.createDeploymentManager({
+        baseDir: config.astroProjectPath,
+      });
     }
     
     return this.deploymentManager;

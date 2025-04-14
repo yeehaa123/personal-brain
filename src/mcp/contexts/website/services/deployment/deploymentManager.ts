@@ -326,13 +326,23 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
  */
 export class DeploymentManagerFactory {
   private static instance: DeploymentManagerFactory | null = null;
+  private deploymentManagerClass: new (options?: any) => WebsiteDeploymentManager;
+  
+  /**
+   * Constructor for DeploymentManagerFactory
+   * @param deploymentManagerClass The deployment manager class to use
+   */
+  constructor(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager) {
+    // Default to LocalCaddyDeploymentManager if no class is provided
+    this.deploymentManagerClass = deploymentManagerClass || LocalCaddyDeploymentManager;
+  }
   
   /**
    * Get the singleton instance
    */
-  static getInstance(): DeploymentManagerFactory {
+  static getInstance(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager): DeploymentManagerFactory {
     if (!DeploymentManagerFactory.instance) {
-      DeploymentManagerFactory.instance = new DeploymentManagerFactory();
+      DeploymentManagerFactory.instance = new DeploymentManagerFactory(deploymentManagerClass);
     }
     return DeploymentManagerFactory.instance;
   }
@@ -347,16 +357,25 @@ export class DeploymentManagerFactory {
   /**
    * Create a fresh instance
    */
-  static createFresh(): DeploymentManagerFactory {
-    return new DeploymentManagerFactory();
+  static createFresh(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager): DeploymentManagerFactory {
+    return new DeploymentManagerFactory(deploymentManagerClass);
+  }
+  
+  /**
+   * Set the deployment manager class
+   * @param deploymentManagerClass The deployment manager class to use
+   */
+  setDeploymentManagerClass(deploymentManagerClass: new (options?: any) => WebsiteDeploymentManager): void {
+    this.deploymentManagerClass = deploymentManagerClass;
   }
   
   /**
    * Create a deployment manager instance
+   * @param options Configuration options
    * @returns A WebsiteDeploymentManager implementation
    */
-  createDeploymentManager(): WebsiteDeploymentManager {
-    // For now, we only support the local Caddy implementation
-    return new LocalCaddyDeploymentManager();
+  createDeploymentManager(options?: { baseDir?: string }): WebsiteDeploymentManager {
+    // Create an instance of the configured deployment manager class
+    return new this.deploymentManagerClass(options);
   }
 }

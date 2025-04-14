@@ -5,3 +5,4 @@
  */
 
 export * from './deploymentManager';
+export * from './localDevDeploymentManager';
