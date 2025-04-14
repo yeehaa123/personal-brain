@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the plan for upgrading the static website deployment to a full server-side rendering (SSR) implementation using Astro SSR with Bun as the runtime. This upgrade maintains the bot-centered deployment approach while adding the benefits of SSR.
+This document outlines the plan for upgrading the static website deployment to a full server-side rendering (SSR) implementation using Astro SSR with Bun as the runtime. This upgrade maintains the bot-centered deployment approach and works seamlessly with the hybrid PM2-Caddy architecture.
 
 ## Goals
 
@@ -15,16 +15,16 @@ This document outlines the plan for upgrading the static website deployment to a
 
 ## Architecture Changes
 
-### Current Static Architecture
+### Current Static Architecture with Caddy
 
 ```
-Client Request → Caddy → Static Files
+Client Request → Caddy → PM2 Static Server → Static Files
 ```
 
-### New SSR Architecture
+### New SSR Architecture with Caddy
 
 ```
-Client Request → Caddy → Bun Server (Astro SSR) → Dynamic Response
+Client Request → Caddy → PM2-managed Bun Server (Astro SSR) → Dynamic Response
 ```
 
 ### Process Structure
@@ -32,10 +32,12 @@ Client Request → Caddy → Bun Server (Astro SSR) → Dynamic Response
 - **Preview Environment**: 
   - Bun server running on port 3001
   - Managed via PM2 as "website-preview"
+  - Proxied through Caddy at preview.yourdomain.com
 
 - **Production Environment**:
   - Bun server running on port 3000
   - Managed via PM2 as "website-production"
+  - Proxied through Caddy at yourdomain.com
 
 ## Implementation Plan
 
@@ -43,7 +45,7 @@ Client Request → Caddy → Bun Server (Astro SSR) → Dynamic Response
 
 1. **Add Bun Adapter to Project**:
    ```bash
-   cd /opt/personal-brain/src/website
+   cd /home/yeehaa/Documents/personal-brain/src/website
    bun add @astrojs/bun
    ```
 
@@ -64,7 +66,7 @@ Client Request → Caddy → Bun Server (Astro SSR) → Dynamic Response
 
 Create server scripts for both environments:
 
-**For Preview** (`/opt/personal-brain-website/preview/server.js`):
+**For Preview** (`/home/yeehaa/Documents/personal-brain/src/website/server.js`):
 ```javascript
 import { serve } from "bun";
 import { handler } from "./dist/server/entry.mjs";
@@ -82,7 +84,7 @@ serve({
 });
 ```
 
-**For Production** (`/opt/personal-brain-website/production/server.js`):
+**For Production** (`/home/yeehaa/Documents/personal-brain/dist/production/server.js`):
 ```javascript
 import { serve } from "bun";
 import { handler } from "./dist/server/entry.mjs";
@@ -102,7 +104,7 @@ serve({
 
 ### 3. Update Caddy Configuration
 
-Modify the Caddy configuration to reverse proxy to the Bun servers:
+Modify the Caddy configuration to reverse proxy to the Bun servers instead of serving static files:
 
 ```
 # Production website
@@ -158,94 +160,144 @@ preview.yourdomain.com {
 }
 ```
 
-### 4. Update Bot Commands
+### 4. Update the HybridPm2CaddyManager Implementation
 
-Update the WebsiteCommandHandler to manage SSR processes:
+Modify the HybridPm2CaddyManager to handle SSR servers:
 
 ```typescript
-// In src/commands/handlers/websiteCommands.ts
+// In src/mcp/contexts/website/services/deployment/hybridPm2CaddyManager.ts
 
-// Inside handleWebsiteBuild method, add after build:
-async handleWebsiteBuild(environment: string = 'preview'): Promise<CommandResult> {
+// Update the startServers method to use SSR servers
+async startServers(): Promise<boolean> {
   try {
-    // ... existing build code ...
+    // First make sure servers are stopped
+    await this.stopServers();
     
-    // After building, start/restart the SSR server
-    const port = environment === 'production' ? 3000 : 3001;
-    const serviceName = `website-${environment}`;
+    const fs = await import('fs/promises');
+    const path = await import('path');
     
-    // Check if server script exists, if not create it
-    const serverScriptPath = path.join(targetDir, 'server.js');
-    if (!fs.existsSync(serverScriptPath)) {
-      const serverScript = `
+    // Define paths
+    const rootDir = path.resolve(process.cwd());
+    const previewDir = path.join(rootDir, 'src', 'website');
+    const productionDir = path.join(rootDir, 'dist', 'production');
+    
+    // Ensure both directories exist
+    await fs.mkdir(previewDir, { recursive: true });
+    await fs.mkdir(productionDir, { recursive: true });
+    
+    // Prepare server scripts for both environments
+    // For Preview
+    const previewServerScript = `
 import { serve } from "bun";
 import { handler } from "./dist/server/entry.mjs";
 
-console.log("Starting ${environment} server on port ${port}");
+console.log("Starting preview server on port 3001");
 
 serve({
-  port: ${port},
+  port: 3001,
   fetch: handler,
   error(error) {
     console.error("Server error:", error);
     return new Response("Server Error", { status: 500 });
   }
 });`;
+
+    // For Production
+    const productionServerScript = `
+import { serve } from "bun";
+import { handler } from "./dist/server/entry.mjs";
+
+console.log("Starting production server on port 3000");
+
+serve({
+  port: 3000,
+  fetch: handler,
+  error(error) {
+    console.error("Server error:", error);
+    return new Response("Server Error", { status: 500 });
+  }
+});`;
+
+    // Write server scripts
+    await fs.writeFile(path.join(previewDir, 'server.js'), previewServerScript);
+    await fs.writeFile(path.join(productionDir, 'server.js'), productionServerScript);
+    
+    // Initialize the deployment adapter
+    await this.deploymentAdapter.initialize();
+    
+    // Start the preview server
+    const previewSuccess = await this.deploymentAdapter.startServer(
+      'preview',
+      3001,
+      previewDir,
+      'bun server.js'  // Use Bun to run the server script instead of static hosting
+    );
+    
+    // Start the production server
+    const productionSuccess = await this.deploymentAdapter.startServer(
+      'production',
+      3000,
+      productionDir,
+      'bun server.js'  // Use Bun to run the server script instead of static hosting
+    );
+    
+    // Verify Caddy is running
+    try {
+      const childProcess = await import('child_process');
+      const util = await import('util');
+      const exec = util.promisify(childProcess.exec);
       
-      await fs.writeFile(serverScriptPath, serverScript);
+      // Check if Caddy is running
+      const { stdout } = await exec('systemctl is-active caddy');
+      const caddyActive = stdout.trim() === 'active';
+      
+      if (!caddyActive) {
+        this.logger.warn('Caddy is not running. HTTPS may not be available.', {
+          context: 'HybridPm2CaddyManager',
+        });
+        
+        // Try to restart Caddy if it's installed
+        try {
+          await exec('command -v caddy && sudo systemctl restart caddy');
+          this.logger.info('Restarted Caddy service', {
+            context: 'HybridPm2CaddyManager',
+          });
+        } catch (restartError) {
+          this.logger.warn('Could not restart Caddy. Website will only be available via local ports.', {
+            error: restartError,
+            context: 'HybridPm2CaddyManager',
+          });
+        }
+      } else {
+        this.logger.info('Caddy is running. HTTPS should be available.', {
+          context: 'HybridPm2CaddyManager',
+        });
+      }
+    } catch (caddyCheckError) {
+      // Non-critical error, just log it
+      this.logger.warn('Could not check Caddy status', {
+        error: caddyCheckError,
+        context: 'HybridPm2CaddyManager',
+      });
     }
     
-    // Start or restart the server using PM2
-    await execAsync(`cd ${targetDir} && pm2 restart ${serviceName} || pm2 start server.js --name ${serviceName}`);
-    
-    // ... rest of the method ...
+    return previewSuccess && productionSuccess;
   } catch (error) {
-    // ... error handling ...
+    this.logger.error('Error starting SSR servers', {
+      error,
+      context: 'HybridPm2CaddyManager',
+    });
+    return false;
   }
 }
+```
 
-// Update promote method to restart production server after promotion
-async handleWebsitePromote(): Promise<CommandResult> {
-  try {
-    // ... existing promotion code ...
-    
-    // Copy the server script as well
-    await execAsync(`cp ${this.previewDir}/server.js ${this.productionDir}/`);
-    
-    // Restart the production server
-    await execAsync(`cd ${this.productionDir} && pm2 restart website-production || pm2 start server.js --name website-production`);
-    
-    // ... rest of the method ...
-  } catch (error) {
-    // ... error handling ...
-  }
-}
+### 5. Update Bot Commands
 
-// Update status method to include server status
-async handleWebsiteStatus(environment: string = 'production'): Promise<CommandResult> {
-  try {
-    // ... existing status code ...
-    
-    // Check SSR server status
-    const serviceName = `website-${environment}`;
-    const { stdout: serverStatus, stderr: serverError } = await execAsync(
-      `pm2 show ${serviceName} | grep "status\\|memory\\|cpu" || echo "Not running"`
-    ).catch(() => ({ stdout: 'Not running', stderr: '' }));
-    
-    // Include server status in the response
-    return {
-      success: true,
-      message: `${statusMessage}, Server: ${serverStatus.includes('online') ? 'Running' : 'Stopped'}`,
-      data: {
-        // ... existing data ...
-        serverStatus: serverStatus.trim(),
-        isServerRunning: serverStatus.includes('online')
-      }
-    };
-  } catch (error) {
-    // ... error handling ...
-  }
-}
+Add explicit server management to the WebsiteCommandHandler:
+
+```typescript
+// In src/commands/handlers/websiteCommands.ts
 
 // Add new method to handle server control
 async handleWebsiteServer(environment: string = 'production', action: string = 'restart'): Promise<CommandResult> {
@@ -266,22 +318,39 @@ async handleWebsiteServer(environment: string = 'production', action: string = '
       };
     }
     
-    const targetDir = environment === 'production' 
-      ? this.productionDir 
-      : this.previewDir;
+    // Get deployment manager
+    const context = this.getWebsiteContext();
+    const deploymentManager = await context.getDeploymentManager();
     
-    const serviceName = `website-${environment}`;
+    if (!deploymentManager) {
+      return {
+        success: false,
+        message: 'Deployment manager not available',
+      };
+    }
     
-    // Execute the requested action
-    if (action === 'restart' || action === 'start') {
-      await execAsync(`cd ${targetDir} && pm2 ${action} server.js --name ${serviceName}`);
-    } else {
-      await execAsync(`pm2 stop ${serviceName}`);
+    // Perform the requested action
+    let result = false;
+    
+    switch (action) {
+      case 'start':
+        // Start only the specified environment
+        result = await deploymentManager.startServer(environment);
+        break;
+      case 'stop':
+        // Stop only the specified environment
+        result = await deploymentManager.stopServer(environment);
+        break;
+      case 'restart':
+        // Stop and start the specified environment
+        await deploymentManager.stopServer(environment);
+        result = await deploymentManager.startServer(environment);
+        break;
     }
     
     return {
-      success: true,
-      message: `${environment} server ${action}ed successfully`,
+      success: result,
+      message: `${environment} server ${action}ed ${result ? 'successfully' : 'with errors'}`,
     };
   } catch (error: any) {
     return {
@@ -293,7 +362,7 @@ async handleWebsiteServer(environment: string = 'production', action: string = '
 }
 ```
 
-### 5. Register New Command
+### 6. Register New Command
 
 ```typescript
 // In src/commands/index.ts
@@ -361,7 +430,7 @@ To migrate from static to SSR:
    - Create server scripts
 
 2. **Update Caddy Config**:
-   - Modify for reverse proxying
+   - Modify for reverse proxying to Bun servers
 
 3. **Update Bot Commands**:
    - Add SSR process management

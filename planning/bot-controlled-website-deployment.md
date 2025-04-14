@@ -1,12 +1,14 @@
-# Bot-Controlled Website Deployment Plan (MVP)
+# Hybrid PM2-Caddy Website Deployment Plan
 
 ## Overview
 
-This document outlines the implementation plan for integrating website deployment capabilities directly into the Personal Brain bot. The bot will be responsible for building websites and managing the promotion from preview to production environments, with Caddy handling the web serving and HTTPS.
+This document outlines the implementation plan for a hybrid deployment approach that combines our existing PM2-based process management with Caddy as a front-end proxy. The Personal Brain bot will continue to be responsible for building websites and managing the promotion from preview to production environments, with Caddy handling web serving, HTTPS, and domain routing.
 
 ## Goals
 
-- Make the bot the central controller for website deployment
+- Maintain the bot as the central controller for website deployment
+- Keep the existing PM2-based server management implementation
+- Add Caddy as a front-end proxy for enhanced security and domain support
 - Support simple preview → production promotion workflow
 - Implement minimal, intuitive commands for website management
 - Leverage Caddy for always-on web serving with automatic HTTPS
@@ -23,53 +25,77 @@ This document outlines the implementation plan for integrating website deploymen
    - Configures domains and Caddy config
    - Only runs once for infrastructure setup
 
-2. **Bot Commands**:
+2. **Bot Commands** (Existing Implementation):
    - `website-build` - Build website (always to preview environment)
    - `website-status` - Check status of preview or production environment
    - `website-promote` - Promote preview to production
    - `website-config` - Configure website title and metadata
 
-3. **Caddy Web Server**:
-   - Serves static files from respective environments
+3. **PM2 Process Management** (Existing Implementation):
+   - Manages local server processes on ports 4321 (preview) and 4322 (production)
+   - Handles server lifecycle (start, stop, restart)
+   - Serves built files from respective directories
+
+4. **Caddy Web Server** (New Addition):
+   - Acts as a reverse proxy to PM2-managed servers
    - Handles HTTPS certificates automatically
    - Manages domain routing
+   - Adds security headers and other web serving optimizations
+
+### System Architecture
+
+```
+                  ┌──────────────────────────────────────┐
+                  │         Hetzner VPS Server           │
+                  │                                      │
+                  │  ┌─────────────┐    ┌────────────┐   │
+Internet ─────────┼─►│   Caddy     │───►│  PM2       │   │
+                  │  │ (Web Proxy) │    │ (Processes)│   │
+                  │  └─────────────┘    └────────────┘   │
+                  │        │                 │           │
+                  │        ▼                 ▼           │
+                  │  ┌─────────────┐    ┌────────────┐   │
+                  │  │ SSL Certs   │    │Website Files│   │
+                  │  └─────────────┘    └────────────┘   │
+                  └──────────────────────────────────────┘
+```
 
 ### Directory Structure
 
 ```
-/opt/personal-brain/
+/home/yeehaa/Documents/personal-brain/
 ├── src/
-│   └── website/           # Source website files
+│   └── website/           # Source website files (built to dist/ by Astro)
 │       ├── src/
 │       ├── public/
+│       ├── dist/          # Built preview website
 │       ├── package.json
 │       └── astro.config.mjs
 └── ... (rest of Personal Brain)
 
-/opt/personal-brain-website/
-├── preview/               # Preview environment
-│   ├── src/
-│   ├── public/
-│   ├── dist/              # Built website
-│   ├── package.json
-│   └── astro.config.mjs
-└── production/            # Production environment
-    ├── src/
-    ├── public/
-    ├── dist/              # Built website
-    ├── package.json
-    └── astro.config.mjs
+/home/yeehaa/Documents/personal-brain/dist/
+└── production/            # Production environment (copied from preview)
+    └── index.html         # Default template or promoted content
 ```
+
+### Network Configuration
+
+- **Preview Server (PM2)**: Runs on localhost:4321, accessible internally
+- **Production Server (PM2)**: Runs on localhost:4322, accessible internally
+- **Caddy Proxy**: Listens on ports 80/443, routes to the appropriate PM2 server
+- **Domain Routing**:
+  - `yourdomain.com` → localhost:4322 (Production)
+  - `preview.yourdomain.com` → localhost:4321 (Preview)
 
 ## Implementation Plan
 
 ### 1. GitHub Actions Setup (One-Time)
 
-Update the existing deployment workflow to include Caddy and website setup:
+Update the existing deployment workflow to include Caddy as a reverse proxy:
 
 ```yaml
 # Add to existing deploy.yml workflow
-- name: Install Caddy and Configure Website
+- name: Install Caddy and Configure as Reverse Proxy
   run: |
     ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
       # Install Caddy if not already installed
@@ -85,16 +111,15 @@ Update the existing deployment workflow to include Caddy and website setup:
         sudo mkdir -p /var/log/caddy
       fi
       
-      # Set up website directories if they don't exist
-      mkdir -p /opt/personal-brain-website/{production,preview}/dist
+      # Ensure the local production directory exists
+      mkdir -p ${HOME}/Documents/personal-brain/dist/production
       
-      # Configure Caddy
+      # Configure Caddy as a reverse proxy to PM2 servers
       sudo tee /etc/caddy/Caddyfile > /dev/null << 'EOF'
     # Production website
     ${WEBSITE_DOMAIN} {
-      # Serve static files directly
-      root * /opt/personal-brain-website/production/dist
-      file_server
+      # Reverse proxy to local PM2-managed production server
+      reverse_proxy localhost:4322
       
       # Enable compression
       encode gzip
@@ -108,18 +133,6 @@ Update the existing deployment workflow to include Caddy and website setup:
         Content-Security-Policy \"default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:;\"
         Referrer-Policy \"strict-origin-when-cross-origin\"
         Permissions-Policy \"camera=(), microphone=(), geolocation=()\"
-      }
-      
-      # Handle errors with custom 404 page if it exists
-      handle_errors {
-        @404 {
-          expression {http.error.status_code} == 404
-        }
-        handle @404 {
-          root * /opt/personal-brain-website/production/dist
-          try_files /404.html
-          file_server
-        }
       }
       
       # Logging
@@ -131,9 +144,8 @@ Update the existing deployment workflow to include Caddy and website setup:
     
     # Preview website (automatically as subdomain)
     preview.${WEBSITE_DOMAIN} {
-      # Serve static files directly
-      root * /opt/personal-brain-website/preview/dist
-      file_server
+      # Reverse proxy to local PM2-managed preview server
+      reverse_proxy localhost:4321
       
       # Enable compression
       encode gzip
@@ -149,18 +161,6 @@ Update the existing deployment workflow to include Caddy and website setup:
         Permissions-Policy \"camera=(), microphone=(), geolocation=()\"
       }
       
-      # Handle errors with custom 404 page if it exists
-      handle_errors {
-        @404 {
-          expression {http.error.status_code} == 404
-        }
-        handle @404 {
-          root * /opt/personal-brain-website/preview/dist
-          try_files /404.html
-          file_server
-        }
-      }
-      
       # Logging
       log {
         output file /var/log/caddy/preview.${WEBSITE_DOMAIN}.access.log
@@ -169,303 +169,173 @@ Update the existing deployment workflow to include Caddy and website setup:
     }
     EOF
       
-      # Set permissions and restart Caddy
-      sudo chown -R $USER:$USER /opt/personal-brain-website
-      sudo setfacl -R -m u:caddy:rx /opt/personal-brain-website || true
-      sudo systemctl reload caddy || sudo systemctl restart caddy
+      # Start and enable Caddy 
+      sudo systemctl enable caddy
+      sudo systemctl restart caddy
+      
+      # Configure firewall to allow Caddy, block direct PM2 ports
+      sudo ufw allow 80/tcp
+      sudo ufw allow 443/tcp
+      sudo ufw deny 4321/tcp
+      sudo ufw deny 4322/tcp
     "
 ```
 
-### 2. Bot Command Implementation
+### 2. Leveraging Existing PM2 Implementation
 
-Create a new module for website commands:
+The implementation will continue to use the existing PM2-based server management that's already in place. We don't need to change the core website command implementations, as they will continue to work as before. The only changes are:
+
+1. The URLs returned by commands will now be HTTPS domain URLs instead of localhost port URLs
+2. The status check will be enhanced to also report on Caddy proxy status
 
 ```typescript
-// In src/commands/handlers/websiteCommands.ts
+// We'll make minimal changes to src/commands/handlers/websiteCommands.ts
+// We're already using the ServerManager implementation with:
 
 import { BaseCommandHandler } from '@/commands/core/baseCommandHandler';
 import { CommandResult } from '@/commands/core/commandTypes';
-import { promisify } from 'util';
-import { exec } from 'child_process';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import config from '@/config';
+import { ServerManager } from '@/mcp/contexts/website/services/serverManager';
 
-const execAsync = promisify(exec);
+// Existing methods will be used, but modified to include public domain URLs
 
-export class WebsiteCommandHandler extends BaseCommandHandler {
-  // Base directories
-  private readonly baseDir = '/opt/personal-brain-website';
-  private readonly previewDir = path.join(this.baseDir, 'preview');
-  private readonly productionDir = path.join(this.baseDir, 'production');
-  private readonly sourceDir = '/opt/personal-brain/src/website';
-  
-  /**
-   * Build website for preview environment
-   * Copies source files from repository and builds them
-   */
-  async handleWebsiteBuild(): Promise<CommandResult> {
-    try {
-      // Always build to preview environment
-      const targetDir = this.previewDir;
-      
-      // Copy source files
-      await execAsync(`cp -r ${this.sourceDir}/* ${targetDir}/`);
-      
-      // Make sure dist directory exists
-      await fs.mkdir(path.join(targetDir, 'dist'), { recursive: true });
-      
-      // Install dependencies and build
-      const { stdout, stderr } = await execAsync(
-        `cd ${targetDir} && bun install && bun run build`
-      );
-      
-      // Check for critical errors (but ignore warnings)
-      if (stderr && !stderr.includes('warning')) {
-        return {
-          success: false,
-          message: `Error building preview environment: ${stderr}`,
-        };
-      }
-      
-      // Reload Caddy to ensure it picks up any changes
-      await execAsync('sudo systemctl reload caddy');
-      
-      // Get domain for URL
-      const domain = this.getDomain('preview');
-      
-      return {
-        success: true,
-        message: `Website built successfully for preview. Available at https://${domain}`,
-        data: { 
-          environment: 'preview',
-          url: `https://${domain}`,
-          output: stdout
-        }
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: `Failed to build ${environment} environment: ${error.message}`,
-        data: { error: error.message }
-      };
-    }
-  }
-  
-  /**
-   * Promote the preview environment to production
-   * Copies the built files from preview to production
-   */
-  async handleWebsitePromote(): Promise<CommandResult> {
-    try {
-      // Check if preview exists
-      try {
-        await fs.access(path.join(this.previewDir, 'dist'));
-      } catch (error) {
-        return {
-          success: false,
-          message: 'Preview environment not built or missing dist folder. Build preview first.',
-        };
-      }
-      
-      // Copy from preview to production
-      await execAsync(`cp -r ${this.previewDir}/dist/* ${this.productionDir}/dist/`);
-      
-      // Also copy source files in case they need to be rebuilt
-      await execAsync(`cp -r ${this.previewDir}/src ${this.productionDir}/`);
-      await execAsync(`cp -r ${this.previewDir}/public ${this.productionDir}/`);
-      await execAsync(`cp ${this.previewDir}/package.json ${this.productionDir}/`);
-      await execAsync(`cp ${this.previewDir}/astro.config.mjs ${this.productionDir}/`);
-      
-      // Reload Caddy to ensure it picks up any changes
-      await execAsync('sudo systemctl reload caddy');
-      
-      // Get production domain for URL
-      const domain = this.getDomain('production');
-      
-      return {
-        success: true,
-        message: `Preview successfully promoted to production. Available at https://${domain}`,
-        data: {
-          url: `https://${domain}`
-        }
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: `Failed to promote to production: ${error.message}`,
-        data: { error: error.message }
-      };
-    }
-  }
-  
-  /**
-   * Check the status of a website environment
-   * Provides information about build status and accessibility
-   */
-  async handleWebsiteStatus(environment: string = 'preview'): Promise<CommandResult> {
-    try {
-      // Validate environment
-      if (environment !== 'production' && environment !== 'preview') {
-        return {
-          success: false,
-          message: 'Environment must be "production" or "preview"',
-        };
-      }
-      
-      const targetDir = environment === 'production' 
-        ? this.productionDir 
-        : this.previewDir;
-      
-      // Check if the environment exists
-      let buildStatus = 'Not built';
-      let fileCount = 0;
-      try {
-        const stats = await fs.stat(path.join(targetDir, 'dist'));
-        if (stats.isDirectory()) {
-          const files = await fs.readdir(path.join(targetDir, 'dist'));
-          fileCount = files.length;
-          buildStatus = files.length > 0 ? 'Built' : 'Empty';
-        }
-      } catch (error) {
-        buildStatus = 'Not built';
-      }
-      
-      // Check Caddy status
-      const { stdout: caddyStatus } = await execAsync(
-        'sudo systemctl is-active caddy && echo "Running" || echo "Not running"'
-      );
-      
-      // Get domain and check accessibility
-      const domain = this.getDomain(environment);
-      
-      let accessStatus = 'Unknown';
-      try {
-        const { stdout } = await execAsync(`curl -s -o /dev/null -w "%{http_code}" https://${domain} || echo "Failed"`);
-        accessStatus = stdout.trim() === '200' ? 'Accessible' : `Status: ${stdout.trim()}`;
-      } catch (error) {
-        accessStatus = 'Not accessible';
-      }
-      
-      const statusMessage = `${environment} website status: ${buildStatus}, Caddy: ${caddyStatus.trim()}, Files: ${fileCount}, Access: ${accessStatus}`;
-      
-      return {
-        success: true,
-        message: statusMessage,
-        data: {
-          environment,
-          buildStatus,
-          fileCount,
-          caddyStatus: caddyStatus.trim(),
-          domain,
-          accessStatus,
-          url: `https://${domain}`
-        }
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: `Failed to check ${environment} status: ${error.message}`,
-        data: { error: error.message }
-      };
-    }
-  }
-  
-  /**
-   * Helper method to get the domain for an environment
-   */
-  private getDomain(environment: string): string {
-    const baseDomain = process.env.WEBSITE_DOMAIN || config.website?.baseUrl || 'example.com';
+// Update the handleWebsiteStatus method to include Caddy status
+async handleWebsiteStatus(environment: string = 'preview'): Promise<CommandResult> {
+  try {
+    // Get status from ServerManager
+    const serverManager = ServerManager.getInstance();
+    const serverStatus = await serverManager.areServersRunning();
     
-    // Remove protocol if present
-    const cleanDomain = baseDomain.replace(/^https?:\/\//, '');
+    // Get file status and other details from existing implementation
+    const serverEnv = environment === 'production' 
+      ? 'production'
+      : 'preview';
     
-    // Add preview subdomain if needed
-    return environment === 'production' ? cleanDomain : `preview.${cleanDomain}`;
+    // Get domain for URL - read from configuration
+    const domain = this.getDomain(environment);
+    
+    // Check Caddy status using systemctl
+    let caddyStatus = 'Unknown';
+    try {
+      const { stdout } = await execAsync('systemctl is-active caddy');
+      caddyStatus = stdout.trim() === 'active' ? 'Running' : 'Not running';
+    } catch (error) {
+      caddyStatus = 'Not running';
+    }
+    
+    // Check HTTPS accessibility
+    let accessStatus = 'Unknown';
+    try {
+      const { stdout } = await execAsync(`curl -s -o /dev/null -w "%{http_code}" https://${domain}`);
+      accessStatus = stdout.trim() === '200' ? 'Accessible' : `Status: ${stdout.trim()}`;
+    } catch (error) {
+      accessStatus = 'Not accessible';
+    }
+    
+    // Format URL with HTTPS domain
+    const url = `https://${domain}`;
+    
+    return {
+      success: true,
+      message: `${environment} website status: ${buildStatus}, Server: ${serverStatus}, Caddy: ${caddyStatus}, Access: ${accessStatus}`,
+      data: {
+        environment,
+        buildStatus,
+        fileCount,
+        serverStatus: serverStatus ? 'Running' : 'Not running',
+        caddyStatus,
+        domain,
+        accessStatus,
+        url
+      }
+    };
+  } catch (error) {
+    // Error handling
+    return {
+      success: false,
+      message: `Failed to check ${environment} status: ${error.message}`,
+    };
   }
+}
+/**
+ * Helper method to get the domain for an environment
+ */
+private getDomain(environment: string): string {
+  const baseDomain = process.env.WEBSITE_DOMAIN || config.website?.baseUrl || 'example.com';
+  
+  // Remove protocol if present
+  const cleanDomain = baseDomain.replace(/^https?:\/\//, '');
+  
+  // Add preview subdomain if needed
+  return environment === 'production' ? cleanDomain : `preview.${cleanDomain}`;
 }
 ```
 
-### 3. Register Commands with the Bot
+### 3. Configuration Updates
+
+Update the configuration with Caddy-specific settings:
 
 ```typescript
-// In src/commands/index.ts
+// In src/config.ts
 
-// Website management commands
-registry.registerCommand('website-build', {
-  handler: () => websiteCommands.handleWebsiteBuild(),
-  description: 'Build website to preview environment',
-  usage: 'website-build',
-  args: {}
-});
-
-registry.registerCommand('website-promote', {
-  handler: () => websiteCommands.handleWebsitePromote(),
-  description: 'Promote preview environment to production',
-  usage: 'website-promote',
-  args: {}
-});
-
-registry.registerCommand('website-status', {
-  handler: (args) => websiteCommands.handleWebsiteStatus(args.environment),
-  description: 'Check website environment status',
-  usage: 'website-status [environment]',
-  args: {
-    environment: { 
-      type: 'string', 
-      optional: true, 
-      description: 'Environment (preview or production)', 
-      validate: (val) => ['preview', 'production'].includes(val),
-      default: 'preview'
-    }
-  }
-});
-
-registry.registerCommand('website-config', {
-  handler: (args) => websiteCommands.handleWebsiteConfig(args.title, args.description, args.author),
-  description: 'Configure website metadata',
-  usage: 'website-config [--title=value] [--description=value] [--author=value]',
-  args: {
-    title: { 
-      type: 'string', 
-      optional: true, 
-      description: 'Website title'
+export const websiteConfig = {
+  // ...existing config
+  
+  // Deployment settings
+  deployment: {
+    // Deployment type (local-dev with Caddy proxy)
+    type: 'local-dev',
+    
+    // Port settings (for local servers)
+    previewPort: Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321,
+    productionPort: Number(process.env['WEBSITE_PRODUCTION_PORT']) || 4322,
+    
+    // Caddy configuration
+    caddy: {
+      // Whether Caddy is being used as a front-end proxy
+      enabled: Boolean(process.env['WEBSITE_USE_CADDY']) || true,
+      // Domain configuration (from env or default)
+      domains: {
+        base: process.env['WEBSITE_DOMAIN'] || 'example.com',
+        preview: `preview.${process.env['WEBSITE_DOMAIN'] || 'example.com'}`,
+        production: process.env['WEBSITE_DOMAIN'] || 'example.com',
+      },
     },
-    description: { 
-      type: 'string', 
-      optional: true, 
-      description: 'Website description'
-    },
-    author: { 
-      type: 'string', 
-      optional: true, 
-      description: 'Website author'
-    }
-  }
-});
-```
+  },
+};
 
-### 4. Environment Variables
+### 4. DNS Configuration
 
-Add only a single environment variable to your `.env` file and GitHub secrets:
+Configure your DNS records to point to your Hetzner server:
+
+1. **A Record**: `yourdomain.com` → [Hetzner Server IP]
+2. **A Record**: `preview.yourdomain.com` → [Hetzner Server IP]
+
+### 5. Environment Variables
+
+You only need to set a few environment variables:
 
 ```
+# Domain for the website 
 WEBSITE_DOMAIN=yourdomain.com
-```
 
-The preview URL is automatically derived as `preview.yourdomain.com`.
+# Whether to use Caddy as a proxy (default: true)
+WEBSITE_USE_CADDY=true
 
+# Ports for local PM2 servers (defaults: 4321/4322)
+WEBSITE_PREVIEW_PORT=4321
+WEBSITE_PRODUCTION_PORT=4322
 ## Workflow Usage
 
 ### Typical Development Workflow
 
 1. **Make Changes to Website**:
-   - Update files in `/opt/personal-brain/src/website/*`
+   - Update files in `src/website/*`
 
 2. **Build to Preview**:
    ```
    website-build
    ```
+   This builds the site to `src/website/dist` using Astro
 
 3. **Check Preview Status**:
    ```
@@ -480,6 +350,7 @@ The preview URL is automatically derived as `preview.yourdomain.com`.
    ```
    website-promote
    ```
+   This copies from `src/website/dist` to `dist/production`
 
 6. **Verify Production**:
    ```
@@ -491,28 +362,39 @@ The preview URL is automatically derived as `preview.yourdomain.com`.
 
 1. **GitHub Actions Update**: 0.5 day
    - Add Caddy installation
-   - Configure domains
-   - Set up initial structure
+   - Configure Caddy as a reverse proxy 
+   - Set up DNS records
 
-2. **Bot Command Implementation**: 1 day
-   - website-build command (always to preview)
-   - website-promote command
-   - website-status command
-   - website-config command
+2. **Configuration Updates**: 0.5 day
+   - Update config.ts with Caddy settings
+   - Add domain support to status reporting
+   - Update URL generation to use domains instead of localhost ports
 
 3. **Testing and Debugging**: 0.5 day
-   - Test build process
-   - Test promotion flow
-   - Verify Caddy configuration
+   - Test Caddy proxy to PM2 servers
+   - Verify HTTPS certificates
+   - Test complete workflow with domains
 
-Total: 2 days
+Total: 1.5 days
+
+## Advantages of the Hybrid Approach
+
+1. **Minimal Changes to Existing Code**: Leverages the PM2 implementation that's already working
+2. **Enhanced Security**: Adds HTTPS termination, security headers via Caddy
+3. **Professional URLs**: Uses proper domains instead of port-based URLs
+4. **Separation of Concerns**:
+   - PM2 manages process and application lifecycle
+   - Caddy handles web server concerns (SSL, domains, security)
+5. **Simpler Implementation**: No need to rewrite the existing deployment code
+6. **Improved User Experience**: Users see proper URLs in command output
 
 ## Success Criteria
 
-1. Website can be built via bot commands
-2. Preview environment works for testing changes
-3. Promotion to production works reliably
-4. Caddy handles HTTPS automatically
-5. Environments are properly isolated
-6. No external scripts or manual steps required
-7. Clear path for future SSR implementation
+1. Website can be built via bot commands (existing functionality)
+2. Preview environment works for testing changes (existing functionality)
+3. Promotion to production works reliably (existing functionality)
+4. Caddy handles HTTPS automatically (new functionality)
+5. Environments are properly isolated (existing functionality)
+6. Domain-based access works for both environments (new functionality)
+7. Security is enhanced with HTTPS and headers (new functionality)
+8. PM2 management continues to work as before (existing functionality)
