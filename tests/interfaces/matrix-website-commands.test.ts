@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
 import { getMarkdownFormatter, getResponseFormatter, MatrixBlockBuilder } from '@/interfaces/matrix/formatters';
+import type { 
+  WebsiteBuildResult, 
+  WebsitePromoteResult, 
+  WebsiteStatusResult, 
+} from '@/interfaces/matrix/formatters/types';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import type { WebsiteConfig } from '@mcp/contexts/website/storage/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
@@ -10,7 +15,9 @@ describe('Matrix Website Command Formatters', () => {
     test('should format website-help output', () => {
       const formatter = getResponseFormatter();
       const commands = [
-        { command: 'website-init', description: 'Initialize website', usage: 'website-init' },
+        { command: 'website-build', description: 'Build website to preview', usage: 'website-build' },
+        { command: 'website-promote', description: 'Promote preview to production', usage: 'website-promote' },
+        { command: 'website-status', description: 'Check website status', usage: 'website-status [preview|production]' },
         { command: 'website-config', description: 'Configure website settings', usage: 'website-config [key=value]' },
         { command: 'landing-page', description: 'Manage landing page content', usage: 'landing-page [generate|view]' },
       ];
@@ -24,41 +31,58 @@ describe('Matrix Website Command Formatters', () => {
       
       // Check for expected elements
       expect(formatted).toContain('Website Commands');
-      expect(formatted).toContain('website-init');
+      expect(formatted).toContain('website-build');
+      expect(formatted).toContain('website-promote');
+      expect(formatted).toContain('website-status');
       expect(formatted).toContain('website-config');
       expect(formatted).toContain('landing-page');
-      expect(formatted).toContain('Initialize website');
+      expect(formatted).toContain('Build website to preview');
       expect(formatted).toContain('Configure website settings');
     });
 
-    test('should format website-init success output', () => {
+    test('should format website-promote success output', () => {
       const formatter = getResponseFormatter();
       const result: WebsiteCommandResult = {
-        type: 'website-init',
+        type: 'website-promote',
         success: true,
-        message: 'Website initialized successfully',
+        message: 'Preview successfully promoted to production',
+        url: 'https://example.com',
       };
 
-      const formatted = formatter.formatWebsiteInit(result);
+      const formatted = formatter.formatWebsitePromote(result as WebsitePromoteResult);
       
-      expect(formatted).toContain('Website Initialization');
-      expect(formatted).toContain('Website initialized successfully');
+      expect(formatted).toContain('Website Promotion');
+      expect(formatted).toContain('Preview successfully promoted to production');
+      expect(formatted).toContain('https://example.com');
       expect(formatted).toContain('✅');
     });
 
-    test('should format website-init failure output', () => {
+    test('should format website-status output', () => {
       const formatter = getResponseFormatter();
       const result: WebsiteCommandResult = {
-        type: 'website-init',
-        success: false,
-        message: 'Failed to initialize website',
+        type: 'website-status',
+        success: true,
+        message: 'Website status check completed',
+        data: {
+          environment: 'preview',
+          buildStatus: 'Built',
+          fileCount: 42,
+          caddyStatus: 'Running',
+          domain: 'preview.example.com',
+          accessStatus: 'Accessible',
+          url: 'https://preview.example.com',
+        },
       };
 
-      const formatted = formatter.formatWebsiteInit(result);
+      const formatted = formatter.formatWebsiteStatus(result as WebsiteStatusResult);
       
-      expect(formatted).toContain('Website Initialization');
-      expect(formatted).toContain('Failed to initialize website');
-      expect(formatted).toContain('❌');
+      expect(formatted).toContain('Website Status');
+      expect(formatted).toContain('Website status check completed');
+      expect(formatted).toContain('preview');
+      expect(formatted).toContain('Built');
+      expect(formatted).toContain('Running');
+      expect(formatted).toContain('preview.example.com');
+      expect(formatted).toContain('✅');
     });
 
     test('should format website-config display output', () => {
@@ -68,7 +92,6 @@ describe('Matrix Website Command Formatters', () => {
         description: 'My personal website',
         author: 'Test Author',
         baseUrl: 'https://example.com',
-        deploymentType: 'local',
         astroProjectPath: 'src/website',
       };
       
@@ -145,84 +168,56 @@ describe('Matrix Website Command Formatters', () => {
       expect(formatted).toContain('Building great software');
     });
 
-    test('should format website-preview output', () => {
-      const formatter = getResponseFormatter();
-      const result: WebsiteCommandResult = {
-        type: 'website-preview',
-        success: true,
-        url: 'http://localhost:4321',
-        message: 'Preview server started',
-      };
-
-      const formatted = formatter.formatWebsitePreview(result);
-      
-      expect(formatted).toContain('Website Preview');
-      expect(formatted).toContain('Preview server started');
-      expect(formatted).toContain('http://localhost:4321');
-      expect(formatted).toContain('✅');
-      // It should include instructions to stop the preview
-      expect(formatted).toContain('website-preview-stop');
-    });
-
-    test('should format website-preview-stop output', () => {
-      const formatter = getResponseFormatter();
-      const result: WebsiteCommandResult = {
-        type: 'website-preview-stop',
-        success: true,
-        message: 'Preview server stopped',
-      };
-
-      const formatted = formatter.formatWebsitePreviewStop(result);
-      
-      expect(formatted).toContain('Website Preview');
-      expect(formatted).toContain('Preview server stopped');
-      expect(formatted).toContain('✅');
-    });
 
     test('should format website-build output', () => {
       const formatter = getResponseFormatter();
       const result: WebsiteCommandResult = {
         type: 'website-build',
         success: true,
-        message: 'Website built successfully',
+        message: 'Website built successfully for preview',
+        url: 'https://preview.example.com',
+        output: 'Build output details...',
       };
 
-      const formatted = formatter.formatWebsiteBuild(result);
+      const formatted = formatter.formatWebsiteBuild(result as WebsiteBuildResult);
       
       expect(formatted).toContain('Website Build');
-      expect(formatted).toContain('Website built successfully');
+      expect(formatted).toContain('Website built successfully for preview');
+      expect(formatted).toContain('https://preview.example.com');
       expect(formatted).toContain('✅');
+      // Should include promotion instructions
+      expect(formatted).toContain('website-promote');
     });
   });
 
   // Test formatting in the BlockBuilder for structure validation
   describe('Website BlockBuilder Integration', () => {
-    test('should build website preview blocks correctly', () => {
+    test('should build website build blocks correctly', () => {
       const builder = new MatrixBlockBuilder({ clientSupportsBlocks: false });
       const markdownFormatter = getMarkdownFormatter();
       
-      builder.addHeader('Website Preview');
+      builder.addHeader('Website Build');
       
       // Use available methods instead of addSuccess
-      builder.addSection('✅ Preview server started successfully');
-      builder.addSection('Website preview available at:');
+      builder.addSection('✅ Website built successfully for preview');
+      builder.addSection('Preview available at:');
       
       // Format a URL as code for clear visibility
-      const url = markdownFormatter.formatCodeBlock('http://localhost:4321', 'text');
+      const url = markdownFormatter.formatCodeBlock('https://preview.example.com', 'text');
       
       // Use addSection instead of addRaw
       builder.addSection(url);
       
-      builder.addSection('To stop the preview server, use:');
-      const command = markdownFormatter.formatCodeBlock('website-preview-stop', 'shell');
+      builder.addSection('To promote to production, use:');
+      const command = markdownFormatter.formatCodeBlock('website-promote', 'shell');
       builder.addSection(command);
       
       const result = builder.build() as string;
       
-      expect(result).toContain('<h3>Website Preview</h3>');
-      expect(result).toContain('Preview server started successfully');
-      expect(result).toContain('http://localhost:4321');
-      expect(result).toContain('website-preview-stop');
+      expect(result).toContain('<h3>Website Build</h3>');
+      expect(result).toContain('Website built successfully for preview');
+      expect(result).toContain('https://preview.example.com');
+      expect(result).toContain('website-promote');
     });
     
     test('should build website config blocks correctly', () => {

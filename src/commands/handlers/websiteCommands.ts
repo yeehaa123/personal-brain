@@ -2,6 +2,7 @@ import type { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext'
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult, WebsiteCommandResult } from '@commands/core/commandTypes';
 import type { BrainProtocol } from '@mcp/protocol';
+// Direct file access replaced with WebsiteContext delegation
 
 /**
  * Command handler for website-related commands
@@ -9,24 +10,10 @@ import type { BrainProtocol } from '@mcp/protocol';
 export class WebsiteCommandHandler extends BaseCommandHandler {
   private static instance: WebsiteCommandHandler | null = null;
   private websiteContext: WebsiteContext | null = null;
-  // Track preview state locally until WebsiteContext implements it
-  private _previewRunning = false;
   
   /**
-   * Check if website preview is currently running
-   * @returns True if preview server is running
+   * Helper method to get domain for environment (removed - now handled by WebsiteContext)
    */
-  private isPreviewRunning(): boolean {
-    return this._previewRunning;
-  }
-  
-  /**
-   * Set preview server running state
-   * @param running Whether preview is running
-   */
-  private setPreviewRunning(running: boolean): void {
-    this._previewRunning = running;
-  }
   
   /**
    * Get singleton instance of WebsiteCommandHandler
@@ -64,15 +51,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   private static readonly SUPPORTED_COMMANDS = [
     'website',
-    'website-init',
     'website-config',
     'landing-page',
-    'website-preview',
-    'website-preview-stop',
     'website-build',
-    'website-deploy',
-    'website-deployment-status',
+    'website-promote',
+    'website-status',
   ];
+  
+  // Directory paths now managed by WebsiteContext
 
   /**
    * Check if this handler can process the given command
@@ -110,30 +96,20 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         examples: ['landing-page generate', 'landing-page view'],
       },
       {
-        command: 'website-preview',
-        description: 'Start local preview server',
-        usage: 'website-preview',
-      },
-      {
-        command: 'website-preview-stop',
-        description: 'Stop the running preview server',
-        usage: 'website-preview-stop',
-      },
-      {
         command: 'website-build',
-        description: 'Build the website for deployment',
+        description: 'Build the website (always to preview environment)',
         usage: 'website-build',
       },
       {
-        command: 'website-deploy',
-        description: 'Deploy the website using the configured provider (creates site if needed)',
-        usage: 'website-deploy',
-        examples: ['website-deploy'],
+        command: 'website-promote',
+        description: 'Promote preview to production',
+        usage: 'website-promote',
       },
       {
-        command: 'website-deployment-status',
-        description: 'Check the deployment status of the website',
-        usage: 'website-deployment-status',
+        command: 'website-status',
+        description: 'Check status of website environments',
+        usage: 'website-status [preview|production]',
+        examples: ['website-status', 'website-status production'],
       },
     ];
   }
@@ -155,8 +131,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       // If we couldn't get a valid website context
       if (!this.websiteContext) {
         return {
-          type: 'website-init',
-          success: false,
+          type: 'error',
           message: 'Website context not available. Try initializing the brain protocol first.',
         };
       }
@@ -165,34 +140,26 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       switch (command) {
       case 'website':
         return this.handleWebsiteHelp();
-      case 'website-init':
-        return this.handleWebsiteInit();
       case 'website-config':
         return this.handleWebsiteConfig(args);
       case 'landing-page':
         return this.handleLandingPage(args);
-      case 'website-preview':
-        return this.handleWebsitePreview();
-      case 'website-preview-stop':
-        return this.handleWebsitePreviewStop();
       case 'website-build':
         return this.handleWebsiteBuild();
-      case 'website-deploy':
-        return this.handleWebsiteDeploy();
-      case 'website-deployment-status':
-        return this.handleWebsiteDeploymentStatus();
+      case 'website-promote':
+        return this.handleWebsitePromote();
+      case 'website-status':
+        return this.handleWebsiteStatus(args);
       default:
         return {
-          type: 'website-init',
-          success: false,
+          type: 'error',
           message: `Unknown website command: ${command}`,
         };
       }
     } catch (error) {
       this.logger.error(`Error processing website command ${command}: ${error}`);
       return {
-        type: 'website-init',
-        success: false,
+        type: 'error',
         message: `Failed to process website command: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
@@ -209,46 +176,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   }
   
   /**
-   * Handle website initialization
+   * Website initialization - removed as it's no longer needed 
+   * The bot-controlled approach with Caddy doesn't require initialization
    */
-  private async handleWebsiteInit(): Promise<WebsiteCommandResult> {
-    try {
-      if (!this.websiteContext) {
-        return {
-          type: 'website-init',
-          success: false,
-          message: 'Website context not available',
-        };
-      }
-      
-      // Initialize the website context
-      await this.websiteContext.initialize();
-      this.logger.info('Website context initialized successfully');
-      
-      // Get current config for logging purposes
-      const config = await this.websiteContext.getConfig();
-      
-      // Log deployment type information
-      if (config.deploymentType === 's3') {
-        this.logger.info('S3 deployment type detected.');
-      }
-      
-      // Basic initialization succeeded
-      return {
-        type: 'website-init',
-        success: true,
-        message: 'Website initialized successfully' + 
-          (config.deploymentType ? ` with ${config.deploymentType} deployment type` : ''),
-      };
-    } catch (error) {
-      this.logger.error(`Error initializing website: ${error}`);
-      return {
-        type: 'website-init',
-        success: false,
-        message: `Failed to initialize website: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
   
   /**
    * Handle website configuration command
@@ -390,282 +320,114 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     };
   }
   
-  /**
-   * Handle website preview command
-   */
-  private async handleWebsitePreview(): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-preview',
-        success: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-preview',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
-    // Check if preview is already running
-    if (this.isPreviewRunning()) {
-      return {
-        type: 'website-preview',
-        success: false,
-        message: 'Preview server is already running. Use "website-preview-stop" to stop it first.',
-      };
-    }
-    
-    try {
-      const result = await this.websiteContext.previewWebsite();
-      
-      // Update the preview running state if successful
-      if (result.success) {
-        this.setPreviewRunning(true);
-      }
-      
-      return {
-        type: 'website-preview',
-        success: result.success,
-        url: result.url,
-        message: result.message,
-      };
-    } catch (error) {
-      this.logger.error(`Error starting preview server: ${error}`);
-      return {
-        type: 'error',
-        message: `Failed to start preview server: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
+  // Preview server methods removed - Caddy is always running in the new approach
   
   /**
-   * Handle website preview stop command
-   */
-  private async handleWebsitePreviewStop(): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-preview-stop',
-        success: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-preview-stop',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
-    // Check if preview is running
-    if (!this.isPreviewRunning()) {
-      return {
-        type: 'website-preview-stop',
-        success: false,
-        message: 'No preview server is currently running.',
-      };
-    }
-    
-    try {
-      // Use the new stopPreviewWebsite method in WebsiteContext
-      const result = await this.websiteContext.stopPreviewWebsite();
-      
-      // Update our running state
-      if (result.success) {
-        this.setPreviewRunning(false);
-      }
-      
-      return {
-        type: 'website-preview-stop',
-        success: result.success,
-        message: result.message,
-      };
-    } catch (error) {
-      this.logger.error(`Error stopping preview server: ${error}`);
-      return {
-        type: 'website-preview-stop',
-        success: false,
-        message: `Failed to stop preview server: ${error instanceof Error ? error.message : String(error)}`,
-      };
-    }
-  }
-  
-  /**
-   * Handle website build command
+   * Handle website build command - always builds to preview environment
    */
   private async handleWebsiteBuild(): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-build',
-        success: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-build',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
     try {
-      const result = await this.websiteContext.buildWebsite();
+      this.logger.info('Building website to preview environment');
+      
+      if (!this.websiteContext) {
+        return {
+          type: 'website-build',
+          success: false,
+          message: 'Website context not available',
+        };
+      }
+      
+      // Delegate to WebsiteContext implementation
+      const result = await this.websiteContext.handleWebsiteBuild();
       
       return {
         type: 'website-build',
         success: result.success,
         message: result.message,
+        url: result.url,
       };
     } catch (error) {
-      this.logger.error(`Error building website: ${error}`);
+      this.logger.error(`Error in website build command: ${error}`);
       return {
-        type: 'error',
+        type: 'website-build',
+        success: false,
         message: `Failed to build website: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
   
   /**
-   * Handle website deploy command
+   * Handle website promote command
+   * Copies the built files from preview to production
    */
-  private async handleWebsiteDeploy(): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-deploy',
-        success: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-deploy',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
+  private async handleWebsitePromote(): Promise<CommandResult> {
     try {
-      this.logger.info('Starting website deployment process');
+      this.logger.info('Promoting website from preview to production');
       
-      const result = await this.websiteContext.deployWebsite();
-      
-      if (!result.success) {
-        this.logger.error('Website deployment failed', {
-          message: result.message,
-          logs: result.logs,
-        });
-        
-        // Display more detailed error information in the command result
+      if (!this.websiteContext) {
         return {
-          type: 'website-deploy',
+          type: 'website-promote',
           success: false,
-          message: result.message,
-          logs: result.logs ? `Deployment logs:\n${result.logs}` : 
-            'No detailed error logs available. Try running with debug logging enabled.',
+          message: 'Website context not available',
         };
       }
       
-      // Use the original message for now
-      const message = result.message;
+      // Delegate to WebsiteContext implementation
+      const result = await this.websiteContext.handleWebsitePromote();
       
       return {
-        type: 'website-deploy',
-        success: true,
-        message: message,
+        type: 'website-promote',
+        success: result.success,
+        message: result.message,
         url: result.url,
-        logs: result.logs,
       };
     } catch (error) {
-      this.logger.error(`Error deploying website: ${error}`, {
-        errorDetails: error instanceof Error ? { message: error.message, stack: error.stack } : 'Unknown error',
-      });
-      
+      this.logger.error(`Error in website promote command: ${error}`);
       return {
-        type: 'website-deploy',
+        type: 'website-promote',
         success: false,
-        message: `Failed to deploy website: ${error instanceof Error ? error.message : String(error)}`,
-        logs: error instanceof Error ? `Error details:\n${error.stack}` : 'No detailed error information available',
+        message: `Failed to promote to production: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
   
   /**
-   * Handle website deployment status command
+   * Handle website status command
+   * Provides information about build status and accessibility
    */
-  private async handleWebsiteDeploymentStatus(): Promise<CommandResult> {
-    if (!this.websiteContext) {
-      return {
-        type: 'website-deployment-status',
-        success: false,
-        isDeployed: false,
-        message: 'Website context not available',
-      };
-    }
-    
-    if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-deployment-status',
-        success: false,
-        isDeployed: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-    
+  private async handleWebsiteStatus(args: string = ''): Promise<CommandResult> {
     try {
-      const result = await this.websiteContext.getDeploymentStatus();
+      // Parse environment from args
+      const environment = args.trim().toLowerCase() === 'production' ? 'production' : 'preview';
+      this.logger.info(`Checking status of ${environment} environment`);
       
-      // Create informative message for any deployment provider
-      let message = result.message || '';
-      
-      if (result.isDeployed) {
-        if (result.status === 'ready') {
-          // For completed deployments
-          message = `${message}
-
-✅ The site is fully deployed and ready to view at ${result.url}
-
-- Deployed: ${result.deployTime || 'unknown time'}`;
-        } else if (result.status === 'error') {
-          // For failed deployments
-          message = `${message}
-
-❌ The deployment failed with an error.
-
-- Attempted: ${result.deployTime || 'unknown time'}
-- State: ${result.status}
-- Try running 'website-build' and then 'website-deploy' again`;
-        }
+      if (!this.websiteContext) {
+        return {
+          type: 'website-status',
+          success: false,
+          message: 'Website context not available',
+        };
       }
       
+      // Delegate to WebsiteContext implementation
+      const result = await this.websiteContext.handleWebsiteStatus(environment);
+      
       return {
-        type: 'website-deployment-status',
+        type: 'website-status',
         success: result.success,
-        isDeployed: result.isDeployed,
-        provider: result.provider,
-        url: result.url,
-        message: message,
-        // Additional properties not defined in type
-        ...(result.status ? { statusDetails: result.status } : {}),
-        ...(result.deployTime ? { deployTime: result.deployTime } : {}),
+        message: result.message,
+        data: result.data,
       };
     } catch (error) {
-      this.logger.error(`Error checking deployment status: ${error}`);
+      this.logger.error(`Error in website status command: ${error}`);
       return {
-        type: 'website-deployment-status',
+        type: 'website-status',
         success: false,
-        isDeployed: false,
-        message: `Failed to check deployment status: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Failed to check ${args || 'preview'} status: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
+  
   
 // Removed website-deployment-config command as it was redundant with website-config
 }

@@ -29,7 +29,6 @@ export class InMemoryWebsiteStorageAdapter implements WebsiteStorageAdapter {
     description: 'My personal website',
     author: 'Anonymous',
     baseUrl: 'http://localhost:4321',
-    deploymentType: 'local',
     astroProjectPath: 'src/website',
   };
   
@@ -83,38 +82,11 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
       description: website.description,
       author: website.author,
       baseUrl: website.baseUrl,
-      deploymentType: this.validateDeploymentType(website.deployment.provider),
       astroProjectPath: website.astroProjectPath,
-      // Map provider-specific config based on provider type
-      deploymentConfig: this.getProviderConfig(website.deployment.provider),
     };
   }
   
-  /**
-   * Validate that deployment type is one of the allowed values
-   */
-  private validateDeploymentType(type: string): 'local' | 's3' {
-    switch (type) {
-    case 's3':
-      return 's3';
-    default:
-      return 'local';
-    }
-  }
-  
-  /**
-   * Get provider-specific configuration
-   */
-  private getProviderConfig(providerType: string): Record<string, unknown> {
-    const { website } = config;
-    
-    switch (providerType) {
-    case 's3':
-      return website.deployment.providers.s3;
-    default:
-      return {};
-    }
-  }
+  // Deployment-related methods removed - Caddy is now the only approach
   
   async getWebsiteConfig(): Promise<WebsiteConfig> {
     // Always return fresh config from global config

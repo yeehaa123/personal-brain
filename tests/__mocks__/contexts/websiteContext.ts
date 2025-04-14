@@ -15,17 +15,13 @@ export class MockWebsiteContext {
   private static instance: MockWebsiteContext | null = null;
 
   // Mock state tracking
-  private mockInitialized = false;
   private mockConfig: WebsiteConfig = {
     title: 'Personal Brain Website',
     description: 'My personal website',
     author: 'Test Author',
     baseUrl: 'https://example.com',
-    deploymentType: 'local',
     astroProjectPath: 'src/website',
   };
-  private mockPreviewUrl = 'http://localhost:4321';
-  private mockPreviewRunning = false;
 
   // Use the existing MockAstroContentService and MockLandingPageGenerationService
   private mockAstroContentService: MockAstroContentService;
@@ -47,13 +43,6 @@ export class MockWebsiteContext {
     this.mockAstroContentService.readLandingPageContent = mock(() => Promise.resolve(landingPageData));
 
     this.mockAstroContentService.runAstroCommand = mock((command: string) => {
-      if (command === 'dev') {
-        this.mockPreviewRunning = true; // Update preview state
-        return Promise.resolve({
-          success: true,
-          output: `Local: ${this.mockPreviewUrl}`,
-        });
-      }
       if (command === 'build') {
         return Promise.resolve({
           success: true,
@@ -61,11 +50,6 @@ export class MockWebsiteContext {
         });
       }
       return Promise.resolve({ success: false, output: 'Unknown command' });
-    });
-
-    this.mockAstroContentService.killProcess = mock(() => {
-      this.mockPreviewRunning = false; // Update preview state
-      return Promise.resolve(true);
     });
 
     this.mockLandingPageGenerationService.generateLandingPageData = mock(() => Promise.resolve(landingPageData));
@@ -96,13 +80,8 @@ export class MockWebsiteContext {
   }
 
   // Core WebsiteContext methods that would be used by command handlers
-  async initialize(): Promise<void> {
-    this.mockInitialized = true;
-    return Promise.resolve();
-  }
-
   isReady(): boolean {
-    return this.mockInitialized;
+    return true;
   }
 
   async getConfig(): Promise<WebsiteConfig> {
@@ -152,73 +131,9 @@ export class MockWebsiteContext {
     };
   }
 
-  async previewWebsite(): Promise<{ success: boolean; url?: string; message: string; output?: string }> {
-    // Check if website is initialized
-    if (!this.isReady()) {
-      return {
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
+  // Preview methods removed - Caddy is always running in the new approach
 
-    // Check if preview is already running
-    if (this.isPreviewRunning()) {
-      return {
-        success: false,
-        message: 'Preview server is already running. Use "website-preview-stop" to stop it first.',
-      };
-    }
-
-    // Use startDevServer for PM2-based preview
-    const result = await this.mockAstroContentService.startDevServer();
-
-    // Set preview running state based on result
-    if (result.success) {
-      this.mockPreviewRunning = true;
-    }
-
-    return {
-      success: result.success,
-      url: result.url,
-      message: result.success ? 'Website preview started with PM2' : 'Failed to start website preview',
-      output: result.output,
-    };
-  }
-
-  async stopPreviewWebsite(): Promise<{ success: boolean; message: string }> {
-    // Check if website is initialized
-    if (!this.isReady()) {
-      return {
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
-    }
-
-    // Check if preview is running
-    if (!this.isPreviewRunning()) {
-      return {
-        success: false,
-        message: 'No preview server is currently running.',
-      };
-    }
-
-    // Use stopDevServer for PM2-based management
-    const success = await this.mockAstroContentService.stopDevServer();
-
-    // Update preview state
-    if (success) {
-      this.mockPreviewRunning = false;
-    }
-
-    return {
-      success,
-      message: success ? 'Website preview server stopped successfully' : 'Failed to stop website preview server',
-    };
-  }
-
-  isPreviewRunning(): boolean {
-    return this.mockPreviewRunning;
-  }
+  // Preview state tracking removed - Caddy is always running
 
   async getAstroContentService(): Promise<AstroContentService> {
     return this.mockAstroContentService as unknown as AstroContentService;
@@ -228,20 +143,58 @@ export class MockWebsiteContext {
     return this.mockLandingPageGenerationService as unknown as LandingPageGenerationService;
   }
 
-  // Test helpers to modify internal state directly
-  setMockInitialized(initialized: boolean): void {
-    this.mockInitialized = initialized;
+  // New methods for bot-controlled website deployment
+  async handleWebsiteBuild(): Promise<{ success: boolean; message: string; url?: string }> {
+    return {
+      success: true,
+      message: 'Website built successfully for preview',
+      url: 'https://preview.example.com',
+    };
   }
 
-  setMockPreviewRunning(running: boolean): void {
-    this.mockPreviewRunning = running;
+  async handleWebsitePromote(): Promise<{ success: boolean; message: string; url?: string }> {
+    return {
+      success: true,
+      message: 'Preview successfully promoted to production',
+      url: 'https://example.com',
+    };
   }
+
+  async handleWebsiteStatus(environment: string = 'preview'): Promise<{ 
+    success: boolean; 
+    message: string;
+    data?: {
+      environment: string;
+      buildStatus: string;
+      fileCount: number;
+      caddyStatus: string;
+      domain: string;
+      accessStatus: string;
+      url: string;
+    }
+  }> {
+    return {
+      success: true,
+      message: `${environment} website status: Built, Caddy: Running, Files: 42, Access: Accessible`,
+      data: {
+        environment,
+        buildStatus: 'Built',
+        fileCount: 42,
+        caddyStatus: 'Running',
+        domain: environment === 'preview' ? 'preview.example.com' : 'example.com',
+        accessStatus: 'Accessible',
+        url: `https://${environment === 'preview' ? 'preview.example.com' : 'example.com'}`,
+      },
+    };
+  }
+
+  // Test helpers to modify internal state directly
+
+  // Preview state tracking removed - Caddy is always running
 
   setMockConfig(config: Partial<WebsiteConfig>): void {
     this.mockConfig = { ...this.mockConfig, ...config };
   }
 
-  getMockPreviewUrl(): string {
-    return this.mockPreviewUrl;
-  }
+  // No longer needed with Caddy approach
 }

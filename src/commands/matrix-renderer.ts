@@ -12,7 +12,12 @@
  */
 
 import { getResponseFormatter } from '../interfaces/matrix/formatters';
-import type { NotePreview } from '../interfaces/matrix/formatters/types';
+import type { 
+  NotePreview, 
+  WebsiteBuildResult, 
+  WebsitePromoteResult, 
+  WebsiteStatusResult, 
+} from '../interfaces/matrix/formatters/types';
 import logger from '../utils/logger';
 
 import type { CommandHandler } from '.';
@@ -163,10 +168,6 @@ export class MatrixRenderer {
         break;
       }
       
-      case 'website-init': {
-        this.sendMessageFn(roomId, this.formatter.formatWebsiteInit(result));
-        break;
-      }
       
       case 'website-config': {
         this.sendMessageFn(roomId, this.formatter.formatWebsiteConfig(result));
@@ -178,60 +179,22 @@ export class MatrixRenderer {
         break;
       }
       
-      case 'website-preview': {
-        this.sendMessageFn(roomId, this.formatter.formatWebsitePreview(result));
-        break;
-      }
-      
-      case 'website-preview-stop': {
-        this.sendMessageFn(roomId, this.formatter.formatWebsitePreviewStop(result));
-        break;
-      }
       
       case 'website-build': {
-        this.sendMessageFn(roomId, this.formatter.formatWebsiteBuild(result));
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteBuild(result as WebsiteBuildResult));
         break;
       }
       
-      case 'website-deploy': {
-        // Format website deployment result with detailed logs
-        const message = [
-          `### ${result.success ? '✅ Deployment Successful' : '❌ Deployment Failed'}`,
-          '',
-          result.message,
-        ];
-        
-        if (result.url) {
-          message.push('', `**Website URL**: ${result.url}`);
-        }
-        
-        if (result.logs) {
-          message.push('', '#### Deployment Logs', '', '```', result.logs, '```');
-        }
-        
-        this.sendMessageFn(roomId, message.join('\n'));
+      case 'website-promote': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsitePromote(result as WebsitePromoteResult));
         break;
       }
       
-      case 'website-deployment-status': {
-        const icon = result.isDeployed ? '✅' : '⚠️';
-        const message = [
-          '### Website Deployment Status',
-          '',
-          `${icon} ${result.message}`,
-        ];
-        
-        if (result.provider) {
-          message.push(`**Provider**: ${result.provider}`);
-        }
-        
-        if (result.isDeployed && result.url) {
-          message.push('', `**Website URL**: ${result.url}`);
-        }
-        
-        this.sendMessageFn(roomId, message.join('\n'));
+      case 'website-status': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteStatus(result as WebsiteStatusResult));
         break;
       }
+      
       }
     } catch (error) {
       logger.error('Error rendering Matrix result:', error);

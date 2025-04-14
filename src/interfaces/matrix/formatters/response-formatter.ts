@@ -20,9 +20,8 @@ import type {
   WebsiteBuildResult, 
   WebsiteConfigResult,
   WebsiteHelpResult,
-  WebsiteInitResult,
-  WebsitePreviewResult,
-  WebsitePreviewStopResult,
+  WebsitePromoteResult,
+  WebsiteStatusResult,
 } from './types';
 
 /**
@@ -745,62 +744,32 @@ export class MatrixResponseFormatter {
   }
   
   /**
-   * Format website initialization result
+   * Format website promote result
    */
-  formatWebsiteInit(result: WebsiteInitResult): string {
+  formatWebsitePromote(result: WebsitePromoteResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
-      builder.addHeader('Website Initialization');
+      builder.addHeader('Website Promotion');
       
       const icon = result.success ? '✅' : '❌';
       builder.addSection(`${icon} ${result.message}`);
       
-      // Display deployment info if available
-      if (result.success && result.deploymentInfo) {
-        const providerName = result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1);
-        builder.addSection(`**${providerName} Site Information**:`);
-        
-        if (result.deploymentInfo.siteId) {
-          builder.addSection(`**Site ID**: ${result.deploymentInfo.siteId}`);
-        }
-        
-        if (result.deploymentInfo.url) {
-          builder.addSection(`**Site URL**: ${result.deploymentInfo.url}`);
-          builder.addSection('Your site is ready to be deployed using:');
-          builder.addSection(`\`${this.commandPrefix} website-build\``);
-          builder.addSection(`\`${this.commandPrefix} website-deploy\``);
-        }
-      } else if (result.success) {
-        builder.addSection(`Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
+      if (result.success && result.url) {
+        builder.addSection(`Production website available at: ${result.url}`);
       }
       
       return builder.build() as string;
     } else {
       const icon = result.success ? '✅' : '❌';
       const message = [
-        '### Website Initialization',
+        '### Website Promotion',
         '',
         `${icon} ${result.message}`,
       ];
       
-      // Display deployment info if available
-      if (result.success && result.deploymentInfo) {
-        const providerName = result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1);
-        message.push('', `#### ${providerName} Site Information`);
-        
-        if (result.deploymentInfo.siteId) {
-          message.push(`**Site ID**: ${result.deploymentInfo.siteId}`);
-        }
-        
-        if (result.deploymentInfo.url) {
-          message.push(`**Site URL**: ${result.deploymentInfo.url}`);
-          message.push('', 'Your site is ready to be deployed using:');
-          message.push(`\`${this.commandPrefix} website-build\``);
-          message.push(`\`${this.commandPrefix} website-deploy\``);
-        }
-      } else if (result.success) {
-        message.push('', `Use \`${this.commandPrefix} website-config\` to view or update website configuration.`);
+      if (result.success && result.url) {
+        message.push('', `Production website available at: ${result.url}`);
       }
       
       return this.markdown.format(message.join('\n'));
@@ -961,60 +930,58 @@ export class MatrixResponseFormatter {
   }
   
   /**
-   * Format website preview result
+   * Format website status result
    */
-  formatWebsitePreview(result: WebsitePreviewResult): string {
+  formatWebsiteStatus(result: WebsiteStatusResult): string {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
-      builder.addHeader('Website Preview');
+      builder.addHeader('Website Status');
       
       const icon = result.success ? '✅' : '❌';
       builder.addSection(`${icon} ${result.message}`);
       
-      if (result.success && result.url) {
-        builder.addSection(`Website preview available at: ${result.url}`);
-        builder.addSection(`To stop the preview server, use: \`${this.commandPrefix} website-preview-stop\``);
+      if (result.success && result.data) {
+        const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+        
+        builder.addSection(`**Environment**: ${environment}`);
+        builder.addSection(`**Build Status**: ${buildStatus}`);
+        builder.addSection(`**Files**: ${fileCount}`);
+        builder.addSection(`**Server Status**: ${caddyStatus}`);
+        builder.addSection(`**Domain**: ${domain}`);
+        builder.addSection(`**Access Status**: ${accessStatus}`);
+        
+        if (url) {
+          builder.addSection(`**Website URL**: ${url}`);
+        }
       }
       
       return builder.build() as string;
     } else {
       const icon = result.success ? '✅' : '❌';
       const message = [
-        '### Website Preview',
+        '### Website Status',
         '',
         `${icon} ${result.message}`,
       ];
       
-      if (result.success && result.url) {
-        message.push('', `Website preview available at: ${result.url}`);
-        message.push('', `To stop the preview server, use: \`${this.commandPrefix} website-preview-stop\``);
+      if (result.success && result.data) {
+        const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+        
+        message.push(
+          '',
+          `**Environment**: ${environment}`,
+          `**Build Status**: ${buildStatus}`,
+          `**Files**: ${fileCount}`,
+          `**Server Status**: ${caddyStatus}`,
+          `**Domain**: ${domain}`,
+          `**Access Status**: ${accessStatus}`,
+        );
+        
+        if (url) {
+          message.push('', `**Website URL**: ${url}`);
+        }
       }
-      
-      return this.markdown.format(message.join('\n'));
-    }
-  }
-  
-  /**
-   * Format website preview stop result
-   */
-  formatWebsitePreviewStop(result: WebsitePreviewStopResult): string {
-    if (this.useBlocks) {
-      const builder = new MatrixBlockBuilder();
-      
-      builder.addHeader('Website Preview');
-      
-      const icon = result.success ? '✅' : '❌';
-      builder.addSection(`${icon} ${result.message}`);
-      
-      return builder.build() as string;
-    } else {
-      const icon = result.success ? '✅' : '❌';
-      const message = [
-        '### Website Preview',
-        '',
-        `${icon} ${result.message}`,
-      ];
       
       return this.markdown.format(message.join('\n'));
     }
@@ -1032,6 +999,11 @@ export class MatrixResponseFormatter {
       const icon = result.success ? '✅' : '❌';
       builder.addSection(`${icon} ${result.message}`);
       
+      if (result.success && result.url) {
+        builder.addSection(`Preview available at: ${result.url}`);
+        builder.addSection(`To promote to production, use: \`${this.commandPrefix} website-promote\``);
+      }
+      
       return builder.build() as string;
     } else {
       const icon = result.success ? '✅' : '❌';
@@ -1040,6 +1012,11 @@ export class MatrixResponseFormatter {
         '',
         `${icon} ${result.message}`,
       ];
+      
+      if (result.success && result.url) {
+        message.push('', `Preview available at: ${result.url}`);
+        message.push('', `To promote to production, use: \`${this.commandPrefix} website-promote\``);
+      }
       
       return this.markdown.format(message.join('\n'));
     }

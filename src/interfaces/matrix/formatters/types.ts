@@ -2,7 +2,7 @@
  * Common types for Matrix formatters
  */
 
-import type { DeploymentInfo, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
 
 // Note model properties we need for formatting
@@ -113,13 +113,13 @@ export interface WebsiteHelpResult {
 }
 
 /**
- * Website initialization result
+ * Website promote result
  */
-export interface WebsiteInitResult {
-  type: 'website-init';
+export interface WebsitePromoteResult {
+  type: 'website-promote';
   success: boolean;
   message: string;
-  deploymentInfo?: DeploymentInfo;
+  url?: string;
 }
 
 /**
@@ -133,22 +133,21 @@ export interface LandingPageResult {
 }
 
 /**
- * Website preview result
+ * Website status result
  */
-export interface WebsitePreviewResult {
-  type: 'website-preview';
-  success: boolean;
-  url?: string;
-  message: string;
-}
-
-/**
- * Website preview stop result
- */
-export interface WebsitePreviewStopResult {
-  type: 'website-preview-stop';
+export interface WebsiteStatusResult {
+  type: 'website-status';
   success: boolean;
   message: string;
+  data?: {
+    environment: string;
+    buildStatus: string;
+    fileCount: number;
+    caddyStatus: string;
+    domain: string;
+    accessStatus: string;
+    url: string;
+  };
 }
 
 /**
@@ -158,6 +157,8 @@ export interface WebsiteBuildResult {
   type: 'website-build';
   success: boolean;
   message: string;
+  url?: string;
+  output?: string;
 }
 
 /**

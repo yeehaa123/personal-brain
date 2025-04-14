@@ -4,7 +4,7 @@
  */
 
 import type { ExternalCitation } from '@/mcp';
-import type { DeploymentInfo, LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 
@@ -23,15 +23,19 @@ export interface CommandInfo {
  */
 export type WebsiteCommandResult =
   | { type: 'website-help'; commands: CommandInfo[] }
-  | { type: 'website-init'; success: boolean; message: string; deploymentInfo?: DeploymentInfo }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
-  | { type: 'website-preview'; success: boolean; url?: string; message: string }
-  | { type: 'website-preview-stop'; success: boolean; message: string }
-  | { type: 'website-build'; success: boolean; message: string }
-  | { type: 'website-deploy'; success: boolean; message: string; url?: string; logs?: string }
-  | { type: 'website-deployment-status'; success: boolean; isDeployed: boolean; provider?: string; url?: string; message?: string }
-  | { type: 'website-deployment-config'; success?: boolean; message: string; config?: WebsiteConfig };
+  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }
+  | { type: 'website-promote'; success: boolean; message: string; url?: string }
+  | { type: 'website-status'; success: boolean; message: string; data?: { 
+      environment: string;
+      buildStatus: string;
+      fileCount: number;
+      caddyStatus: string;
+      domain: string;
+      accessStatus: string;
+      url: string;
+    } };
 
 /**
  * Union type for all possible command result types
@@ -60,12 +64,16 @@ export type CommandResult =
   | { type: 'save-note-confirm'; noteId: string; title: string }
   | { type: 'conversation-notes'; notes: Note[] }
   | { type: 'website-help'; commands: CommandInfo[] }
-  | { type: 'website-init'; success: boolean; message: string; deploymentInfo?: DeploymentInfo }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
-  | { type: 'website-preview'; success: boolean; url?: string; message: string }
-  | { type: 'website-preview-stop'; success: boolean; message: string }
-  | { type: 'website-build'; success: boolean; message: string }
-  | { type: 'website-deploy'; success: boolean; message: string; url?: string; logs?: string }
-  | { type: 'website-deployment-status'; success: boolean; isDeployed: boolean; provider?: string; url?: string; message?: string }
-  | { type: 'website-deployment-config'; success?: boolean; message: string; config?: WebsiteConfig };
+  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }
+  | { type: 'website-promote'; success: boolean; message: string; url?: string }
+  | { type: 'website-status'; success: boolean; message: string; data?: { 
+      environment: string;
+      buildStatus: string;
+      fileCount: number;
+      caddyStatus: string;
+      domain: string;
+      accessStatus: string;
+      url: string;
+    } };

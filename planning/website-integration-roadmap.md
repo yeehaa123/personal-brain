@@ -15,9 +15,43 @@ This document outlines a concrete plan to add website generation and integration
 
 ## Architecture
 
-The website generation will be implemented as a dedicated context with its own resources and tools:
+The website generation and deployment will be implemented with two key principles:
+1. Bot-controlled deployment and management
+2. Caddy for web serving with automatic HTTPS
+
+### Directory Structure
 
 ```
+/opt/personal-brain/
+├── src/
+│   └── website/           # Source website files
+│       ├── src/
+│       ├── public/
+│       ├── package.json
+│       └── astro.config.mjs
+└── ... (rest of Personal Brain)
+
+/opt/personal-brain-website/
+├── preview/               # Preview environment
+│   ├── src/
+│   ├── public/
+│   ├── dist/              # Built website
+│   ├── package.json
+│   └── astro.config.mjs
+└── production/            # Production environment
+    ├── src/
+    ├── public/
+    ├── dist/              # Built website
+    ├── package.json
+    └── astro.config.mjs
+```
+
+### Component Structure
+
+```
+src/commands/handlers/
+└── websiteCommands.ts     # Bot commands for website management
+
 src/mcp/contexts/website/
 ├── adapters/
 │   └── websiteStorageAdapter.ts
@@ -40,22 +74,24 @@ src/mcp/contexts/website/
 
 ## Features by Phase
 
-### Phase 1: Foundation and Landing Page (3 days)
+### Phase 1: Foundation and Bot-Controlled Website Deployment (3 days)
 
-1. **Website Context Setup** (0.5 day)
-   - Create WebsiteContext class following Component Interface Standardization pattern
-   - Implement WebsiteStorageAdapter
-   - Set up data schemas for website configuration and content
+1. **Initial Infrastructure Setup** (1 day)
+   - Integrate Caddy installation into GitHub Actions workflow
+   - Configure preview and production environments
+   - Set up directory structure for both environments
+   - Configure automatic HTTPS for domains
+   - Create website context and data models
 
-2. **Astro Integration with Content Collections** (1 day)
-   - Set up Astro project template
-   - Configure Content Collections with Zod schemas
-   - Create build process for generating static sites
-   - Implement TypeScript interfaces for data exchange
-   - Configure asset optimization pipeline
+2. **Bot Command Implementation** (1 day)
+   - Create website build command for both environments
+   - Implement preview → production promotion workflow
+   - Add status command for environment monitoring
+   - Ensure command interface is intuitive
+   - Enable proper error handling and reporting
 
-3. **Landing Page Generation** (1.5 days)
-   - Create profile data extraction pipeline that outputs Astro-compatible content collection data
+3. **Landing Page Generation** (1 day)
+   - Create profile data extraction pipeline
    - Design landing page template with sections for:
      - Professional introduction
      - Key skills and expertise areas
@@ -79,18 +115,19 @@ src/mcp/contexts/website/
    - Add series overview page
    - Create automatic next/previous navigation
 
-3. **Preview System** (1 day)
-   - Implement site-wide preview generation
-   - Create local preview server
-   - Add preview command for CLI and Matrix
+3. **Preview Environment** (1 day)
+   - Implement preview bucket deployment
+   - Enable switching between preview and production deployments
+   - Add preview commands for CLI and Matrix
 
-### Phase 3: Deployment and SEO (3 days)
+### Phase 3: Server-Side Rendering and SEO (3 days)
 
-1. **Automatic Deployment** (1.5 days)
-   - Implement deployment adapters for common platforms
-   - Create self-hosted deployment option
-   - Set up CI/CD pipeline for automated builds
-   - Implement caching for optimized rebuilds
+1. **Server-Side Rendering Implementation** (1.5 days)
+   - Upgrade Astro to SSR mode with Bun adapter
+   - Create server scripts for both environments
+   - Update Caddy configuration for reverse proxying
+   - Implement PM2 process management
+   - Add server control commands to bot
 
 2. **SEO Optimization** (1.5 days)
    - Implement advanced SEO features:
@@ -117,31 +154,38 @@ src/mcp/contexts/website/
 
 ## Command Implementation
 
-### CLI Commands
+### Bot Commands
 
 ```typescript
 // In src/commands/handlers/websiteCommands.ts
 
 export class WebsiteCommandHandler extends BaseCommandHandler {
-  // Core website commands
-  async handleWebsiteInit(): Promise<CommandResult> {
-    // Initialize website configuration
+  // Website management commands
+  async handleWebsiteBuild(environment: string = 'preview'): Promise<CommandResult> {
+    // Build website for specified environment (preview or production)
+    // Copies source files, builds them, and makes website available
   }
   
-  async handleWebsitePreview(): Promise<CommandResult> {
-    // Generate and serve preview of entire site
+  async handleWebsitePromote(): Promise<CommandResult> {
+    // Promote preview to production
+    // Copies files from preview to production
   }
   
-  async handleWebsitePublish(): Promise<CommandResult> {
-    // Publish website to configured platform
+  async handleWebsiteStatus(environment: string = 'production'): Promise<CommandResult> {
+    // Check status of specified environment
+    // Shows build status, server status, and accessibility
   }
   
-  // Landing page commands
+  // With SSR upgrade (Phase 3)
+  async handleWebsiteServer(environment: string = 'production', action: string = 'restart'): Promise<CommandResult> {
+    // Control the SSR server (restart, stop, start)
+  }
+  
+  // Content management commands (Phase 2)
   async handleLandingPageGenerate(): Promise<CommandResult> {
     // Generate landing page from profile
   }
   
-  // Series commands
   async handleSeriesCreate(name: string, description: string): Promise<CommandResult> {
     // Create new series
   }
@@ -150,22 +194,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Add note to series
   }
   
-  async handleSeriesList(): Promise<CommandResult> {
-    // List all series
-  }
-  
-  // Note publishing commands
   async handleNotePublish(noteId: string, scheduledDate?: Date): Promise<CommandResult> {
     // Publish note to website, optionally with scheduled date
   }
   
   async handleNoteUnpublish(noteId: string): Promise<CommandResult> {
     // Remove note from website
-  }
-  
-  // Scheduling commands
-  async handleScheduleList(): Promise<CommandResult> {
-    // List all scheduled content
   }
 }
 ```
@@ -549,7 +583,7 @@ export const WebsiteConfigSchema = z.object({
   author: z.string(),
   social: z.record(z.string()).optional(),
   baseUrl: z.string().url(),
-  deploymentType: z.enum(['self-hosted', 'github', 'vercel', 'netlify']),
+  deploymentType: z.enum(['s3']),
   deploymentConfig: z.record(z.unknown()),
   astroProjectPath: z.string(), // Path to Astro project root
   seo: z.object({
@@ -864,17 +898,21 @@ export class MockAstroContentService implements AstroContentServiceInterface {
 
 ## Success Criteria
 
-1. Users can generate a professional landing page from their profile data
-2. Content can be previewed before publishing via a preview website
-3. Notes can be published individually or as part of a series
-4. Series can be created and managed with ordered content
-5. Content can be scheduled for future publication
-6. Website is automatically deployed to configured platforms
-7. All content is managed through type-safe Astro content collections
-8. SEO features are implemented and optimized
-9. Analytics integration provides basic visibility
-10. All commands are available in both CLI and Matrix interfaces
-11. Comprehensive test coverage ensures reliability and maintainability
+1. **MVP (Phase 1):**
+   - Bot successfully manages website building and promotion
+   - Preview and production environments function correctly
+   - Caddy provides automatic HTTPS for both environments
+   - Simple commands available for full website lifecycle
+   - Landing page generation works from profile data
+
+2. **Full Implementation:**
+   - Notes can be published individually or as part of a series
+   - Series can be created and managed with ordered content
+   - Content can be scheduled for future publication
+   - Server-side rendering works for dynamic content
+   - SEO features are implemented and optimized
+   - Analytics integration provides basic visibility
+   - Comprehensive test coverage ensures reliability and maintainability
 
 ## Future Enhancements
 

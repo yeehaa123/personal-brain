@@ -58,29 +58,7 @@ describe('CLIRenderer - Website Commands', () => {
       expect(trackers.displayListCalls[0].items.length).toBe(commands.length);
     });
 
-    test('should render website-init result', () => {
-      const result: WebsiteCommandResult = {
-        type: 'website-init',
-        success: true,
-        message: 'Website initialized successfully',
-      };
-
-      renderer.render(result as CommandResult);
-
-      expect(trackers.successCalls).toContain('Website initialized successfully');
-    });
-
-    test('should render website-init failure result', () => {
-      const result: WebsiteCommandResult = {
-        type: 'website-init',
-        success: false,
-        message: 'Failed to initialize website',
-      };
-
-      renderer.render(result as CommandResult);
-
-      expect(trackers.errorCalls).toContain('Failed to initialize website');
-    });
+    // No longer need website-init tests as it's been removed
 
     test('should render website-config display result', () => {
       const config: WebsiteConfig = {
@@ -88,7 +66,6 @@ describe('CLIRenderer - Website Commands', () => {
         description: 'My personal website',
         baseUrl: 'https://example.com',
         author: 'username',
-        deploymentType: 'local',
         astroProjectPath: 'src/website',
       };
       
@@ -157,45 +134,60 @@ describe('CLIRenderer - Website Commands', () => {
       expect(trackers.printCalls).toContain('Building great software');
     });
 
-    test('should render website-preview result', () => {
+    test('should render website-promote result', () => {
       const result: WebsiteCommandResult = {
-        type: 'website-preview',
+        type: 'website-promote',
         success: true,
-        url: 'http://localhost:4321',
-        message: 'Preview server started',
+        url: 'https://example.com',
+        message: 'Preview successfully promoted to production',
       };
 
       renderer.render(result as CommandResult);
 
-      expect(trackers.successCalls).toContain('Preview server started');
-      expect(trackers.infoCalls).toContain('Website preview available at:');
-      expect(trackers.printCalls).toContain('http://localhost:4321');
-      expect(trackers.infoCalls).toContain('To stop the preview server, use:');
-      expect(trackers.printCalls).toContain('website-preview-stop');
+      expect(trackers.successCalls).toContain('Preview successfully promoted to production');
+      // Should show the production URL
+      expect(trackers.infoCalls).toContain('Production site available at:');
+      expect(trackers.printCalls).toContain('https://example.com');
     });
 
-    test('should render website-preview-stop result', () => {
+    test('should render website-status result', () => {
       const result: WebsiteCommandResult = {
-        type: 'website-preview-stop',
+        type: 'website-status',
         success: true,
-        message: 'Preview server stopped',
+        message: 'preview website status: Built, Caddy: Running, Files: 42, Access: Accessible',
+        data: {
+          environment: 'preview',
+          buildStatus: 'Built',
+          fileCount: 42,
+          caddyStatus: 'Running',
+          domain: 'preview.example.com',
+          accessStatus: 'Accessible',
+          url: 'https://preview.example.com',
+        },
       };
 
       renderer.render(result as CommandResult);
 
-      expect(trackers.successCalls).toContain('Preview server stopped');
+      expect(trackers.displayTitleCalls).toContain('Website Status');
+      expect(trackers.successCalls).toContain('preview website status: Built, Caddy: Running, Files: 42, Access: Accessible');
     });
 
     test('should render website-build result', () => {
       const result: WebsiteCommandResult = {
         type: 'website-build',
         success: true,
-        message: 'Website built successfully',
+        message: 'Website built successfully for preview',
+        url: 'https://preview.example.com',
+        output: 'Build logs here...',
       };
 
       renderer.render(result as CommandResult);
 
-      expect(trackers.successCalls).toContain('Website built successfully');
+      expect(trackers.successCalls).toContain('Website built successfully for preview');
+      expect(trackers.infoCalls).toContain('Website preview available at:');
+      expect(trackers.printCalls).toContain('https://preview.example.com');
+      expect(trackers.infoCalls).toContain('To promote to production:');
+      expect(trackers.printCalls).toContain('website-promote');
     });
   });
 });

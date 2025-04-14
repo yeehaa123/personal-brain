@@ -32,12 +32,11 @@ export class MockWebsiteCommandHandler {
   canHandle(command: string): boolean {
     return [
       'website',
-      'website-init',
       'website-config',
       'landing-page',
-      'website-preview',
-      'website-preview-stop',
       'website-build',
+      'website-promote',
+      'website-status',
     ].includes(command);
   }
   
@@ -47,11 +46,6 @@ export class MockWebsiteCommandHandler {
         command: 'website',
         description: 'Display website commands and help',
         usage: 'website',
-      },
-      {
-        command: 'website-init',
-        description: 'Initialize website configuration',
-        usage: 'website-init',
       },
       {
         command: 'website-config',
@@ -66,19 +60,20 @@ export class MockWebsiteCommandHandler {
         examples: ['landing-page generate', 'landing-page view'],
       },
       {
-        command: 'website-preview',
-        description: 'Start local preview server',
-        usage: 'website-preview',
-      },
-      {
-        command: 'website-preview-stop',
-        description: 'Stop the running preview server',
-        usage: 'website-preview-stop',
-      },
-      {
         command: 'website-build',
-        description: 'Build the website for deployment',
+        description: 'Build the website (always to preview environment)',
         usage: 'website-build',
+      },
+      {
+        command: 'website-promote',
+        description: 'Promote preview to production',
+        usage: 'website-promote',
+      },
+      {
+        command: 'website-status',
+        description: 'Check status of website environments',
+        usage: 'website-status [preview|production]',
+        examples: ['website-status', 'website-status production'],
       },
     ];
   }
@@ -94,20 +89,12 @@ export class MockWebsiteCommandHandler {
         commands: this.getCommands(),
       };
         
-    case 'website-init':
-      await websiteContext.initialize();
-      return {
-        type: 'website-init',
-        success: true,
-        message: 'Website initialized successfully',
-      };
-        
     case 'website-config':
       if (!websiteContext.isReady()) {
         return {
           type: 'website-config',
           success: false,
-          message: 'Website not initialized. Run "website-init" first.',
+          message: 'Website context not available',
         };
       }
         
@@ -160,7 +147,7 @@ export class MockWebsiteCommandHandler {
         return {
           type: 'landing-page',
           success: false,
-          message: 'Website not initialized. Run "website-init" first.',
+          message: 'Website context not available',
         };
       }
         
@@ -190,71 +177,34 @@ export class MockWebsiteCommandHandler {
       };
     }
         
-    case 'website-preview': {
-      if (!websiteContext.isReady()) {
-        return {
-          type: 'website-preview',
-          success: false,
-          message: 'Website not initialized. Run "website-init" first.',
-        };
-      }
-        
-      if (websiteContext.isPreviewRunning()) {
-        return {
-          type: 'website-preview',
-          success: false,
-          message: 'Preview server is already running. Use "website-preview-stop" to stop it first.',
-        };
-      }
-        
-      const previewResult = await websiteContext.previewWebsite();
-      return {
-        type: 'website-preview',
-        success: previewResult.success,
-        url: previewResult.url,
-        message: previewResult.message,
-      };
-    }
-        
-    case 'website-preview-stop': {
-      if (!websiteContext.isReady()) {
-        return {
-          type: 'website-preview-stop',
-          success: false,
-          message: 'Website not initialized. Run "website-init" first.',
-        };
-      }
-        
-      if (!websiteContext.isPreviewRunning()) {
-        return {
-          type: 'website-preview-stop',
-          success: false,
-          message: 'No preview server is currently running.',
-        };
-      }
-        
-      const stopResult = await websiteContext.stopPreviewWebsite();
-      return {
-        type: 'website-preview-stop',
-        success: stopResult.success,
-        message: stopResult.message,
-      };
-    }
-        
     case 'website-build': {
-      if (!websiteContext.isReady()) {
-        return {
-          type: 'website-build',
-          success: false,
-          message: 'Website not initialized. Run "website-init" first.',
-        };
-      }
-        
-      const buildResult = await websiteContext.buildWebsite();
+      const result = await websiteContext.handleWebsiteBuild();
       return {
         type: 'website-build',
-        success: buildResult.success,
-        message: buildResult.message,
+        success: result.success,
+        message: result.message,
+        url: result.url,
+      };
+    }
+    
+    case 'website-promote': {
+      const result = await websiteContext.handleWebsitePromote();
+      return {
+        type: 'website-promote',
+        success: result.success,
+        message: result.message,
+        url: result.url,
+      };
+    }
+    
+    case 'website-status': {
+      const environment = args.trim().toLowerCase() === 'production' ? 'production' : 'preview';
+      const result = await websiteContext.handleWebsiteStatus(environment);
+      return {
+        type: 'website-status',
+        success: result.success,
+        message: result.message,
+        data: result.data,
       };
     }
         

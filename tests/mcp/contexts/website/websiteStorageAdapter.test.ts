@@ -26,7 +26,6 @@ describe('WebsiteStorageAdapter', () => {
         description: 'My personal website',
         author: 'Anonymous',
         baseUrl: 'http://localhost:4321',
-        deploymentType: 'local',
         astroProjectPath: 'src/website',
       });
     });

@@ -211,62 +211,76 @@ describe('WebsiteContext', () => {
     expect(mockAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
   });
 
-  test('previewWebsite should start the Astro dev server using PM2', async () => {
+  // Tests for Caddy-based approach
+  test('handleWebsiteBuild should build the website to preview environment', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
     });
 
-    const result = await context.previewWebsite();
+    // Mock the buildWebsite method to return success
+    context.buildWebsite = mock(() => Promise.resolve({
+      success: true,
+      message: 'Website built successfully',
+      output: 'Build output...',
+    }));
+
+    const result = await context.handleWebsiteBuild();
 
     expect(result.success).toBe(true);
-    expect(result.url).toBe('http://localhost:4321');
-    expect(result.message).toBe('Website preview started with PM2');
-    expect(mockAstroContentService.startDevServer).toHaveBeenCalled();
+    expect(result.message).toContain('preview environment');
+    expect(result.path).toContain('/preview/dist');
+    expect(result.url).toContain('https://preview.');
   });
   
-  test('previewWebsite should handle errors when starting the server fails', async () => {
-    // Configure the mock to simulate failure
-    mockAstroContentService.setStartDevServerFailure('PM2 startup error');
-    
+  test('handleWebsiteBuild should handle errors when build fails', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
     });
 
-    const result = await context.previewWebsite();
+    // Mock the buildWebsite method to return failure
+    context.buildWebsite = mock(() => Promise.resolve({
+      success: false,
+      message: 'Build error',
+      output: 'Error output...',
+    }));
+
+    const result = await context.handleWebsiteBuild();
 
     expect(result.success).toBe(false);
-    expect(result.message).toBe('Failed to start website preview');
-    expect(mockAstroContentService.startDevServer).toHaveBeenCalled();
+    expect(result.message).toContain('Failed to build website');
   });
   
-  test('stopPreviewWebsite should stop the Astro dev server using PM2', async () => {
+  test('handleWebsitePromote should promote preview to production', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
     });
 
-    const result = await context.stopPreviewWebsite();
+    const result = await context.handleWebsitePromote();
 
     expect(result.success).toBe(true);
-    expect(result.message).toBe('Website preview server stopped successfully');
-    expect(mockAstroContentService.stopDevServer).toHaveBeenCalled();
+    expect(result.message).toContain('promoted to production');
+    expect(result.url).toBeDefined();
   });
   
-  test('stopPreviewWebsite should handle errors when stopping the server fails', async () => {
-    // Configure the mock to simulate failure
-    mockAstroContentService.setStopDevServerFailure();
-    
+  test('handleWebsiteStatus should return website status information', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
     });
 
-    const result = await context.stopPreviewWebsite();
-
-    expect(result.success).toBe(false);
-    expect(result.message).toBe('Failed to stop website preview server');
-    expect(mockAstroContentService.stopDevServer).toHaveBeenCalled();
+    // Test preview environment (default)
+    const previewResult = await context.handleWebsiteStatus();
+    expect(previewResult.success).toBe(true);
+    expect(previewResult.data?.environment).toBe('preview');
+    expect(previewResult.data?.url).toContain('preview.');
+    
+    // Test production environment
+    const prodResult = await context.handleWebsiteStatus('production');
+    expect(prodResult.success).toBe(true);
+    expect(prodResult.data?.environment).toBe('production');
+    expect(prodResult.data?.url).not.toContain('preview.');
   });
 });

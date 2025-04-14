@@ -193,27 +193,6 @@ export class CLIRenderer {
       );
       break;
       
-    case 'website-init':
-      if (result.success) {
-        CLIInterface.success(result.message);
-        
-        // Display deployment info if available
-        if (result.deploymentInfo) {
-          CLIInterface.displaySubtitle(`${result.deploymentInfo.type.charAt(0).toUpperCase() + result.deploymentInfo.type.slice(1)} Site Information`);
-          if (result.deploymentInfo.siteId) {
-            CLIInterface.printLabelValue('Site ID', result.deploymentInfo.siteId);
-          }
-          if (result.deploymentInfo.url) {
-            CLIInterface.printLabelValue('Site URL', result.deploymentInfo.url);
-            CLIInterface.info('Your site is ready to be deployed using:');
-            CLIInterface.print('  website-build');
-            CLIInterface.print('  website-deploy');
-          }
-        }
-      } else {
-        CLIInterface.error(result.message);
-      }
-      break;
       
     case 'website-config':
       if (result.success !== undefined) {
@@ -256,76 +235,60 @@ export class CLIRenderer {
       }
       break;
       
-    case 'website-preview':
+      
+    case 'website-build':
       if (result.success) {
         CLIInterface.success(result.message);
         
         if (result.url) {
           CLIInterface.info('Website preview available at:');
           CLIInterface.print(result.url);
-          CLIInterface.info('To stop the preview server, use:');
-          CLIInterface.print('website-preview-stop');
         }
+        
+        // Show helpful next steps
+        CLIInterface.info('To promote to production:');
+        CLIInterface.print('website-promote');
       } else {
         CLIInterface.error(result.message);
       }
       break;
       
-    case 'website-preview-stop':
-      if (result.success) {
-        CLIInterface.success(result.message);
-      } else {
-        CLIInterface.error(result.message);
-      }
-      break;
-      
-    case 'website-build':
-      if (result.success) {
-        CLIInterface.success(result.message);
-      } else {
-        CLIInterface.error(result.message);
-      }
-      break;
-      
-    case 'website-deploy':
+    case 'website-promote':
       if (result.success) {
         CLIInterface.success(result.message);
         
         if (result.url) {
-          CLIInterface.info('Website deployed to:');
+          CLIInterface.info('Production site available at:');
           CLIInterface.print(result.url);
-        }
-        
-        if (result.logs) {
-          CLIInterface.displayTitle('Deployment Logs');
-          CLIInterface.print(String(result.logs));
         }
       } else {
         CLIInterface.error(result.message);
-        
-        // Display deployment logs if available for more detailed troubleshooting
-        if (result.logs) {
-          CLIInterface.displayTitle('Deployment Error Details');
-          CLIInterface.print(CLIInterface.styles.error(String(result.logs)));
-        }
       }
       break;
       
-    case 'website-deployment-status':
+    case 'website-status':
       if (result.success) {
-        const statusIcon = result.isDeployed ? '✅' : '⚠️';
-        const statusMsg = result.isDeployed 
-          ? `${statusIcon} Website is deployed with ${result.provider}`
-          : `${statusIcon} ${result.message || 'No deployment found'}`;
+        CLIInterface.displayTitle('Website Status');
+        CLIInterface.success(result.message);
         
-        CLIInterface.info(statusMsg);
-        
-        if (result.isDeployed && result.url) {
-          CLIInterface.info('Website URL:');
-          CLIInterface.print(result.url);
+        if (result.data) {
+          // Display detailed status information
+          const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+          
+          CLIInterface.printLabelValue('Environment', environment);
+          CLIInterface.printLabelValue('Build Status', buildStatus);
+          CLIInterface.printLabelValue('File Count', String(fileCount));
+          CLIInterface.printLabelValue('Server Status', caddyStatus);
+          CLIInterface.printLabelValue('Domain', domain);
+          CLIInterface.printLabelValue('Access Status', accessStatus);
+          
+          if (url) {
+            CLIInterface.info('Website URL:');
+            CLIInterface.print(url);
+          }
         }
       } else {
-        CLIInterface.error(result.message || 'Failed to get deployment status');
+        CLIInterface.error(result.message || 'Failed to check website status');
       }
       break;
 

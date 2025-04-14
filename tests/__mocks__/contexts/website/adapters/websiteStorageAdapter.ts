@@ -20,7 +20,6 @@ export class MockWebsiteStorageAdapter implements WebsiteStorageAdapter {
     description: 'Test Description',
     author: 'Test Author',
     baseUrl: 'http://localhost:4321',
-    deploymentType: 'local',
     astroProjectPath: 'src/website',
   };
   
