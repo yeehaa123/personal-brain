@@ -3,18 +3,21 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { ProfileContext } from '@/mcp/contexts/profiles';
 import { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/mcp/contexts/website/services/astroContentService';
+import type { WebsiteDeploymentManager } from '@/mcp/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
 import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 // Import our mock implementations directly
 import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
+import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
 import { MockProfile } from '@test/__mocks__/models/profile';
 
 // Create our mock instances with proper typings
 const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
 const mockLandingPageGenerationService = MockLandingPageGenerationService.createFresh() as unknown as LandingPageGenerationService;
+const mockDeploymentManager = MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager;
 describe('WebsiteContext', () => {
   // Set up and tear down for each test
   beforeEach(() => {
@@ -26,6 +29,7 @@ describe('WebsiteContext', () => {
     // We're recasting to the correct types after creating fresh instances
     MockAstroContentService.resetInstance();
     MockLandingPageGenerationService.resetInstance();
+    MockWebsiteDeploymentManager.resetInstance();
   });
 
   afterEach(() => {
@@ -252,35 +256,101 @@ describe('WebsiteContext', () => {
     expect(result.message).toContain('Failed to build website');
   });
   
-  test('handleWebsitePromote should promote preview to production', async () => {
-    // Create context with mocked Astro service
+  test('getDeploymentManager should create deployment manager if not injected', async () => {
+    // Create context without providing a deployment manager
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
+    });
+
+    // Get the deployment manager
+    const deploymentManager = await context.getDeploymentManager();
+    
+    // The method should create a deployment manager
+    expect(deploymentManager).toBeDefined();
+  });
+  
+  test('getDeploymentManager should return injected deployment manager', async () => {
+    // Create context with mocked deployment manager
+    const context = WebsiteContext.createFresh({
+      astroContentService: mockAstroContentService,
+      deploymentManager: mockDeploymentManager,
+    });
+
+    // Get the deployment manager
+    const deploymentManager = await context.getDeploymentManager();
+    
+    // The method should return the injected deployment manager
+    expect(deploymentManager).toBe(mockDeploymentManager);
+  });
+  
+  test('handleWebsitePromote should use the deployment manager', async () => {
+    // Create a manager with spied methods
+    const spiedManager = MockWebsiteDeploymentManager.createFresh();
+    spiedManager.setPromotionResult({
+      success: true,
+      message: 'Test promotion message',
+      url: 'https://test.example.com',
+    });
+    
+    // Create context with mocked deployment manager
+    const context = WebsiteContext.createFresh({
+      deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
     });
 
     const result = await context.handleWebsitePromote();
 
+    // Should delegate to the deployment manager
     expect(result.success).toBe(true);
-    expect(result.message).toContain('promoted to production');
-    expect(result.url).toBeDefined();
+    expect(result.message).toBe('Test promotion message');
+    expect(result.url).toBe('https://test.example.com');
+    
+    // Verify the deployment manager was called
+    expect(spiedManager.promoteToProduction).toHaveBeenCalled();
   });
   
-  test('handleWebsiteStatus should return website status information', async () => {
-    // Create context with mocked Astro service
+  test('handleWebsiteStatus should use the deployment manager', async () => {
+    // Create a manager with spied methods
+    const spiedManager = MockWebsiteDeploymentManager.createFresh();
+    spiedManager.setEnvironmentStatus('preview', {
+      buildStatus: 'Built',
+      fileCount: 123,
+      accessStatus: 'Test Status',
+    });
+    
+    // Create context with mocked deployment manager
     const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
+      deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
     });
 
-    // Test preview environment (default)
+    // Test preview environment
     const previewResult = await context.handleWebsiteStatus();
+    
+    // Verify result contains the data from our mock
     expect(previewResult.success).toBe(true);
     expect(previewResult.data?.environment).toBe('preview');
-    expect(previewResult.data?.url).toContain('preview.');
+    expect(previewResult.data?.fileCount).toBe(123);
+    expect(previewResult.data?.accessStatus).toBe('Test Status');
+    
+    // Verify the deployment manager was called with the correct environment
+    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('preview');
     
     // Test production environment
+    spiedManager.setEnvironmentStatus('production', {
+      buildStatus: 'Not Built',
+      fileCount: 0,
+      accessStatus: 'Not Accessible',
+    });
+    
     const prodResult = await context.handleWebsiteStatus('production');
+    
+    // Verify result contains the data from our mock
     expect(prodResult.success).toBe(true);
     expect(prodResult.data?.environment).toBe('production');
-    expect(prodResult.data?.url).not.toContain('preview.');
+    expect(prodResult.data?.buildStatus).toBe('Not Built');
+    expect(prodResult.data?.fileCount).toBe(0);
+    expect(prodResult.data?.accessStatus).toBe('Not Accessible');
+    
+    // Verify the deployment manager was called with the correct environment
+    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('production');
   });
 });

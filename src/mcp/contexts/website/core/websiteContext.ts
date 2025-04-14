@@ -5,6 +5,8 @@ import { Logger } from '@/utils/logger';
 import { GlobalConfigWebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from '../adapters/websiteStorageAdapter';
 import { AstroContentService } from '../services/astroContentService';
+import { DeploymentManagerFactory } from '../services/deployment';
+import type { WebsiteDeploymentManager } from '../services/deployment';
 import { LandingPageGenerationService } from '../services/landingPageGenerationService';
 import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
 
@@ -18,6 +20,7 @@ export interface WebsiteContextOptions {
   astroContentService?: AstroContentService;
   landingPageGenerationService?: LandingPageGenerationService;
   profileContext?: ProfileContext;
+  deploymentManager?: WebsiteDeploymentManager;
 }
 
 /**
@@ -32,6 +35,7 @@ export class WebsiteContext extends BaseContext {
   private astroContentService: AstroContentService | null = null;
   private landingPageGenerationService: LandingPageGenerationService | null = null;
   private profileContext: ProfileContext | null = null;
+  private deploymentManager: WebsiteDeploymentManager | null = null;
   
   /**
    * Create a new WebsiteContext instance
@@ -54,6 +58,10 @@ export class WebsiteContext extends BaseContext {
     
     if (options?.profileContext) {
       this.profileContext = options.profileContext;
+    }
+    
+    if (options?.deploymentManager) {
+      this.deploymentManager = options.deploymentManager;
     }
   }
   
@@ -159,6 +167,20 @@ export class WebsiteContext extends BaseContext {
    */
   setStorage(storage: WebsiteStorageAdapter): void {
     this.storage = storage;
+  }
+  
+  /**
+   * Get the deployment manager
+   * @returns The deployment manager instance
+   */
+  async getDeploymentManager(): Promise<WebsiteDeploymentManager> {
+    if (!this.deploymentManager) {
+      // Create a new deployment manager using the factory
+      const factory = DeploymentManagerFactory.getInstance();
+      this.deploymentManager = factory.createDeploymentManager();
+    }
+    
+    return this.deploymentManager;
   }
   
   /**
@@ -401,19 +423,26 @@ export class WebsiteContext extends BaseContext {
    */
   async handleWebsitePromote(): Promise<{ success: boolean; message: string; url?: string }> {
     try {
-      // Here we would implement the actual promotion
-      // This would typically involve copying files from preview to production
-      // and reloading Caddy
+      // Get the deployment manager
+      const deploymentManager = await this.getDeploymentManager();
       
-      // Get current configuration for domain info
-      const config = await this.getConfig();
-      const productionDomain = new URL(config.baseUrl).hostname;
+      // Promote to production using the deployment manager
+      const result = await deploymentManager.promoteToProduction();
       
-      return {
-        success: true,
-        message: `Preview successfully promoted to production. Available at https://${productionDomain}`,
-        url: `https://${productionDomain}`,
-      };
+      // Log the result
+      if (result.success) {
+        this.logger.info('Website promotion completed successfully', {
+          url: result.url,
+          context: 'WebsiteContext',
+        });
+      } else {
+        this.logger.error('Website promotion failed', {
+          message: result.message,
+          context: 'WebsiteContext',
+        });
+      }
+      
+      return result;
     } catch (error) {
       this.logger.error('Error promoting website', {
         error,
@@ -446,23 +475,26 @@ export class WebsiteContext extends BaseContext {
     }
   }> {
     try {
-      // Get current configuration for domain info
-      const config = await this.getConfig();
-      const domain = environment === 'production' 
-        ? new URL(config.baseUrl).hostname
-        : `preview.${new URL(config.baseUrl).hostname}`;
+      // Get the deployment manager
+      const deploymentManager = await this.getDeploymentManager();
+      
+      // Get environment status using the deployment manager
+      const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
+      
+      // Format a summary message
+      const statusMessage = `${environment} website status: ${status.buildStatus}, Caddy: ${status.caddyStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
       
       return {
         success: true,
-        message: `${environment} website status: Built, Caddy: Running, Files: 42, Access: Accessible`,
+        message: statusMessage,
         data: {
-          environment,
-          buildStatus: 'Built',
-          fileCount: 42, // In real implementation, this would check actual files
-          caddyStatus: 'Running', // In real implementation, this would check Caddy status
-          domain,
-          accessStatus: 'Accessible', // In real implementation, this would check actual accessibility
-          url: `https://${domain}`,
+          environment: status.environment,
+          buildStatus: status.buildStatus,
+          fileCount: status.fileCount,
+          caddyStatus: status.caddyStatus,
+          domain: status.domain,
+          accessStatus: status.accessStatus,
+          url: status.url,
         },
       };
     } catch (error) {
