@@ -37,11 +37,9 @@ cat > /tmp/Caddyfile << EOF
 $DOMAIN {
     # Reverse proxy to PM2-managed production server
     reverse_proxy localhost:$PRODUCTION_PORT {
-        # Add health checks to ensure the server is running
-        health_uri /
-        health_interval 30s
+        # Use a simple health check - just verify the port is reachable
+        health_interval 10s
         health_timeout 5s
-        health_status 200
     }
     
     # Enable compression
@@ -62,11 +60,9 @@ $DOMAIN {
 preview.$DOMAIN {
     # Reverse proxy to PM2-managed preview server
     reverse_proxy localhost:$PREVIEW_PORT {
-        # Add health checks to ensure the server is running
-        health_uri /
-        health_interval 30s
+        # Use a simple health check - just verify the port is reachable
+        health_interval 10s
         health_timeout 5s
-        health_status 200
     }
     
     # Enable compression
