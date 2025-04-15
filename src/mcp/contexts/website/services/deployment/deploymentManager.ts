@@ -226,7 +226,8 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
       const util = await import('util');
       
       // Define directory paths
-      const previewDir = path.join(this.baseDir, 'preview', 'dist');
+      // The preview site is built to src/website/dist by Astro
+      const previewDir = path.join(process.cwd(), 'src', 'website', 'dist');
       const productionDir = path.join(this.baseDir, 'production', 'dist');
       
       // Get domain for production environment
