@@ -37,16 +37,11 @@ cat > /tmp/Caddyfile << EOF
 $DOMAIN {
     # Reverse proxy to PM2-managed production server
     reverse_proxy localhost:$PRODUCTION_PORT {
-        # Use a simple health check - just verify the port is reachable
-        health_interval 10s
+        # Add health checks to ensure the server is running
+        health_uri /
+        health_interval 30s
         health_timeout 5s
-        
-        # Improve reliability with header forwarding
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Port {server_port}
-        header_up X-Forwarded-Proto {scheme}
+        health_status 200
     }
     
     # Enable compression
@@ -59,8 +54,7 @@ $DOMAIN {
         X-Frame-Options "SAMEORIGIN"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Broader CSP for development environment
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss: *;"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
 }
 
@@ -68,19 +62,11 @@ $DOMAIN {
 preview.$DOMAIN {
     # Reverse proxy to PM2-managed preview server
     reverse_proxy localhost:$PREVIEW_PORT {
-        # Use a simple health check - just verify the port is reachable
-        health_interval 10s
+        # Add health checks to ensure the server is running
+        health_uri /
+        health_interval 30s
         health_timeout 5s
-        
-        # Handle WebSocket connections for HMR
-        header_up Host {host}
-        header_up Origin https://preview.$DOMAIN
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-        
-        # Enable WebSocket support (compatible with older Caddy versions)
-        header_up Connection {http.request.header.Connection}
-        header_up Upgrade {http.request.header.Upgrade}
+        health_status 200
     }
     
     # Enable compression
@@ -93,8 +79,7 @@ preview.$DOMAIN {
         X-Frame-Options "SAMEORIGIN"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        # Broader CSP for development environment
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' ws: wss: *;"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
 }
 EOF
