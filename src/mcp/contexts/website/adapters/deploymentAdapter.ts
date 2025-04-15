@@ -151,10 +151,11 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
       let command: string;
       
       if (environment === 'preview') {
-        command = `bun run pm2 start "bun run ${script} --port ${port}" --name ${serverName} --interpreter none`;
+        // For preview, pass WEBSITE_PREVIEW_PORT environment variable to match what the script looks for
+        command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_PREVIEW_PORT=${port}`;
       } else {
-        // For production, pass PORT environment variable
-        command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env PORT=${port}`;
+        // For production, pass WEBSITE_PRODUCTION_PORT environment variable to match what the script looks for
+        command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_PRODUCTION_PORT=${port}`;
       }
       
       this.logger.info(`Starting ${environment} server on port ${port}`, {
