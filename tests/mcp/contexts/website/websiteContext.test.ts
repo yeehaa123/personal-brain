@@ -233,8 +233,9 @@ describe('WebsiteContext', () => {
 
     expect(result.success).toBe(true);
     expect(result.message).toContain('preview environment');
-    expect(result.path).toContain('/preview/dist');
-    expect(result.url).toContain('https://preview.');
+    expect(result.path).toContain('dist/preview');
+    // In local-dev mode (default for tests), the URL is http://localhost:port
+    expect(result.url).toContain('http://localhost:');
   });
   
   test('handleWebsiteBuild should handle errors when build fails', async () => {
@@ -312,7 +313,7 @@ describe('WebsiteContext', () => {
     // Create a manager with spied methods
     const spiedManager = MockWebsiteDeploymentManager.createFresh();
     spiedManager.setEnvironmentStatus('preview', {
-      buildStatus: 'Built',
+      buildStatus: 'Built' as const,
       fileCount: 123,
       accessStatus: 'Test Status',
     });
@@ -336,7 +337,7 @@ describe('WebsiteContext', () => {
     
     // Test production environment
     spiedManager.setEnvironmentStatus('production', {
-      buildStatus: 'Not Built',
+      buildStatus: 'Not Built' as const,
       fileCount: 0,
       accessStatus: 'Not Accessible',
     });

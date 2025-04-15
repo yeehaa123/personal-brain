@@ -9,6 +9,20 @@ const defaultAstroPath = path.join('src', 'website');
 
 
 /**
+ * Schema for website deployment configuration
+ */
+export const DeploymentConfigSchema = z.object({
+  type: z.enum(['local-dev', 'caddy']).default('local-dev'),
+  previewDir: z.string().optional(),
+  productionDir: z.string().optional(),
+  previewPort: z.number().default(4321),
+  productionPort: z.number().default(4322),
+  domain: z.string().optional(),
+});
+
+export type DeploymentConfig = z.infer<typeof DeploymentConfigSchema>;
+
+/**
  * Schema for website configuration
  */
 export const WebsiteConfigSchema = z.object({
@@ -17,6 +31,11 @@ export const WebsiteConfigSchema = z.object({
   author: z.string(),
   baseUrl: z.string().url().default('http://localhost:4321'),
   astroProjectPath: z.string().default(defaultAstroPath),
+  deployment: DeploymentConfigSchema.default({
+    type: 'local-dev',
+    previewPort: 4321,
+    productionPort: 4322,
+  }),
 });
 
 export type WebsiteConfig = z.infer<typeof WebsiteConfigSchema>;

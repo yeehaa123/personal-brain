@@ -21,6 +21,11 @@ export class MockWebsiteContext {
     author: 'Test Author',
     baseUrl: 'https://example.com',
     astroProjectPath: 'src/website',
+    deployment: {
+      type: 'local-dev',
+      previewPort: 4321,
+      productionPort: 4322,
+    },
   };
 
   // Use the existing MockAstroContentService and MockLandingPageGenerationService
@@ -167,7 +172,7 @@ export class MockWebsiteContext {
       environment: string;
       buildStatus: string;
       fileCount: number;
-      caddyStatus: string;
+      serverStatus: string;
       domain: string;
       accessStatus: string;
       url: string;
@@ -175,12 +180,12 @@ export class MockWebsiteContext {
   }> {
     return {
       success: true,
-      message: `${environment} website status: Built, Caddy: Running, Files: 42, Access: Accessible`,
+      message: `${environment} website status: Built, Server: Running, Files: 42, Access: Accessible`,
       data: {
         environment,
-        buildStatus: 'Built',
+        buildStatus: 'Built' as const,
         fileCount: 42,
-        caddyStatus: 'Running',
+        serverStatus: 'Running' as const,
         domain: environment === 'preview' ? 'preview.example.com' : 'example.com',
         accessStatus: 'Accessible',
         url: `https://${environment === 'preview' ? 'preview.example.com' : 'example.com'}`,

@@ -942,12 +942,12 @@ export class MatrixResponseFormatter {
       builder.addSection(`${icon} ${result.message}`);
       
       if (result.success && result.data) {
-        const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+        const { environment, buildStatus, fileCount, serverStatus, domain, accessStatus, url } = result.data;
         
         builder.addSection(`**Environment**: ${environment}`);
         builder.addSection(`**Build Status**: ${buildStatus}`);
         builder.addSection(`**Files**: ${fileCount}`);
-        builder.addSection(`**Server Status**: ${caddyStatus}`);
+        builder.addSection(`**Server Status**: ${serverStatus}`);
         builder.addSection(`**Domain**: ${domain}`);
         builder.addSection(`**Access Status**: ${accessStatus}`);
         
@@ -966,14 +966,14 @@ export class MatrixResponseFormatter {
       ];
       
       if (result.success && result.data) {
-        const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+        const { environment, buildStatus, fileCount, serverStatus, domain, accessStatus, url } = result.data;
         
         message.push(
           '',
           `**Environment**: ${environment}`,
           `**Build Status**: ${buildStatus}`,
           `**Files**: ${fileCount}`,
-          `**Server Status**: ${caddyStatus}`,
+          `**Server Status**: ${serverStatus}`,
           `**Domain**: ${domain}`,
           `**Access Status**: ${accessStatus}`,
         );

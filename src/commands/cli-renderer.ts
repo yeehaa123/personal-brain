@@ -273,12 +273,12 @@ export class CLIRenderer {
         
         if (result.data) {
           // Display detailed status information
-          const { environment, buildStatus, fileCount, caddyStatus, domain, accessStatus, url } = result.data;
+          const { environment, buildStatus, fileCount, serverStatus, domain, accessStatus, url } = result.data;
           
           CLIInterface.printLabelValue('Environment', environment);
           CLIInterface.printLabelValue('Build Status', buildStatus);
           CLIInterface.printLabelValue('File Count', String(fileCount));
-          CLIInterface.printLabelValue('Server Status', caddyStatus);
+          CLIInterface.printLabelValue('Server Status', serverStatus);
           CLIInterface.printLabelValue('Domain', domain);
           CLIInterface.printLabelValue('Access Status', accessStatus);
           

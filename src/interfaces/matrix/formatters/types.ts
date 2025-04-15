@@ -143,7 +143,7 @@ export interface WebsiteStatusResult {
     environment: string;
     buildStatus: string;
     fileCount: number;
-    caddyStatus: string;
+    serverStatus: string;
     domain: string;
     accessStatus: string;
     url: string;

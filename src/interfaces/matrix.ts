@@ -442,16 +442,62 @@ export class MatrixBrainInterface {
 
 async function main() {
   try {
+    // Initialize website server manager early in development mode
+    if (process.env.NODE_ENV === 'development') {
+      try {
+        const { getServerManager } = await import('@/mcp/contexts/website/services/serverManager');
+        logger.info('Initializing server manager for development mode');
+        const serverManager = getServerManager();
+        await serverManager.initialize();
+        logger.info('Server manager initialized');
+      } catch (error) {
+        logger.error('Error initializing server manager:', { error });
+      }
+    }
+
     const matrixInterface = new MatrixBrainInterface();
     await matrixInterface.start();
 
     logger.info('Matrix brain interface is running');
 
-    // Keep the process alive
-    process.on('SIGINT', () => {
-      logger.info('Shutting down...');
+    // Track if we're in the process of exiting
+    let isExiting = false;
+    
+    // Handle cleanup for graceful shutdown
+    const performCleanup = async () => {
+      if (isExiting) return;
+      isExiting = true;
+      
+      logger.info('Shutting down Matrix interface, cleaning up resources...');
+      
+      try {
+        // Always use the ServerManager to stop servers in any environment
+        const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
+        logger.info('Stopping website servers...');
+        
+        const serverManager = ServerManager.getInstance();
+        // Use the stronger cleanup method that forcefully stops all servers
+        await serverManager.cleanup();
+        
+        logger.info('Website servers stopped successfully.');
+      } catch (error) {
+        logger.error('Error stopping website servers:', { error });
+      }
+    };
+    
+    // Keep the process alive but handle cleanup on exit signals
+    process.on('SIGINT', async () => {
+      logger.info('Received SIGINT signal');
+      await performCleanup();
       process.exit(0);
     });
+    
+    process.on('SIGTERM', async () => {
+      logger.info('Received SIGTERM signal');
+      await performCleanup();
+      process.exit(0);
+    });
+    
   } catch (error) {
     logger.error('Fatal error starting Matrix interface:', error);
     process.exit(1);

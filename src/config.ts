@@ -149,10 +149,22 @@ export const websiteConfig = {
   
   // Deployment settings
   deployment: {
-    // Default provider type (local, s3)
-    provider: getEnv('WEBSITE_DEPLOYMENT_PROVIDER', 'local'),
+    // Deployment type (local-dev, caddy)
+    type: getEnv('WEBSITE_DEPLOYMENT_TYPE', 'local-dev'),
     
-    // Provider-specific configurations
+    // Directory settings (for Caddy deployment)
+    previewDir: getEnv('WEBSITE_PREVIEW_DIR', '/opt/personal-brain-website/preview'),
+    productionDir: getEnv('WEBSITE_PRODUCTION_DIR', '/opt/personal-brain-website/production'),
+    
+    // Port settings (for local development)
+    previewPort: getEnvAsInt('WEBSITE_PREVIEW_PORT', 4321),
+    productionPort: getEnvAsInt('WEBSITE_PRODUCTION_PORT', 4322),
+    
+    // Domain settings
+    domain: getEnv('WEBSITE_DOMAIN', 'example.com'),
+    
+    // Legacy provider-specific configurations
+    provider: getEnv('WEBSITE_DEPLOYMENT_PROVIDER', 'local-dev'),
     providers: {
       // S3 deployment configuration (for Hetzner and similar services)
       s3: {

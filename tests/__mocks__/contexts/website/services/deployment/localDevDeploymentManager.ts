@@ -3,6 +3,7 @@
  */
 
 import { mock } from 'bun:test';
+
 import type { 
   DeploymentEnvironment, 
   EnvironmentStatus, 
@@ -21,9 +22,9 @@ export class MockLocalDevDeploymentManager implements WebsiteDeploymentManager {
   // Mock state
   private previewStatus: EnvironmentStatus = {
     environment: 'preview',
-    buildStatus: 'Built',
+    buildStatus: 'Built' as const,
     fileCount: 42,
-    caddyStatus: 'Running',
+    serverStatus: 'Running' as const,
     domain: 'localhost:4321',
     accessStatus: 'Accessible',
     url: 'http://localhost:4321',
@@ -31,9 +32,9 @@ export class MockLocalDevDeploymentManager implements WebsiteDeploymentManager {
 
   private productionStatus: EnvironmentStatus = {
     environment: 'production',
-    buildStatus: 'Built',
+    buildStatus: 'Built' as const,
     fileCount: 42,
-    caddyStatus: 'Running',
+    serverStatus: 'Running' as const,
     domain: 'localhost:4322',
     accessStatus: 'Accessible',
     url: 'http://localhost:4322',

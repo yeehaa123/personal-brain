@@ -27,6 +27,11 @@ describe('WebsiteStorageAdapter', () => {
         author: 'Anonymous',
         baseUrl: 'http://localhost:4321',
         astroProjectPath: 'src/website',
+        deployment: {
+          type: 'local-dev',
+          previewPort: 4321,
+          productionPort: 4322,
+        },
       });
     });
     

@@ -30,6 +30,11 @@ export class InMemoryWebsiteStorageAdapter implements WebsiteStorageAdapter {
     author: 'Anonymous',
     baseUrl: 'http://localhost:4321',
     astroProjectPath: 'src/website',
+    deployment: {
+      type: 'local-dev',
+      previewPort: 4321,
+      productionPort: 4322,
+    },
   };
   
   private landingPageData: LandingPageData | null = null;
@@ -83,6 +88,14 @@ export class GlobalConfigWebsiteStorageAdapter implements WebsiteStorageAdapter 
       author: website.author,
       baseUrl: website.baseUrl,
       astroProjectPath: website.astroProjectPath,
+      deployment: {
+        type: website.deployment.type as 'local-dev' | 'caddy',
+        previewDir: website.deployment.previewDir,
+        productionDir: website.deployment.productionDir,
+        previewPort: website.deployment.previewPort,
+        productionPort: website.deployment.productionPort,
+        domain: website.deployment.domain,
+      },
     };
   }
   

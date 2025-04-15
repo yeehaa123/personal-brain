@@ -77,6 +77,10 @@ export class CLIApp {
     } catch (error) {
       CLIInterface.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
       logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
+    } finally {
+      // Always stop the CLI application when done with the command
+      // Note: Actual cleanup is handled by the CLI main function
+      this.running = false;
     }
   }
 
@@ -183,8 +187,14 @@ export class CLIApp {
 
   /**
    * Stop the CLI application
+   * Note: This method only sets the running flag to false,
+   * actual cleanup is handled by the CLI main function
    */
-  stop(): void {
+  async stop(): Promise<void> {
+    logger.info('Stopping CLI application...');
     this.running = false;
+    
+    // Do not perform any cleanup here, as it's handled by the main CLI function
+    // This prevents duplicate cleanup attempts which can cause issues
   }
 }

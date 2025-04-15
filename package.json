@@ -40,7 +40,8 @@
     "prepare": "husky",
     "website:dev": "astro dev --root ./src/website",
     "website:build": "astro build --root ./src/website",
-    "website:preview": "astro preview --root ./src/website"
+    "website:preview": "astro preview --root ./src/website",
+    "website:production": "bun run scripts/server/production-server.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",

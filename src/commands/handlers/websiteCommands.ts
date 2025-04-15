@@ -192,12 +192,18 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       };
     }
     
+    // Initialize the context if it's not ready
     if (!this.websiteContext.isReady()) {
-      return {
-        type: 'website-config',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
+      try {
+        await this.websiteContext.initialize();
+      } catch (error) {
+        this.logger.error('Failed to initialize website context', { error });
+        return {
+          type: 'website-config',
+          success: false,
+          message: 'Failed to initialize website context',
+        };
+      }
     }
     
     // If no args, display current config
@@ -265,12 +271,18 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       };
     }
     
+    // Initialize the context if it's not ready
     if (!this.websiteContext.isReady()) {
-      return {
-        type: 'landing-page',
-        success: false,
-        message: 'Website not initialized. Run "website-init" first.',
-      };
+      try {
+        await this.websiteContext.initialize();
+      } catch (error) {
+        this.logger.error('Failed to initialize website context', { error });
+        return {
+          type: 'landing-page',
+          success: false,
+          message: 'Failed to initialize website context',
+        };
+      }
     }
     
     const action = args.trim().toLowerCase();
@@ -409,14 +421,23 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
+      // Make sure the context is initialized
+      if (!this.websiteContext.isReady()) {
+        this.logger.info('Initializing website context before checking status');
+        await this.websiteContext.initialize();
+      }
+      
       // Delegate to WebsiteContext implementation
       const result = await this.websiteContext.handleWebsiteStatus(environment);
+      
+      // Pass the data through directly
+      const statusData = result.data;
       
       return {
         type: 'website-status',
         success: result.success,
         message: result.message,
-        data: result.data,
+        data: statusData,
       };
     } catch (error) {
       this.logger.error(`Error in website status command: ${error}`);

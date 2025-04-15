@@ -18,7 +18,7 @@ export interface EnvironmentStatus {
   environment: DeploymentEnvironment;
   buildStatus: 'Built' | 'Not Built' | 'Empty';
   fileCount: number;
-  caddyStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown';
+  serverStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown';
   domain: string;
   accessStatus: string;
   url: string;
@@ -49,6 +49,17 @@ export interface WebsiteDeploymentManager {
    * @returns Result of the promotion operation
    */
   promoteToProduction(): Promise<PromotionResult>;
+  
+  /**
+   * Start preview and production servers
+   * @returns Promise indicating success
+   */
+  startServers?(): Promise<boolean>;
+  
+  /**
+   * Stop preview and production servers
+   */
+  stopServers?(): Promise<void>;
 }
 
 /**
@@ -99,7 +110,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
           fileCount = files.length;
           buildStatus = fileCount > 0 ? 'Built' : 'Empty';
         }
-      } catch (fsError) {
+      } catch (_fsError) {
         // Directory doesn't exist
         buildStatus = 'Not Built';
         this.logger.warn(`Directory for ${environment} environment does not exist`, {
@@ -109,19 +120,19 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
       }
       
       // Check Caddy status
-      let caddyStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown' = 'Unknown';
+      let serverStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown' = 'Unknown';
       try {
         const execPromise = util.promisify(childProcess.exec);
         await execPromise('systemctl is-active --quiet caddy');
-        caddyStatus = 'Running';
+        serverStatus = 'Running';
       } catch (caddyError) {
         const error = caddyError as { code?: number };
         if (error.code === 3) { // systemctl exit code 3 means service is not active
-          caddyStatus = 'Not Running';
+          serverStatus = 'Not Running';
         } else if (error.code === 127) { // command not found
-          caddyStatus = 'Not Found';
+          serverStatus = 'Not Found';
         } else {
-          caddyStatus = 'Error';
+          serverStatus = 'Error';
         }
       }
       
@@ -168,7 +179,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
       this.logger.info(`Website status check completed for ${environment}`, {
         buildStatus,
         fileCount,
-        caddyStatus,
+        serverStatus,
         accessStatus,
         context: 'LocalCaddyDeploymentManager',
       });
@@ -177,7 +188,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
         environment,
         buildStatus,
         fileCount,
-        caddyStatus,
+        serverStatus,
         domain,
         accessStatus,
         url,
@@ -194,7 +205,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
         environment,
         buildStatus: 'Not Built',
         fileCount: 0,
-        caddyStatus: 'Unknown',
+        serverStatus: 'Unknown',
         domain: this.getDomainForEnvironment(environment),
         accessStatus: 'Error',
         url: `https://${this.getDomainForEnvironment(environment)}`,
@@ -256,7 +267,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
             
             await fs.rm(productionDir, { recursive: true, force: true });
           }
-        } catch (err) {
+        } catch (_err) {
           // Directory doesn't exist, which is fine
         }
         
@@ -324,15 +335,23 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
 /**
  * Factory for creating WebsiteDeploymentManager instances
  */
+export interface DeploymentManagerOptions {
+  baseDir?: string;
+  deploymentConfig?: {
+    previewPort?: number;
+    productionPort?: number;
+  };
+}
+
 export class DeploymentManagerFactory {
   private static instance: DeploymentManagerFactory | null = null;
-  private deploymentManagerClass: new (options?: any) => WebsiteDeploymentManager;
+  private deploymentManagerClass: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager;
   
   /**
    * Constructor for DeploymentManagerFactory
    * @param deploymentManagerClass The deployment manager class to use
    */
-  constructor(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager) {
+  constructor(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager) {
     // Default to LocalCaddyDeploymentManager if no class is provided
     this.deploymentManagerClass = deploymentManagerClass || LocalCaddyDeploymentManager;
   }
@@ -340,7 +359,7 @@ export class DeploymentManagerFactory {
   /**
    * Get the singleton instance
    */
-  static getInstance(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager): DeploymentManagerFactory {
+  static getInstance(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): DeploymentManagerFactory {
     if (!DeploymentManagerFactory.instance) {
       DeploymentManagerFactory.instance = new DeploymentManagerFactory(deploymentManagerClass);
     }
@@ -357,7 +376,7 @@ export class DeploymentManagerFactory {
   /**
    * Create a fresh instance
    */
-  static createFresh(deploymentManagerClass?: new (options?: any) => WebsiteDeploymentManager): DeploymentManagerFactory {
+  static createFresh(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): DeploymentManagerFactory {
     return new DeploymentManagerFactory(deploymentManagerClass);
   }
   
@@ -365,7 +384,7 @@ export class DeploymentManagerFactory {
    * Set the deployment manager class
    * @param deploymentManagerClass The deployment manager class to use
    */
-  setDeploymentManagerClass(deploymentManagerClass: new (options?: any) => WebsiteDeploymentManager): void {
+  setDeploymentManagerClass(deploymentManagerClass: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): void {
     this.deploymentManagerClass = deploymentManagerClass;
   }
   
@@ -374,7 +393,7 @@ export class DeploymentManagerFactory {
    * @param options Configuration options
    * @returns A WebsiteDeploymentManager implementation
    */
-  createDeploymentManager(options?: { baseDir?: string }): WebsiteDeploymentManager {
+  createDeploymentManager(options?: DeploymentManagerOptions): WebsiteDeploymentManager {
     // Create an instance of the configured deployment manager class
     return new this.deploymentManagerClass(options);
   }

@@ -113,7 +113,24 @@ export class BrainProtocol {
     try {
       // Close/cleanup if needed
       if (BrainProtocol.instance) {
-        // No cleanup needed currently
+        // Reset all context objects to ensure proper cleanup
+        try {
+          // Import the WebsiteContext class dynamically to avoid circular dependencies
+          import('@/mcp/contexts/website/core/websiteContext').then(({ WebsiteContext }) => {
+            WebsiteContext.resetInstance();
+          }).catch(err => {
+            const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+            logger.error('Error resetting WebsiteContext:', err);
+          });
+          
+          // Reset other contexts as needed
+          // NoteContext.resetInstance();
+          // ConversationContext.resetInstance();
+          // etc.
+        } catch (contextError) {
+          const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+          logger.error('Error resetting context objects:', contextError);
+        }
       }
     } catch (error) {
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });

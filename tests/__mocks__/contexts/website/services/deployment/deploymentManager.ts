@@ -22,9 +22,9 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
   // Mock state
   private previewStatus: EnvironmentStatus = {
     environment: 'preview',
-    buildStatus: 'Built',
+    buildStatus: 'Built' as const,
     fileCount: 42,
-    caddyStatus: 'Running',
+    serverStatus: 'Running' as const,
     domain: 'preview.example.com',
     accessStatus: 'Accessible',
     url: 'https://preview.example.com',
@@ -32,9 +32,9 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
 
   private productionStatus: EnvironmentStatus = {
     environment: 'production',
-    buildStatus: 'Built',
+    buildStatus: 'Built' as const,
     fileCount: 42,
-    caddyStatus: 'Running',
+    serverStatus: 'Running' as const,
     domain: 'example.com',
     accessStatus: 'Accessible',
     url: 'https://example.com',

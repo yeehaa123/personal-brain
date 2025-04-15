@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the plan for upgrading the static website deployment to a full server-side rendering (SSR) implementation using Astro SSR with Bun as the runtime. This upgrade maintains the bot-centered deployment approach and works seamlessly with the hybrid PM2-Caddy architecture.
+This document outlines the plan for upgrading the static website deployment to a full server-side rendering (SSR) implementation using Astro SSR with Bun as the runtime. This upgrade builds upon the hybrid PM2-Caddy architecture and maintains the bot-centered deployment approach for a seamless transition from static to dynamic rendering.
 
 ## Goals
 

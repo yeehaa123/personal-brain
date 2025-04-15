@@ -3,6 +3,12 @@ name: Deploy Bot
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Primary domain for your website'
+        required: false
+        default: ''
 
 jobs:
   deploy:
@@ -18,7 +24,11 @@ jobs:
       - name: Add host key
         run: ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
       
-      - name: Deploy to server
+      - name: Copy deployment scripts to server
+        run: |
+          scp scripts/deploy-bot.sh scripts/setup-caddy.sh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:~
+      
+      - name: Deploy the bot
         env:
           MATRIX_HOMESERVER_URL: ${{ secrets.MATRIX_HOMESERVER_URL }}
           MATRIX_USER_ID: ${{ secrets.MATRIX_USER_ID }}
@@ -27,71 +37,49 @@ jobs:
           COMMAND_PREFIX: ${{ secrets.COMMAND_PREFIX }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WEBSITE_DOMAIN: ${{ github.event.inputs.domain || secrets.WEBSITE_DOMAIN || 'example.com' }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
-            # Create project directory if it doesn't exist
-            mkdir -p /opt/personal-brain
+            export MATRIX_HOMESERVER_URL=\"${MATRIX_HOMESERVER_URL}\"
+            export MATRIX_USER_ID=\"${MATRIX_USER_ID}\"
+            export MATRIX_ACCESS_TOKEN=\"${MATRIX_ACCESS_TOKEN}\"
+            export MATRIX_ROOM_IDS=\"${MATRIX_ROOM_IDS}\"
+            export COMMAND_PREFIX=\"${COMMAND_PREFIX}\"
+            export OPENAI_API_KEY=\"${OPENAI_API_KEY}\"
+            export ANTHROPIC_API_KEY=\"${ANTHROPIC_API_KEY}\"
+            export WEBSITE_DOMAIN=\"${WEBSITE_DOMAIN}\"
+            export GITHUB_REPOSITORY=\"${GITHUB_REPOSITORY}\"
             
-            # Check if repository already exists
-            if [ -d \"/opt/personal-brain/.git\" ]; then
-              cd /opt/personal-brain
-              git pull
-            else
-              # First time clone
-              git clone https://github.com/${{ github.repository }} /opt/personal-brain
-              cd /opt/personal-brain
-            fi
+            # Make the scripts executable
+            chmod +x ~/deploy-bot.sh
             
-            # Install prerequisites and Bun if not already installed
-            if ! command -v bun &> /dev/null; then
-              echo \"Installing prerequisites for Bun...\"
-              sudo apt-get update
-              sudo apt-get install -y unzip
-              
-              echo \"Installing Bun...\"
-              curl -fsSL https://bun.sh/install | bash
-              export BUN_INSTALL=\"\$HOME/.bun\"
-              export PATH=\"\$BUN_INSTALL/bin:\$PATH\"
-            else
-              echo \"Bun is already installed\"
-            fi
-            
-            # Install dependencies
-            bun install
-            
-            # No need to install PM2 globally as it's in package.json
-            # It will be installed with bun install
-            
-            # Create .env file directly with environment variables
-            echo "MATRIX_HOMESERVER_URL=${MATRIX_HOMESERVER_URL}" > .env
-            echo "MATRIX_USER_ID=${MATRIX_USER_ID}" >> .env
-            echo "MATRIX_ACCESS_TOKEN=${MATRIX_ACCESS_TOKEN}" >> .env
-            echo "MATRIX_ROOM_IDS=${MATRIX_ROOM_IDS}" >> .env
-            echo "COMMAND_PREFIX=${COMMAND_PREFIX}" >> .env
-            echo "OPENAI_API_KEY=${OPENAI_API_KEY}" >> .env
-            echo "ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}" >> .env
-            
-            # Print number of lines in .env to verify
-            echo \"Verifying .env file was created with \$(wc -l < .env) lines\"
-            
-            # API key is already set in the .env file            
-            
-            # Set up database if needed
-            bun run db:generate
-            bun run db:migrate
-            
-            # Generate embeddings for all notes
-            echo \"Generating embeddings for all notes...\"
-            bun run db:embeddings 
-            
-            # Print working directory for debugging
-            echo \"Working directory: $(pwd)\"
-            
-            # List files to ensure we have the right content
-            echo \"Files in directory:\"
-            ls -la
-            
-            # Directly start the application - simple approach
-            echo \"Starting personal-brain...\"
-            bun run restart
+            # Run the deployment script
+            ~/deploy-bot.sh
           "
+          
+      - name: Set up Caddy
+        env:
+          WEBSITE_DOMAIN: ${{ github.event.inputs.domain || secrets.WEBSITE_DOMAIN || 'example.com' }}
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            # Make the script executable
+            chmod +x ~/setup-caddy.sh
+            
+            # Run the Caddy setup script
+            ~/setup-caddy.sh \"${WEBSITE_DOMAIN}\"
+          "
+          
+      - name: Clean up scripts
+        run: |
+          ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
+            rm ~/deploy-bot.sh ~/setup-caddy.sh
+          "
+      
+      - name: Output success message
+        run: |
+          echo "✅ Deployment complete!"
+          echo "🤖 Bot is now running on the server"
+          echo "🌐 Website is available at:"
+          echo "   - Production: https://${{ github.event.inputs.domain || secrets.WEBSITE_DOMAIN || 'example.com' }}"
+          echo "   - Preview: https://preview.${{ github.event.inputs.domain || secrets.WEBSITE_DOMAIN || 'example.com' }}"

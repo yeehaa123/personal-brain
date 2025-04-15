@@ -2,9 +2,10 @@
  * Tests for the ServerManager class
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import type * as fsPromises from 'fs/promises';
 import type * as pathModule from 'path';
+
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { type DeploymentAdapter } from '@/mcp/contexts/website/adapters/deploymentAdapter';
 import { ServerManager } from '@/mcp/contexts/website/services/serverManager';

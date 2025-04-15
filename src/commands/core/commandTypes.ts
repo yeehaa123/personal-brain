@@ -31,7 +31,7 @@ export type WebsiteCommandResult =
       environment: string;
       buildStatus: string;
       fileCount: number;
-      caddyStatus: string;
+      serverStatus: string;
       domain: string;
       accessStatus: string;
       url: string;
@@ -72,7 +72,7 @@ export type CommandResult =
       environment: string;
       buildStatus: string;
       fileCount: number;
-      caddyStatus: string;
+      serverStatus: string;
       domain: string;
       accessStatus: string;
       url: string;
