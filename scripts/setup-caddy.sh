@@ -1,10 +1,12 @@
 #!/bin/bash
 # Script to set up Caddy for the hybrid PM2-Caddy deployment
 
-# Get domain from argument or environment variable
+# Get domain and port configuration from environment variables or defaults
 DOMAIN="${1:-$WEBSITE_DOMAIN}"
+PREVIEW_PORT="${WEBSITE_PREVIEW_PORT:-4321}"
+PRODUCTION_PORT="${WEBSITE_PRODUCTION_PORT:-4322}"
 
-# Create website directories if they don't exist
+# Create website directories if they don't exist (still needed for temporary files)
 echo "Setting up website directories..."
 sudo mkdir -p /opt/personal-brain-website/preview/dist
 sudo mkdir -p /opt/personal-brain-website/production/dist
@@ -29,12 +31,20 @@ fi
 # Get domain from environment or use default
 echo "Configuring Caddy for domain: $DOMAIN"
 
-# Create Caddyfile - using direct variable substitution instead of placeholders
+# Create Caddyfile - configure as reverse proxy to PM2 servers
 cat > /tmp/Caddyfile << EOF
 # Main production domain
 $DOMAIN {
-    root * /opt/personal-brain-website/production/dist
-    file_server
+    # Reverse proxy to PM2-managed production server
+    reverse_proxy localhost:$PRODUCTION_PORT {
+        # Add health checks to ensure the server is running
+        health_uri /
+        health_interval 30s
+        health_timeout 5s
+        health_status 200
+    }
+    
+    # Enable compression
     encode gzip
     
     # Security headers
@@ -46,15 +56,20 @@ $DOMAIN {
         Referrer-Policy "strict-origin-when-cross-origin"
         Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
-    
-    # Handle SPA fallback
-    try_files {path} /index.html
 }
 
 # Preview subdomain
 preview.$DOMAIN {
-    root * /opt/personal-brain-website/preview/dist
-    file_server
+    # Reverse proxy to PM2-managed preview server
+    reverse_proxy localhost:$PREVIEW_PORT {
+        # Add health checks to ensure the server is running
+        health_uri /
+        health_interval 30s
+        health_timeout 5s
+        health_status 200
+    }
+    
+    # Enable compression
     encode gzip
     
     # Security headers
@@ -66,9 +81,6 @@ preview.$DOMAIN {
         Referrer-Policy "strict-origin-when-cross-origin"
         Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
-    
-    # Handle SPA fallback
-    try_files {path} /index.html
 }
 EOF
 
@@ -93,10 +105,12 @@ fi
 echo "Reloading Caddy..."
 sudo systemctl reload caddy
 
-# Copy template file to production and preview directories if they're empty
+# Create placeholder files for health checks if needed
+# These files are only used until the PM2 servers are running
 if [ ! -f /opt/personal-brain-website/production/dist/index.html ]; then
   echo "Creating default production template..."
   cp /opt/personal-brain/src/mcp/contexts/website/services/deployment/productionTemplate.html /opt/personal-brain-website/production/dist/index.html
+  echo "<p>Note: This is a placeholder. The actual site will be served by PM2 on port $PRODUCTION_PORT.</p>" >> /opt/personal-brain-website/production/dist/index.html
 fi
 
 if [ ! -f /opt/personal-brain-website/preview/dist/index.html ]; then
@@ -104,8 +118,12 @@ if [ ! -f /opt/personal-brain-website/preview/dist/index.html ]; then
   cp /opt/personal-brain/src/mcp/contexts/website/services/deployment/productionTemplate.html /opt/personal-brain-website/preview/dist/index.html
   # Update the title to indicate it's the preview environment
   sed -i 's/Production Environment/Preview Environment/g' /opt/personal-brain-website/preview/dist/index.html
+  echo "<p>Note: This is a placeholder. The actual site will be served by PM2 on port $PREVIEW_PORT.</p>" >> /opt/personal-brain-website/preview/dist/index.html
 fi
 
 echo "Website environment setup complete!"
-echo "Production URL: https://$DOMAIN"
-echo "Preview URL: https://preview.$DOMAIN"
+echo "Caddy is now configured as a reverse proxy to PM2 servers."
+echo "Production URL: https://$DOMAIN (proxies to localhost:$PRODUCTION_PORT)"
+echo "Preview URL: https://preview.$DOMAIN (proxies to localhost:$PREVIEW_PORT)"
+echo ""
+echo "Note: Make sure PM2 servers are running on the configured ports."

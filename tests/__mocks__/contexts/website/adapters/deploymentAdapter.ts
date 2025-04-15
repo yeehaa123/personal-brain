@@ -24,6 +24,19 @@ export class MockDeploymentAdapter implements DeploymentAdapter {
     () => Promise.resolve(true),
   );
   cleanup = mock<() => Promise<void>>(() => Promise.resolve());
+  getDeploymentConfig = mock<() => {
+    type: string;
+    useReverseProxy: boolean;
+    previewPort: number;
+    productionPort: number;
+    domain: string;
+  }>(() => ({
+    type: 'local-dev',
+    useReverseProxy: false,
+    previewPort: 4321,
+    productionPort: 4322,
+    domain: 'example.com',
+  }));
 
   // Server running status flags
   private previewRunning = true;

@@ -17,6 +17,13 @@ class MockDeploymentAdapter implements DeploymentAdapter {
   stopServer = mock(() => Promise.resolve(true));
   isServerRunning = mock((_env?: 'preview' | 'production') => Promise.resolve(false)); // Default to not running
   cleanup = mock(() => Promise.resolve());
+  getDeploymentConfig = mock(() => ({
+    type: 'local-dev',
+    useReverseProxy: false,
+    previewPort: 4321,
+    productionPort: 4322,
+    domain: 'example.com',
+  }));
 }
 
 describe('ServerManager', () => {

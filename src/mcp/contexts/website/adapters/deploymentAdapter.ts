@@ -45,6 +45,18 @@ export interface DeploymentAdapter {
    * Clean up all resources
    */
   cleanup(): Promise<void>;
+  
+  /**
+   * Get the configuration for the deployment adapter
+   * @returns Configuration object with deployment type and proxy settings
+   */
+  getDeploymentConfig(): {
+    type: string;
+    useReverseProxy: boolean;
+    previewPort: number;
+    productionPort: number;
+    domain: string;
+  };
 }
 
 /**
@@ -68,6 +80,17 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
   private readonly defaultScripts = {
     preview: 'website:dev',
     production: 'website:production',
+  };
+  
+  /**
+   * Deployment configuration
+   */
+  private readonly config = {
+    type: process.env['WEBSITE_DEPLOYMENT_TYPE'] || 'local-dev',
+    useReverseProxy: process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'caddy',
+    previewPort: Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321,
+    productionPort: Number(process.env['WEBSITE_PRODUCTION_PORT']) || 4322,
+    domain: process.env['WEBSITE_DOMAIN'] || 'example.com',
   };
   
   constructor() {
@@ -255,6 +278,19 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
     }
   }
 }
+
+/**
+ * Implement the getDeploymentConfig method
+ */
+PM2DeploymentAdapter.prototype.getDeploymentConfig = function(): {
+  type: string;
+  useReverseProxy: boolean;
+  previewPort: number;
+  productionPort: number;
+  domain: string;
+} {
+  return this.config;
+};
 
 /**
  * Factory function to get a deployment adapter

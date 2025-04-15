@@ -25,6 +25,17 @@ describe('DeploymentAdapter', () => {
     expect(typeof adapter.stopServer).toBe('function');
     expect(typeof adapter.isServerRunning).toBe('function');
     expect(typeof adapter.cleanup).toBe('function');
+    expect(typeof adapter.getDeploymentConfig).toBe('function');
+  });
+  
+  test('PM2DeploymentAdapter getDeploymentConfig should return configuration', () => {
+    const adapter = new PM2DeploymentAdapter();
+    const config = adapter.getDeploymentConfig();
+    expect(config).toHaveProperty('type');
+    expect(config).toHaveProperty('useReverseProxy');
+    expect(config).toHaveProperty('previewPort');
+    expect(config).toHaveProperty('productionPort');
+    expect(config).toHaveProperty('domain');
   });
 });
 
