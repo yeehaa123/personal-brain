@@ -39,9 +39,10 @@
     "test:website": "./test-runner.sh tests/commands/website-commands.test.ts",
     "prepare": "husky",
     "website:dev": "astro dev --root ./src/website",
-    "website:build": "astro build --root ./src/website",
-    "website:preview": "astro preview --root ./src/website",
-    "website:production": "bun run scripts/server/production-server.ts"
+    "website:build": "astro build --outDir ./dist/production --root ./src/website",
+    "website:build:preview": "astro build --outDir ./dist/preview --root ./src/website",
+    "website:preview": "bun run scripts/server/production-server.ts preview",
+    "website:production": "bun run scripts/server/production-server.ts production"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",

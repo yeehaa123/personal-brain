@@ -31,12 +31,19 @@ export class MockDeploymentAdapter implements DeploymentAdapter {
     productionPort: number;
     domain: string;
   }>(() => ({
-    type: 'local-dev',
-    useReverseProxy: false,
-    previewPort: 4321,
-    productionPort: 4322,
-    domain: 'example.com',
-  }));
+      type: 'local-dev',
+      useReverseProxy: false,
+      previewPort: 4321,
+      productionPort: 4322,
+      domain: 'example.com',
+    }));
+    
+  // Default server scripts for testing - keeping in sync with the real adapter
+  // This is used for reference and documentation purposes
+  readonly defaultScripts = {
+    preview: 'website:preview',
+    production: 'website:production',
+  };
 
   // Server running status flags
   private previewRunning = true;
