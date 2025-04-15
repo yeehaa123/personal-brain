@@ -29,10 +29,10 @@ fi
 # Get domain from environment or use default
 echo "Configuring Caddy for domain: $DOMAIN"
 
-# Create Caddyfile
-cat > /tmp/Caddyfile << 'EOF'
+# Create Caddyfile - using direct variable substitution instead of placeholders
+cat > /tmp/Caddyfile << EOF
 # Main production domain
-{$DOMAIN} {
+$DOMAIN {
     root * /opt/personal-brain-website/production/dist
     file_server
     encode gzip
@@ -52,7 +52,7 @@ cat > /tmp/Caddyfile << 'EOF'
 }
 
 # Preview subdomain
-preview.{$DOMAIN} {
+preview.$DOMAIN {
     root * /opt/personal-brain-website/preview/dist
     file_server
     encode gzip
@@ -71,9 +71,6 @@ preview.{$DOMAIN} {
     try_files {path} /index.html
 }
 EOF
-
-# Replace {$DOMAIN} placeholder with actual domain
-sed -i "s/{\\$DOMAIN}/$DOMAIN/g" /tmp/Caddyfile
 
 # Move Caddyfile to the correct location
 sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
