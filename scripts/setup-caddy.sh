@@ -77,7 +77,10 @@ preview.$DOMAIN {
         header_up Origin https://preview.$DOMAIN
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
-        websocket
+        
+        # Enable WebSocket support (compatible with older Caddy versions)
+        header_up Connection {http.request.header.Connection}
+        header_up Upgrade {http.request.header.Upgrade}
     }
     
     # Enable compression
