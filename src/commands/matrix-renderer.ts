@@ -163,12 +163,6 @@ export class MatrixRenderer {
       }
       
       // Website commands
-      case 'website-help': {
-        this.sendMessageFn(roomId, this.formatter.formatWebsiteHelp(result));
-        break;
-      }
-      
-      
       case 'website-config': {
         this.sendMessageFn(roomId, this.formatter.formatWebsiteConfig(result));
         break;

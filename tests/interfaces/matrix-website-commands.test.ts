@@ -12,34 +12,6 @@ import type { LandingPageData } from '@website/schemas';
 
 describe('Matrix Website Command Formatters', () => {
   describe('Website Command Formatting', () => {
-    test('should format website-help output', () => {
-      const formatter = getResponseFormatter();
-      const commands = [
-        { command: 'website-build', description: 'Build website to preview', usage: 'website-build' },
-        { command: 'website-promote', description: 'Promote preview to production', usage: 'website-promote' },
-        { command: 'website-status', description: 'Check website status', usage: 'website-status [preview|production]' },
-        { command: 'website-config', description: 'Configure website settings', usage: 'website-config [key=value]' },
-        { command: 'landing-page', description: 'Manage landing page content', usage: 'landing-page [generate|view]' },
-      ];
-      
-      const result: WebsiteCommandResult = {
-        type: 'website-help',
-        commands,
-      };
-
-      const formatted = formatter.formatWebsiteHelp(result);
-      
-      // Check for expected elements
-      expect(formatted).toContain('Website Commands');
-      expect(formatted).toContain('website-build');
-      expect(formatted).toContain('website-promote');
-      expect(formatted).toContain('website-status');
-      expect(formatted).toContain('website-config');
-      expect(formatted).toContain('landing-page');
-      expect(formatted).toContain('Build website to preview');
-      expect(formatted).toContain('Configure website settings');
-    });
-
     test('should format website-promote success output', () => {
       const formatter = getResponseFormatter();
       const result: WebsiteCommandResult = {

@@ -99,11 +99,11 @@ export class MockWebsiteContext {
   }
 
   async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
-    // Check if website is initialized
+    // Check if context is ready
     if (!this.isReady()) {
       return {
         success: false,
-        message: 'Website not initialized. Run "website-init" first.',
+        message: 'Website context not available.',
       };
     }
 
@@ -121,11 +121,11 @@ export class MockWebsiteContext {
   }
 
   async buildWebsite(): Promise<{ success: boolean; message: string }> {
-    // Check if website is initialized
+    // Check if context is ready
     if (!this.isReady()) {
       return {
         success: false,
-        message: 'Website not initialized. Run "website-init" first.',
+        message: 'Website context not available.',
       };
     }
 

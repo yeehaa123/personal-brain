@@ -19,7 +19,6 @@ import type {
   SystemStatus,
   WebsiteBuildResult, 
   WebsiteConfigResult,
-  WebsiteHelpResult,
   WebsitePromoteResult,
   WebsiteStatusResult,
 } from './types';
@@ -78,8 +77,8 @@ export type ResponseType =
   'search' | 'note' | 'notes' | 'profile' | 
   'ask' | 'error' | 'status' | 'tags' |
   'save-note-preview' | 'save-note-confirm' | 'conversation-notes' |
-  'website-help' | 'website-init' | 'website-config' | 'landing-page' |
-  'website-preview' | 'website-preview-stop' | 'website-build';
+  'website-config' | 'landing-page' |
+  'website-build' | 'website-promote' | 'website-status';
 
 // Response formatter options
 export interface ResponseFormatterOptions {
@@ -705,43 +704,7 @@ export class MatrixResponseFormatter {
     }
   }
 
-  /**
-   * Format website help information
-   */
-  formatWebsiteHelp(result: WebsiteHelpResult): string {
-    if (this.useBlocks) {
-      const builder = new MatrixBlockBuilder();
-      
-      builder.addHeader('Website Commands');
-      
-      // Format commands as a list
-      const commandsList = result.commands.map(cmd => {
-        const command = cmd['command'] as string;
-        const description = cmd['description'] as string;
-        const usage = cmd['usage'] as string;
-        
-        return `- **${command}**: ${description}\n  Usage: \`${usage}\``;
-      }).join('\n\n');
-      
-      builder.addSection(commandsList);
-      
-      return builder.build() as string;
-    } else {
-      const message = [
-        '### Website Commands',
-        '',
-        ...result.commands.map(cmd => {
-          const command = cmd['command'] as string;
-          const description = cmd['description'] as string;
-          const usage = cmd['usage'] as string;
-          
-          return `- **${command}**: ${description}\n  Usage: \`${usage}\``;
-        }),
-      ].join('\n\n');
-      
-      return this.markdown.format(message);
-    }
-  }
+  // Website help formatter removed as it's no longer needed
   
   /**
    * Format website promote result

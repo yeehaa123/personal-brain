@@ -99,18 +99,7 @@ export interface WebsiteConfigResult {
   message: string;
 }
 
-/**
- * Website help result
- */
-export interface WebsiteHelpResult {
-  type: 'website-help';
-  commands: Array<{
-    command: string;
-    description: string;
-    usage: string;
-    examples?: string[];
-  }>;
-}
+// Website help result interface removed as it's no longer needed
 
 /**
  * Website promote result

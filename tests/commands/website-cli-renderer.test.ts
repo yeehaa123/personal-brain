@@ -37,28 +37,8 @@ describe('CLIRenderer - Website Commands', () => {
   });
 
   describe('website command rendering', () => {
-    test('should render website-help result', () => {
-      const commands = [
-        { command: 'website-init', description: 'Initialize website', usage: 'website-init' },
-        { command: 'website-config', description: 'Configure website settings', usage: 'website-config [key=value]' },
-        { command: 'landing-page', description: 'Manage landing page content', usage: 'landing-page [generate|view]' },
-        { command: 'website-preview', description: 'Preview website locally', usage: 'website-preview' },
-        { command: 'website-preview-stop', description: 'Stop the preview server', usage: 'website-preview-stop' },
-      ];
-      
-      const result: WebsiteCommandResult = {
-        type: 'website-help',
-        commands,
-      };
+    // Test for website-help removed as it's no longer needed
 
-      renderer.render(result as CommandResult);
-
-      expect(trackers.displayTitleCalls).toContain('Website Commands');
-      expect(trackers.displayListCalls.length).toBe(1);
-      expect(trackers.displayListCalls[0].items.length).toBe(commands.length);
-    });
-
-    // No longer need website-init tests as it's been removed
 
     test('should render website-config display result', () => {
       const config: WebsiteConfig = {

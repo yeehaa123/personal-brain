@@ -22,7 +22,6 @@ export interface CommandInfo {
  * Union type for all website command result types
  */
 export type WebsiteCommandResult =
-  | { type: 'website-help'; commands: CommandInfo[] }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }
@@ -63,7 +62,6 @@ export type CommandResult =
   | { type: 'save-note-preview'; noteContent: string; title: string; conversationId: string }
   | { type: 'save-note-confirm'; noteId: string; title: string }
   | { type: 'conversation-notes'; notes: Note[] }
-  | { type: 'website-help'; commands: CommandInfo[] }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
   | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }

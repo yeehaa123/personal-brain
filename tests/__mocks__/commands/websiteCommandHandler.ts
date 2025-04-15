@@ -31,7 +31,6 @@ export class MockWebsiteCommandHandler {
   
   canHandle(command: string): boolean {
     return [
-      'website',
       'website-config',
       'landing-page',
       'website-build',
@@ -42,11 +41,6 @@ export class MockWebsiteCommandHandler {
   
   getCommands(): CommandInfo[] {
     return [
-      {
-        command: 'website',
-        description: 'Display website commands and help',
-        usage: 'website',
-      },
       {
         command: 'website-config',
         description: 'View or update website configuration',
@@ -83,12 +77,6 @@ export class MockWebsiteCommandHandler {
     const websiteContext = this.websiteContext;
     
     switch (command) {
-    case 'website':
-      return {
-        type: 'website-help',
-        commands: this.getCommands(),
-      };
-        
     case 'website-config':
       if (!websiteContext.isReady()) {
         return {

@@ -1,6 +1,6 @@
 import type { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
-import type { CommandInfo, CommandResult, WebsiteCommandResult } from '@commands/core/commandTypes';
+import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 import type { BrainProtocol } from '@mcp/protocol';
 // Direct file access replaced with WebsiteContext delegation
 
@@ -50,7 +50,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    * List of commands supported by this handler
    */
   private static readonly SUPPORTED_COMMANDS = [
-    'website',
     'website-config',
     'landing-page',
     'website-build',
@@ -72,17 +71,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   public getCommands(): CommandInfo[] {
     return [
-      {
-        command: 'website',
-        description: 'Display website commands and help',
-        usage: 'website',
-      },
-      {
-        command: 'website-init',
-        description: 'Initialize website configuration',
-        usage: 'website-init',
-        examples: ['website-init'],
-      },
       {
         command: 'website-config',
         description: 'View or update website configuration',
@@ -138,8 +126,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       
       // Process the command
       switch (command) {
-      case 'website':
-        return this.handleWebsiteHelp();
       case 'website-config':
         return this.handleWebsiteConfig(args);
       case 'landing-page':
@@ -163,16 +149,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         message: `Failed to process website command: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-  }
-  
-  /**
-   * Handle website help command
-   */
-  private handleWebsiteHelp(): WebsiteCommandResult {
-    return {
-      type: 'website-help',
-      commands: this.getCommands(),
-    };
   }
   
   /**

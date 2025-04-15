@@ -43,7 +43,7 @@ if command -v bun &> /dev/null && bun run pm2 --version &> /dev/null; then
         bun run pm2 list | grep "website-" | awk '{print "  - " $2 " (" $10 ")"}'
     else
         echo -e "${YELLOW}! No website servers found in PM2${NC}"
-        echo -e "  Run: ${YELLOW}bun run website-build${NC} to start the preview server"
+        echo -e "  Run: ${YELLOW}bun run start${NC} to start the website servers"
     fi
 else
     echo -e "${RED}✗ PM2 is not available${NC}"
@@ -161,10 +161,10 @@ if command -v caddy &> /dev/null && [ -d "$PREVIEW_DIR" ] && [ -d "$PRODUCTION_D
     echo -e "${GREEN}✓ Basic hybrid PM2-Caddy setup is in place${NC}"
     
     echo -e "\n${BLUE}=== Next Steps ===${NC}"
-    echo -e "1. Run ${YELLOW}website-build${NC} to generate the website in preview environment"
+    echo -e "1. Run ${YELLOW}bun run website-build${NC} to generate the website in preview environment"
     echo -e "2. Check the preview site at the URL shown in the command output"
-    echo -e "3. Run ${YELLOW}website-promote${NC} to promote the preview site to production"
-    echo -e "4. Run ${YELLOW}website-status${NC} to check both environments"
+    echo -e "3. Run ${YELLOW}bun run website-promote${NC} to promote the preview site to production"
+    echo -e "4. Run ${YELLOW}bun run website-status${NC} to check both environments"
 else
     echo -e "${RED}✗ Hybrid PM2-Caddy setup is incomplete${NC}"
     

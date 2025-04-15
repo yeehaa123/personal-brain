@@ -185,15 +185,6 @@ export class CLIRenderer {
       break;
       
     // Website commands
-    case 'website-help':
-      CLIInterface.displayTitle('Website Commands');
-      CLIInterface.displayList(
-        result.commands,
-        (cmd) => `${CLIInterface.styles.subtitle(cmd.command)}: ${cmd.description}\n  Usage: ${cmd.usage}`,
-      );
-      break;
-      
-      
     case 'website-config':
       if (result.success !== undefined) {
         CLIInterface.displayTitle('Updated Configuration');

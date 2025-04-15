@@ -59,7 +59,6 @@ describe('WebsiteCommandHandler', () => {
     const commandNames = commands.map((cmd) => cmd.command);
 
     // Check if website commands are registered
-    expect(commandNames).toContain('website');
     expect(commandNames).toContain('website-config');
     expect(commandNames).toContain('landing-page');
     expect(commandNames).toContain('website-build');
@@ -67,31 +66,6 @@ describe('WebsiteCommandHandler', () => {
     expect(commandNames).toContain('website-status');
   });
 
-  test('should handle website help command', async () => {
-    const result = await commandHandler.processCommand('website', '');
-
-    expect(result.type).toBe('website-help');
-    const websiteHelpResult = result as Extract<WebsiteCommandResult, { type: 'website-help' }>;
-    expect(Array.isArray(websiteHelpResult.commands)).toBe(true);
-
-    const commands = websiteHelpResult.commands;
-    expect(commands.length).toBeGreaterThan(0);
-
-    // Verify that each command has the required properties
-    commands.forEach((cmd) => {
-      expect(cmd.command).toBeDefined();
-      expect(cmd.description).toBeDefined();
-      expect(cmd.usage).toBeDefined();
-    });
-  });
-
-  // test('should handle website init command', async () => {
-  //   const result = await commandHandler.processCommand('website-init', '');
-
-  //   expect(result.type).toBe('website-init');
-  //   const initResult = result as Extract<WebsiteCommandResult, { type: 'website-init' }>;
-  //   expect(initResult.success).toBe(true);
-  //   expect(initResult.message).toBe('Website initialized successfully');
   // });
 
   test('should handle website config command with no args', async () => {
