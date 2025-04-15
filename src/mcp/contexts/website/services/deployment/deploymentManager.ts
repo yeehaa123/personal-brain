@@ -228,7 +228,8 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
       // Define directory paths
       // The preview site is built to src/website/dist by Astro
       const previewDir = path.join(process.cwd(), 'src', 'website', 'dist');
-      const productionDir = path.join(this.baseDir, 'production', 'dist');
+      // The production server looks for files in dist/production, not baseDir/production/dist
+      const productionDir = path.join(process.cwd(), 'dist', 'production');
       
       // Get domain for production environment
       const productionDomain = this.getDomainForEnvironment('production');
@@ -277,7 +278,30 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
         
         // Copy all files from preview to production
         const execPromise = util.promisify(childProcess.exec);
+        
+        this.logger.info('Copying files from preview to production', {
+          sourceDir: previewDir,
+          destDir: productionDir,
+          command: `cp -R ${previewDir}/* ${productionDir}/`,
+          context: 'LocalCaddyDeploymentManager',
+        });
+        
+        // Make sure the preview directory has files to copy
+        const previewContents = await fs.readdir(previewDir);
+        if (previewContents.length === 0) {
+          throw new Error(`Preview directory exists but is empty: ${previewDir}`);
+        }
+        
+        // Use cp -r with explicit paths
         await execPromise(`cp -R ${previewDir}/* ${productionDir}/`);
+        
+        // List files in production directory after copy
+        const productionContents = await fs.readdir(productionDir);
+        this.logger.info('Files copied to production directory', {
+          fileCount: productionContents.length,
+          fileList: productionContents.join(', '),
+          context: 'LocalCaddyDeploymentManager',
+        });
         
         // Optional: Reload Caddy to ensure it picks up any changes
         try {
