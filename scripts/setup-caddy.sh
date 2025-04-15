@@ -75,6 +75,10 @@ EOF
 # Move Caddyfile to the correct location
 sudo mv /tmp/Caddyfile /etc/caddy/Caddyfile
 
+# Format the Caddyfile to fix inconsistencies
+echo "Formatting Caddyfile..."
+sudo caddy fmt --overwrite /etc/caddy/Caddyfile
+
 # Validate the Caddyfile
 echo "Validating Caddyfile..."
 sudo caddy validate --config /etc/caddy/Caddyfile
