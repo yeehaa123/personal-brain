@@ -42,7 +42,10 @@
     "website:build": "astro build --outDir ./dist/production --root ./src/website",
     "website:build:preview": "astro build --outDir ./dist/preview --root ./src/website",
     "website:preview": "bun run scripts/server/production-server.ts preview",
-    "website:production": "bun run scripts/server/production-server.ts production"
+    "website:production": "bun run scripts/server/production-server.ts production",
+    "website:cleanup": "pm2 stop website-preview || true && pm2 delete website-preview || true && pm2 stop website-production || true && pm2 delete website-production || true",
+    "prestart": "bun run website:cleanup",
+    "prerestart": "bun run website:cleanup"
   },
   "devDependencies": {
     "@eslint/js": "^9.23.0",
