@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 import { conversationConfig } from '@/config';
 import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { getServerManager } from '@/mcp/contexts/website/services/serverManager';
 
 import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
@@ -14,17 +15,17 @@ if (!process.env.NODE_ENV) {
 }
 
 async function main() {
-  // Initialize website server manager early in development mode
-  if (process.env.NODE_ENV === 'development') {
-    try {
-      const { getServerManager } = await import('@/mcp/contexts/website/services/serverManager');
-      logger.info('Initializing server manager for development mode');
-      const serverManager = getServerManager();
-      await serverManager.initialize();
-      logger.info('Server manager initialized');
-    } catch (error) {
-      logger.error('Error initializing server manager:', { error });
-    }
+  // Initialize and start website servers for all environments
+  logger.info('Initializing and starting website servers');
+  const serverManager = getServerManager();
+  await serverManager.initialize();
+  
+  // Explicitly start servers after initialization
+  const startResult = await serverManager.startServers();
+  if (startResult) {
+    logger.info('Website servers started successfully');
+  } else {
+    logger.warn('Some website servers may not have started properly');
   }
 
   // Initialize components using the singleton pattern with room ID
@@ -54,21 +55,17 @@ async function main() {
     
     try {
       // Always use the ServerManager to stop servers in any environment
-      try {
-        const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
-        logger.info('Stopping website servers via ServerManager...');
-        
-        const serverManager = ServerManager.getInstance();
-        // Use the stronger cleanup method that forcefully stops all servers
-        await serverManager.cleanup();
-        
-        // Reset the server manager to clean up its resources
-        ServerManager.resetInstance();
-        
-        logger.info('Website servers stopped successfully.');
-      } catch (serverError) {
-        logger.error('Error stopping website servers:', { error: serverError });
-      }
+      logger.info('Stopping website servers via ServerManager...');
+      
+      const serverManager = getServerManager();
+      // Use the stronger cleanup method that forcefully stops all servers
+      await serverManager.cleanup();
+      
+      // Reset the server manager singleton to clean up its resources
+      const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
+      ServerManager.resetInstance();
+      
+      logger.info('Website servers stopped successfully.');
       
       // Reset the brain protocol, which will cascade to reset other contexts
       logger.info('Resetting brain protocol...');
@@ -119,14 +116,9 @@ main().catch(async error => {
   // Clean up before exiting
   try {
     // Always use the ServerManager for cleanup
-    try {
-      const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
-      logger.info('Stopping website servers after error...');
-      const serverManager = ServerManager.getInstance();
-      await serverManager.cleanup();
-    } catch (serverError) {
-      logger.error('Error stopping servers during error handling:', { error: serverError });
-    }
+    logger.info('Stopping website servers after error...');
+    const serverManager = getServerManager();
+    await serverManager.cleanup();
     
     // Reset the brain protocol
     logger.info('Resetting brain protocol after error...');

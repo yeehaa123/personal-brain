@@ -26,7 +26,6 @@ describe('ServerManager', () => {
   
   // Save original env vars to restore after tests
   const originalNodeEnv = process.env.NODE_ENV;
-  const originalAutoStart = process.env['WEBSITE_AUTO_START_SERVERS'];
   
   beforeEach(() => {
     // Create a fresh mock adapter for each test
@@ -37,7 +36,6 @@ describe('ServerManager', () => {
     
     // Reset environment variables to known values
     process.env.NODE_ENV = 'test';
-    process.env['WEBSITE_AUTO_START_SERVERS'] = '';
   });
   
   afterEach(() => {
@@ -46,7 +44,6 @@ describe('ServerManager', () => {
     
     // Restore env vars
     process.env.NODE_ENV = originalNodeEnv;
-    process.env['WEBSITE_AUTO_START_SERVERS'] = originalAutoStart;
   });
   
   test('getInstance returns a singleton instance', () => {
@@ -63,48 +60,14 @@ describe('ServerManager', () => {
     expect(mockAdapter.initialize).toHaveBeenCalled();
   });
   
-  test('servers should be started in development environment', async () => {
-    // Set development environment
-    process.env.NODE_ENV = 'development';
-    
-    // Create a new adapter for this test only to avoid interference from other tests
-    const localMockAdapter = new MockDeploymentAdapter();
-    
-    // Create a fresh server manager with the local adapter
-    const serverManager = ServerManager.createFresh({ deploymentAdapter: localMockAdapter });
-    await serverManager.initialize();
-    
-    // Verify that startServer was called (don't care about the exact count of isServerRunning)
-    expect(localMockAdapter.startServer).toHaveBeenCalled();
-  });
-  
-  test('servers should be started when auto-start flag is true', async () => {
-    // Set production environment but with auto-start flag
-    process.env.NODE_ENV = 'production';
-    process.env['WEBSITE_AUTO_START_SERVERS'] = 'true';
-    
-    // Create a new adapter for this test only
-    const localMockAdapter = new MockDeploymentAdapter();
-    
-    // Create a fresh server manager with the local adapter
-    const serverManager = ServerManager.createFresh({ deploymentAdapter: localMockAdapter });
-    await serverManager.initialize();
-    
-    // Verify that startServer was called (don't care about the exact count of isServerRunning)
-    expect(localMockAdapter.startServer).toHaveBeenCalled();
-  });
-  
-  test('dont auto-start servers in production without flag', async () => {
-    // Set production environment with no auto-start flag
-    process.env.NODE_ENV = 'production';
-    process.env['WEBSITE_AUTO_START_SERVERS'] = '';
-    
+  test('initialize should set up the server manager without starting servers', async () => {
+    // Create a fresh server manager with the adapter
     const serverManager = ServerManager.createFresh({ deploymentAdapter: mockAdapter });
     await serverManager.initialize();
     
-    // Initialize should be called but no server checks or starts
+    // Initialize should be called but no servers should be auto-started
+    // In hybrid Caddy approach, servers are managed externally
     expect(mockAdapter.initialize).toHaveBeenCalled();
-    expect(mockAdapter.isServerRunning).not.toHaveBeenCalled();
     expect(mockAdapter.startServer).not.toHaveBeenCalled();
   });
   

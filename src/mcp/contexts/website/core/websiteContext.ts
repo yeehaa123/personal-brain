@@ -136,30 +136,12 @@ export class WebsiteContext extends BaseContext {
   override async initialize(): Promise<boolean> {
     await this.storage.initialize();
     
-    // Log the current NODE_ENV and auto-start flag for debugging
     this.logger.info('Initializing WebsiteContext', {
-      NODE_ENV: process.env['NODE_ENV'],
-      WEBSITE_AUTO_START_SERVERS: process.env['WEBSITE_AUTO_START_SERVERS'],
       context: 'WebsiteContext',
     });
     
     // Ensure production directory exists with default template
     await this.ensureProductionDirectory();
-    
-    // Start local development servers
-    if (process.env['NODE_ENV'] === 'development' || process.env['WEBSITE_AUTO_START_SERVERS'] === 'true') {
-      this.logger.info('Auto-starting servers based on environment settings', {
-        context: 'WebsiteContext',
-      });
-      const deploymentManager = await this.getDeploymentManager();
-      
-      // Check if the deployment manager supports server management
-      if ('startServers' in deploymentManager) {
-        // This is just a type assertion to access the method
-        const manager = deploymentManager as unknown as { startServers(): Promise<boolean> };
-        await manager.startServers();
-      }
-    }
     
     this.setReadyState(true);
     return true;
@@ -290,11 +272,9 @@ export class WebsiteContext extends BaseContext {
       });
       
       // Always use LocalDevDeploymentManager for local-dev deployment type
-      // or when running in development/test environment
+      // or when explicitly configured with WEBSITE_DEPLOYMENT_TYPE=local-dev
       if (config.deployment.type === 'local-dev' || 
-          process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev' ||
-          process.env['NODE_ENV'] === 'development' || 
-          process.env['NODE_ENV'] === 'test') {
+          process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev') {
         
         this.logger.info('Using LocalDevDeploymentManager', {
           context: 'WebsiteContext',

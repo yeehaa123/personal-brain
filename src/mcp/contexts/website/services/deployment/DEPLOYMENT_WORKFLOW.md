@@ -17,8 +17,16 @@ WebsiteDeploymentManager (interface)
 │LocalCaddyDeployment│  │LocalDevDeployment   │
 │Manager             │  │Manager              │
 └─────────────────────┘  └─────────────────────┘
-    (Production)             (Development)
+    (Caddy-based)        (Local Development)
 ```
+
+## Hybrid Caddy Approach
+
+The system uses a hybrid approach for server management:
+
+1. **Always-Running Servers**: With the hybrid Caddy approach, servers are always started at application startup regardless of environment.
+2. **External Management**: Caddy manages the HTTP servers in production environments.
+3. **Consistent Server Lifecycle**: Servers follow the same lifecycle in all environments (development, test, production).
 
 ## Deployment Environments
 
@@ -33,15 +41,14 @@ The system supports two deployment environments:
 
 The WebsiteContext is responsible for high-level website operations. It:
 
-- Gets the appropriate deployment manager based on the environment
+- Gets the appropriate deployment manager based on configuration
 - Provides `handleWebsiteBuild`, `handleWebsitePromote`, and `handleWebsiteStatus` methods
-- Delegates actual deployment operations to the deployment manager
+- Delegates deployment operations to the deployment manager
 
 ### 2. DeploymentManagerFactory
 
 The factory creates the appropriate deployment manager based on:
-- Environment settings (NODE_ENV)
-- Configuration settings
+- Configuration settings (deployment.type)
 - Environment variable overrides (WEBSITE_DEPLOYMENT_TYPE)
 
 ### 3. WebsiteDeploymentManager Interface
@@ -63,6 +70,14 @@ The development implementation for local testing:
 - Manages files at `./dist/{preview,production}`
 - Simulates deployment without needing a real web server
 - Uses the same interface for command compatibility
+
+### 6. ServerManager
+
+Dedicated server management component with responsibilities:
+- Initializing servers at application startup
+- Ensuring servers are properly stopped during shutdown
+- Providing server status information
+- Coordinating with the deployment manager
 
 ## Workflow Example
 
@@ -97,13 +112,13 @@ The development implementation for local testing:
       │<─────────────────│                     │          
 ```
 
-## Environment Detection
+## Manager Selection Logic
 
-The system detects the appropriate environment to use:
+The system selects the appropriate deployment manager:
 
 1. If `WEBSITE_DEPLOYMENT_TYPE=local-dev` is set, it always uses LocalDevDeploymentManager
-2. If `NODE_ENV=development` or `NODE_ENV=test`, it defaults to LocalDevDeploymentManager
-3. Otherwise, it uses LocalCaddyDeploymentManager (for production)
+2. If `config.deployment.type === 'local-dev'`, it uses LocalDevDeploymentManager
+3. Otherwise, it uses the appropriate manager based on configuration
 
 ## Directory Structure
 
@@ -132,9 +147,9 @@ The deployment system includes comprehensive tests:
 
 ## Configuration
 
-Environment variables that control deployment:
+Environment variables and configuration that control deployment:
 
-- `NODE_ENV`: Determines default deployment manager type
 - `WEBSITE_DEPLOYMENT_TYPE`: Override to force a specific manager type
+- `config.deployment.type`: Configuration setting determining deployment type
 - `WEBSITE_BASE_DIR`: Base directory for file operations
 - `WEBSITE_DOMAIN`: Domain name for the website

@@ -7,6 +7,7 @@ import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
 import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import { getServerManager } from '@/mcp/contexts/website/services/serverManager';
 
 import { createCommandHandler } from '../commands';
 import type { CommandHandler } from '../commands';
@@ -442,17 +443,17 @@ export class MatrixBrainInterface {
 
 async function main() {
   try {
-    // Initialize website server manager early in development mode
-    if (process.env.NODE_ENV === 'development') {
-      try {
-        const { getServerManager } = await import('@/mcp/contexts/website/services/serverManager');
-        logger.info('Initializing server manager for development mode');
-        const serverManager = getServerManager();
-        await serverManager.initialize();
-        logger.info('Server manager initialized');
-      } catch (error) {
-        logger.error('Error initializing server manager:', { error });
-      }
+    // Initialize and start website servers for all environments
+    logger.info('Initializing and starting website servers');
+    const serverManager = getServerManager();
+    await serverManager.initialize();
+    
+    // Explicitly start servers after initialization
+    const startResult = await serverManager.startServers();
+    if (startResult) {
+      logger.info('Website servers started successfully');
+    } else {
+      logger.warn('Some website servers may not have started properly');
     }
 
     const matrixInterface = new MatrixBrainInterface();
@@ -472,16 +473,15 @@ async function main() {
       
       try {
         // Always use the ServerManager to stop servers in any environment
-        const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
         logger.info('Stopping website servers...');
         
-        const serverManager = ServerManager.getInstance();
+        const serverManager = getServerManager();
         // Use the stronger cleanup method that forcefully stops all servers
         await serverManager.cleanup();
         
         logger.info('Website servers stopped successfully.');
-      } catch (error) {
-        logger.error('Error stopping website servers:', { error });
+      } catch {
+        // Cleanup errors are logged but don't prevent exit
       }
     };
     

@@ -46,10 +46,11 @@ describe('Website Deployment Integration', () => {
     process.env = { ...originalEnv };
   });
   
-  test('should use LocalDevDeploymentManager in development environment', async () => {
-    // Set up the environment
-    process.env['NODE_ENV'] = 'development';
-    delete process.env['WEBSITE_DEPLOYMENT_TYPE'];
+  test('should use LocalDevDeploymentManager when deployment type is local-dev', async () => {
+    // Set up the configuration for local-dev
+    const mockConfig = await websiteContext.getConfig();
+    mockConfig.deployment.type = 'local-dev';
+    await websiteContext.updateConfig(mockConfig);
     
     // Get the deployment manager
     const deploymentManager = await websiteContext.getDeploymentManager();

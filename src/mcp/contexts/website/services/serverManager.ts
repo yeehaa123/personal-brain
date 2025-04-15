@@ -3,10 +3,6 @@
  *
  * A dedicated module for managing server lifecycle across the application,
  * independent of context initialization.
- * 
- * This allows servers to be automatically started and stopped based on
- * environment settings, regardless of when or if the WebsiteContext is
- * initialized.
  */
 
 import { Logger } from '@/utils/logger';
@@ -149,7 +145,6 @@ export class ServerManager {
   
   /**
    * Initialize the server manager
-   * This should be called at application startup
    */
   async initialize(): Promise<boolean> {
     if (this.initialized) {
@@ -158,7 +153,14 @@ export class ServerManager {
     
     try {
       // Initialize the deployment adapter
-      await this.deploymentAdapter.initialize();
+      const adapterInitialized = await this.deploymentAdapter.initialize();
+      if (!adapterInitialized) {
+        this.logger.warn('Deployment adapter initialization returned false', {
+          context: 'ServerManager',
+        });
+        // Continue anyway as this might be recoverable
+      }
+      
       this.initialized = true;
       
       // Define the production directory path
@@ -167,9 +169,6 @@ export class ServerManager {
       // Always ensure the production directory exists with a default HTML file
       // This ensures the production server can start properly in any environment
       await this.ensureProductionDirectory(productionDir);
-      
-      // Check if we should auto-start servers based on environment
-      await this.autoStartIfNeeded();
       
       return true;
     } catch (error) {
@@ -182,27 +181,18 @@ export class ServerManager {
   }
   
   /**
-   * Check if servers should be auto-started based on environment settings
-   */
-  private async autoStartIfNeeded(): Promise<void> {
-    // Auto-start servers in development mode or if explicitly configured
-    if (process.env.NODE_ENV === 'development' || process.env['WEBSITE_AUTO_START_SERVERS'] === 'true') {
-      this.logger.info('Auto-starting website servers based on environment settings', {
-        NODE_ENV: process.env.NODE_ENV,
-        WEBSITE_AUTO_START_SERVERS: process.env['WEBSITE_AUTO_START_SERVERS'],
-        context: 'ServerManager',
-      });
-      
-      await this.startServers();
-    }
-  }
-  
-  /**
    * Start preview and production servers
+   * @returns true if both servers are running, false otherwise
    */
   async startServers(): Promise<boolean> {
     if (!this.initialized) {
-      await this.initialize();
+      const initResult = await this.initialize();
+      if (!initResult) {
+        this.logger.error('Server manager failed to initialize, cannot start servers', {
+          context: 'ServerManager',
+        });
+        return false;
+      }
     }
     
     try {
@@ -211,8 +201,19 @@ export class ServerManager {
       });
       
       // First check if servers are already running
-      const previewRunning = await this.deploymentAdapter.isServerRunning('preview');
-      const productionRunning = await this.deploymentAdapter.isServerRunning('production');
+      let previewRunning = false;
+      let productionRunning = false;
+      
+      try {
+        previewRunning = await this.deploymentAdapter.isServerRunning('preview');
+        productionRunning = await this.deploymentAdapter.isServerRunning('production');
+      } catch (checkError) {
+        this.logger.warn('Error checking server status, assuming servers are not running', {
+          error: checkError,
+          context: 'ServerManager',
+        });
+        // Continue with starting the servers
+      }
       
       // Skip starting if already running
       if (previewRunning && productionRunning) {
@@ -228,19 +229,30 @@ export class ServerManager {
       
       // Start the preview server if not running
       if (!previewRunning) {
-        const previewSuccess = await this.deploymentAdapter.startServer(
-          'preview',
-          previewPort,
-          `${process.cwd()}/src/website`,
-        );
-        
-        if (!previewSuccess) {
-          this.logger.error('Failed to start preview server', {
+        try {
+          const previewSuccess = await this.deploymentAdapter.startServer(
+            'preview',
+            previewPort,
+            `${process.cwd()}/src/website`,
+          );
+          
+          if (!previewSuccess) {
+            this.logger.error('Failed to start preview server', {
+              context: 'ServerManager',
+            });
+          } else {
+            // Track that we've started a server
+            this.activeServerCount++;
+            this.logger.info('Preview server started successfully', {
+              port: previewPort,
+              context: 'ServerManager',
+            });
+          }
+        } catch (previewError) {
+          this.logger.error('Error starting preview server', {
+            error: previewError,
             context: 'ServerManager',
           });
-        } else {
-          // Track that we've started a server
-          this.activeServerCount++;
         }
       } else if (previewRunning) {
         // Already running server counts too
@@ -252,21 +264,30 @@ export class ServerManager {
         // Define the production directory
         const productionDir = `${process.cwd()}/dist/production`;
         
-        // Production directory is now ensured at initialization, no need to check again
-        
-        const productionSuccess = await this.deploymentAdapter.startServer(
-          'production',
-          productionPort,
-          productionDir,
-        );
-        
-        if (!productionSuccess) {
-          this.logger.error('Failed to start production server', {
+        try {
+          const productionSuccess = await this.deploymentAdapter.startServer(
+            'production',
+            productionPort,
+            productionDir,
+          );
+          
+          if (!productionSuccess) {
+            this.logger.error('Failed to start production server', {
+              context: 'ServerManager',
+            });
+          } else {
+            // Track that we've started a server
+            this.activeServerCount++;
+            this.logger.info('Production server started successfully', {
+              port: productionPort,
+              context: 'ServerManager',
+            });
+          }
+        } catch (productionError) {
+          this.logger.error('Error starting production server', {
+            error: productionError,
             context: 'ServerManager',
           });
-        } else {
-          // Track that we've started a server
-          this.activeServerCount++;
         }
       } else if (productionRunning) {
         // Already running server counts too
@@ -274,12 +295,26 @@ export class ServerManager {
       }
       
       // Check if servers are now running
-      const finalPreviewRunning = await this.deploymentAdapter.isServerRunning('preview');
-      const finalProductionRunning = await this.deploymentAdapter.isServerRunning('production');
+      let finalPreviewRunning = false;
+      let finalProductionRunning = false;
+      
+      try {
+        finalPreviewRunning = await this.deploymentAdapter.isServerRunning('preview');
+        finalProductionRunning = await this.deploymentAdapter.isServerRunning('production');
+      } catch (finalCheckError) {
+        this.logger.error('Error checking final server status', {
+          error: finalCheckError,
+          context: 'ServerManager',
+        });
+        // Use best guess based on success of start operations
+        finalPreviewRunning = previewRunning || (this.activeServerCount > 0);
+        finalProductionRunning = productionRunning || (this.activeServerCount > 1);
+      }
       
       this.logger.info('Server status after startup attempt', {
         preview: finalPreviewRunning ? 'Running' : 'Not Running',
         production: finalProductionRunning ? 'Running' : 'Not Running',
+        activeCount: this.activeServerCount,
         context: 'ServerManager',
       });
       
