@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { anthropic } from '@ai-sdk/anthropic';
+import { generateText, type LanguageModelUsage } from 'ai';
 
 import { aiConfig } from '@/config';
 import logger from '@/utils/logger';
@@ -36,7 +37,7 @@ export class ClaudeModel {
    */
   private static instance: ClaudeModel | null = null;
   
-  private client: Anthropic;
+  private apiKey: string;
   private model: string;
 
   /**
@@ -94,9 +95,7 @@ export class ClaudeModel {
    * @param model Model to use (defaults to aiConfig.anthropic.defaultModel)
    */
   private constructor(apiKey?: string, model = aiConfig.anthropic.defaultModel) {
-    this.client = new Anthropic({
-      apiKey: apiKey || aiConfig.anthropic.apiKey,
-    });
+    this.apiKey = apiKey || aiConfig.anthropic.apiKey;
     this.model = model;
     logger.debug(`Claude model initialized with model: ${this.model}`);
   }
@@ -115,33 +114,59 @@ export class ClaudeModel {
     maxTokens = aiConfig.anthropic.defaultMaxTokens,
   ): Promise<ModelResponse> {
     try {
-      const response = await this.client.messages.create({
-        model: this.model,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: userPrompt }],
-        max_tokens: maxTokens,
-      });
-
-      let responseText = '';
-      if (response.content.length > 0) {
-        const firstContent = response.content[0];
-        if (firstContent.type === 'text') {
-          responseText = firstContent.text ?? '';
-        } else {
-          responseText = JSON.stringify(firstContent);
-        }
+      // The Vercel AI SDK uses environment variables for API keys by default
+      // Here we temporarily set the environment variable if we have a custom API key
+      const originalApiKey = process.env['ANTHROPIC_API_KEY'];
+      if (this.apiKey) {
+        process.env['ANTHROPIC_API_KEY'] = this.apiKey;
       }
       
-      return {
-        response: responseText,
-        usage: {
-          inputTokens: response.usage?.input_tokens ?? 0,
-          outputTokens: response.usage?.output_tokens ?? 0,
-        },
-      };
+      try {
+        // Generate text using the Vercel AI SDK
+        const { text, usage } = await generateText({
+          model: anthropic(this.model),
+          system: systemPrompt,
+          prompt: userPrompt,
+          maxTokens,
+          temperature: aiConfig.anthropic.temperature,
+        });
+        
+        // Map usage from the AI SDK to our internal format
+        const mappedUsage = this.mapUsage(usage);
+        
+        return {
+          response: text,
+          usage: mappedUsage,
+        };
+      } finally {
+        // Restore the original API key environment variable
+        if (originalApiKey) {
+          process.env['ANTHROPIC_API_KEY'] = originalApiKey;
+        } else if (this.apiKey) {
+          delete process.env['ANTHROPIC_API_KEY'];
+        }
+      }
     } catch (error) {
       logger.error(`Error calling Claude API: ${error}`);
       throw error;
     }
+  }
+  
+  /**
+   * Map SDK usage object to our internal format
+   * @param usage The AI SDK usage object
+   * @returns Our internal usage format
+   */
+  private mapUsage(usage?: LanguageModelUsage): { inputTokens: number; outputTokens: number } {
+    if (!usage) {
+      return { inputTokens: 0, outputTokens: 0 };
+    }
+    
+    // The AI SDK usage object structure is different, so we need to map it
+    // The 'prompt' tokens are the input, and the 'completion' tokens are the output
+    return {
+      inputTokens: usage.promptTokens ?? 0,
+      outputTokens: usage.completionTokens ?? 0,
+    };
   }
 }
