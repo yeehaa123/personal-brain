@@ -10,6 +10,7 @@ This document outlines the development plan for the Personal Brain project, focu
 4. ✅ **Enhanced Context Management**: Improved context handling with automatic tier transitions
 5. ✅ **Conversation to Notes Integration**: Implemented functionality to convert conversations to permanent notes
 6. ✅ **Matrix Interface Improvements**: Enhanced the Matrix chat interface (ongoing)
+7. ✅ **Claude Model Migration**: Migrated from direct Anthropic SDK to the more generic Vercel AI SDK
 
 ## Current Priorities
 
@@ -66,6 +67,14 @@ This document outlines the development plan for the Personal Brain project, focu
    - Add "Related notes" suggestions when viewing content
    - Create multiple navigation paths (tags, similarity, timeline)
    - See detailed plan in [`planning/knowledge-navigation-enhancements.md`](/planning/knowledge-navigation-enhancements.md)
+
+## Post-MVP Priorities
+
+1. **Vercel AI SDK MCP Integration**: Integrate our MCP implementation with Vercel AI SDK
+   - Evaluate phased integration vs. complete migration approaches
+   - Standardize AI model interactions using Vercel's implementation
+   - Future-proof our architecture as Vercel's MCP support matures
+   - See detailed plan in [`planning/vercel-ai-sdk-mcp-integration.md`](/planning/vercel-ai-sdk-mcp-integration.md)
 
 ## Future Development
 
