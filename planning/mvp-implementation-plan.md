@@ -6,22 +6,30 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 
 ## MVP Components
 
-1. **Website Landing Page Generation**: Create a professional landing page from profile data
-2. **Netlify Deployment**: Implement flexible deployment architecture with Netlify as first provider
-3. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
+1. **Protocol Response Simplification**: Simplify BrainProtocol using Claude's schema capabilities
+2. **Website Landing Page Generation**: Create a professional landing page from profile data
+3. **Netlify Deployment**: Implement flexible deployment architecture with Netlify as first provider
+4. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
 
 ## Scope Boundaries
 
 ### What's In (MVP Scope)
 
-#### 1. Website Landing Page Generation
+#### 1. Protocol Response Simplification
+- Standard schema for common query responses
+- Custom schema support for specialized queries
+- Schema-based metadata generation with Claude model
+- Updated renderers for standard schema responses
+- Unit tests for both schema approaches
+
+#### 2. Website Landing Page Generation
 - Website Context following Component Interface Standardization pattern
 - Astro integration with content collections
 - Profile-to-landing-page conversion
 - Preview capability
 - CLI and Matrix command parity
 
-#### 2. Flexible Deployment Architecture
+#### 3. Flexible Deployment Architecture
 - Provider-agnostic deployment interface
 - Netlify integration as first deployment provider
 - Build process automation
@@ -95,7 +103,17 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 
 ## Implementation Sequence
 
-### Phase 1: Foundation and Deployment Pipeline (Week 1)
+### Phase 0: Protocol Response Simplification (Priority Task)
+
+0. **Simplify BrainProtocol with Schema-Based Responses** (Days 1-3) 🔜 Highest Priority
+   - 🔜 Define standard response schema with Zod
+   - 🔜 Modify BrainProtocol to use schema-based modeling
+   - 🔜 Create custom schema support for specialized use cases
+   - 🔜 Update renderers to handle schema-based responses
+   - 🔜 Implement comprehensive test suite
+   - 🔜 Document the new approach
+
+### Phase 1: Foundation and Deployment Pipeline
 
 1. **Set up Website Context** (Days 1-2) ✅
    - ✅ Implement storage schemas
@@ -122,7 +140,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - 🔜 Test end-to-end with generated landing page
    - 🔜 Verify automated build and deployment
 
-### Phase 2: Core Content Features (Week 2)
+### Phase 2: Core Content Features
 
 5. **Landing Page Refinements** (Days 1-2)
    - Enhance landing page template with better styling
@@ -136,7 +154,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - Add log visibility controls
    - Ensure consistent formatting across interfaces
 
-### Phase 3: Refinement and Polish (Week 3)
+### Phase 3: Refinement and Polish
 
 7. **Deployment Enhancements** (Days 1-2)
    - Optimize build process
@@ -161,6 +179,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 
 | Week | Day | Tasks | Status |
 |------|-----|-------|--------|
+| 0 | 1-3 | Protocol Response Simplification | 🔜 Highest Priority |
 | 1 | 1-2 | Website Context Setup | ✅ Completed |
 | 1 | 3 | Basic Astro Setup & Content Services | ✅ Completed |
 | 1 | 4 | Command Interface Integration | ⏳ In Progress |
@@ -181,6 +200,14 @@ For the MVP to be considered complete, all the following criteria must be met:
 - End-to-end tests passing
 - Documentation completed
 - No critical bugs
+
+### Protocol Response Simplification
+- 🔜 Standard response schema implemented with Zod
+- 🔜 BrainProtocol updated to use schema-based modeling
+- 🔜 Custom schema support implemented for specialized queries
+- 🔜 CLI and Matrix renderers updated to handle new response format
+- 🔜 Test suite passing for both standard and custom schemas
+- 🔜 Documentation updated for the new approach
 
 ### Website Landing Page Generation
 - ✅ Website Context architecture implemented with Component Interface Standardization pattern

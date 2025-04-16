@@ -16,7 +16,14 @@ This document outlines the development plan for the Personal Brain project, focu
 
 > **Note:** The current development focus is on the MVP implementation plan. For the most up-to-date status and detailed timeline, please refer to the [MVP Implementation Plan](/planning/mvp-implementation-plan.md).
 
-1. **Website Integration MVP**: 
+1. **Protocol Response Simplification**: Simplify BrainProtocol output using model schema support
+   - Delegate metadata generation to the Claude model using schemas
+   - Create a standard response format for common queries
+   - Add support for custom schemas for specialized use cases
+   - Significantly reduce code complexity in the protocol layer
+   - See detailed plan in [`planning/protocol-response-simplification.md`](/planning/protocol-response-simplification.md)
+
+2. **Website Integration MVP**: 
    - Currently in Phase 1 of implementation
    - Website Context architecture implemented
    - Basic Astro integration complete
@@ -24,20 +31,20 @@ This document outlines the development plan for the Personal Brain project, focu
    - GitHub Pages deployment upcoming
    - See full details and current status in the [MVP Implementation Plan](/planning/mvp-implementation-plan.md)
 
-2. **CLI Interface Improvements**: Separate logger output from CLI content
+3. **CLI Interface Improvements**: Separate logger output from CLI content
    - Create clear visual distinction between logs and actual content
    - Add option to control log visibility (hide/show/log level)
    - Implement consistent formatting across output types
    - Part of MVP Phase 2 (See [MVP Implementation Plan](/planning/mvp-implementation-plan.md))
 
-3. **Conversation Schema Refactoring**: Remove direct access to conversation turns data
+4. **Conversation Schema Refactoring**: Remove direct access to conversation turns data
    - Eliminate direct access to conversation history data through Conversation object properties
    - Establish the TieredMemoryManager as the single source of truth for conversation history
    - Create a cleaner, more maintainable architecture with clear responsibilities
    - Prevent potential bugs from inconsistent access patterns
    - See detailed plan in [`planning/conversation-schema-refactoring.md`](/planning/conversation-schema-refactoring.md)
 
-4. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
+5. **Database-backed Memory Storage**: Implement persistent storage for conversation memory
    - Move from in-memory to database storage
    - Support archiving and retrieval of old conversations
    - Implement cross-conversation knowledge transfer
