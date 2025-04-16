@@ -16,7 +16,14 @@ import {
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel, EmbeddingService } from '@/mcp/model';
 import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
+import { 
+  generateStandardSystemPrompt, 
+  StandardResponseSchema, 
+  standardToProtocolResponse 
+} from '@/mcp/protocol/schemas/standardResponseSchema';
+import type { StandardResponse } from '@/mcp/protocol/schemas/standardResponseSchema';
 import type { Profile } from '@models/profile';
+import type { Note } from '@models/note';
 import { Logger } from '@utils/logger';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
 
@@ -24,8 +31,9 @@ import { ExternalSourceService } from './components/externalSourceService';
 import { NoteService } from './components/noteService';
 import { ProfileAnalyzer } from './components/profileAnalyzer';
 import { PromptFormatter } from './components/promptFormatter';
-import { SystemPromptGenerator } from './components/systemPromptGenerator';
-import type { ExternalCitation, IConversationManager, ProtocolResponse } from './types';
+// Note: SystemPromptGenerator is not used directly now that we're using schema-based responses
+// import { SystemPromptGenerator } from './components/systemPromptGenerator';
+import type { IConversationManager, ProtocolResponse, QueryOptions } from './types';
 
 /**
  * Interface for BrainProtocol constructor options
@@ -66,7 +74,6 @@ export class BrainProtocol {
 
   // Component classes
   private promptFormatter: PromptFormatter;
-  private systemPromptGenerator: SystemPromptGenerator;
   private profileAnalyzer: ProfileAnalyzer;
   private externalSourceService: ExternalSourceService;
   private noteService: NoteService;
@@ -218,7 +225,6 @@ export class BrainProtocol {
 
     // Initialize component classes using the Component Interface Standardization pattern
     this.promptFormatter = PromptFormatter.getInstance();
-    this.systemPromptGenerator = SystemPromptGenerator.getInstance();
     this.profileAnalyzer = ProfileAnalyzer.getInstance({
       embeddingService: this.embeddingService,
     });
@@ -460,22 +466,41 @@ export class BrainProtocol {
   /**
    * Process a user query through the full MCP pipeline
    * @param query The user's query to process
-   * @returns A structured response with answer and contextual information
-   */
-  /**
-   * Process a user query through the full MCP pipeline with conversation history
-   * @param query The user's query to process
    * @param options Optional parameters like user info for conversation tracking
    * @returns A structured response with answer and contextual information
    */
   async processQuery(
     query: string,
-    options?: {
-      userId?: string;
-      userName?: string;
-      roomId?: string;
-    },
+    options?: QueryOptions,
   ): Promise<ProtocolResponse> {
+    // Get the standard response first
+    const standardResponse = await this.processQueryWithStandardSchema(query, options);
+    
+    // Get related notes to suggest to the user
+    let relatedNotes: Note[] = [];
+    try {
+      const relevantNotes = await this.noteService.fetchRelevantContext(query);
+      const relatedNotesResult = await this.noteService.getRelatedNotes(relevantNotes);
+      // Ensure relatedNotes is always an array
+      relatedNotes = Array.isArray(relatedNotesResult) ? relatedNotesResult : [];
+    } catch (error) {
+      this.logger.warn('Failed to get related notes:', error);
+    }
+    
+    // Convert the standard response to the traditional protocol response format
+    return standardToProtocolResponse(standardResponse, relatedNotes);
+  }
+  
+  /**
+   * Process a query using the standard schema
+   * @param query The user query
+   * @param options Optional parameters
+   * @returns Standardized response with answer and metadata
+   */
+  async processQueryWithStandardSchema(
+    query: string,
+    options?: QueryOptions,
+  ): Promise<StandardResponse> {
     // Validate input
     if (!isNonEmptyString(query)) {
       this.logger.warn('Empty query received, using default question');
@@ -484,19 +509,17 @@ export class BrainProtocol {
 
     this.logger.info(`Processing query: "${query}"`);
 
-    // If roomId is provided, ensure we're using the right conversation
+    // Set up conversation
     if (options?.roomId) {
       await this.setCurrentRoom(options.roomId);
+    }
+    if (!this.currentConversationId) {
+      await this.initializeConversation();
     }
 
     // Ensure profile is loaded
     if (!isDefined(this.profile)) {
       await this.loadProfile();
-    }
-
-    // Ensure we have an active conversation
-    if (!this.getConversationManager().hasActiveConversation()) {
-      await this.initializeConversation();
     }
 
     // 1. Analyze profile relevance
@@ -528,7 +551,6 @@ export class BrainProtocol {
 
     // 3. Fetch relevant external knowledge if enabled
     let externalResults: ExternalSourceResult[] = [];
-    let externalCitations: ExternalCitation[] = [];
 
     if (this.useExternalSources) {
       // Determine if we should query external sources
@@ -543,17 +565,6 @@ export class BrainProtocol {
 
         if (externalResults.length > 0) {
           this.logger.info(`Found ${externalResults.length} relevant external sources`);
-
-          // Convert to citations format with safe access to properties
-          externalCitations = externalResults.map(result => ({
-            title: isNonEmptyString(result.title) ? result.title : 'Untitled Source',
-            source: isNonEmptyString(result.source) ? result.source : 'Unknown Source',
-            url: isNonEmptyString(result.url) ? result.url : '#',
-            excerpt: this.promptFormatter.getExcerpt(
-              isNonEmptyString(result.content) ? result.content : 'No content available',
-              150,
-            ),
-          }));
         }
       }
     }
@@ -577,7 +588,7 @@ export class BrainProtocol {
     // 5. Format the context and query for the model
     // For highly relevant profile queries, always include profile context
     const includeProfile = isProfileQuery || profileRelevance > relevanceConfig.profileInclusionThreshold;
-    const { formattedPrompt, citations } = this.promptFormatter.formatPromptWithContext(
+    const { formattedPrompt } = this.promptFormatter.formatPromptWithContext(
       query,
       relevantNotes,
       externalResults,
@@ -587,32 +598,21 @@ export class BrainProtocol {
       conversationHistory,
     );
 
-    // 6. Get related notes to suggest to the user
-    const relatedNotesResult = await this.noteService.getRelatedNotes(relevantNotes);
-    // Ensure relatedNotes is always an array
-    const relatedNotes = Array.isArray(relatedNotesResult) ? relatedNotesResult : [];
-
-    // 7. Generate system prompt based on query analysis
-    const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
+    // 6. Generate system prompt for standard schema
+    const systemPrompt = generateStandardSystemPrompt(
       isProfileQuery,
-      profileRelevance,
-      externalResults.length > 0,
+      externalResults.length > 0
     );
 
-    // 8. Query the LLM with the formatted prompt
+    // 7. Query the LLM with the formatted prompt and schema
     const modelResponse = await this.model.complete({
       systemPrompt,
       userPrompt: formattedPrompt,
+      schema: StandardResponseSchema,
     });
-    const responseText = isNonEmptyString(modelResponse.object.answer)
-      ? modelResponse.object.answer
-      : 'I apologize, but I could not generate a response. Please try asking again.';
 
-    // 9. Save the conversation turn
+    // 8. Save the conversation turn
     try {
-      // The model response is pure text, so we save it directly to memory
-      // No HTML formatting has been applied at this point
-      
       // Ensure we have an active conversation
       if (!this.currentConversationId) {
         await this.initializeConversation();
@@ -660,7 +660,7 @@ export class BrainProtocol {
       await this.conversationContext.addTurn(
         this.currentConversationId,
         query, // We include the original query for context
-        responseText,
+        modelResponse.object.answer,
         assistantTurnOptions,
       );
       this.logger.debug('Saved assistant turn with userId: assistant');
@@ -673,17 +673,7 @@ export class BrainProtocol {
       // Continue even if saving fails
     }
 
-    // 10. Return the formatted protocol response
-    // For medium-high relevance, include profile even if not a direct profile query
-    const includeProfileInResponse = isProfileQuery || profileRelevance > relevanceConfig.profileResponseThreshold;
-    const citationsArray = Array.isArray(citations) ? citations : [];
-
-    return {
-      answer: responseText,
-      citations: citationsArray,
-      relatedNotes,
-      profile: (includeProfileInResponse && isDefined(this.profile)) ? this.profile : undefined,
-      externalSources: externalCitations.length > 0 ? externalCitations : undefined,
-    };
+    // 9. Return the structured response from the model
+    return modelResponse.object;
   }
 }
