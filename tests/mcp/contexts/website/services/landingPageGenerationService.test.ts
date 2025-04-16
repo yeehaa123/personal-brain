@@ -1,18 +1,37 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 
 import type { ProfileContext } from '@/mcp/contexts/profiles';
 import { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
+import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockProfile } from '@test/__mocks__/models/profile';
+import { MockBrainProtocol } from '@test/__mocks__/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
 
 describe('LandingPageGenerationService', () => {
   let service: LandingPageGenerationService;
   let mockProfileContext: MockProfileContext;
+  let mockBrainProtocol: MockBrainProtocol;
   
   beforeEach(() => {
     // Reset dependencies
     MockProfileContext.resetInstance();
+    MockBrainProtocol.resetInstance();
+    
+    // Configure mock brain protocol
+    mockBrainProtocol = MockBrainProtocol.getInstance();
+    
+    // Override the processQuery method to return landing page data
+    mockBrainProtocol.processQuery = mock((query: unknown) => Promise.resolve({
+      query,
+      answer: `{
+        "name": "AI Generated Name",
+        "title": "AI Generated Title",
+        "tagline": "AI Generated Tagline"
+      }`,
+      citations: [],
+      relatedNotes: [],
+    }));
     
     // Create a fresh profile context
     mockProfileContext = MockProfileContext.createFresh();
@@ -22,6 +41,11 @@ describe('LandingPageGenerationService', () => {
     
     // Set the mock profile context
     service.setProfileContext(mockProfileContext as unknown as ProfileContext);
+    
+    // Mock getBrainProtocol to return our configured mock
+    spyOn(service, 'getBrainProtocol').mockImplementation(() => {
+      return mockBrainProtocol as unknown as BrainProtocol;
+    });
   });
   
   afterEach(() => {
@@ -57,18 +81,18 @@ describe('LandingPageGenerationService', () => {
     expect(instance1).not.toBe(instance2);
   });
   
-  test('generateLandingPageData should extract data from profile', async () => {
+  test('generateLandingPageData should return AI-generated content', async () => {
     // Setup mock profile
     const mockProfile = MockProfile.createDefault();
     mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfile));
     
     const result = await service.generateLandingPageData();
     
-    // Verify the generated data matches profile data
+    // Verify the generated data matches AI-enhanced content
     expect(result).toEqual({
-      name: mockProfile.fullName,
-      title: `${mockProfile.fullName} - ${mockProfile.occupation || 'Personal Website'}`,
-      tagline: mockProfile.headline || 'Welcome to my personal website',
+      name: 'AI Generated Name',
+      title: 'AI Generated Title',
+      tagline: 'AI Generated Tagline',
     });
   });
   
@@ -79,42 +103,7 @@ describe('LandingPageGenerationService', () => {
     await expect(service.generateLandingPageData()).rejects.toThrow('No profile found');
   });
   
-  test('generateLandingPageData should handle missing required fields', async () => {
-    // Mock profile with missing fields
-    const incompleteProfile = MockProfile.createMinimalProfile();
-    mockProfileContext.getProfile = mock(() => Promise.resolve(incompleteProfile));
-    
-    const result = await service.generateLandingPageData();
-    
-    // Should use fallbacks
-    expect(result.name).toBe(incompleteProfile.fullName);
-    expect(result.title).toBe(`${incompleteProfile.fullName} - Personal Website`);
-    expect(result.tagline).toBe('Welcome to my personal website');
-  });
-  
-  test('generateLandingPageData should use occupation for title if available', async () => {
-    // Mock profile with occupation
-    const profileWithOccupation = MockProfile.createDeveloperProfile();
-    mockProfileContext.getProfile = mock(() => Promise.resolve(profileWithOccupation));
-    
-    const result = await service.generateLandingPageData();
-    
-    // Should use occupation in title
-    expect(result.title).toBe(`${profileWithOccupation.fullName} - ${profileWithOccupation.occupation}`);
-  });
-  
-  test('generateLandingPageData should use headline for tagline if available', async () => {
-    // Mock profile with headline
-    const profileWithHeadline = MockProfile.createDeveloperProfile();
-    mockProfileContext.getProfile = mock(() => Promise.resolve(profileWithHeadline));
-    
-    const result = await service.generateLandingPageData();
-    
-    // Should use headline for tagline (headline is defined in the developer profile)
-    expect(result.tagline).toBe(profileWithHeadline.headline || '');
-  });
-  
-  test('should allow customization via overrides', async () => {
+  test('should apply custom overrides to AI-generated content', async () => {
     // Setup mock profile
     const mockProfile = MockProfile.createDefault();
     mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfile));
@@ -125,9 +114,28 @@ describe('LandingPageGenerationService', () => {
     
     const result = await service.generateLandingPageData(overrides);
     
-    // Verify custom tagline was used
-    expect(result.tagline).toBe('Custom tagline');
-    // Standard fields should still be populated from profile
-    expect(result.name).toBe(mockProfile.fullName);
+    // Verify custom tagline was used while AI content was used for other fields
+    expect(result).toEqual({
+      name: 'AI Generated Name',
+      title: 'AI Generated Title',
+      tagline: 'Custom tagline',
+    });
+  });
+  
+  test('should throw an error if BrainProtocol returns invalid JSON', async () => {
+    // Setup mock profile
+    const mockProfile = MockProfile.createDefault();
+    mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfile));
+    
+    // Configure mock brain protocol to return invalid JSON
+    mockBrainProtocol.processQuery = mock((query: unknown) => Promise.resolve({
+      query,
+      answer: 'This is not valid JSON',
+      citations: [],
+      relatedNotes: [],
+    }));
+    
+    // Should throw an error
+    await expect(service.generateLandingPageData()).rejects.toThrow();
   });
 });

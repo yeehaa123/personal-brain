@@ -362,6 +362,10 @@ export class WebsiteContext extends BaseContext {
     // Set profile context for retrieving profile data
     this.landingPageGenerationService.setProfileContext(this.getProfileContext());
     
+    this.logger.debug('Initialized LandingPageGenerationService with profile context', {
+      context: 'WebsiteContext',
+    });
+    
     return this.landingPageGenerationService;
   }
   
