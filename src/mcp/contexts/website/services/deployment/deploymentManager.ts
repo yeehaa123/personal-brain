@@ -282,43 +282,155 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
         this.logger.info('Copying files from preview to production', {
           sourceDir: previewDir,
           destDir: productionDir,
-          command: `cp -R ${previewDir}/* ${productionDir}/`,
           context: 'LocalCaddyDeploymentManager',
         });
         
         // Make sure the preview directory has files to copy
         const previewContents = await fs.readdir(previewDir);
+        this.logger.info('Preview directory contents:', {
+          fileCount: previewContents.length,
+          fileList: previewContents.join(', '),
+          context: 'LocalCaddyDeploymentManager',
+        });
+        
         if (previewContents.length === 0) {
           throw new Error(`Preview directory exists but is empty: ${previewDir}`);
         }
         
-        // Use cp -r with explicit paths
-        await execPromise(`cp -R ${previewDir}/* ${productionDir}/`);
+        // Verify index.html exists in preview
+        const indexExists = await fs.stat(path.join(previewDir, 'index.html'))
+          .then(stats => stats.isFile())
+          .catch(() => false);
+          
+        if (!indexExists) {
+          this.logger.error('index.html missing from preview directory', {
+            previewDir,
+            context: 'LocalCaddyDeploymentManager',
+          });
+          throw new Error('index.html not found in preview directory');
+        }
         
-        // List files in production directory after copy
+        // Copy each file individually to ensure everything transfers correctly
+        await fs.mkdir(productionDir, { recursive: true });
+        
+        // First copy index.html explicitly
+        await fs.copyFile(
+          path.join(previewDir, 'index.html'),
+          path.join(productionDir, 'index.html'),
+        );
+        
+        this.logger.info('index.html copied successfully', {
+          source: path.join(previewDir, 'index.html'),
+          destination: path.join(productionDir, 'index.html'),
+          context: 'LocalCaddyDeploymentManager',
+        });
+        
+        // Then copy the rest
+        for (const file of previewContents) {
+          if (file === 'index.html') continue; // Already copied
+          
+          const sourcePath = path.join(previewDir, file);
+          const destPath = path.join(productionDir, file);
+          
+          try {
+            const fileStats = await fs.stat(sourcePath);
+            
+            if (fileStats.isDirectory()) {
+              // Use shell command for recursive directory copy
+              await execPromise(`cp -R "${sourcePath}" "${destPath}"`);
+              this.logger.info(`Copied directory: ${file}`, {
+                context: 'LocalCaddyDeploymentManager',
+              });
+            } else {
+              // Direct file copy
+              await fs.copyFile(sourcePath, destPath);
+              this.logger.info(`Copied file: ${file}`, {
+                context: 'LocalCaddyDeploymentManager',
+              });
+            }
+          } catch (copyError) {
+            this.logger.error(`Error copying ${file}`, {
+              error: copyError,
+              context: 'LocalCaddyDeploymentManager',
+            });
+            // Continue with other files even if one fails
+          }
+        }
+        
+        // Verify the production directory has the copied files
         const productionContents = await fs.readdir(productionDir);
-        this.logger.info('Files copied to production directory', {
+        this.logger.info('Production directory contents after copy:', {
           fileCount: productionContents.length,
           fileList: productionContents.join(', '),
           context: 'LocalCaddyDeploymentManager',
         });
         
-        // Optional: Reload Caddy to ensure it picks up any changes
-        try {
-          await execPromise('systemctl is-active --quiet caddy && systemctl reload caddy');
-          this.logger.info('Reloaded Caddy server', {
+        // Verify index.html exists in production
+        const prodIndexExists = await fs.stat(path.join(productionDir, 'index.html'))
+          .then(stats => stats.isFile())
+          .catch(() => false);
+          
+        if (!prodIndexExists) {
+          this.logger.error('index.html missing from production directory after copy', {
+            productionDir,
             context: 'LocalCaddyDeploymentManager',
           });
+          throw new Error('index.html not found in production directory after copy');
+        }
+        
+        // Force Caddy to fully restart to clear any caches
+        try {
+          // First try to restart Caddy completely instead of just reloading
+          this.logger.info('Attempting to restart Caddy server completely', {
+            context: 'LocalCaddyDeploymentManager',
+          });
+          
+          try {
+            // Try restart first (preserves state but more thorough than reload)
+            await execPromise('systemctl is-active --quiet caddy && systemctl restart caddy');
+            this.logger.info('Restarted Caddy server', {
+              context: 'LocalCaddyDeploymentManager',
+            });
+          } catch (restartError) {
+            // If restart fails, try reload as fallback
+            this.logger.warn('Could not restart Caddy, trying reload instead', {
+              error: restartError,
+              context: 'LocalCaddyDeploymentManager',
+            });
+            
+            await execPromise('systemctl is-active --quiet caddy && systemctl reload caddy');
+            this.logger.info('Reloaded Caddy server', {
+              context: 'LocalCaddyDeploymentManager',
+            });
+          }
+          
+          // Add a short delay to ensure Caddy is fully restarted before returning
+          await new Promise(resolve => global.setTimeout(resolve, 1000));
+          
         } catch (caddyError) {
-          this.logger.warn('Could not reload Caddy server, but files were copied successfully', {
+          this.logger.warn('Could not refresh Caddy server, but files were copied successfully', {
             error: caddyError,
             context: 'LocalCaddyDeploymentManager',
           });
-          // Continue even if Caddy reload fails - it might not be managed by systemd
+          // Continue even if Caddy operations fail - it might not be managed by systemd
         }
         
         // Verify the files were copied
         const productionFiles = await fs.readdir(productionDir);
+        
+        // Use the PM2 restart command to restart the production server
+        // This will force a clean restart with the new files
+        try {
+          this.logger.info('Restarting production server to load new files', {
+            context: 'LocalCaddyDeploymentManager',
+          });
+          await execPromise('bun run pm2 restart website-production || true');
+        } catch (restartError) {
+          this.logger.warn('Failed to restart production server', {
+            error: restartError,
+            context: 'LocalCaddyDeploymentManager',
+          });
+        }
         
         return {
           success: true,
