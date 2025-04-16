@@ -63,4 +63,3 @@ When `noUncheckedIndexedAccess` is enabled, TypeScript will treat all property a
 - `noteUtils.ts` - Note handling and formatting
 - `tagExtractor.ts` - Tag extraction and generation
 - `textUtils.ts` - Text processing and chunking
-- `vectorUtils.ts` - Vector operations for embeddings
