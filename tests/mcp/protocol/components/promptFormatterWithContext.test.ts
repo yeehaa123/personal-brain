@@ -95,7 +95,7 @@ Assistant: Classical computing uses classical bits that can be either 0 or 1, wh
       const systemPrompt = 'You are a helpful assistant';
       const modelResponse = await mockModel.complete({
         systemPrompt,
-        userPrompt: promptWithHistory
+        userPrompt: promptWithHistory,
       });
 
       // Save conversation turn

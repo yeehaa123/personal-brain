@@ -88,15 +88,15 @@ describe('QueryProcessor', () => {
         
         if (userPrompt.includes('ecosystem')) {
           responseObject = { 
-            answer: 'Ecosystem architecture involves designing interconnected components that work together.' 
+            answer: 'Ecosystem architecture involves designing interconnected components that work together.', 
           };
         } else if (userPrompt.includes('profile')) {
           responseObject = { 
-            answer: 'Your profile shows expertise in software development and architecture.' 
+            answer: 'Your profile shows expertise in software development and architecture.', 
           };
         } else {
           responseObject = { 
-            answer: 'I don\'t have specific information about that in my knowledge base.' 
+            answer: 'I don\'t have specific information about that in my knowledge base.', 
           };
         }
         
@@ -107,7 +107,7 @@ describe('QueryProcessor', () => {
             ? { inputTokens: 100, outputTokens: 20 }
             : userPrompt.includes('profile')
               ? { inputTokens: 150, outputTokens: 25 }
-              : { inputTokens: 50, outputTokens: 15 }
+              : { inputTokens: 50, outputTokens: 15 },
         });
       },
     );

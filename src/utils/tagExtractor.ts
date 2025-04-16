@@ -70,7 +70,7 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
     });
 
     // Return the tags array directly
-    return response.object.tags
+    return response.object.tags;
   } catch (error) {
     logger.error(`Error extracting tags with Claude: ${error}`);
     // Fallback to simple keyword extraction

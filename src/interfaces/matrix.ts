@@ -6,8 +6,8 @@ import { MsgType } from 'matrix-js-sdk/lib/@types/event';
 import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
-import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import { getServerManager } from '@/mcp/contexts/website/services/serverManager';
+import { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 
 import { createCommandHandler } from '../commands';
 import type { CommandHandler } from '../commands';

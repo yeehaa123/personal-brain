@@ -135,7 +135,7 @@ export class ClaudeModel {
    * @returns Model response with structured object and token usage
    */
   async complete<T = DefaultResponseType>(
-    options: CompleteOptions<T>
+    options: CompleteOptions<T>,
   ): Promise<ModelResponse<T>> {
     try {
       // Use the provided schema or default to textSchema

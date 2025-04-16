@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { conversationConfig } from '@/config';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { getServerManager } from '@/mcp/contexts/website/services/serverManager';
+import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 
 import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
