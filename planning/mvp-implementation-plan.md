@@ -153,21 +153,21 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - ✅ Test end-to-end with generated landing page
    - ✅ Verify automated build and deployment
 
-### Phase 2: Core Content Features & Architecture Improvements
+### Phase 2: Architecture Improvements & Core Content Features
 
-5. **Landing Page Refinements** (Days 1-2) 🔜 Upcoming
+5. **MCP Architecture Refactoring Phase 1-2** (Days 1-3) 🔜 Highest Priority
+   - 🔜 Resource Layer Reorganization (Days 1-2)
+   - 🔜 Protocol Layer Organization (Day 3)
+   - 🔜 Update import references
+   - 🔜 Add tests for refactored components
+
+6. **Landing Page Refinements** (Days 3-4) 🔜 Upcoming
    - 🔜 Enhance landing page template with better styling
    - 🔜 Add support for more profile sections (skills, education, etc.)
    - 🔜 Implement responsive design for mobile compatibility
    - 🔜 Create customizable theme
 
-6. **MCP Architecture Refactoring Phase 1-2** (Days 3-5) 🔜 Upcoming
-   - 🔜 Resource Layer Reorganization (Days 3-4)
-   - 🔜 Protocol Layer Organization (Day 5)
-   - 🔜 Update import references
-   - 🔜 Add tests for refactored components
-
-7. **CLI Interface Improvements** (Days 3-5) 🔜 Upcoming
+7. **CLI Interface Improvements** (Days 4-5) 🔜 Upcoming
    - 🔜 Implement logger separation
    - 🔜 Create visual distinction between logs and content
    - 🔜 Add log visibility controls
@@ -201,10 +201,10 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 | 1 | 3 | Basic Astro Setup & Content Services | ✅ Completed |
 | 1 | 4 | Command Interface Integration | ⏳ In Progress |
 | 1 | 4-5 | Caddy Deployment Integration | ✅ Completed |
-| 2 | 1-2 | Landing Page Refinements | 🔜 Upcoming |
-| 2 | 3-4 | MCP Refactoring Phase 1 (Resource Layer) | 🔜 Upcoming |
-| 2 | 5 | MCP Refactoring Phase 2 (Protocol Layer) | 🔜 Upcoming |
-| 2 | 3-5 | CLI Interface Improvements | 🔜 Upcoming |
+| 2 | 1-2 | MCP Refactoring Phase 1 (Resource Layer) | 🔜 Highest Priority |
+| 2 | 3 | MCP Refactoring Phase 2 (Protocol Layer) | 🔜 Upcoming |
+| 2 | 3-4 | Landing Page Refinements | 🔜 Upcoming |
+| 2 | 4-5 | CLI Interface Improvements | 🔜 Upcoming |
 | 3 | 1-2 | MCP Refactoring Phase 3 (BrainProtocol) | 🔜 Planned |
 | 3 | 3 | MCP Refactoring Phase 4 (Communication) | 🔜 Planned |
 | 3 | 3-4 | Integration & Performance | 🔜 Planned |
