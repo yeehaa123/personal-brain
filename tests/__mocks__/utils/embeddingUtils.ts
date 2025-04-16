@@ -68,44 +68,38 @@ export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: ()
     };
   });
   
-  // Also mock the OpenAI module that's used by BaseEmbeddingService
-  mockFn.module('openai', () => {
+  // Mock Vercel AI SDK embedding functions
+  mockFn.module('ai', () => {
     return {
-      OpenAI: class MockOpenAI {
-        constructor() {}
-        embeddings = {
-          create: async ({ input }: { input: string | string[] }) => {
-            if (Array.isArray(input)) {
-              return {
-                data: input.map(text => ({
-                  embedding: createMockEmbedding(text),
-                  object: 'embedding',
-                  index: 0,
-                })),
-                model: 'text-embedding-3-small',
-                object: 'list',
-                usage: {
-                  prompt_tokens: 100,
-                  total_tokens: 100,
-                },
-              };
-            } else {
-              return {
-                data: [{
-                  embedding: createMockEmbedding(input),
-                  object: 'embedding',
-                  index: 0,
-                }],
-                model: 'text-embedding-3-small',
-                object: 'list',
-                usage: {
-                  prompt_tokens: 50,
-                  total_tokens: 50,
-                },
-              };
-            }
-          },
+      cosineSimilarity: (_vec1: number[], _vec2: number[]) => {
+        // Simple deterministic similarity calculation for tests
+        return 0.85;
+      },
+      
+      embed: async ({ value }: { value: string }) => {
+        return {
+          embedding: createMockEmbedding(value),
+          usage: { tokens: 50 },
         };
+      },
+      
+      embedMany: async ({ values }: { values: string[] }) => {
+        return {
+          embeddings: values.map(text => createMockEmbedding(text)),
+          usage: { tokens: values.length * 50 },
+        };
+      },
+    };
+  });
+  
+  // Mock the OpenAI SDK
+  mockFn.module('@ai-sdk/openai', () => {
+    return {
+      openai: {
+        embedding: (model: string) => ({ 
+          id: model,
+          provider: 'openai',
+        }),
       },
     };
   });
