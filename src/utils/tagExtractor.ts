@@ -1,11 +1,10 @@
-import { anthropic } from '@ai-sdk/anthropic';
-import { generateObject } from 'ai';
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { aiConfig, textConfig } from '@/config';
 import { db } from '@/db'; 
 import { notes } from '@/db/schema';
+import { ClaudeModel } from '@/mcp/model/claude';
 import logger from '@/utils/logger';
 
 import { extractKeywords } from './textUtils';
@@ -54,16 +53,25 @@ Extract up to ${maxTags} tags that best represent this content.
 
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
-    const { object } = await generateObject({
-      model: anthropic(aiConfig.anthropic.defaultModel),
-      prompt,
-      temperature: aiConfig.anthropic.temperature,
-      system: 'You extract tags from content. Only respond with the tags, nothing else.',
-      schema: z.object({
-        tags: z.array(z.string()).max(maxTags),
-      }),
+    // Get the Claude model instance
+    const claude = ClaudeModel.getInstance();
+    
+    // Define the schema for the response
+    const tagSchema = z.object({
+      tags: z.array(z.string()).max(maxTags),
     });
-    return object.tags;
+    
+    // Call Claude with schema-based completion
+    const response = await claude.completeWithSchema({
+      schema: tagSchema,
+      systemPrompt: 'You extract tags from content. Only respond with the tags, nothing else.',
+      userPrompt: prompt,
+      temperature: aiConfig.anthropic.temperature
+    });
+    
+    // Parse the response with our schema to ensure type safety
+    const parsedObject = tagSchema.parse(response.object);
+    return parsedObject.tags;
   } catch (error) {
     logger.error(`Error extracting tags with Claude: ${error}`);
     // Fallback to simple keyword extraction

@@ -56,8 +56,9 @@ export class ConversationSummarizer {
    * @param options Configuration options including optional API key for Claude
    * @private Private constructor to enforce getInstance() usage
    */
-  private constructor(options?: ConversationSummarizerOptions) {
-    this.model = ClaudeModel.getInstance({ apiKey: options?.apiKey });
+  private constructor(_options?: ConversationSummarizerOptions) {
+    // Just get the default instance since we don't need to pass API key anymore
+    this.model = ClaudeModel.getInstance();
   }
 
   /**
@@ -88,10 +89,10 @@ export class ConversationSummarizer {
 
     try {
       // Get summary from Claude
-      const response = await this.model.complete(
-        this.getSystemPrompt(),
-        prompt,
-      );
+      const response = await this.model.complete({
+        systemPrompt: this.getSystemPrompt(),
+        userPrompt: prompt,
+      });
 
       // Create summary object
       const summary: ConversationSummary = {

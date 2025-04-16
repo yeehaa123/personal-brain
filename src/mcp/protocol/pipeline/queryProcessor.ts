@@ -134,7 +134,7 @@ export class QueryProcessor implements IQueryProcessor {
     conversationManager: IConversationManager,
     profileManager: IProfileManager,
     externalSourceManager: IExternalSourceManager,
-    apiKey?: string,
+    _apiKey?: string,
   ) {
     this.conversationManager = conversationManager;
     this.profileManager = profileManager;
@@ -146,7 +146,7 @@ export class QueryProcessor implements IQueryProcessor {
     });
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
-    this.model = ClaudeModel.getInstance({ apiKey });
+    this.model = ClaudeModel.getInstance();
     
     this.logger.debug('Query processor initialized');
   }
@@ -354,7 +354,10 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns Model response
    */
   private async callModel(systemPrompt: string, userPrompt: string): Promise<ModelResponse> {
-    return await this.model.complete(systemPrompt, userPrompt);
+    return await this.model.complete({
+      systemPrompt,
+      userPrompt,
+    });
   }
 
   /**

@@ -9,7 +9,7 @@ import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
 import type { ConversationContext } from '@/mcp/contexts/conversations';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel } from '@/mcp/model';
-import type { ModelResponse } from '@/mcp/model/claude';
+import type { CompleteOptions, ModelResponse } from '@/mcp/model/claude';
 import { NoteService } from '@/mcp/protocol/components/noteService';
 import { QueryProcessor } from '@/mcp/protocol/pipeline/queryProcessor';
 import type {
@@ -81,7 +81,9 @@ describe('QueryProcessor', () => {
 
     // Mock the ClaudeModel complete method with correct signature
     spyOn(ClaudeModel.prototype, 'complete').mockImplementation(
-      async (_systemPrompt: string, userPrompt: string, _maxTokens?: number): Promise<ModelResponse> => {
+      async (options: CompleteOptions): Promise<ModelResponse> => {
+        const userPrompt = options.userPrompt;
+        
         if (userPrompt.includes('ecosystem')) {
           return {
             response: 'Ecosystem architecture involves designing interconnected components that work together.',

@@ -188,7 +188,7 @@ export class BrainProtocol {
     this.currentRoomId = options.roomId;
 
     // Initialize core services using Component Interface Standardization pattern
-    this.model = ClaudeModel.getInstance({ apiKey });
+    this.model = ClaudeModel.getInstance();
 
     // Get the singleton instance of EmbeddingService
     this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
@@ -600,7 +600,10 @@ export class BrainProtocol {
     );
 
     // 8. Query the LLM with the formatted prompt
-    const modelResponse = await this.model.complete(systemPrompt, formattedPrompt);
+    const modelResponse = await this.model.complete({
+      systemPrompt,
+      userPrompt: formattedPrompt,
+    });
     const responseText = isNonEmptyString(modelResponse.response)
       ? modelResponse.response
       : 'I apologize, but I could not generate a response. Please try asking again.';
