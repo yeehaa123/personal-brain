@@ -4,43 +4,58 @@
 
 This document provides a focused implementation plan for the Personal Brain MVP, which will deliver a complete website generation and publishing solution with a professional landing page (blog capabilities moved to post-MVP).
 
+## Current Status Overview
+
+1. ✅ **Protocol Response Simplification**: Implemented schema-based responses in BrainProtocol
+2. ✅ **Deployment Architecture**: Completed with Caddy server instead of Netlify
+3. ⏳ **Website Landing Page Generation**: Partially completed (Context, Astro setup, service foundations)
+4. 🔜 **MCP Architecture Refactoring**: Added to MVP scope to improve architecture
+5. 🔜 **CLI Interface Improvements**: Planned to separate logger output from content
+
 ## MVP Components
 
 1. **Protocol Response Simplification**: Simplify BrainProtocol using Claude's schema capabilities
 2. **Website Landing Page Generation**: Create a professional landing page from profile data
-3. **Netlify Deployment**: Implement flexible deployment architecture with Netlify as first provider
-4. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
+3. **Caddy Deployment**: Implement flexible deployment architecture with Caddy
+4. **MCP Architecture Refactoring**: Align codebase with MCP architecture principles
+5. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
 
 ## Scope Boundaries
 
 ### What's In (MVP Scope)
 
-#### 1. Protocol Response Simplification
-- Standard schema for common query responses
-- Custom schema support for specialized queries
-- Schema-based metadata generation with Claude model
-- Updated renderers for standard schema responses
-- Unit tests for both schema approaches
+#### 1. Protocol Response Simplification ✅
+- ✅ Standard schema for common query responses
+- ✅ Schema-based metadata generation with Claude model
+- ✅ Updated renderers for standard schema responses
+- ✅ Unit tests for the schema approach
+- 🔜 Custom schema support for specialized queries (if needed)
 
-#### 2. Website Landing Page Generation
-- Website Context following Component Interface Standardization pattern
-- Astro integration with content collections
-- Profile-to-landing-page conversion
-- Preview capability
-- CLI and Matrix command parity
+#### 2. Website Landing Page Generation ⏳
+- ✅ Website Context following Component Interface Standardization pattern
+- ✅ Astro integration with content collections
+- ⏳ Profile-to-landing-page conversion
+- 🔜 Preview capability
+- 🔜 CLI and Matrix command parity
 
-#### 3. Flexible Deployment Architecture
-- Provider-agnostic deployment interface
-- Netlify integration as first deployment provider
-- Build process automation
-- Deployment commands for CLI and Matrix
-- Basic deployment status reporting
+#### 3. Flexible Deployment Architecture ✅
+- ✅ Provider-agnostic deployment interface
+- ✅ Caddy server integration
+- ✅ Build process automation
+- ✅ Deployment commands for CLI and Matrix
+- ✅ Basic deployment status reporting
 
-#### 4. CLI Interface Improvements
-- Visual distinction between logs and content
-- Log visibility controls
-- Consistent formatting
-- Feature parity with Matrix interface
+#### 4. MCP Architecture Refactoring 🔜
+- 🔜 Resource Layer Reorganization (AI services proper placement)
+- 🔜 Protocol Layer Organization (formats, translators, adapters)
+- 🔜 BrainProtocol Decomposition
+- 🔜 Cross-Context Communication Standardization
+
+#### 5. CLI Interface Improvements 🔜
+- 🔜 Visual distinction between logs and content
+- 🔜 Log visibility controls
+- 🔜 Consistent formatting
+- 🔜 Feature parity with Matrix interface
 
 ### What's Out (Explicitly Not in MVP)
 
@@ -52,7 +67,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 4. **Content Scheduling**: No future post scheduling
 5. **Analytics Integration**: No visitor tracking or analytics
 6. **Social Media Integration**: No automatic social posting
-7. **Multiple Active Deployment Providers**: Netlify only initially (architecture will support adding more later)
+7. **Multiple Active Deployment Providers**: Caddy only initially (architecture will support adding more later)
 8. **Theme Customization**: Single default theme only
 9. **Conversation Schema Refactoring**: Keep existing conversation schema
 10. **Database-backed Memory**: Keep in-memory storage
@@ -60,68 +75,66 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 ## Component Dependencies
 
 ```
-┌───────────────────┐      
-│ Website Context   │      
-│ & Architecture    │◄────┐
-└─────────┬─────────┘     │
-          │               │
-          │               │
-          ▼               │
-┌───────────────────┐     │
-│ Basic Astro Setup │     │
-└─────────┬─────────┘     │
-          │               │
-          │               │
-          ▼               │
-┌───────────────────┐     │
-│ Flexible Deploy   │     │
-│ Architecture      │     │
-└─────────┬─────────┘     │
-          │               │
-          │               │
-          ▼               │
-┌───────────────────┐     │
-│ Netlify Provider  │     │
-│ Implementation    │     │
-└─────────┬─────────┘     │
-          │               │
-          │               │
-          ▼               │
-┌───────────────────┐     │
-│ Landing Page      │     │
-│ Generation        │     │
-└─────────┬─────────┘     │
-          │               │
-          │               │
-          ▼               │
-┌───────────────────┐     │
-│ CLI/Matrix        ├─────┘
-│ Interface         │
-│ Improvements      │
-└───────────────────┘
+┌────────────────────┐      
+│ Schema-Based       │      
+│ Response System    ├────────┐
+└────────────────────┘        │
+                              │
+┌────────────────────┐        │
+│ Website Context    │        │
+│ & Architecture     │◄───┐   │
+└─────────┬──────────┘    │   │
+          │                │   │
+          │                │   │
+          ▼                │   ▼
+┌────────────────────┐     │  ┌────────────────────┐
+│ Basic Astro Setup  │     │  │ MCP Architecture   │
+└─────────┬──────────┘     │  │ Refactoring        │
+          │                │  └─────────┬──────────┘
+          │                │            │
+          ▼                │            │
+┌────────────────────┐     │            │
+│ Caddy Deployment   │     │            │
+│ Architecture       │     │            │
+└─────────┬──────────┘     │            │
+          │                │            │
+          │                │            │
+          ▼                │            │
+┌────────────────────┐     │            │
+│ Landing Page       │     │            │
+│ Generation         │     │            │
+└─────────┬──────────┘     │            │
+          │                │            │
+          │                │            │
+          ▼                │            │
+┌────────────────────┐     │            │
+│ CLI/Matrix         ├─────┘            │
+│ Interface          │◄────────────────┘
+│ Improvements       │
+└────────────────────┘
 ```
 
 ## Implementation Sequence
 
 ### Phase 0: Protocol Response Simplification (Priority Task)
 
-0. **Simplify BrainProtocol with Schema-Based Responses** (Days 1-3) 🔜 Highest Priority
-   - 🔜 Define standard response schema with Zod
-   - 🔜 Modify BrainProtocol to use schema-based modeling
-   - 🔜 Create custom schema support for specialized use cases
-   - 🔜 Update renderers to handle schema-based responses
-   - 🔜 Implement comprehensive test suite
-   - 🔜 Document the new approach
+0. **Simplify BrainProtocol with Schema-Based Responses** (Days 1-3) ✅ Completed
+   - ✅ Define standard response schema with Zod
+   - ✅ Modify BrainProtocol to use schema-based modeling
+   - ✅ Update renderers to handle schema-based responses
+   - ✅ Implement test suite
+   - ✅ Document the new approach
+   - 🔜 Create custom schema support for specialized use cases (if needed)
 
 ### Phase 1: Foundation and Deployment Pipeline
 
-1. **Set up Website Context** (Days 1-2) ✅
+1. **Set up Website Context** (Days 1-2) ✅ Completed
    - ✅ Implement storage schemas
    - ✅ Create Website Context with standard pattern
    - ✅ Implement storage adapter
    - ✅ Unit tests for core components
 
-2. **Basic Astro Setup and Content Services** (Day 3) ✅
+2. **Basic Astro Setup and Content Services** (Day 3) ✅ Completed
    - ✅ Create minimal Astro project structure
    - ✅ Set up content collections for landing page
    - ✅ Implement AstroContentService for managing Astro content
@@ -133,60 +146,67 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - ⏳ Add preview capability to interfaces
    - ⏳ Complete comprehensive test suite
 
-4. **Netlify Deployment Integration** (Days 4-5) 🔜 Upcoming
-   - 🔜 Design flexible deployment architecture
-   - 🔜 Implement Netlify provider
-   - 🔜 Create deployment commands
-   - 🔜 Test end-to-end with generated landing page
-   - 🔜 Verify automated build and deployment
+4. **Deployment Architecture** (Days 4-5) ✅ Completed
+   - ✅ Design flexible deployment architecture
+   - ✅ Implement Caddy server integration
+   - ✅ Create deployment commands
+   - ✅ Test end-to-end with generated landing page
+   - ✅ Verify automated build and deployment
 
-### Phase 2: Core Content Features
+### Phase 2: Core Content Features & Architecture Improvements
 
-5. **Landing Page Refinements** (Days 1-2)
-   - Enhance landing page template with better styling
-   - Add support for more profile sections (skills, education, etc.)
-   - Implement responsive design for mobile compatibility
-   - Create customizable themes
+5. **Landing Page Refinements** (Days 1-2) 🔜 Upcoming
+   - 🔜 Enhance landing page template with better styling
+   - 🔜 Add support for more profile sections (skills, education, etc.)
+   - 🔜 Implement responsive design for mobile compatibility
+   - 🔜 Create customizable theme
 
-6. **CLI Interface Improvements** (Days 3-5)
-   - Implement logger separation
-   - Create visual distinction between logs and content
-   - Add log visibility controls
-   - Ensure consistent formatting across interfaces
+6. **MCP Architecture Refactoring Phase 1-2** (Days 3-5) 🔜 Upcoming
+   - 🔜 Resource Layer Reorganization (Days 3-4)
+   - 🔜 Protocol Layer Organization (Day 5)
+   - 🔜 Update import references
+   - 🔜 Add tests for refactored components
 
-### Phase 3: Refinement and Polish
+7. **CLI Interface Improvements** (Days 3-5) 🔜 Upcoming
+   - 🔜 Implement logger separation
+   - 🔜 Create visual distinction between logs and content
+   - 🔜 Add log visibility controls
+   - 🔜 Ensure consistent formatting across interfaces
 
-7. **Deployment Enhancements** (Days 1-2)
-   - Optimize build process
-   - Improve deployment commands with error handling
-   - Add deployment status reporting
-   - Implement custom domain support
-   - Prepare architecture for additional providers
+### Phase 3: Architecture Refinement and Polish
 
-8. **Integration & Performance** (Days 3-4)
-   - Optimize build and preview performance
-   - Enhance error reporting and recovery
-   - Improve automatic profile data extraction
-   - Add SEO basic metadata
+8. **MCP Architecture Refactoring Phase 3-4** (Days 1-3) 🔜 Upcoming
+   - 🔜 BrainProtocol Decomposition (Days 1-2)
+   - 🔜 Cross-Context Communication (Day 3)
+   - 🔜 Integration testing of refactored components
 
-9. **Final Integration and Testing** (Day 5)
-   - End-to-end testing
-   - Bug fixes and refinements
-   - Documentation
-   - User guides
+9. **Integration & Performance** (Days 3-4) 🔜 Upcoming
+   - 🔜 Optimize build and preview performance
+   - 🔜 Enhance error reporting and recovery
+   - 🔜 Improve automatic profile data extraction
+   - 🔜 Verify MCP Inspector compatibility
+
+10. **Final Integration and Testing** (Day 5) 🔜 Upcoming
+    - 🔜 End-to-end testing
+    - 🔜 Bug fixes and refinements
+    - 🔜 Documentation
+    - 🔜 User guides
 
 ## Detailed Timeline
 
 | Week | Day | Tasks | Status |
 |------|-----|-------|--------|
-| 0 | 1-3 | Protocol Response Simplification | 🔜 Highest Priority |
+| 0 | 1-3 | Protocol Response Simplification | ✅ Completed |
 | 1 | 1-2 | Website Context Setup | ✅ Completed |
 | 1 | 3 | Basic Astro Setup & Content Services | ✅ Completed |
 | 1 | 4 | Command Interface Integration | ⏳ In Progress |
-| 1 | 4-5 | Netlify Deployment Integration | 🔜 Upcoming |
-| 2 | 1-2 | Landing Page Refinements | 🔜 Planned |
-| 2 | 3-5 | CLI Interface Improvements | 🔜 Planned |
-| 3 | 1-2 | Deployment Enhancements | 🔜 Planned |
+| 1 | 4-5 | Caddy Deployment Integration | ✅ Completed |
+| 2 | 1-2 | Landing Page Refinements | 🔜 Upcoming |
+| 2 | 3-4 | MCP Refactoring Phase 1 (Resource Layer) | 🔜 Upcoming |
+| 2 | 5 | MCP Refactoring Phase 2 (Protocol Layer) | 🔜 Upcoming |
+| 2 | 3-5 | CLI Interface Improvements | 🔜 Upcoming |
+| 3 | 1-2 | MCP Refactoring Phase 3 (BrainProtocol) | 🔜 Planned |
+| 3 | 3 | MCP Refactoring Phase 4 (Communication) | 🔜 Planned |
 | 3 | 3-4 | Integration & Performance | 🔜 Planned |
 | 3 | 5 | Final Integration and Testing | 🔜 Planned |
 
@@ -202,12 +222,12 @@ For the MVP to be considered complete, all the following criteria must be met:
 - No critical bugs
 
 ### Protocol Response Simplification
-- 🔜 Standard response schema implemented with Zod
-- 🔜 BrainProtocol updated to use schema-based modeling
-- 🔜 Custom schema support implemented for specialized queries
-- 🔜 CLI and Matrix renderers updated to handle new response format
-- 🔜 Test suite passing for both standard and custom schemas
-- 🔜 Documentation updated for the new approach
+- ✅ Standard response schema implemented with Zod
+- ✅ BrainProtocol updated to use schema-based modeling
+- ✅ CLI and Matrix renderers updated to handle new response format
+- ✅ Test suite passing for standard schema
+- ✅ Documentation updated for the new approach
+- 🔜 Custom schema support implemented for specialized queries (if needed)
 
 ### Website Landing Page Generation
 - ✅ Website Context architecture implemented with Component Interface Standardization pattern
@@ -219,12 +239,20 @@ For the MVP to be considered complete, all the following criteria must be met:
 - 🔜 All profile sections (bio, skills, projects, contact) render properly
 
 ### Flexible Deployment Architecture
-- 🔜 Provider-agnostic architecture implemented
-- 🔜 Netlify provider fully implemented
-- 🔜 Automated build process implemented
-- 🔜 Deployment commands created for CLI and Matrix
-- 🔜 Status reporting on deployment success/failure
-- 🔜 End-to-end testing with generated landing page
+- ✅ Provider-agnostic architecture implemented
+- ✅ Caddy server integration fully implemented
+- ✅ Automated build process implemented
+- ✅ Deployment commands created for CLI and Matrix
+- ✅ Status reporting on deployment success/failure
+- ✅ End-to-end testing with generated landing page
+
+### MCP Architecture Refactoring
+- 🔜 AI services moved to appropriate resources layer
+- 🔜 Protocol layer properly organized with formats, translators, and adapters
+- 🔜 BrainProtocol decomposed into specialized components
+- 🔜 Cross-context communication patterns established
+- 🔜 Tests passing for all refactored components
+- 🔜 Documentation updated to reflect new architecture
 
 ### CLI Interface Improvements
 - 🔜 Clear visual separation between logs and content
@@ -272,12 +300,14 @@ If a change to the MVP scope is considered necessary:
 
 | Risk | Impact | Likelihood | Mitigation |
 |------|--------|------------|------------|
-| Netlify API integration issues | High | Medium | Test Netlify deployment early with minimal test page |
-| Deployment provider architecture complexity | Medium | Medium | Focus on clean abstractions with single provider first |
-| Astro integration complexity | Medium | Medium | Start with minimal Astro setup before content generation |
+| MCP architecture refactoring complexity | High | Medium | Phase the refactoring in alignment with MVP tasks, ensure thorough testing |
+| Breaking changes from refactoring | High | Medium | Maintain backward compatibility layers, extensive testing |
+| BrainProtocol decomposition impact | Medium | Medium | Incremental changes with robust test coverage |
+| Astro integration complexity | Medium | Low | Start with minimal Astro setup before content generation (already mitigated) |
 | Profile data transformation edge cases | Medium | Medium | Add extensive testing for various profile formats |
 | Command interface inconsistencies | Low | Medium | Create strong abstractions for both interfaces |
 | Scope creep | High | High | Strictly follow this document, regular scope checks |
+| MCP Inspector compatibility | Medium | Medium | Test integration at each refactoring phase |
 
 ## Success Metrics
 
@@ -294,15 +324,17 @@ How we'll measure the success of the MVP:
 These items are explicitly planned for after the MVP and should not be included in the initial release:
 
 1. Blog publishing system for notes
-2. Series organization for blog posts
-3. Additional deployment providers (Vercel, GitHub Pages, self-hosted)
-4. SEO optimization features
-5. Content scheduling
-6. Analytics integration
-7. Theme customization options
+2. SEO optimization features
+3. Content scheduling
+4. Analytics integration
+5. Theme customization options
+6. Conversation Schema Refactoring
+7. Database-backed Memory
 
 ## Conclusion
 
-This plan provides a clear roadmap for implementing the Personal Brain MVP with a focused scope. By removing blog capabilities from the MVP and focusing solely on the landing page generation, we've significantly reduced the scope while maintaining the core value proposition. 
+This plan provides a clear roadmap for implementing the Personal Brain MVP with a focused scope. By removing blog capabilities from the MVP and focusing solely on the landing page generation, we've significantly reduced the scope while maintaining the core value proposition.
 
-By establishing the GitHub Pages deployment pipeline with a minimal test site very early in the process, we significantly reduce integration risks and create a foundation that all subsequent features (including the post-MVP blog system) can build upon. This "infrastructure as code first" approach ensures that deployment concerns are addressed upfront rather than being discovered late in the development process.
+The MVP now includes the MCP architecture refactoring as a core component, which will provide a solid foundation for future features. By phasing this refactoring across the remaining MVP timeline, we ensure that we can complete the essential architectural improvements without delaying the overall timeline.
+
+The completed protocol response simplification and deployment architecture work provide a strong foundation, and the planned refactoring will further improve the codebase structure. This comprehensive approach ensures that we deliver a high-quality MVP with both user-facing features and a robust architectural foundation.
