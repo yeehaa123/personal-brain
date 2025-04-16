@@ -19,11 +19,11 @@ import type { Conversation } from '@/mcp/protocol/schemas/conversationSchemas';
 import { 
   generateStandardSystemPrompt, 
   StandardResponseSchema, 
-  standardToProtocolResponse 
+  standardToProtocolResponse, 
 } from '@/mcp/protocol/schemas/standardResponseSchema';
 import type { StandardResponse } from '@/mcp/protocol/schemas/standardResponseSchema';
-import type { Profile } from '@models/profile';
 import type { Note } from '@models/note';
+import type { Profile } from '@models/profile';
 import { Logger } from '@utils/logger';
 import { isDefined, isNonEmptyString } from '@utils/safeAccessUtils';
 
@@ -601,7 +601,7 @@ export class BrainProtocol {
     // 6. Generate system prompt for standard schema
     const systemPrompt = generateStandardSystemPrompt(
       isProfileQuery,
-      externalResults.length > 0
+      externalResults.length > 0,
     );
 
     // 7. Query the LLM with the formatted prompt and schema

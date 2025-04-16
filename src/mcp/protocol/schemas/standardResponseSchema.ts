@@ -6,6 +6,7 @@
  * metadata object with information about the sources used.
  */
 import { z } from 'zod';
+
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 
@@ -65,7 +66,7 @@ export type StandardResponse = z.infer<typeof StandardResponseSchema>;
  */
 export function standardToProtocolResponse(
   standardResponse: StandardResponse,
-  relatedNotes: Note[] = []
+  relatedNotes: Note[] = [],
 ): {
   answer: string;
   citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>;

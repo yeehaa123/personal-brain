@@ -2,7 +2,8 @@
  * Tests for standard schema-based response in BrainProtocol
  */
 import { describe, expect, test } from 'bun:test';
-import { StandardResponseSchema, standardToProtocolResponse, generateStandardSystemPrompt } from '@/mcp/protocol/schemas/standardResponseSchema';
+
+import { generateStandardSystemPrompt, StandardResponseSchema, standardToProtocolResponse } from '@/mcp/protocol/schemas/standardResponseSchema';
 import type { StandardResponse } from '@/mcp/protocol/schemas/standardResponseSchema';
 import { createMockNote } from '@test/__mocks__/models/note';
 
@@ -13,7 +14,7 @@ describe('Standard schema-based responses', () => {
         answer: 'This is a test answer.',
         metadata: {
           hasSources: false,
-        }
+        },
       };
       
       const result = StandardResponseSchema.safeParse(validResponse);
@@ -32,7 +33,7 @@ describe('Standard schema-based responses', () => {
           externalSources: [
             { title: 'Test Source', source: 'Wikipedia', url: 'https://example.com' },
           ],
-        }
+        },
       };
       
       const result = StandardResponseSchema.safeParse(responseWithSources);
@@ -44,7 +45,7 @@ describe('Standard schema-based responses', () => {
         // Missing required 'answer' field
         metadata: {
           hasSources: false,
-        }
+        },
       };
       
       const result = StandardResponseSchema.safeParse(invalidResponse);
@@ -62,7 +63,7 @@ describe('Standard schema-based responses', () => {
           citations: [
             { noteId: 'note1', noteTitle: 'Test Note', excerpt: 'Test excerpt' },
           ],
-        }
+        },
       };
       
       const mockNotes = [createMockNote('related1', 'Related Note')];
@@ -87,10 +88,10 @@ describe('Standard schema-based responses', () => {
               title: 'External Source', 
               source: 'Wikipedia', 
               url: 'https://example.com',
-              excerpt: 'External excerpt' 
+              excerpt: 'External excerpt', 
             },
           ],
-        }
+        },
       };
       
       const protocolResponse = standardToProtocolResponse(standardResponse);
@@ -108,23 +109,23 @@ describe('Standard schema-based responses', () => {
       
       // Basic checks
       expect(prompt).toContain('You are a helpful assistant');
-      expect(prompt).toContain("'answer' field");
-      expect(prompt).toContain("'metadata' object");
-      expect(prompt).toContain("'hasSources'");
+      expect(prompt).toContain('\'answer\' field');
+      expect(prompt).toContain('\'metadata\' object');
+      expect(prompt).toContain('\'hasSources\'');
     });
     
     test('should include profile instructions when isProfileQuery is true', () => {
       const prompt = generateStandardSystemPrompt(true);
       
       expect(prompt).toContain('profile information');
-      expect(prompt).toContain("'usedProfile'");
+      expect(prompt).toContain('\'usedProfile\'');
     });
     
     test('should include external source instructions when enabled', () => {
       const prompt = generateStandardSystemPrompt(false, true);
       
       expect(prompt).toContain('external sources');
-      expect(prompt).toContain("'externalSources'");
+      expect(prompt).toContain('\'externalSources\'');
     });
   });
   
