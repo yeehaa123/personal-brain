@@ -107,16 +107,9 @@ export interface ContextResult {
 
 /**
  * Response from a model
+ * This imports the ModelResponse generic interface from the model module
  */
-export interface ModelResponse {
-  /** The response text */
-  response: string;
-  /** Usage statistics */
-  usage?: {
-    inputTokens: number;
-    outputTokens: number;
-  };
-}
+export type { ModelResponse, ModelUsage } from '@/mcp/model/claude';
 
 /**
  * Metadata for conversation turns

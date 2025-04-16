@@ -9,7 +9,7 @@ import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/mcp';
 import type { ConversationContext } from '@/mcp/contexts/conversations';
 import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
 import { ClaudeModel } from '@/mcp/model';
-import type { CompleteOptions, ModelResponse } from '@/mcp/model/claude';
+import type { CompleteOptions, DefaultResponseType, ModelResponse } from '@/mcp/model/claude';
 import { NoteService } from '@/mcp/protocol/components/noteService';
 import { QueryProcessor } from '@/mcp/protocol/pipeline/queryProcessor';
 import type {
@@ -79,29 +79,36 @@ describe('QueryProcessor', () => {
       },
     );
 
-    // Mock the ClaudeModel complete method with correct signature
+    // Mock the ClaudeModel complete method
     spyOn(ClaudeModel.prototype, 'complete').mockImplementation(
-      async (options: CompleteOptions): Promise<ModelResponse> => {
+      function<T = DefaultResponseType>(options: CompleteOptions<T>): Promise<ModelResponse<T>> {
         const userPrompt = options.userPrompt;
         
+        let responseObject: DefaultResponseType;
+        
         if (userPrompt.includes('ecosystem')) {
-          return {
-            response: 'Ecosystem architecture involves designing interconnected components that work together.',
-            usage: { inputTokens: 100, outputTokens: 20 },
+          responseObject = { 
+            answer: 'Ecosystem architecture involves designing interconnected components that work together.' 
+          };
+        } else if (userPrompt.includes('profile')) {
+          responseObject = { 
+            answer: 'Your profile shows expertise in software development and architecture.' 
+          };
+        } else {
+          responseObject = { 
+            answer: 'I don\'t have specific information about that in my knowledge base.' 
           };
         }
-
-        if (userPrompt.includes('profile')) {
-          return {
-            response: 'Your profile shows expertise in software development and architecture.',
-            usage: { inputTokens: 150, outputTokens: 25 },
-          };
-        }
-
-        return {
-          response: 'I don\'t have specific information about that in my knowledge base.',
-          usage: { inputTokens: 50, outputTokens: 15 },
-        };
+        
+        // For the tests we only use the default schema with { answer: string }
+        return Promise.resolve({
+          object: responseObject as unknown as T,
+          usage: userPrompt.includes('ecosystem') 
+            ? { inputTokens: 100, outputTokens: 20 }
+            : userPrompt.includes('profile')
+              ? { inputTokens: 150, outputTokens: 25 }
+              : { inputTokens: 50, outputTokens: 15 }
+        });
       },
     );
   });

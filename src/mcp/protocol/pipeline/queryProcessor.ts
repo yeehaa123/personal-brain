@@ -204,7 +204,7 @@ export class QueryProcessor implements IQueryProcessor {
     const modelResponse = await this.callModel(systemPrompt, userPrompt);
     
     // 7. Save the conversation turn
-    await this.saveTurn(query, modelResponse.response, options);
+    await this.saveTurn(query, modelResponse.object.answer, options);
     
     // 8. Get related notes for the response
     const relatedNotes = await this.noteService.getRelatedNotes(context.relevantNotes);
@@ -219,7 +219,7 @@ export class QueryProcessor implements IQueryProcessor {
     
     // 11. Return the result
     return {
-      answer: modelResponse.response,
+      answer: modelResponse.object.answer,
       citations: context.citations,
       relatedNotes,
       profile,

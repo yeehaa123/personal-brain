@@ -604,8 +604,8 @@ export class BrainProtocol {
       systemPrompt,
       userPrompt: formattedPrompt,
     });
-    const responseText = isNonEmptyString(modelResponse.response)
-      ? modelResponse.response
+    const responseText = isNonEmptyString(modelResponse.object.answer)
+      ? modelResponse.object.answer
       : 'I apologize, but I could not generate a response. Please try asking again.';
 
     // 9. Save the conversation turn

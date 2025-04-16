@@ -2,7 +2,7 @@ import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { aiConfig, textConfig } from '@/config';
-import { db } from '@/db'; 
+import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { ClaudeModel } from '@/mcp/model/claude';
 import logger from '@/utils/logger';
@@ -55,23 +55,22 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
 
     // Get the Claude model instance
     const claude = ClaudeModel.getInstance();
-    
+
     // Define the schema for the response
     const tagSchema = z.object({
       tags: z.array(z.string()).max(maxTags),
     });
-    
-    // Call Claude with schema-based completion
-    const response = await claude.completeWithSchema({
+
+    // Call Claude with schema, type is inferred from the schema using z.infer
+    const response = await claude.complete<z.infer<typeof tagSchema>>({
       schema: tagSchema,
       systemPrompt: 'You extract tags from content. Only respond with the tags, nothing else.',
       userPrompt: prompt,
-      temperature: aiConfig.anthropic.temperature
+      temperature: aiConfig.anthropic.temperature,
     });
-    
-    // Parse the response with our schema to ensure type safety
-    const parsedObject = tagSchema.parse(response.object);
-    return parsedObject.tags;
+
+    // Return the tags array directly
+    return response.object.tags
   } catch (error) {
     logger.error(`Error extracting tags with Claude: ${error}`);
     // Fallback to simple keyword extraction
@@ -130,10 +129,10 @@ export async function generateAndSaveTagsForNote(
  * @param forceRegenerate Whether to force regeneration even if tags exist
  * @returns Statistics on processed notes
  */
-export async function batchProcessNoteTags(forceRegenerate: boolean = false): Promise<{ 
-  processed: number, 
-  updated: number, 
-  failed: number 
+export async function batchProcessNoteTags(forceRegenerate: boolean = false): Promise<{
+  processed: number,
+  updated: number,
+  failed: number
 }> {
   logger.info('=== Processing Note Tags ===');
 
@@ -171,7 +170,7 @@ export async function batchProcessNoteTags(forceRegenerate: boolean = false): Pr
     logger.info(`\nNotes processed: ${updated + failed}`);
     logger.info(`Notes updated: ${updated}`);
     logger.info(`Notes failed: ${failed}`);
-    
+
     return { processed: updated + failed, updated, failed };
   } catch (error) {
     logger.error(`Error in batch note tag processing: ${error}`);

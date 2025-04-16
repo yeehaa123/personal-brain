@@ -1,24 +1,20 @@
 import { anthropic } from '@ai-sdk/anthropic';
-import { generateObject, generateText, type LanguageModelUsage } from 'ai';
-import type { z } from 'zod';
+import { generateObject, type LanguageModelUsage } from 'ai';
+import { z } from 'zod';
 
 import { aiConfig } from '@/config';
 import logger from '@/utils/logger';
 
-export interface ModelResponse {
-  response: string;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-  };
+// Define the usage interface
+export interface ModelUsage {
+  inputTokens: number;
+  outputTokens: number;
 }
 
-export interface ModelObjectResponse<T> {
+// Generic response interface for all model responses
+export interface ModelResponse<T = DefaultResponseType> {
   object: T;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-  };
+  usage: ModelUsage;
 }
 
 /**
@@ -30,9 +26,12 @@ export interface ClaudeModelOptions {
 }
 
 /**
- * Options for text completion requests
+ * Options for completion requests
+ * Generic T represents the type that will be returned by the schema
  */
-export interface CompleteOptions {
+export interface CompleteOptions<T = DefaultResponseType> {
+  /** Schema defining the expected return structure (defaults to textSchema) */
+  schema?: z.ZodType<T>;
   /** System prompt to set context */
   systemPrompt: string;
   /** User prompt/question */
@@ -43,21 +42,13 @@ export interface CompleteOptions {
   temperature?: number;
 }
 
-/**
- * Options for schema-based completion requests
- */
-export interface CompleteWithSchemaOptions<Schema extends z.ZodType<any>> {
-  /** Schema defining the expected return structure */
-  schema: Schema;
-  /** System prompt to set context */
-  systemPrompt: string;
-  /** User prompt/question */
-  userPrompt: string;
-  /** Maximum tokens in the response (defaults to aiConfig.anthropic.defaultMaxTokens) */
-  maxTokens?: number;
-  /** Temperature for sampling (0-1, lower = more deterministic) */
-  temperature?: number;
-}
+// Define the default schema for text responses
+export const textSchema = z.object({
+  answer: z.string(),
+});
+
+// Type alias for the default response type inferred from the schema
+export type DefaultResponseType = z.infer<typeof textSchema>;
 
 /**
  * Claude Large Language Model client wrapper
@@ -135,51 +126,27 @@ export class ClaudeModel {
   }
 
   /**
-   * Send a completion request to Claude for free-form text responses
+   * Send a completion request to Claude and return a structured response
    * 
-   * @param options Completion options (systemPrompt, userPrompt, maxTokens, temperature)
-   * @returns Model response with text and token usage
-   */
-  async complete(options: CompleteOptions): Promise<ModelResponse> {
-    try {
-      // Generate text using the Vercel AI SDK
-      const { text, usage } = await generateText({
-        model: anthropic(this.model),
-        system: options.systemPrompt,
-        prompt: options.userPrompt,
-        maxTokens: options.maxTokens ?? aiConfig.anthropic.defaultMaxTokens,
-        temperature: options.temperature ?? aiConfig.anthropic.temperature,
-      });
-      
-      // Map usage from the AI SDK to our internal format
-      const mappedUsage = this.mapUsage(usage);
-      
-      return {
-        response: text,
-        usage: mappedUsage,
-      };
-    } catch (error) {
-      logger.error(`Error calling Claude API: ${error}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Send a completion request to Claude to generate structured data according to a schema
+   * All responses use a schema for consistency. If no schema is provided,
+   * the default schema for { answer: string } is used.
    * 
-   * @param options Schema-based completion options
+   * @param options Completion options including optional schema
    * @returns Model response with structured object and token usage
    */
-  async completeWithSchema<T, Schema extends z.ZodType<T>>(
-    options: CompleteWithSchemaOptions<Schema>
-  ): Promise<ModelObjectResponse<T>> {
+  async complete<T = DefaultResponseType>(
+    options: CompleteOptions<T>
+  ): Promise<ModelResponse<T>> {
     try {
+      // Use the provided schema or default to textSchema
+      const schema = options.schema || (textSchema as unknown as z.ZodType<T>);
+      
       // Generate structured object using the Vercel AI SDK
       const response = await generateObject({
         model: anthropic(this.model),
         system: options.systemPrompt,
         prompt: options.userPrompt,
-        schema: options.schema,
+        schema,
         temperature: options.temperature ?? aiConfig.anthropic.temperature,
         maxTokens: options.maxTokens ?? aiConfig.anthropic.defaultMaxTokens,
       });
@@ -188,11 +155,11 @@ export class ClaudeModel {
       const mappedUsage = this.mapUsage(response.usage);
       
       return {
-        object: response.object,
+        object: response.object as T,
         usage: mappedUsage,
       };
     } catch (error) {
-      logger.error(`Error calling Claude API with schema: ${error}`);
+      logger.error(`Error calling Claude API: ${error}`);
       throw error;
     }
   }

@@ -98,7 +98,7 @@ export class ConversationSummarizer {
       const summary: ConversationSummary = {
         id: `summ-${nanoid()}`,
         timestamp: new Date(),
-        content: response.response.trim(),
+        content: response.object.answer.trim(),
         startTurnIndex: 0, // These will be set by the caller
         endTurnIndex: turns.length - 1,
         startTimestamp: sortedTurns[0].timestamp,

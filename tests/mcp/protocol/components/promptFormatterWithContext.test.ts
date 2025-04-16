@@ -67,8 +67,9 @@ Assistant: Classical computing uses classical bits that can be either 0 or 1, wh
     };
 
     const mockModel = {
-      complete: mock(async (_systemPrompt, userPrompt) => ({
-        response: 'Model response to: ' + userPrompt.slice(0, 20) + '...',
+      complete: mock(async (options) => ({
+        object: { answer: 'Model response to: ' + options.userPrompt.slice(0, 20) + '...' },
+        usage: { inputTokens: 100, outputTokens: 20 },
       })),
     };
 
@@ -92,18 +93,21 @@ Assistant: Classical computing uses classical bits that can be either 0 or 1, wh
 
       // Call model with combined prompt
       const systemPrompt = 'You are a helpful assistant';
-      const modelResponse = await mockModel.complete(systemPrompt, promptWithHistory);
+      const modelResponse = await mockModel.complete({
+        systemPrompt,
+        userPrompt: promptWithHistory
+      });
 
       // Save conversation turn
       await mockContext.addTurn(
         mockContext.currentConversationId,
         query,
-        modelResponse.response,
+        modelResponse.object.answer,
       );
 
       // Return response
       return {
-        answer: modelResponse.response,
+        answer: modelResponse.object.answer,
         citations: [],
         relatedNotes: [],
       };
@@ -122,9 +126,9 @@ Assistant: Classical computing uses classical bits that can be either 0 or 1, wh
 
     // The model should be called with a prompt containing history
     const modelCall = mockModel.complete.mock.calls[0];
-    expect(modelCall[0]).toBe('You are a helpful assistant');
-    expect(modelCall[1]).toContain('Recent Conversation History:');
-    expect(modelCall[1]).toContain('User: Previous question');
+    expect(modelCall[0].systemPrompt).toBe('You are a helpful assistant');
+    expect(modelCall[0].userPrompt).toContain('Recent Conversation History:');
+    expect(modelCall[0].userPrompt).toContain('User: Previous question');
 
     // The response should be recorded in conversation context
     expect(mockContext.addTurn).toHaveBeenCalledWith(
