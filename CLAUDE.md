@@ -13,6 +13,10 @@
 ## Code Style Guidelines
 - **TypeScript**: Use strict typing (noImplicitAny, strictNullChecks)
 - **Imports**: Group by 1) built-in, 2) external, 3) internal; sort alphabetically
+- **Import Pattern**: Always use barrel files (index.ts) for imports:
+  - Use highest-level barrel exports: `import { NoteContext } from '@/contexts'` instead of `from '@/contexts/notes/core/noteContext'`
+  - Only use direct file imports for dynamic imports (to avoid circular dependencies)
+  - Group related imports from the same barrel: `import { Type1, Type2, Type3 } from '@/module'`
 - **Formatting**: 2-space indentation, single quotes, trailing comma
 - **Naming**: camelCase for variables/functions, PascalCase for classes/types
 - **Error Handling**: Use explicit try/catch; avoid throwing in async functions
@@ -55,7 +59,7 @@ tests/
 
 ### Import Patterns
 
-Always use standardized import paths for test utilities:
+Always use barrel files for imports, and use standardized import paths for test utilities:
 
 ```typescript
 // GOOD: Standardized import paths with TypeScript path aliases

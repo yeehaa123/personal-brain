@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { BaseContext } from '@/contexts/core/baseContext';
-import { NoteContext } from '@/contexts/notes/core/noteContext';
+import { NoteContext } from "@/contexts";
 import { setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';
 
 describe('NoteContext', () => {

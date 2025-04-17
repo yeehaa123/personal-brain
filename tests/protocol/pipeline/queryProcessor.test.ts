@@ -5,12 +5,14 @@
  */
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
-import type { ConversationContext } from '@/contexts/conversations';
-import type { ExternalSourceContext } from '@/contexts/externalSources/core/externalSourceContext';
+import type { 
+  ConversationContext,
+  ExternalSourceContext,
+  NoteContext,
+  ProfileContext,
+  WebsiteContext 
+} from '@/contexts';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import type { NoteContext } from '@/contexts/notes/core/noteContext';
-import type { ProfileContext } from '@/contexts/profiles/core/profileContext';
-import type { WebsiteContext } from '@/contexts/website/core/websiteContext';
 import type { Note } from '@/models/note';
 import { NoteService } from '@/protocol/components/noteService';
 import { QueryProcessor } from '@/protocol/pipeline/queryProcessor';

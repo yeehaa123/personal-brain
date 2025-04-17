@@ -8,7 +8,7 @@ import {
   getDeploymentAdapter, 
   PM2DeploymentAdapter, 
 } from '@/contexts/website/adapters/deploymentAdapter';
-import { WebsiteContext } from '@/contexts/website/core/websiteContext';
+import { WebsiteContext } from "@/contexts";
 import { LocalDevDeploymentManager } from '@/contexts/website/services/deployment/localDevDeploymentManager';
 import { MockDeploymentAdapter } from '@test/__mocks__/contexts/website/adapters/deploymentAdapter';
 

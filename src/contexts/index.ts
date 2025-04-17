@@ -9,10 +9,10 @@
 import { ConversationContext } from './conversations';
 import { BaseContext } from './core';
 import type { ContextInterface, FormatterInterface, StorageInterface } from './core';
-import { ExternalSourceContext } from './externalSources/core/externalSourceContext';
-import { NoteContext } from './notes/core/noteContext';
-import { ProfileContext } from './profiles/core/profileContext';
-import { WebsiteContext } from './website/core/websiteContext';
+import { ExternalSourceContext } from './externalSources';
+import { NoteContext } from './notes';
+import { ProfileContext } from './profiles';
+import { WebsiteContext } from './website';
 
 // Export the context classes
 export { BaseContext };

@@ -1,6 +1,5 @@
 #!/usr/bin/env bun
-import { NoteContext } from '@/contexts/notes/core/noteContext';
-import { ProfileContext } from '@/contexts/profiles/core/profileContext';
+import { NoteContext, ProfileContext } from "@/contexts";
 import { db } from '@/db';
 import { notes, profiles } from '@/db/schema';
 import logger from '@/utils/logger';

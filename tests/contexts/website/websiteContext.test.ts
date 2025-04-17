@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ProfileContext } from '@/contexts/profiles';
-import { WebsiteContext } from '@/contexts/website/core/websiteContext';
+import { WebsiteContext } from "@/contexts";
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';

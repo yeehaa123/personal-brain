@@ -86,7 +86,7 @@ ConversationContext exposes conversations through MCP resources and tools:
 ## Usage Example
 
 ```typescript
-import { ConversationContext } from '@/mcp/contexts/conversations';
+import { ConversationContext } from '@/contexts/conversations';
 
 // Get the context instance
 const conversationContext = ConversationContext.getInstance();

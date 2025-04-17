@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { ProfileContext } from '@/contexts/profiles/core/profileContext';
+import { ProfileContext } from "@/contexts";
 import type { Profile } from '@/models/profile';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { setupAnthropicMocks, setupMcpServerMocks } from '@test/__mocks__/utils/mcpUtils';

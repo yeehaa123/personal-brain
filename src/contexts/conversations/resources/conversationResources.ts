@@ -11,7 +11,7 @@
  */
 
 import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
-import type { ConversationContext } from '@/contexts/conversations/core/conversationContext';
+import { ConversationContext } from "@/contexts";
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import { Logger } from '@/utils/logger';

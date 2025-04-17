@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
-import type { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
-import type { DeploymentServiceFactory } from '@/mcp/contexts/website/services/deploymentService';
-import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
-import { MockDeploymentServiceFactory } from '@test/__mocks__/contexts/website/services/deploymentServiceFactory';
-import { MockNetlifyDeploymentService } from '@test/__mocks__/contexts/website/services/netlifyDeploymentService';
+import { WebsiteContext, type AstroContentService, type DeploymentServiceFactory } from '@/contexts/website';
+import { 
+  MockAstroContentService,
+  MockDeploymentServiceFactory,
+  MockNetlifyDeploymentService 
+} from '@test/__mocks__/contexts/website/services';
 
 // We'll inject the mock deployment service factory directly in the tests
 

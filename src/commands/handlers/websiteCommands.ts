@@ -1,5 +1,5 @@
-import type { WebsiteContext } from '@/contexts/website/core/websiteContext';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { WebsiteContext } from '@/contexts/website';
+import type { BrainProtocol } from '@/protocol';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 // Direct file access replaced with WebsiteContext delegation

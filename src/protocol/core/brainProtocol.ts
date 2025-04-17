@@ -9,9 +9,13 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/contexts';
-import type { ConversationContext } from '@/contexts/conversations';
-import type { WebsiteContext } from '@/contexts/website/core/websiteContext';
+import type { 
+  ConversationContext, 
+  ExternalSourceContext, 
+  NoteContext, 
+  ProfileContext,
+  WebsiteContext 
+} from '@/contexts';
 import { createUnifiedMcpServer } from '@/mcpServer';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import { PromptFormatter } from '@/protocol/components/promptFormatter';

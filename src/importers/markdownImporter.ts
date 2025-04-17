@@ -4,7 +4,7 @@ import { basename, extname, join } from 'path';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-import { NoteContext } from '@/contexts/notes/core/noteContext';
+import { NoteContext } from "@/contexts";
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { EmbeddingService } from '@/resources/ai/embedding';

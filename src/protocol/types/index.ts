@@ -2,10 +2,15 @@
  * Types and interfaces for the BrainProtocol system
  * All types are exported for use by components
  */
-import type { ExternalSourceContext, NoteContext, ProfileContext } from '@/contexts';
-import type { ConversationContext, ConversationStorage } from '@/contexts/conversations';
+import type { 
+  ConversationContext, 
+  ExternalSourceContext, 
+  NoteContext, 
+  ProfileContext,
+  WebsiteContext 
+} from '@/contexts';
+import type { ConversationStorage } from '@/contexts/conversations';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import type { WebsiteContext } from '@/contexts/website/core/websiteContext';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
