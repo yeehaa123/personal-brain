@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { aiConfig, textConfig } from '@/config';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
-import { ClaudeModel } from '@/resources/ai/claude';
+import { ResourceRegistry } from '@/resources';
 import logger from '@/utils/logger';
 
 import { extractKeywords } from './textUtils';
@@ -53,8 +53,10 @@ Extract up to ${maxTags} tags that best represent this content.
 
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
-    // Get the Claude model instance
-    const claude = ClaudeModel.getInstance();
+    // Get the Claude model instance from the ResourceRegistry
+    const claude = ResourceRegistry.getInstance({
+      anthropicApiKey: aiConfig.anthropic.apiKey,
+    }).getClaudeModel();
 
     // Define the schema for the response
     const tagSchema = z.object({

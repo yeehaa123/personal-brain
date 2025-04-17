@@ -28,8 +28,8 @@
  * 
  * @param mockFn Bun's mock function
  */
-// Import the MockEmbeddingService for use in setupEmbeddingMocks
-import { MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
+// Import the EmbeddingService for use in setupEmbeddingMocks
+import { EmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 export function createMockEmbedding(input: string, dimensions: number = 1536): number[] {
   // Create a deterministic embedding based on the input
@@ -64,7 +64,7 @@ export function setupEmbeddingMocks(mockFn: { module: (name: string, factory: ()
   // Mock the embedding module with our MockEmbeddingService class
   mockFn.module('@/resources/ai/embedding', () => {
     return {
-      EmbeddingService: MockEmbeddingService,
+      EmbeddingService: EmbeddingService,
     };
   });
   

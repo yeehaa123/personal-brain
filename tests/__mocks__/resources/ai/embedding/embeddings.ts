@@ -10,26 +10,26 @@ import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
  * 
  * Implements the Component Interface Standardization pattern.
  */
-export class MockEmbeddingService {
-  private static instance: MockEmbeddingService | null = null;
+export class EmbeddingService {
+  private static instance: EmbeddingService | null = null;
   
   /**
-   * Get the singleton instance of MockEmbeddingService
+   * Get the singleton instance of EmbeddingService
    * @param config Optional configuration
    * @returns The shared instance
    */
-  public static getInstance(_config?: EmbeddingConfig): MockEmbeddingService {
-    if (!MockEmbeddingService.instance) {
-      MockEmbeddingService.instance = new MockEmbeddingService();
+  public static getInstance(_config?: EmbeddingConfig): EmbeddingService {
+    if (!EmbeddingService.instance) {
+      EmbeddingService.instance = new EmbeddingService();
     }
-    return MockEmbeddingService.instance;
+    return EmbeddingService.instance;
   }
 
   /**
    * Reset the singleton instance (primarily for testing)
    */
   public static resetInstance(): void {
-    MockEmbeddingService.instance = null;
+    EmbeddingService.instance = null;
   }
 
   /**
@@ -37,8 +37,8 @@ export class MockEmbeddingService {
    * @param config Optional configuration
    * @returns A new instance
    */
-  public static createFresh(_config?: EmbeddingConfig): MockEmbeddingService {
-    return new MockEmbeddingService();
+  public static createFresh(_config?: EmbeddingConfig): EmbeddingService {
+    return new EmbeddingService();
   }
   
   /**
@@ -68,6 +68,16 @@ export class MockEmbeddingService {
   cosineSimilarity(_vec1: number[], _vec2: number[]): number {
     // Simple deterministic similarity calculation for tests
     return 0.85;
+  }
+  
+  /**
+   * Calculate similarity between two vectors (alias for ResourceRegistry interface)
+   * @param vec1 First vector
+   * @param vec2 Second vector
+   * @returns Similarity score (-1 to 1)
+   */
+  calculateSimilarity(vec1: number[], vec2: number[]): number {
+    return this.cosineSimilarity(vec1, vec2);
   }
   
   /**

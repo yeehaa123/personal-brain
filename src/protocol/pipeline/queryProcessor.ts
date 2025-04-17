@@ -8,7 +8,8 @@ import type { Note } from '@/models/note';
 import { NoteService } from '@/protocol/components/noteService';
 import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import { SystemPromptGenerator } from '@/protocol/components/systemPromptGenerator';
-import { ClaudeModel } from '@/resources/ai/claude';
+import { ResourceRegistry } from '@/resources';
+import type { ModelResponse } from '@/resources/ai/interfaces';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
@@ -20,7 +21,6 @@ import type {
   IExternalSourceManager, 
   IProfileManager,
   IQueryProcessor,
-  ModelResponse,
   ProfileAnalysisResult,
   QueryOptions,
   QueryResult,
@@ -65,7 +65,7 @@ export class QueryProcessor implements IQueryProcessor {
   private noteService: NoteService;
   private promptFormatter: PromptFormatter;
   private systemPromptGenerator: SystemPromptGenerator;
-  private model: ClaudeModel;
+  private resourceRegistry: ResourceRegistry;
 
   /**
    * Get the singleton instance of QueryProcessor
@@ -146,7 +146,9 @@ export class QueryProcessor implements IQueryProcessor {
     });
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
-    this.model = ClaudeModel.getInstance();
+    this.resourceRegistry = ResourceRegistry.getInstance({
+      anthropicApiKey: _apiKey,
+    });
     
     this.logger.debug('Query processor initialized');
   }
@@ -359,7 +361,8 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns Model response
    */
   private async callModel(systemPrompt: string, userPrompt: string): Promise<ModelResponse> {
-    return await this.model.complete({
+    const claude = this.resourceRegistry.getClaudeModel();
+    return await claude.complete({
       systemPrompt,
       userPrompt,
     });

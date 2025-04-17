@@ -4,14 +4,15 @@
 import { nanoid } from 'nanoid';
 
 import type { ConversationSummary, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
-import { ClaudeModel, type DefaultResponseType } from '@/resources/ai/claude';
+import { ResourceRegistry } from '@/resources';
+import { type DefaultResponseType } from '@/resources/ai/interfaces';
 import logger from '@/utils/logger';
 
 /**
  * Configuration options for ConversationSummarizer
  */
 export interface ConversationSummarizerOptions {
-  apiKey?: string;
+  anthropicApiKey?: string;
 }
 
 /**
@@ -19,7 +20,7 @@ export interface ConversationSummarizerOptions {
  */
 export class ConversationSummarizer {
   private static instance: ConversationSummarizer | null = null;
-  private model: ClaudeModel;
+  private resourceRegistry: ResourceRegistry;
 
   /**
    * Get the singleton instance of ConversationSummarizer
@@ -56,9 +57,11 @@ export class ConversationSummarizer {
    * @param options Configuration options including optional API key for Claude
    * @private Private constructor to enforce getInstance() usage
    */
-  private constructor(_options?: ConversationSummarizerOptions) {
-    // Just get the default instance since we don't need to pass API key anymore
-    this.model = ClaudeModel.getInstance();
+  private constructor(options?: ConversationSummarizerOptions) {
+    // Initialize the ResourceRegistry with the provided API key
+    this.resourceRegistry = ResourceRegistry.getInstance({
+      anthropicApiKey: options?.anthropicApiKey,
+    });
   }
 
   /**
@@ -88,8 +91,11 @@ export class ConversationSummarizer {
     const prompt = this.createSummarizationPrompt(conversationText);
 
     try {
+      // Get Claude model from the ResourceRegistry
+      const claude = this.resourceRegistry.getClaudeModel();
+      
       // Get summary from Claude
-      const response = await this.model.complete<DefaultResponseType>({
+      const response = await claude.complete<DefaultResponseType>({
         systemPrompt: this.getSystemPrompt(),
         userPrompt: prompt,
       });
