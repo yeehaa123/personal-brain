@@ -11,6 +11,7 @@ import type {
 } from '@/contexts';
 import type { ConversationStorage } from '@/contexts/conversations';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
+import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
@@ -203,6 +204,7 @@ export interface IProfileManager {
   getProfile(): Promise<Profile | undefined>;
   getProfileText(): Promise<string | null>;
   analyzeProfileRelevance(query: string): Promise<ProfileAnalysisResult>;
+  getProfileAnalyzer(): ProfileAnalyzer;
 }
 
 /**

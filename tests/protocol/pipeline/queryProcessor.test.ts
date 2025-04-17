@@ -15,6 +15,7 @@ import type {
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
 import { NoteService } from '@/protocol/components/noteService';
+import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import { QueryProcessor } from '@/protocol/pipeline/queryProcessor';
 import type {
   IContextManager,
@@ -164,6 +165,15 @@ describe('QueryProcessor', () => {
           return { isProfileQuery: false, relevance: 0.7 };
         }
         return { isProfileQuery: false, relevance: 0.1 };
+      },
+      getProfileAnalyzer: () => {
+        // Use a simpler mock approach for this test
+        const mockAnalyzer: Partial<ProfileAnalyzer> = {
+          isProfileQuery: (query: string) => 
+            query.toLowerCase().includes('profile') || query.toLowerCase().includes('about me'),
+          getProfileRelevance: async () => 0.5,
+        };
+        return mockAnalyzer as ProfileAnalyzer;
       },
     };
   };

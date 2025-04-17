@@ -218,4 +218,13 @@ export class ProfileManager implements IProfileManager {
     
     return { isProfileQuery, relevance };
   }
+  
+  /**
+   * Get the ProfileAnalyzer instance
+   * This allows direct access to the analyzer for specialized components
+   * @returns The ProfileAnalyzer instance
+   */
+  getProfileAnalyzer(): ProfileAnalyzer {
+    return this.profileAnalyzer;
+  }
 }

@@ -1,6 +1,10 @@
 /**
  * BrainProtocol Main Class
- * Orchestrates the interaction between models and contexts through specialized managers
+ * Coordinates protocol-level communication and integration between components
+ * 
+ * Acts as the main entry point for the protocol layer, handling high-level 
+ * protocol concerns while delegating context orchestration, query processing,
+ * and other specialized tasks to dedicated components.
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
@@ -9,36 +13,31 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { 
-  ConversationContext, 
-  ExternalSourceContext, 
-  NoteContext, 
-  ProfileContext,
-  WebsiteContext, 
-} from '@/contexts';
+import type { ConversationContext } from '@/contexts';
 import { createUnifiedMcpServer } from '@/mcpServer';
-import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
-import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
-import { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
 
+import { PromptFormatter } from '../components';
 import { BrainProtocolConfig } from '../config/brainProtocolConfig';
-import { ContextManager } from '../managers/contextManager';
 import { ConversationManager } from '../managers/conversationManager';
 import { ExternalSourceManager } from '../managers/externalSourceManager';
 import { ProfileManager } from '../managers/profileManager';
 import { QueryProcessor } from '../pipeline/queryProcessor';
 import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
 
+import { ContextOrchestrator } from './contextOrchestrator';
+
 /**
- * Main BrainProtocol class that orchestrates all components
+ * Main BrainProtocol class that coordinates protocol components
  * 
- * This is the central class of the personal-brain application, responsible for:
- * - Coordinating interactions between all component managers
- * - Processing user queries through the query pipeline
- * - Managing conversation and profile data
- * - Providing access to external knowledge sources
+ * This is the central class of the personal-brain application, providing a unified
+ * interface for the protocol layer. It delegates specialized concerns to dedicated components:
+ * - Context coordination → ContextOrchestrator
+ * - Conversation management → ConversationManager
+ * - Profile handling → ProfileManager
+ * - External knowledge → ExternalSourceManager
+ * - Query processing → QueryProcessor
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
@@ -49,8 +48,8 @@ export class BrainProtocol {
   // Core configuration
   private config: BrainProtocolConfig;
   
-  // Specialized managers
-  private contextManager: ContextManager;
+  // Specialized components
+  private contextOrchestrator: ContextOrchestrator;
   private conversationManager: ConversationManager;
   private profileManager: ProfileManager;
   private externalSourceManager: ExternalSourceManager;
@@ -89,14 +88,14 @@ export class BrainProtocol {
   /**
    * Reset the singleton instance
    * This is primarily used for testing to ensure a clean state between tests
-   * Also resets all manager singletons to ensure a clean state
+   * Also resets all component singletons to ensure a clean state
    */
   public static resetInstance(): void {
     const logger = Logger.getInstance();
     
-    // Reset all manager singletons
-    if (ContextManager.resetInstance) {
-      ContextManager.resetInstance();
+    // Reset all component singletons
+    if (ContextOrchestrator.resetInstance) {
+      ContextOrchestrator.resetInstance();
     }
     if (ConversationManager.resetInstance) {
       ConversationManager.resetInstance();
@@ -106,6 +105,9 @@ export class BrainProtocol {
     }
     if (ExternalSourceManager.resetInstance) {
       ExternalSourceManager.resetInstance();
+    }
+    if (QueryProcessor.resetInstance) {
+      QueryProcessor.resetInstance();
     }
     
     // Finally reset the BrainProtocol instance
@@ -148,46 +150,38 @@ export class BrainProtocol {
       // Create the unified MCP server using config
       this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
       
-      // Initialize managers with proper error handling using getInstance pattern
-      this.contextManager = ContextManager.getInstance({ config: this.config });
+      // Initialize context orchestrator
+      this.contextOrchestrator = ContextOrchestrator.getInstance({
+        config: this.config,
+      });
       
       // Ensure contexts are ready before proceeding
-      if (!this.contextManager.areContextsReady()) {
-        throw new Error('Context manager initialization failed: contexts not ready');
+      if (!this.contextOrchestrator.areContextsReady()) {
+        throw new Error('Context orchestration failed: contexts not ready');
       }
       
-      // Initialize context links
-      this.contextManager.initializeContextLinks();
-      
       // Initialize conversation manager
-      this.conversationManager = ConversationManager.getInstance({ config: this.config });
+      this.conversationManager = ConversationManager.getInstance({ 
+        config: this.config,
+      });
       
       // Initialize profile manager with profile context
       this.profileManager = ProfileManager.getInstance({
-        profileContext: this.contextManager.getProfileContext(),
+        profileContext: this.contextOrchestrator.getProfileContext(),
         apiKey: this.config.getApiKey(),
-      });
-      
-      // Initialize prompt formatter and profile analyzer for external source manager
-      const promptFormatter = PromptFormatter.getInstance();
-      const embeddingService = EmbeddingService.getInstance(
-        this.config.getApiKey() ? { apiKey: this.config.getApiKey() } : undefined,
-      );
-      const profileAnalyzer = ProfileAnalyzer.getInstance({
-        embeddingService,
       });
       
       // Initialize external source manager
       this.externalSourceManager = ExternalSourceManager.getInstance({
-        externalSourceContext: this.contextManager.getExternalSourceContext(),
-        profileAnalyzer,
-        promptFormatter,
+        externalSourceContext: this.contextOrchestrator.getExternalSourceContext(),
+        profileAnalyzer: this.profileManager.getProfileAnalyzer(),
+        promptFormatter: PromptFormatter.getInstance(),
         enabled: this.config.useExternalSources,
       });
       
       // Initialize query processor
       this.queryProcessor = QueryProcessor.getInstance({
-        contextManager: this.contextManager,
+        contextManager: this.contextOrchestrator.getContextManager(),
         conversationManager: this.conversationManager,
         profileManager: this.profileManager,
         externalSourceManager: this.externalSourceManager,
@@ -207,32 +201,32 @@ export class BrainProtocol {
    * Get the note context for external access
    * @returns NoteContext instance
    */
-  getNoteContext(): NoteContext {
-    return this.contextManager.getNoteContext();
+  getNoteContext() {
+    return this.contextOrchestrator.getNoteContext();
   }
 
   /**
    * Get the profile context for external access
    * @returns ProfileContext instance
    */
-  getProfileContext(): ProfileContext {
-    return this.contextManager.getProfileContext();
+  getProfileContext() {
+    return this.contextOrchestrator.getProfileContext();
   }
 
   /**
    * Get the external source context for external access
-   * @returns ExternalSourceContext instance or null
+   * @returns ExternalSourceContext instance
    */
-  getExternalSourceContext(): ExternalSourceContext {
-    return this.contextManager.getExternalSourceContext();
+  getExternalSourceContext() {
+    return this.contextOrchestrator.getExternalSourceContext();
   }
 
   /**
    * Get the website context for website management
    * @returns WebsiteContext instance
    */
-  getWebsiteContext(): WebsiteContext {
-    return this.contextManager.getWebsiteContext();
+  getWebsiteContext() {
+    return this.contextOrchestrator.getWebsiteContext();
   }
 
   /**
@@ -289,12 +283,12 @@ export class BrainProtocol {
    * @param enabled Whether to enable external sources
    */
   setUseExternalSources(enabled: boolean): void {
-    // Update both the context manager and external source manager
-    this.contextManager.setExternalSourcesEnabled(enabled);
+    // Update both the context orchestrator and external source manager
+    this.contextOrchestrator.setExternalSourcesEnabled(enabled);
     this.externalSourceManager.setEnabled(enabled);
     
     // This ensures both components stay in sync
-    this.logger.debug('External sources setting updated in both managers');
+    this.logger.debug('External sources setting updated in both components');
   }
 
   /**
@@ -329,7 +323,7 @@ export class BrainProtocol {
    */
   isReady(): boolean {
     return (
-      this.contextManager.areContextsReady() && 
+      this.contextOrchestrator.areContextsReady() && 
       this.hasActiveConversation() && 
       !!this.unifiedMcpServer
     );
@@ -341,7 +335,7 @@ export class BrainProtocol {
    */
   getStatus(): Record<string, boolean> {
     return {
-      contextManager: this.contextManager.areContextsReady(),
+      contextOrchestrator: this.contextOrchestrator.areContextsReady(),
       conversationManager: this.hasActiveConversation(),
       mcpServer: !!this.unifiedMcpServer,
       externalSources: this.getUseExternalSources(),
@@ -358,7 +352,7 @@ export class BrainProtocol {
    */
   async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
     // Check that contexts are ready before processing
-    if (!this.contextManager.areContextsReady()) {
+    if (!this.contextOrchestrator.areContextsReady()) {
       throw new Error('Cannot process query: contexts not ready');
     }
     
