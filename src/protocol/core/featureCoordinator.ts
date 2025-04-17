@@ -13,7 +13,6 @@
 
 import { Logger } from '@/utils/logger';
 
-import type { ExternalSourceManager } from '../managers/externalSourceManager';
 
 import type { ConfigurationManager } from './configurationManager';
 import type { ContextOrchestrator } from './contextOrchestrator';
@@ -27,8 +26,6 @@ export interface FeatureCoordinatorOptions {
   configManager: ConfigurationManager;
   /** Context orchestrator for context coordination */
   contextOrchestrator: ContextOrchestrator;
-  /** External source manager for managing external knowledge sources */
-  externalSourceManager: ExternalSourceManager;
   /** Status manager for updating status information */
   statusManager: StatusManager;
 }
@@ -59,8 +56,6 @@ export class FeatureCoordinator {
   private configManager: ConfigurationManager;
   /** Context orchestrator instance */
   private contextOrchestrator: ContextOrchestrator;
-  /** External source manager instance */
-  private externalSourceManager: ExternalSourceManager;
   /** Status manager instance */
   private statusManager: StatusManager;
   
@@ -119,7 +114,6 @@ export class FeatureCoordinator {
   private constructor(options: FeatureCoordinatorOptions) {
     this.configManager = options.configManager;
     this.contextOrchestrator = options.contextOrchestrator;
-    this.externalSourceManager = options.externalSourceManager;
     this.statusManager = options.statusManager;
     
     // Initialize feature flags
@@ -228,9 +222,6 @@ export class FeatureCoordinator {
     
     // Update contexts
     this.contextOrchestrator.setExternalSourcesEnabled(enabled);
-    
-    // Update external source manager
-    this.externalSourceManager.setEnabled(enabled);
     
     // Update status manager
     this.statusManager.setExternalSourcesEnabled(enabled);

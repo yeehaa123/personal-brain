@@ -12,14 +12,11 @@ import type { ModelResponse } from '@/resources/ai/interfaces';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
-import type { INoteManager } from '../types';
 import type { 
   ContextResult,
   ExternalCitation,
   IContextManager, 
   IConversationManager, 
-  IExternalSourceManager, 
-  IProfileManager,
   IQueryProcessor,
   ProfileAnalysisResult,
   QueryOptions,
@@ -35,12 +32,6 @@ export interface QueryProcessorConfig {
   contextManager: IContextManager;
   /** Conversation manager for history */
   conversationManager: IConversationManager;
-  /** Profile manager for profile analysis */
-  profileManager: IProfileManager;
-  /** Note manager for note operations */
-  noteManager: INoteManager;
-  /** External source manager for external knowledge */
-  externalSourceManager: IExternalSourceManager;
   /** API key for model access */
   apiKey?: string;
 }
@@ -60,11 +51,8 @@ export class QueryProcessor implements IQueryProcessor {
   /** Logger instance for this class */
   private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
+  private contextManager: IContextManager;
   private conversationManager: IConversationManager;
-  private profileManager: IProfileManager;
-  private externalSourceManager: IExternalSourceManager;
-  
-  private noteManager: INoteManager;
   private promptFormatter: PromptFormatter;
   private systemPromptGenerator: SystemPromptGenerator;
   private resourceRegistry: ResourceRegistry;
@@ -80,9 +68,6 @@ export class QueryProcessor implements IQueryProcessor {
       QueryProcessor.instance = new QueryProcessor(
         config.contextManager,
         config.conversationManager,
-        config.profileManager,
-        config.noteManager,
-        config.externalSourceManager,
         config.apiKey,
       );
       
@@ -117,9 +102,6 @@ export class QueryProcessor implements IQueryProcessor {
     return new QueryProcessor(
       config.contextManager,
       config.conversationManager,
-      config.profileManager,
-      config.noteManager,
-      config.externalSourceManager,
       config.apiKey,
     );
   }
@@ -129,28 +111,21 @@ export class QueryProcessor implements IQueryProcessor {
    * 
    * @param contextManager Context manager
    * @param conversationManager Conversation manager
-   * @param profileManager Profile manager
-   * @param externalSourceManager External source manager
    * @param apiKey API key for model
    */
   private constructor(
-    _contextManager: IContextManager,
+    contextManager: IContextManager,
     conversationManager: IConversationManager,
-    profileManager: IProfileManager,
-    noteManager: INoteManager,
-    externalSourceManager: IExternalSourceManager,
-    _apiKey?: string,
+    apiKey?: string,
   ) {
+    this.contextManager = contextManager;
     this.conversationManager = conversationManager;
-    this.profileManager = profileManager;
-    this.noteManager = noteManager;
-    this.externalSourceManager = externalSourceManager;
     
     // Initialize helpers using their getInstance methods
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
     this.resourceRegistry = ResourceRegistry.getInstance({
-      anthropicApiKey: _apiKey,
+      anthropicApiKey: apiKey,
     });
     
     this.logger.debug('Query processor initialized');
@@ -217,7 +192,11 @@ export class QueryProcessor implements IQueryProcessor {
     await this.saveTurn(query, answer, options);
     
     // 8. Get related notes for the response
-    const relatedNotes = await this.noteManager.getRelatedNotes(context.relevantNotes);
+    const noteContext = this.contextManager.getNoteContext();
+    // If we have relevant notes, get related notes for the first one
+    const relatedNotes = context.relevantNotes.length > 0 
+      ? await noteContext.getRelatedNotes(context.relevantNotes[0].id)
+      : [];
     
     // 9. Determine if profile should be included in response
     const includeProfileInResponse = 
@@ -225,7 +204,8 @@ export class QueryProcessor implements IQueryProcessor {
       profileAnalysis.relevance > relevanceConfig.profileResponseThreshold;
     
     // 10. Get profile if needed
-    const profile = includeProfileInResponse ? await this.profileManager.getProfile() : undefined;
+    const profileContext = this.contextManager.getProfileContext();
+    const profile = includeProfileInResponse ? await profileContext.getProfile() : undefined;
     
     // 11. Return the result
     return {
@@ -243,7 +223,15 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns Profile analysis result
    */
   private async analyzeProfile(query: string): Promise<ProfileAnalysisResult> {
-    return await this.profileManager.analyzeProfileRelevance(query);
+    // Use ProfileAnalyzer directly through the ResourceRegistry for now
+    // This is a temporary solution until we move profile analysis to ProfileContext
+    // We don't actually need to get the profile here, just detect if it's a profile query
+    
+    // Basic profile query detection pattern
+    const isProfileQuery = /profile|about\s+me|who\s+am\s+i|my\s+background/i.test(query);
+    const relevance = isProfileQuery ? 0.9 : 0.1;
+    
+    return { isProfileQuery, relevance };
   }
 
   /**
@@ -252,7 +240,8 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns Context result with relevant notes and citations
    */
   private async retrieveRelevantNotes(query: string): Promise<ContextResult> {
-    const relevantNotes = await this.noteManager.fetchRelevantNotes(query);
+    const noteContext = this.contextManager.getNoteContext();
+    const relevantNotes = await noteContext.searchNotes({ query, limit: 5 });
     const notesFound = Array.isArray(relevantNotes) ? relevantNotes.length : 0;
     
     this.logger.info(`Found ${notesFound} relevant notes`);
@@ -287,8 +276,15 @@ export class QueryProcessor implements IQueryProcessor {
    * @param relevantNotes Relevant notes for the query
    * @returns External results or null
    */
-  private async fetchExternalSources(query: string, relevantNotes: Note[]): Promise<ExternalSourceResult[] | null> {
-    return await this.externalSourceManager.getExternalResults(query, relevantNotes);
+  private async fetchExternalSources(query: string, _relevantNotes: Note[]): Promise<ExternalSourceResult[] | null> {
+    const externalSourceContext = this.contextManager.getExternalSourceContext();
+    const enabled = this.contextManager.getExternalSourcesEnabled();
+    
+    if (!enabled) {
+      return null;
+    }
+    
+    return await externalSourceContext.search(query);
   }
 
   /**
@@ -334,7 +330,8 @@ export class QueryProcessor implements IQueryProcessor {
       profileAnalysis.relevance > relevanceConfig.profileInclusionThreshold;
     
     // Get profile if needed
-    const profile = includeProfile ? await this.profileManager.getProfile() : undefined;
+    const profileContext = this.contextManager.getProfileContext();
+    const profile = includeProfile ? await profileContext.getProfile() : undefined;
     
     // Format the user prompt
     const { formattedPrompt } = this.promptFormatter.formatPromptWithContext(

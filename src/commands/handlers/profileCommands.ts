@@ -21,7 +21,7 @@ export class ProfileCommandHandler extends BaseCommandHandler {
 
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.profileContext = brainProtocol.getProfileManager().getProfileContext();
+    this.profileContext = brainProtocol.getContextManager().getProfileContext();
   }
 
   /**
@@ -67,7 +67,7 @@ export class ProfileCommandHandler extends BaseCommandHandler {
 
     // Check if we want related notes
     if (args && args.toLowerCase() === 'related') {
-      const noteContext = this.brainProtocol.getNoteManager().getNoteContext();
+      const noteContext = this.brainProtocol.getContextManager().getNoteContext();
       const relatedNotes = await this.profileContext.findRelatedNotes(noteContext, 5);
 
       // Determine match type

@@ -34,7 +34,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.noteContext = brainProtocol.getNoteManager().getNoteContext();
+    this.noteContext = brainProtocol.getContextManager().getNoteContext();
     this.externalContext = brainProtocol.getContextManager().getExternalSourceContext();
   }
   

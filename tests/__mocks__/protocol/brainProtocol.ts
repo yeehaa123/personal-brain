@@ -1,43 +1,90 @@
 /**
  * Mock BrainProtocol for testing
+ * 
+ * Follows the Component Interface Standardization pattern with
+ * getInstance(), resetInstance(), and createFresh()
  */
 
-import type { BaseCommandHandler } from '@/commands/core/baseCommandHandler';
-import type { Note } from '@/models/note';
-import type { Profile } from '@/models/profile';
-import type { ProtocolResponse } from '@/protocol/types';
-import { MockWebsiteCommandHandler } from '@test/__mocks__/commands/websiteCommandHandler';
-import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
-import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
+import type { BrainProtocolOptions, IContextManager, IConversationManager, QueryOptions, QueryResult } from '@/protocol/types';
+import { Logger } from '@/utils/logger';
+
+import type { MockConfigurationManager } from './core/configurationManager';
+import { MockConfigurationManager as ConfigManager } from './core/configurationManager';
+import type { MockFeatureCoordinator } from './core/featureCoordinator';
+import { MockFeatureCoordinator as FeatureCoord } from './core/featureCoordinator';
+import { MockContextManager } from './managers/contextManager';
+import { MockConversationManager } from './managers/conversationManager';
 
 /**
  * Options for configuring MockBrainProtocol behavior
  */
-export interface MockBrainProtocolOptions {
+export interface MockBrainProtocolOptions extends BrainProtocolOptions {
   /**
    * Custom response for processQuery method
    */
-  customQueryResponse?: Omit<ProtocolResponse, 'query'> & {
-    answer: string;
-    citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>;
-    relatedNotes: Note[];
-    profile?: Profile;
-    externalSources?: Array<{ title: string; source: string; url: string; excerpt: string }>;
-  };
+  customQueryResponse?: QueryResult;
 }
 
+/**
+ * Mock implementation of BrainProtocol
+ * 
+ * Follows the simplified BrainProtocol architecture:
+ * - Provides access to essential managers (ContextManager, ConversationManager, etc.)
+ * - Includes standard Component Interface Standardization pattern methods
+ * - Returns mock data for query processing
+ */
 export class MockBrainProtocol {
   private static instance: MockBrainProtocol | null = null;
-  private websiteContext: MockWebsiteContext;
-  private profileContext: MockProfileContext;
-  private websiteCommandHandler: MockWebsiteCommandHandler;
+  private contextManager: IContextManager;
+  private conversationManager: IConversationManager;
+  private featureCoordinator: MockFeatureCoordinator;
+  private configManager: MockConfigurationManager;
   private options: MockBrainProtocolOptions = {};
+  private logger = Logger.getInstance();
 
-  constructor(options?: MockBrainProtocolOptions) {
-    // Create mock contexts
-    this.websiteContext = MockWebsiteContext.getInstance();
-    this.profileContext = MockProfileContext.createFresh();
-    this.websiteCommandHandler = MockWebsiteCommandHandler.getInstance();
+  /**
+   * Get the singleton instance
+   */
+  static getInstance(options?: MockBrainProtocolOptions): MockBrainProtocol {
+    if (!MockBrainProtocol.instance) {
+      MockBrainProtocol.instance = new MockBrainProtocol(options);
+    } else if (options) {
+      MockBrainProtocol.instance.setOptions(options);
+    }
+    return MockBrainProtocol.instance;
+  }
+
+  /**
+   * Reset the singleton instance
+   * Also resets all component singletons to ensure a clean state
+   */
+  static resetInstance(): void {
+    // Reset all specialized component singletons
+    MockContextManager.resetInstance();
+    MockConversationManager.resetInstance();
+    ConfigManager.resetInstance();
+    FeatureCoord.resetInstance();
+    
+    // Reset the BrainProtocol instance itself
+    MockBrainProtocol.instance = null;
+  }
+
+  /**
+   * Create a fresh instance
+   */
+  static createFresh(options?: MockBrainProtocolOptions): MockBrainProtocol {
+    return new MockBrainProtocol(options);
+  }
+
+  /**
+   * Private constructor to enforce the use of getInstance() or createFresh()
+   */
+  private constructor(options?: MockBrainProtocolOptions) {
+    // Create mock managers
+    this.contextManager = MockContextManager.createFresh() as unknown as IContextManager;
+    this.conversationManager = MockConversationManager.createFresh() as unknown as IConversationManager;
+    this.featureCoordinator = FeatureCoord.createFresh();
+    this.configManager = ConfigManager.createFresh();
     
     // Store options
     if (options) {
@@ -52,65 +99,64 @@ export class MockBrainProtocol {
     this.options = { ...this.options, ...options };
   }
 
-  static getInstance(options?: MockBrainProtocolOptions): MockBrainProtocol {
-    if (!MockBrainProtocol.instance) {
-      MockBrainProtocol.instance = new MockBrainProtocol(options);
-    } else if (options) {
-      MockBrainProtocol.instance.setOptions(options);
-    }
-    return MockBrainProtocol.instance;
-  }
-
-  static resetInstance(): void {
-    MockBrainProtocol.instance = null;
-  }
-
-  static createFresh(options?: MockBrainProtocolOptions): MockBrainProtocol {
-    return new MockBrainProtocol(options);
-  }
-
-  getContextManager() {
-    return {
-      getWebsiteContext: () => this.websiteContext,
-      getProfileContext: () => this.profileContext,
-      getNoteContext: () => ({}),
-      getExternalSourceContext: () => ({}),
-      getConversationContext: () => ({}),
-      setExternalSourcesEnabled: () => {},
-      getExternalSourcesEnabled: () => false,
-      areContextsReady: () => true,
-      initializeContextLinks: () => {},
-    };
-  }
-
-  getWebsiteCommandHandler(): MockWebsiteCommandHandler {
-    return this.websiteCommandHandler;
-  }
-
-  registerHandlers(commandHandler: { registerHandler: (handler: BaseCommandHandler) => void }): void {
-    // Register all mock command handlers with the provided CommandHandler
-    commandHandler.registerHandler(this.websiteCommandHandler as unknown as BaseCommandHandler);
-    // Add other command handlers as needed
+  /**
+   * Get the context manager
+   * Primary access point for all contexts (notes, profiles, etc.)
+   */
+  getContextManager(): IContextManager {
+    return this.contextManager;
   }
 
   /**
-   * Mock implementation of BrainProtocol's processQuery
-   * @param _query The query to process (unused in mock)
-   * @returns Promise with protocol response
+   * Get the conversation manager
    */
-  processQuery(_query: unknown): Promise<ProtocolResponse> {
+  getConversationManager(): IConversationManager {
+    return this.conversationManager;
+  }
+
+  /**
+   * Get the feature coordinator
+   */
+  getFeatureCoordinator(): MockFeatureCoordinator {
+    return this.featureCoordinator;
+  }
+
+  /**
+   * Get the configuration manager
+   */
+  getConfigManager(): MockConfigurationManager {
+    return this.configManager;
+  }
+
+  /**
+   * Check if all components are ready
+   */
+  isReady(): boolean {
+    return true;
+  }
+
+  /**
+   * Initialize all asynchronous components
+   */
+  async initialize(): Promise<void> {
+    this.logger.info('Mock BrainProtocol initialized');
+  }
+
+  /**
+   * Process a query
+   * Returns mock query result
+   */
+  async processQuery(_query: string, _options?: QueryOptions): Promise<QueryResult> {
     // If we have a custom response configured, use it
     if (this.options.customQueryResponse) {
-      return Promise.resolve({
-        ...this.options.customQueryResponse,
-      });
+      return { ...this.options.customQueryResponse };
     }
     
     // Otherwise use the default mock response
-    return Promise.resolve({
-      answer: 'Mock answer',
+    return {
+      answer: 'Mock answer from BrainProtocol',
       citations: [],
       relatedNotes: [],
-    });
+    };
   }
 }

@@ -27,6 +27,7 @@ export class MockNoteContext extends MockBaseContext {
     list: (options?: Record<string, unknown>) => Promise<Note[]>;
     count: (criteria?: Record<string, unknown>) => Promise<number>;
     findBySource: (sourceId: string) => Promise<Note[]>;
+    getRelated: (id: string, limit?: number) => Promise<Note[]>;
   };
   
   /**
@@ -72,6 +73,7 @@ export class MockNoteContext extends MockBaseContext {
       list: mock(() => Promise.resolve([])),
       count: mock(() => Promise.resolve(0)),
       findBySource: mock(() => Promise.resolve([])),
+      getRelated: mock(() => Promise.resolve([])),
     };
     
     // Initialize mock resources
@@ -179,5 +181,12 @@ export class MockNoteContext extends MockBaseContext {
    */
   async findNotesBySource(sourceId: string): Promise<Note[]> {
     return this.storageAdapter.findBySource(sourceId);
+  }
+  
+  /**
+   * Get related notes for a given note ID
+   */
+  async getRelatedNotes(id: string, limit = 5): Promise<Note[]> {
+    return this.storageAdapter.getRelated(id, limit);
   }
 }

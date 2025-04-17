@@ -17,7 +17,7 @@ export class TagCommandHandler extends BaseCommandHandler {
 
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.noteContext = brainProtocol.getNoteManager().getNoteContext();
+    this.noteContext = brainProtocol.getContextManager().getNoteContext();
   }
 
   /**
