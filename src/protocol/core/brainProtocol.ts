@@ -33,6 +33,7 @@ import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
 
 import { ConfigurationManager } from './configurationManager';
 import { ContextOrchestrator } from './contextOrchestrator';
+import { FeatureCoordinator, type FeatureFlag } from './featureCoordinator';
 import { McpServerManager } from './mcpServerManager';
 import { StatusManager } from './statusManager';
 
@@ -58,6 +59,7 @@ export class BrainProtocol {
   private contextOrchestrator: ContextOrchestrator;
   private mcpServerManager: McpServerManager;
   private statusManager: StatusManager;
+  private featureCoordinator: FeatureCoordinator;
   private conversationManager: ConversationManager;
   private profileManager: ProfileManager;
   private externalSourceManager: ExternalSourceManager;
@@ -110,6 +112,9 @@ export class BrainProtocol {
     }
     if (StatusManager.resetInstance) {
       StatusManager.resetInstance();
+    }
+    if (FeatureCoordinator.resetInstance) {
+      FeatureCoordinator.resetInstance();
     }
     if (ConversationManager.resetInstance) {
       ConversationManager.resetInstance();
@@ -207,6 +212,14 @@ export class BrainProtocol {
         conversationManager: this.conversationManager,
         mcpServer: this.mcpServerManager.getMcpServer(),
         externalSourcesEnabled: this.configManager.getUseExternalSources(),
+      });
+      
+      // Initialize feature coordinator
+      this.featureCoordinator = FeatureCoordinator.getInstance({
+        configManager: this.configManager,
+        contextOrchestrator: this.contextOrchestrator,
+        externalSourceManager: this.externalSourceManager,
+        statusManager: this.statusManager,
       });
       
       // Initialize query processor
@@ -313,13 +326,8 @@ export class BrainProtocol {
    * @param enabled Whether to enable external sources
    */
   setUseExternalSources(enabled: boolean): void {
-    // Update all relevant components
-    this.configManager.setUseExternalSources(enabled);
-    this.contextOrchestrator.setExternalSourcesEnabled(enabled);
-    this.externalSourceManager.setEnabled(enabled);
-    this.statusManager.setExternalSourcesEnabled(enabled);
-    
-    this.logger.debug('External sources setting updated across all components');
+    // Use feature coordinator to update external sources across all components
+    this.featureCoordinator.setExternalSourcesEnabled(enabled);
   }
 
   /**
@@ -327,7 +335,34 @@ export class BrainProtocol {
    * @returns Whether external sources are enabled
    */
   getUseExternalSources(): boolean {
-    return this.configManager.getUseExternalSources();
+    return this.featureCoordinator.areExternalSourcesEnabled();
+  }
+  
+  /**
+   * Get all registered feature flags
+   * @returns Array of feature flag definitions
+   */
+  getFeatures(): FeatureFlag[] {
+    return this.featureCoordinator.getAllFeatures();
+  }
+  
+  /**
+   * Enable or disable a feature by ID
+   * @param featureId Feature flag ID
+   * @param enabled Whether the feature should be enabled
+   * @returns Whether the operation was successful
+   */
+  setFeatureEnabled(featureId: string, enabled: boolean): boolean {
+    return this.featureCoordinator.setFeatureEnabled(featureId, enabled);
+  }
+  
+  /**
+   * Check if a feature is enabled
+   * @param featureId Feature flag ID
+   * @returns Whether the feature is enabled
+   */
+  isFeatureEnabled(featureId: string): boolean {
+    return this.featureCoordinator.isFeatureEnabled(featureId);
   }
 
   /**
