@@ -3,8 +3,14 @@
  * Coordinates protocol-level communication and integration between components
  * 
  * Acts as the main entry point for the protocol layer, handling high-level 
- * protocol concerns while delegating context orchestration, query processing,
- * and other specialized tasks to dedicated components.
+ * protocol concerns while delegating specific functionalities to dedicated components:
+ * - Configuration management (ConfigurationManager)
+ * - Context coordination (ContextOrchestrator)
+ * - Status monitoring (StatusManager)
+ * - MCP server management (McpServerManager)
+ * - Conversation handling (ConversationManager)
+ * - External knowledge (ExternalSourceManager)
+ * - Query processing (QueryProcessor)
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
@@ -14,7 +20,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import type { ConversationContext } from '@/contexts';
-import { createUnifiedMcpServer } from '@/mcpServer';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
@@ -26,7 +31,10 @@ import { ProfileManager } from '../managers/profileManager';
 import { QueryProcessor } from '../pipeline/queryProcessor';
 import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
 
+import { ConfigurationManager } from './configurationManager';
 import { ContextOrchestrator } from './contextOrchestrator';
+import { McpServerManager } from './mcpServerManager';
+import { StatusManager } from './statusManager';
 
 /**
  * Main BrainProtocol class that coordinates protocol components
@@ -45,18 +53,15 @@ import { ContextOrchestrator } from './contextOrchestrator';
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class BrainProtocol {
-  // Core configuration
-  private config: BrainProtocolConfig;
-  
   // Specialized components
+  private configManager: ConfigurationManager;
   private contextOrchestrator: ContextOrchestrator;
+  private mcpServerManager: McpServerManager;
+  private statusManager: StatusManager;
   private conversationManager: ConversationManager;
   private profileManager: ProfileManager;
   private externalSourceManager: ExternalSourceManager;
   private queryProcessor: QueryProcessor;
-  
-  // MCP Server
-  private unifiedMcpServer: McpServer;
   
   // Singleton instance
   private static instance: BrainProtocol | null = null;
@@ -93,9 +98,18 @@ export class BrainProtocol {
   public static resetInstance(): void {
     const logger = Logger.getInstance();
     
-    // Reset all component singletons
+    // Reset all specialized component singletons
+    if (ConfigurationManager.resetInstance) {
+      ConfigurationManager.resetInstance();
+    }
     if (ContextOrchestrator.resetInstance) {
       ContextOrchestrator.resetInstance();
+    }
+    if (McpServerManager.resetInstance) {
+      McpServerManager.resetInstance();
+    }
+    if (StatusManager.resetInstance) {
+      StatusManager.resetInstance();
     }
     if (ConversationManager.resetInstance) {
       ConversationManager.resetInstance();
@@ -145,14 +159,16 @@ export class BrainProtocol {
   ) {
     try {
       // Initialize configuration
-      this.config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
+      const config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
       
-      // Create the unified MCP server using config
-      this.unifiedMcpServer = createUnifiedMcpServer(this.config.getMcpServerConfig());
+      // Initialize configuration manager
+      this.configManager = ConfigurationManager.getInstance({
+        config,
+      });
       
       // Initialize context orchestrator
       this.contextOrchestrator = ContextOrchestrator.getInstance({
-        config: this.config,
+        config,
       });
       
       // Ensure contexts are ready before proceeding
@@ -160,15 +176,21 @@ export class BrainProtocol {
         throw new Error('Context orchestration failed: contexts not ready');
       }
       
+      // Initialize MCP server manager
+      this.mcpServerManager = McpServerManager.getInstance({
+        contextOrchestrator: this.contextOrchestrator,
+        configManager: this.configManager,
+      });
+      
       // Initialize conversation manager
       this.conversationManager = ConversationManager.getInstance({ 
-        config: this.config,
+        config,
       });
       
       // Initialize profile manager with profile context
       this.profileManager = ProfileManager.getInstance({
         profileContext: this.contextOrchestrator.getProfileContext(),
-        apiKey: this.config.getApiKey(),
+        apiKey: this.configManager.getApiKey(),
       });
       
       // Initialize external source manager
@@ -176,7 +198,15 @@ export class BrainProtocol {
         externalSourceContext: this.contextOrchestrator.getExternalSourceContext(),
         profileAnalyzer: this.profileManager.getProfileAnalyzer(),
         promptFormatter: PromptFormatter.getInstance(),
-        enabled: this.config.useExternalSources,
+        enabled: this.configManager.getUseExternalSources(),
+      });
+      
+      // Initialize status manager
+      this.statusManager = StatusManager.getInstance({
+        contextOrchestrator: this.contextOrchestrator,
+        conversationManager: this.conversationManager,
+        mcpServer: this.mcpServerManager.getMcpServer(),
+        externalSourcesEnabled: this.configManager.getUseExternalSources(),
       });
       
       // Initialize query processor
@@ -185,11 +215,11 @@ export class BrainProtocol {
         conversationManager: this.conversationManager,
         profileManager: this.profileManager,
         externalSourceManager: this.externalSourceManager,
-        apiKey: this.config.getApiKey(),
+        apiKey: this.configManager.getApiKey(),
       });
       
-      this.logger.info(`Brain protocol initialized with external sources ${this.config.useExternalSources ? 'enabled' : 'disabled'}`);
-      this.logger.info(`Using interface type: ${this.config.interfaceType}`);
+      this.logger.info(`Brain protocol initialized with external sources ${this.configManager.getUseExternalSources() ? 'enabled' : 'disabled'}`);
+      this.logger.info(`Using interface type: ${this.configManager.getInterfaceType()}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to initialize BrainProtocol: ${errorMessage}`);
@@ -228,13 +258,13 @@ export class BrainProtocol {
   getWebsiteContext() {
     return this.contextOrchestrator.getWebsiteContext();
   }
-
+  
   /**
    * Get the MCP server instance
-   * @returns Unified MCP server instance
+   * @returns MCP server instance
    */
-  getMcpServer(): McpServer {
-    return this.unifiedMcpServer;
+  getMcpServer(): McpServer | null {
+    return this.mcpServerManager.getMcpServer();
   }
 
   /**
@@ -283,12 +313,13 @@ export class BrainProtocol {
    * @param enabled Whether to enable external sources
    */
   setUseExternalSources(enabled: boolean): void {
-    // Update both the context orchestrator and external source manager
+    // Update all relevant components
+    this.configManager.setUseExternalSources(enabled);
     this.contextOrchestrator.setExternalSourcesEnabled(enabled);
     this.externalSourceManager.setEnabled(enabled);
+    this.statusManager.setExternalSourcesEnabled(enabled);
     
-    // This ensures both components stay in sync
-    this.logger.debug('External sources setting updated in both components');
+    this.logger.debug('External sources setting updated across all components');
   }
 
   /**
@@ -296,9 +327,7 @@ export class BrainProtocol {
    * @returns Whether external sources are enabled
    */
   getUseExternalSources(): boolean {
-    // We get this from the external source manager as it's responsible for
-    // processing external source requests
-    return this.externalSourceManager.isEnabled();
+    return this.configManager.getUseExternalSources();
   }
 
   /**
@@ -306,7 +335,7 @@ export class BrainProtocol {
    * @returns Whether Anthropic API key is available
    */
   hasAnthropicApiKey(): boolean {
-    return this.config.hasAnthropicApiKey();
+    return this.configManager.hasAnthropicApiKey();
   }
 
   /**
@@ -314,7 +343,7 @@ export class BrainProtocol {
    * @returns Whether OpenAI API key is available
    */
   hasOpenAIApiKey(): boolean {
-    return this.config.hasOpenAIApiKey();
+    return this.configManager.hasOpenAIApiKey();
   }
 
   /**
@@ -322,23 +351,27 @@ export class BrainProtocol {
    * @returns Whether all components are ready
    */
   isReady(): boolean {
-    return (
-      this.contextOrchestrator.areContextsReady() && 
-      this.hasActiveConversation() && 
-      !!this.unifiedMcpServer
-    );
+    return this.statusManager.isReady();
   }
 
   /**
-   * Get an object describing the status of all components
-   * @returns Status object
+   * Get a detailed status report of all components
+   * @returns Complete system status report
    */
-  getStatus(): Record<string, boolean> {
+  getStatus() {
+    return this.statusManager.getStatus();
+  }
+  
+  /**
+   * Get a simplified status object for backward compatibility
+   * @returns Status key-value pairs
+   */
+  getStatusLegacy(): Record<string, boolean> {
+    const status = this.statusManager.getStatusLegacy();
+    
+    // Add API key status
     return {
-      contextOrchestrator: this.contextOrchestrator.areContextsReady(),
-      conversationManager: this.hasActiveConversation(),
-      mcpServer: !!this.unifiedMcpServer,
-      externalSources: this.getUseExternalSources(),
+      ...status,
       anthropicApiKey: this.hasAnthropicApiKey(),
       openaiApiKey: this.hasOpenAIApiKey(),
     };
@@ -351,9 +384,9 @@ export class BrainProtocol {
    * @returns Query result
    */
   async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
-    // Check that contexts are ready before processing
-    if (!this.contextOrchestrator.areContextsReady()) {
-      throw new Error('Cannot process query: contexts not ready');
+    // Check that the system is ready
+    if (!this.isReady()) {
+      throw new Error('Cannot process query: system not ready');
     }
     
     return await this.queryProcessor.processQuery(query, options);
