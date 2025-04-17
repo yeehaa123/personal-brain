@@ -13,7 +13,7 @@ import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
-import type { IConversationManager, TurnOptions } from '../types';
+import type { IConversationManager, InterfaceType, TurnOptions } from '../types';
 
 /**
  * Configuration options for ConversationManager
@@ -41,6 +41,7 @@ export class ConversationManager implements IConversationManager {
   private conversationContext: ConversationContext;
   private currentRoomId?: string;
   private currentConversationId?: string;
+  private interfaceType: InterfaceType;
 
   /**
    * Get the singleton instance of ConversationManager
@@ -128,10 +129,13 @@ export class ConversationManager implements IConversationManager {
     // Set initial room ID
     this.currentRoomId = config.roomId;
     
+    // Set interface type from configuration
+    this.interfaceType = config.interfaceType || 'cli';
+    
     // Initialize conversation
     this.initializeConversation();
     
-    this.logger.debug('Conversation manager initialized with BaseContext architecture');
+    this.logger.debug(`Conversation manager initialized with BaseContext architecture (interface: ${this.interfaceType})`);
   }
 
   /**
@@ -150,27 +154,38 @@ export class ConversationManager implements IConversationManager {
     this.currentRoomId = roomId;
     this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
       roomId,
-      'cli',
+      this.interfaceType,
     );
     
-    this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId}`);
+    this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId} using interface: ${this.interfaceType}`);
   }
+
 
   /**
    * Initialize the conversation with the current room ID
+   * If no room ID is provided, create a default conversation for CLI use
    */
   async initializeConversation(): Promise<void> {
     try {
-      if (this.currentRoomId) {
-        this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
-          this.currentRoomId,
-          'cli',
-        );
-        
-        this.logger.debug(`Initialized conversation ${this.currentConversationId} for room: ${this.currentRoomId}`);
+      // Define the room ID to use - either provided or default
+      const roomId = this.currentRoomId || 'default-cli-room';
+      
+      // Always create a conversation, using the provided room ID or the default
+      this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
+        roomId,
+        this.interfaceType,
+      );
+      
+      // Update the current room ID if we used a default
+      if (!this.currentRoomId) {
+        this.currentRoomId = roomId;
+        this.logger.info(`Created default conversation ${this.currentConversationId} for ${this.interfaceType} use`);
       } else {
-        this.logger.warn('No room ID provided, cannot initialize conversation');
+        this.logger.info(`Initialized conversation ${this.currentConversationId} for room: ${this.currentRoomId} using interface: ${this.interfaceType}`);
       }
+      
+      // Log whether we have an active conversation
+      this.logger.info(`After initialization, hasActiveConversation: ${this.hasActiveConversation()}`);
     } catch (error) {
       this.logger.error('Failed to initialize conversation:', error);
     }
@@ -181,7 +196,9 @@ export class ConversationManager implements IConversationManager {
    * @returns Whether there is an active conversation
    */
   hasActiveConversation(): boolean {
-    return Boolean(this.currentConversationId);
+    const hasConversation = Boolean(this.currentConversationId);
+    this.logger.info(`Checking active conversation: currentConversationId=${this.currentConversationId}, result=${hasConversation}`);
+    return hasConversation;
   }
 
   /**

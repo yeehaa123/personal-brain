@@ -12,8 +12,8 @@ import {
   ExternalSourceContext,
   NoteContext,
   ProfileContext,
+  WebsiteContext,
 } from '@/contexts';
-import type { WebsiteContext } from '@/contexts';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
@@ -52,6 +52,7 @@ export class ContextManager implements IContextManager {
   private readonly profileContext: ProfileContext;
   private readonly externalSourceContext: ExternalSourceContext;
   private readonly conversationContext: ConversationContext;
+  private readonly websiteContext: WebsiteContext;
   
   // State
   private useExternalSources: boolean;
@@ -134,6 +135,7 @@ export class ContextManager implements IContextManager {
         anchorName: config.anchorName || 'Host',
         anchorId: config.anchorId,
       });
+      this.websiteContext = WebsiteContext.getInstance();
       
       // Connect NoteContext to ProfileContext for related note operations
       this.profileContext.setNoteContext(this.noteContext);
@@ -213,12 +215,7 @@ export class ContextManager implements IContextManager {
    */
   getWebsiteContext(): WebsiteContext {
     this.ensureContextsReady();
-    
-    // Import and return an instance of WebsiteContext
-    // Using dynamic import to prevent circular dependencies
-    return import('@/contexts/website/core/websiteContext').then(
-      ({ WebsiteContext }) => WebsiteContext.getInstance(),
-    ) as unknown as WebsiteContext;
+    return this.websiteContext;
   }
 
   /**
@@ -250,7 +247,8 @@ export class ContextManager implements IContextManager {
            isDefined(this.noteContext) && 
            isDefined(this.profileContext) && 
            isDefined(this.externalSourceContext) &&
-           isDefined(this.conversationContext);
+           isDefined(this.conversationContext) &&
+           isDefined(this.websiteContext);
   }
 
   /**
@@ -296,6 +294,12 @@ export class ContextManager implements IContextManager {
       ConversationContext.resetInstance();
     } else {
       logger.warn('ConversationContext does not support resetInstance');
+    }
+    // Reset the website context as well
+    if (WebsiteContext.resetInstance) {
+      WebsiteContext.resetInstance();
+    } else {
+      logger.warn('WebsiteContext does not support resetInstance');
     }
     logger.debug('All context singletons have been reset');
   }

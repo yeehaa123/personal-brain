@@ -17,6 +17,12 @@ import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 
 /**
+ * Interface type for the application
+ * Defines the possible interface types for conversations
+ */
+export type InterfaceType = 'cli' | 'matrix';
+
+/**
  * Common options for constructing BrainProtocol
  */
 export interface BrainProtocolOptions {
@@ -27,7 +33,7 @@ export interface BrainProtocolOptions {
   /** Whether to enable external knowledge sources */
   useExternalSources?: boolean;
   /** Interface type (CLI or Matrix) */
-  interfaceType?: 'cli' | 'matrix';
+  interfaceType?: InterfaceType;
   /** Room ID for the conversation */
   roomId?: string;
   /** Memory storage implementation for conversation storage */

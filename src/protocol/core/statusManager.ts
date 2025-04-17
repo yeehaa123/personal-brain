@@ -158,11 +158,17 @@ export class StatusManager {
    * @returns Whether the system is ready
    */
   isReady(): boolean {
-    return (
-      this.contextOrchestrator.areContextsReady() && 
-      this.conversationManager.hasActiveConversation() && 
-      !!this.mcpServer
-    );
+    const contextsReady = this.contextOrchestrator.areContextsReady();
+    const hasActiveConversation = this.conversationManager.hasActiveConversation();
+    const hasMcpServer = !!this.mcpServer;
+    
+    // Log the status of each component for debugging
+    this.logger.debug(`System readiness check:
+      - Contexts ready: ${contextsReady}
+      - Has active conversation: ${hasActiveConversation}
+      - Has MCP server: ${hasMcpServer}`);
+    
+    return contextsReady && hasActiveConversation && hasMcpServer;
   }
   
   /**

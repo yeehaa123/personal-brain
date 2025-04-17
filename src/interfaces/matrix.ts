@@ -54,6 +54,9 @@ export class MatrixBrainInterface {
 
     // Initialize brain protocol and command handler using singleton pattern
     this.brainProtocol = BrainProtocol.getInstance({ interfaceType: 'matrix', roomId: this.config.roomIds[0] });
+    
+    // Initialize the brain protocol asynchronously in the start() method
+    
     this.commandHandler = createCommandHandler(this.brainProtocol);
 
     // Initialize renderer with message sending function
@@ -115,6 +118,11 @@ export class MatrixBrainInterface {
     this.client.on(RoomMemberEvent.Membership, this.handleMembership.bind(this));
 
     try {
+      // Initialize the Brain Protocol to ensure all components are ready
+      logger.info('Initializing BrainProtocol...');
+      await this.brainProtocol.initialize();
+      logger.info('BrainProtocol initialization complete');
+      
       // Start the client
       await this.client.startClient({ initialSyncLimit: 10 });
       logger.info('Matrix client started, waiting for sync');
@@ -233,7 +241,7 @@ export class MatrixBrainInterface {
         // Make sure we're using the correct room ID for this message
         // This is crucial for conversation memory to work properly
         if (this.interfaceType === 'matrix') {
-          await this.brainProtocol.setCurrentRoom(room.roomId);
+          await this.brainProtocol.getConversationManager().setCurrentRoom(room.roomId);
         }
         
         await this.processCommand(commandText, room.roomId, event);
@@ -336,7 +344,7 @@ export class MatrixBrainInterface {
       // Make sure we're using the correct room ID for this confirmation
       // This is crucial for conversation memory to work properly
       if (this.interfaceType === 'matrix') {
-        await this.brainProtocol.setCurrentRoom(roomId);
+        await this.brainProtocol.getConversationManager().setCurrentRoom(roomId);
       }
       
       // Get the pending save note from our map (stored during save-note command)

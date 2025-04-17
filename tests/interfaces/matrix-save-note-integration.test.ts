@@ -29,10 +29,10 @@ describeOrSkip('Matrix save-note integration', () => {
       roomId: roomId, 
     });
     
-    // Access conversation context directly from the brainProtocol
+    // Access conversation context through the conversation manager
     
     // Get the conversation context
-    const conversationContext = brainProtocol.getConversationContext();
+    const conversationContext = brainProtocol.getConversationManager().getConversationContext();
     
     // Create command handler
     commandHandler = new CommandHandler(brainProtocol);

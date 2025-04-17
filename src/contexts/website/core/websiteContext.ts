@@ -646,7 +646,3 @@ export class WebsiteContext extends BaseContext {
   
 }
 
-/**
- * Export default instance
- */
-export default WebsiteContext;

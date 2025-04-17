@@ -31,7 +31,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.noteContext = brainProtocol.getNoteContext();
+    this.noteContext = brainProtocol.getNoteManager().getNoteContext();
   }
   
   /**

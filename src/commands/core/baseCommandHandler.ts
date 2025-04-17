@@ -63,14 +63,15 @@ export abstract class BaseCommandHandler {
    * Check if API key is available
    */
   protected requireApiKey(): boolean {
-    return this.brainProtocol.hasAnthropicApiKey() || this.brainProtocol.hasOpenAIApiKey();
+    const configManager = this.brainProtocol.getConfigManager();
+    return configManager.hasAnthropicApiKey() || configManager.hasOpenAIApiKey();
   }
 
   /**
    * Check if there's an active conversation
    */
   protected hasActiveConversation(): boolean {
-    return this.brainProtocol.hasActiveConversation();
+    return this.brainProtocol.getConversationManager().hasActiveConversation();
   }
 
   /**

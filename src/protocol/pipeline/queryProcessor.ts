@@ -5,7 +5,6 @@
 import { relevanceConfig } from '@/config';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
-import type { INoteManager } from '../types';
 import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import { SystemPromptGenerator } from '@/protocol/components/systemPromptGenerator';
 import { ResourceRegistry } from '@/resources';
@@ -13,6 +12,7 @@ import type { ModelResponse } from '@/resources/ai/interfaces';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
+import type { INoteManager } from '../types';
 import type { 
   ContextResult,
   ExternalCitation,

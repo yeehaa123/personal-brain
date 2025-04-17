@@ -15,6 +15,14 @@ class TestBrainProtocol {
     this.websiteContext = MockWebsiteContext.createFresh();
   }
 
+  // The new method that follows the refactored pattern
+  getContextManager() {
+    return {
+      getWebsiteContext: () => this.websiteContext,
+    };
+  }
+  
+  // Keep old method for backward compatibility
   getWebsiteContext(): MockWebsiteContext {
     return this.websiteContext;
   }

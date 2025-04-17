@@ -34,6 +34,11 @@ async function main() {
     roomId: conversationConfig.defaultCliRoomId,
   });
   
+  // Explicitly initialize the BrainProtocol to ensure all async components are ready
+  logger.info('Initializing BrainProtocol...');
+  await brainProtocol.initialize();
+  logger.info('BrainProtocol initialization complete');
+  
   const commandHandler = createCommandHandler(brainProtocol);
   const renderer = new CLIRenderer();
   

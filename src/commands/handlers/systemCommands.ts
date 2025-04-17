@@ -34,8 +34,8 @@ export class SystemCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.noteContext = brainProtocol.getNoteContext();
-    this.externalContext = brainProtocol.getExternalSourceContext();
+    this.noteContext = brainProtocol.getNoteManager().getNoteContext();
+    this.externalContext = brainProtocol.getContextManager().getExternalSourceContext();
   }
   
   /**
@@ -127,14 +127,14 @@ export class SystemCommandHandler extends BaseCommandHandler {
     const arg = args.trim().toLowerCase();
 
     if (arg === 'on' || arg === 'enable') {
-      this.brainProtocol.setUseExternalSources(true);
+      this.brainProtocol.getFeatureCoordinator().setExternalSourcesEnabled(true);
       return {
         type: 'external',
         enabled: true,
         message: 'External knowledge sources have been enabled.',
       };
     } else if (arg === 'off' || arg === 'disable') {
-      this.brainProtocol.setUseExternalSources(false);
+      this.brainProtocol.getFeatureCoordinator().setExternalSourcesEnabled(false);
       return {
         type: 'external',
         enabled: false,
@@ -152,8 +152,9 @@ export class SystemCommandHandler extends BaseCommandHandler {
    * Handle status command - check system status
    */
   private async handleStatus(): Promise<CommandResult> {
-    // Check API connection using BrainProtocol methods
-    const apiConnected = this.brainProtocol.hasAnthropicApiKey() || this.brainProtocol.hasOpenAIApiKey();
+    // Check API connection using ConfigManager methods
+    const configManager = this.brainProtocol.getConfigManager();
+    const apiConnected = configManager.hasAnthropicApiKey() || configManager.hasOpenAIApiKey();
 
     // Check database connection with a single operation
     let dbConnected = false;
@@ -187,7 +188,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
       // Failed to check external sources, continue with empty object
     }
 
-    const externalSourcesEnabled = this.brainProtocol.getUseExternalSources();
+    const externalSourcesEnabled = this.brainProtocol.getFeatureCoordinator().areExternalSourcesEnabled();
 
     return {
       type: 'status',

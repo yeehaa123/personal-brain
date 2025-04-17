@@ -34,7 +34,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    this.noteContext = brainProtocol.getNoteContext();
+    this.noteContext = brainProtocol.getNoteManager().getNoteContext();
   }
   
   /**
@@ -163,19 +163,19 @@ export class ConversationCommandHandler extends BaseCommandHandler {
     }
 
     // Get the current conversation and recent turns
-    const conversationId = this.brainProtocol.getCurrentConversationId();
+    const conversationId = this.brainProtocol.getConversationManager().getCurrentConversationId();
     if (!conversationId) {
       return this.formatError('No active conversation found.');
     }
 
     // Get the conversation
-    const conversation = await this.brainProtocol.getConversation(conversationId);
+    const conversation = await this.brainProtocol.getConversationManager().getConversation(conversationId);
     if (!conversation) {
       return this.formatError('Conversation not found.');
     }
 
     // Get the conversation context to access memory services
-    const conversationContext = this.brainProtocol.getConversationContext();
+    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
     // Get tiered memory history which properly separates active, summarized, and archived turns
     const tieredHistory = await conversationContext.getTieredHistory(conversationId);
@@ -252,13 +252,13 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    */
   async confirmSaveNote(conversationId: string, title?: string, userEdits?: string): Promise<CommandResult> {
     // Get the conversation
-    const conversation = await this.brainProtocol.getConversation(conversationId);
+    const conversation = await this.brainProtocol.getConversationManager().getConversation(conversationId);
     if (!conversation) {
       return this.formatError('Conversation not found.');
     }
 
     // Get the conversation context to access memory services
-    const conversationContext = this.brainProtocol.getConversationContext();
+    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
     // Get tiered memory history which properly separates active, summarized, and archived turns
     const tieredHistory = await conversationContext.getTieredHistory(conversationId);

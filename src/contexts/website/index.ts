@@ -3,7 +3,7 @@
  */
 
 // Core exports
-export { default as WebsiteContext } from './core/websiteContext';
+export { WebsiteContext } from './core/websiteContext';
 export type { WebsiteContextOptions } from './core/websiteContext';
 
 // Storage types

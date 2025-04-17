@@ -69,12 +69,18 @@ export class MockBrainProtocol {
     return new MockBrainProtocol(options);
   }
 
-  getWebsiteContext(): MockWebsiteContext {
-    return this.websiteContext;
-  }
-
-  getProfileContext(): MockProfileContext {
-    return this.profileContext;
+  getContextManager() {
+    return {
+      getWebsiteContext: () => this.websiteContext,
+      getProfileContext: () => this.profileContext,
+      getNoteContext: () => ({}),
+      getExternalSourceContext: () => ({}),
+      getConversationContext: () => ({}),
+      setExternalSourcesEnabled: () => {},
+      getExternalSourcesEnabled: () => false,
+      areContextsReady: () => true,
+      initializeContextLinks: () => {},
+    };
   }
 
   getWebsiteCommandHandler(): MockWebsiteCommandHandler {

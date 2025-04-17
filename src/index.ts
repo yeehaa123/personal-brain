@@ -1,3 +1,4 @@
+import { conversationConfig } from '@/config';
 import { NoteContext } from '@/contexts/notes';
 import { BrainProtocol } from '@/protocol/brainProtocol';
 
@@ -20,14 +21,20 @@ async function main() {
 
     if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
-      // Use the singleton pattern for BrainProtocol
-      const protocol = BrainProtocol.getInstance();
+      // Use the singleton pattern for BrainProtocol with room ID to ensure conversation is created
+      const protocol = BrainProtocol.getInstance({
+        interfaceType: 'cli',
+        roomId: conversationConfig.defaultCliRoomId,
+      });
       
       // Check that MCP is available
       protocol.getMcpServer(); // This confirms the MCP server can be accessed
       logger.info('MCP Server initialized successfully', { context: 'Main' });
       
-      // Process a query through the protocol
+      // Explicitly initialize the BrainProtocol to ensure all async components are ready
+      await protocol.initialize();
+      
+      // Now we can safely process queries
       const result = await protocol.processQuery('What are the main features of this system?');
 
       logger.info('\nAnswer:', { context: 'Main' });
@@ -49,7 +56,15 @@ async function main() {
     }
 
   } catch (error) {
-    logger.error('Error in main application:', { error, context: 'Main' });
+    if (error instanceof Error) {
+      logger.error('Error in main application:', { 
+        message: error.message,
+        stack: error.stack,
+        context: 'Main', 
+      });
+    } else {
+      logger.error('Error in main application:', { error, context: 'Main' });
+    }
   }
 }
 

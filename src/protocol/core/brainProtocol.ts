@@ -19,8 +19,6 @@
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { ConversationContext } from '@/contexts';
-import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import { PromptFormatter } from '../components';
@@ -34,7 +32,7 @@ import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
 
 import { ConfigurationManager } from './configurationManager';
 import { ContextOrchestrator } from './contextOrchestrator';
-import { FeatureCoordinator, type FeatureFlag } from './featureCoordinator';
+import { FeatureCoordinator } from './featureCoordinator';
 import { McpServerManager } from './mcpServerManager';
 import { StatusManager } from './statusManager';
 
@@ -252,14 +250,6 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the note context for external access
-   * @returns NoteContext instance
-   */
-  getNoteContext() {
-    return this.contextOrchestrator.getNoteContext();
-  }
-  
-  /**
    * Get the note manager for external access
    * @returns NoteManager instance
    */
@@ -268,27 +258,19 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the profile context for external access
-   * @returns ProfileContext instance
+   * Get the profile manager for external access
+   * @returns ProfileManager instance
    */
-  getProfileContext() {
-    return this.contextOrchestrator.getProfileContext();
+  getProfileManager() {
+    return this.profileManager;
   }
 
   /**
-   * Get the external source context for external access
-   * @returns ExternalSourceContext instance
+   * Get the context manager for accessing context components
+   * @returns ContextManager instance
    */
-  getExternalSourceContext() {
-    return this.contextOrchestrator.getExternalSourceContext();
-  }
-
-  /**
-   * Get the website context for website management
-   * @returns WebsiteContext instance
-   */
-  getWebsiteContext() {
-    return this.contextOrchestrator.getWebsiteContext();
+  getContextManager() {
+    return this.contextOrchestrator.getContextManager();
   }
   
   /**
@@ -300,106 +282,37 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the conversation context
-   * @returns Conversation context instance
+   * Get the conversation manager for external access
+   * @returns ConversationManager instance
    */
-  getConversationContext(): ConversationContext {
-    return this.conversationManager.getConversationContext();
+  getConversationManager(): ConversationManager {
+    return this.conversationManager;
   }
 
   /**
-   * Check if there is an active conversation
-   * @returns Whether there is an active conversation
+   * Get the feature coordinator for managing system-wide features
+   * @returns FeatureCoordinator instance
    */
-  hasActiveConversation(): boolean {
-    return this.conversationManager.hasActiveConversation();
+  getFeatureCoordinator(): FeatureCoordinator {
+    return this.featureCoordinator;
   }
 
   /**
-   * Get the current conversation ID
-   * @returns Current conversation ID or null
+   * Get the configuration manager for API settings
+   * @returns ConfigurationManager instance
    */
-  getCurrentConversationId(): string | null {
-    return this.conversationManager.getCurrentConversationId();
+  getConfigManager(): ConfigurationManager {
+    return this.configManager;
   }
 
   /**
-   * Get a conversation by ID
-   * @param conversationId Conversation ID
-   * @returns Conversation or null
+   * Get the status manager for system status
+   * @returns StatusManager instance
    */
-  async getConversation(conversationId: string): Promise<Conversation | null> {
-    return await this.conversationManager.getConversation(conversationId);
-  }
-
-  /**
-   * Set the current room ID
-   * @param roomId Room ID to set
-   */
-  async setCurrentRoom(roomId: string): Promise<void> {
-    await this.conversationManager.setCurrentRoom(roomId);
-  }
-
-  /**
-   * Enable or disable external sources
-   * @param enabled Whether to enable external sources
-   */
-  setUseExternalSources(enabled: boolean): void {
-    // Use feature coordinator to update external sources across all components
-    this.featureCoordinator.setExternalSourcesEnabled(enabled);
-  }
-
-  /**
-   * Get whether external sources are enabled
-   * @returns Whether external sources are enabled
-   */
-  getUseExternalSources(): boolean {
-    return this.featureCoordinator.areExternalSourcesEnabled();
+  getStatusManager(): StatusManager {
+    return this.statusManager;
   }
   
-  /**
-   * Get all registered feature flags
-   * @returns Array of feature flag definitions
-   */
-  getFeatures(): FeatureFlag[] {
-    return this.featureCoordinator.getAllFeatures();
-  }
-  
-  /**
-   * Enable or disable a feature by ID
-   * @param featureId Feature flag ID
-   * @param enabled Whether the feature should be enabled
-   * @returns Whether the operation was successful
-   */
-  setFeatureEnabled(featureId: string, enabled: boolean): boolean {
-    return this.featureCoordinator.setFeatureEnabled(featureId, enabled);
-  }
-  
-  /**
-   * Check if a feature is enabled
-   * @param featureId Feature flag ID
-   * @returns Whether the feature is enabled
-   */
-  isFeatureEnabled(featureId: string): boolean {
-    return this.featureCoordinator.isFeatureEnabled(featureId);
-  }
-
-  /**
-   * Check if Anthropic API key is available
-   * @returns Whether Anthropic API key is available
-   */
-  hasAnthropicApiKey(): boolean {
-    return this.configManager.hasAnthropicApiKey();
-  }
-
-  /**
-   * Check if OpenAI API key is available
-   * @returns Whether OpenAI API key is available
-   */
-  hasOpenAIApiKey(): boolean {
-    return this.configManager.hasOpenAIApiKey();
-  }
-
   /**
    * Check if all components of the BrainProtocol are ready
    * @returns Whether all components are ready
@@ -409,28 +322,36 @@ export class BrainProtocol {
   }
 
   /**
-   * Get a detailed status report of all components
-   * @returns Complete system status report
+   * Initialize all asynchronous components of the BrainProtocol
+   * This must be called after construction and before using other methods
+   * @returns Promise that resolves when initialization is complete
    */
-  getStatus() {
-    return this.statusManager.getStatus();
+  async initialize(): Promise<void> {
+    try {
+      this.logger.info('Initializing BrainProtocol components...');
+      
+      // Initialize conversation by ensuring there's at least one active conversation
+      if (!this.conversationManager.hasActiveConversation()) {
+        this.logger.info('Initializing conversation...');
+        await this.conversationManager.initializeConversation();
+        
+        if (!this.conversationManager.hasActiveConversation()) {
+          throw new Error('Failed to initialize conversation');
+        }
+        
+        this.logger.info('Conversation initialization complete');
+      }
+      
+      // Additional async initialization can be added here
+      
+      this.logger.info('BrainProtocol initialization complete');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to complete async initialization: ${errorMessage}`);
+      throw new Error(`BrainProtocol async initialization failed: ${errorMessage}`);
+    }
   }
   
-  /**
-   * Get a simplified status object for backward compatibility
-   * @returns Status key-value pairs
-   */
-  getStatusLegacy(): Record<string, boolean> {
-    const status = this.statusManager.getStatusLegacy();
-    
-    // Add API key status
-    return {
-      ...status,
-      anthropicApiKey: this.hasAnthropicApiKey(),
-      openaiApiKey: this.hasOpenAIApiKey(),
-    };
-  }
-
   /**
    * Process a query through the full pipeline
    * @param query User query

@@ -44,8 +44,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
-    // Initialize the website context from brainProtocol
-    this.websiteContext = brainProtocol.getWebsiteContext();
+    // Initialize the website context from contextManager
+    this.websiteContext = brainProtocol.getContextManager().getWebsiteContext();
   }
   
   /**

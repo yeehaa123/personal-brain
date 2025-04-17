@@ -227,4 +227,12 @@ export class ProfileManager implements IProfileManager {
   getProfileAnalyzer(): ProfileAnalyzer {
     return this.profileAnalyzer;
   }
+  
+  /**
+   * Get the ProfileContext instance
+   * @returns The ProfileContext instance
+   */
+  getProfileContext(): ProfileContext {
+    return this.profileContext;
+  }
 }
