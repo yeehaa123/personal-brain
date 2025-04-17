@@ -4,10 +4,10 @@ import { basename, extname, join } from 'path';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
+import { NoteContext } from '@/contexts/notes/core/noteContext';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
-import { NoteContext } from '@/mcp';
-import { EmbeddingService } from '@/mcp/model/embeddings';
+import { EmbeddingService } from '@/resources/ai/embedding';
 import logger from '@/utils/logger';
 import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
 
@@ -119,8 +119,7 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
   try {
     // Generate embedding for combined title and content
     const combinedText = `${title} ${content}`;
-    const embeddingResult = await embeddingService.getEmbedding(combinedText);
-    embedding = embeddingResult.embedding;
+    embedding = await embeddingService.getEmbedding(combinedText);
   } catch (error) {
     logger.error(`Couldn't generate embedding for ${filePath}: ${error}`);
     // Continue without embedding if there's an error

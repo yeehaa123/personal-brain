@@ -3,8 +3,8 @@
  * 
  * This file provides helper functions for creating and working with storage mocks.
  */
-import type { ConversationSummary } from '@/mcp/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 /**
  * Create a mock conversation for testing

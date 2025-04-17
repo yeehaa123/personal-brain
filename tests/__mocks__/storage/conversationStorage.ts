@@ -13,8 +13,8 @@ import type {
   ConversationSummary, 
   NewConversation, 
   SearchCriteria,
-} from '@/mcp/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+} from '@/contexts/conversations/storage/conversationStorage';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 /**
  * Standardized mock implementation of ConversationStorage

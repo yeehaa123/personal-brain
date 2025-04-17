@@ -1,5 +1,5 @@
-import { NoteContext } from '@mcp/contexts/notes';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { NoteContext } from '@/contexts/notes';
+import { BrainProtocol } from '@/protocol/brainProtocol';
 
 import { getEnv } from './utils/configUtils';
 import logger from './utils/logger';

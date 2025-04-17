@@ -7,7 +7,7 @@
 
 import { mock } from 'bun:test';
 
-import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
 
 import { MockBaseContext } from '../../baseContext';
 import { MockExternalSourceStorageAdapter } from '../adapters/externalSourceStorageAdapter';

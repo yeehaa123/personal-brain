@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { aiConfig, textConfig } from '@/config';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
-import { ClaudeModel } from '@/mcp/model/claude';
+import { ClaudeModel } from '@/resources/ai/claude';
 import logger from '@/utils/logger';
 
 import { extractKeywords } from './textUtils';

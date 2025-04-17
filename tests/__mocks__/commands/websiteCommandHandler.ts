@@ -12,6 +12,11 @@ export class MockWebsiteCommandHandler {
   constructor() {
     // Get a reference to the MockWebsiteContext singleton
     this.websiteContext = MockWebsiteContext.getInstance();
+    
+    // Make sure the mock methods are properly bound
+    this.websiteContext.handleWebsiteBuild = this.websiteContext.handleWebsiteBuild.bind(this.websiteContext);
+    this.websiteContext.handleWebsitePromote = this.websiteContext.handleWebsitePromote.bind(this.websiteContext);
+    this.websiteContext.handleWebsiteStatus = this.websiteContext.handleWebsiteStatus.bind(this.websiteContext);
   }
   
   static getInstance(): MockWebsiteCommandHandler {

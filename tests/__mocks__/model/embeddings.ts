@@ -2,7 +2,7 @@
  * Mock implementation of EmbeddingService
  * Following the Component Interface Standardization pattern
  */
-import type { EmbeddingConfig, EmbeddingResult } from '@/mcp/model/embeddings';
+import type { EmbeddingConfig, EmbeddingResult } from '@/resources/ai/embedding';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
 
 /**

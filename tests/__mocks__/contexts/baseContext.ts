@@ -7,7 +7,7 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { ContextInterface, ContextStatus, ResourceDefinition } from '@/mcp/contexts/core/contextInterface';
+import type { ContextInterface, ContextStatus, ResourceDefinition } from '@/contexts/core/contextInterface';
 
 /**
  * Mock implementation of BaseContext

@@ -5,7 +5,8 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
-import { NoteContext } from '../mcp';
+import { NoteContext } from '@/contexts/notes';
+
 import logger from '../utils/logger';
 
 async function runMigration() {

@@ -8,9 +8,9 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { NoteContext } from '@/mcp';
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
-import type { ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import type { NoteContext } from '@/mcpServer';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import { DependencyContainer } from '@/utils/dependencyContainer';
 

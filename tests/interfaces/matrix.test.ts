@@ -109,7 +109,7 @@ mock.module('matrix-js-sdk', () => {
 });
 
 // Mock BrainProtocol
-mock.module('@mcp/protocol/brainProtocol', () => {
+mock.module('@/protocol/brainProtocol', () => {
   return {
     BrainProtocol: class MockBrainProtocol {
       getProfileContext() {

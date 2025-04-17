@@ -3,9 +3,9 @@
  */
 
 import type { BaseCommandHandler } from '@/commands/core/baseCommandHandler';
-import type { ProtocolResponse } from '@/mcp/protocol/types';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import type { ProtocolResponse } from '@/protocol/types';
 import { MockWebsiteCommandHandler } from '@test/__mocks__/commands/websiteCommandHandler';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';

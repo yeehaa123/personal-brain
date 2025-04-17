@@ -6,7 +6,7 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import { EmbeddingService } from '@/mcp/model/embeddings';
+import { EmbeddingService } from '@/resources/ai/embedding';
 import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
 import { ApiError, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
@@ -48,13 +48,13 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
 
       const result = await this.embeddingService.getEmbedding(text);
       
-      if (!isDefined(result) || !Array.isArray(result.embedding) || result.embedding.length === 0) {
+      if (!isDefined(result) || !Array.isArray(result) || result.length === 0) {
         throw new ApiError('Failed to generate valid embedding', undefined, {
           textLength: text.length,
         });
       }
       
-      return result.embedding;
+      return result;
     } catch (error) {
       this.logger.error(`Error generating embedding: ${error instanceof Error ? error.message : String(error)}`);
       throw error;

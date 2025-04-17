@@ -5,8 +5,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-import { createUnifiedMcpServer } from '@/mcp';
-import type { UnifiedMcpServerConfig } from '@/mcp';
+import { createUnifiedMcpServer, type McpServerConfig } from '@/mcpServer';
 import { getEnv } from '@/utils/configUtils';
 import logger from '@/utils/logger';
 
@@ -32,7 +31,7 @@ export async function startMcpServer(options: McpServerOptions = {}): Promise<{
   const newsApiKey = options.newsApiKey || getEnv('NEWSAPI_KEY');
   
   // Create server configuration
-  const serverConfig: UnifiedMcpServerConfig = {
+  const serverConfig: McpServerConfig = {
     apiKey,
     newsApiKey,
     name: 'PersonalBrainMcpServer',

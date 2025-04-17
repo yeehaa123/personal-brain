@@ -5,9 +5,9 @@
  * and provides a simplified implementation for testing.
  */
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/mcp/contexts/core/storageInterface';
-import type { ExternalSourceStorageConfig } from '@/mcp/contexts/externalSources/adapters/externalSourceStorageAdapter';
-import type { ExternalSourceInterface, ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
+import type { ExternalSourceStorageConfig } from '@/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
 
 import { MockNewsApiSource } from '../sources/newsApiSource';
 import { MockWikipediaSource } from '../sources/wikipediaSource';

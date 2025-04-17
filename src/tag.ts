@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { ProfileContext } from '@/mcp';
+import { ProfileContext } from '@/contexts/profiles/core/profileContext';
 import logger from '@/utils/logger';
 import { batchProcessNoteTags } from '@/utils/tagExtractor';
 

@@ -1,7 +1,7 @@
-import type { WebsiteContext } from '@/mcp/contexts/website/core/websiteContext';
+import type { WebsiteContext } from '@/contexts/website/core/websiteContext';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
-import type { BrainProtocol } from '@mcp/protocol';
 // Direct file access replaced with WebsiteContext delegation
 
 /**
@@ -44,6 +44,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   constructor(brainProtocol: BrainProtocol) {
     super(brainProtocol);
+    // Initialize the website context from brainProtocol
+    this.websiteContext = brainProtocol.getWebsiteContext();
   }
   
   /**
@@ -107,16 +109,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   public async execute(command: string, args: string): Promise<CommandResult> {
     try {
-      // Initialize the website context if needed
-      if (!this.websiteContext) {
-        try {
-          this.websiteContext = this.brainProtocol.getWebsiteContext();
-        } catch (error) {
-          this.logger.error('Failed to get website context', { error });
-        }
-      }
-      
-      // If we couldn't get a valid website context
+      // If we don't have a website context, this is an error
       if (!this.websiteContext) {
         return {
           type: 'error',

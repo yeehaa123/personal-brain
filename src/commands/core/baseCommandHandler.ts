@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
 
 import type { CommandInfo, CommandResult } from './commandTypes';

@@ -6,8 +6,8 @@
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import type { ConversationInfo, ConversationStorage, ConversationSummary, SearchCriteria } from '@/mcp/contexts/conversations';
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import type { ConversationInfo, ConversationStorage, ConversationSummary, SearchCriteria } from '@/contexts/conversations';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';

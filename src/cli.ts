@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { conversationConfig } from '@/config';
-import { getServerManager } from '@/mcp/contexts/website/services/serverManager';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
+import { getServerManager } from '@/contexts/website/services/serverManager';
+import { BrainProtocol } from '@/protocol/brainProtocol';
 
 import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
@@ -62,7 +62,7 @@ async function main() {
       await serverManager.cleanup();
       
       // Reset the server manager singleton to clean up its resources
-      const { ServerManager } = await import('@/mcp/contexts/website/services/serverManager');
+      const { ServerManager } = await import('@/contexts/website/services/serverManager');
       ServerManager.resetInstance();
       
       logger.info('Website servers stopped successfully.');

@@ -6,8 +6,8 @@
 
 import { mock } from 'bun:test';
 
-import type { NoteContext } from '@/mcp/contexts/notes/core/noteContext';
-import type { ProfileStorageAdapter } from '@/mcp/contexts/profiles/adapters/profileStorageAdapter';
+import type { NoteContext } from '@/contexts/notes/core/noteContext';
+import type { ProfileStorageAdapter } from '@/contexts/profiles/adapters/profileStorageAdapter';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 

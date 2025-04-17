@@ -133,10 +133,7 @@ describe('NoteEmbeddingService', () => {
       },
       // Make sure getBatchEmbeddings returns the correct number of mock embeddings
       getBatchEmbeddings: async (texts: string[]) => {
-        return texts.map(text => ({
-          embedding: createMockEmbedding(text),
-          truncated: false,
-        }));
+        return texts.map(text => createMockEmbedding(text));
       },
     };
     

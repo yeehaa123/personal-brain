@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
+import { BrainProtocol } from '@/protocol/core/brainProtocol';
 import { CommandHandler } from '@commands/index';
-import { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 // Skip these tests by default as they're integration tests

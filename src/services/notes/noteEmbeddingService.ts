@@ -198,8 +198,8 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
         if (
           !isNonEmptyString(chunkContent) || 
           !isDefined(embeddingResult) || 
-          !Array.isArray(embeddingResult.embedding) || 
-          embeddingResult.embedding.length === 0
+          !Array.isArray(embeddingResult) || 
+          embeddingResult.length === 0
         ) {
           this.logger.warn(`Invalid chunk or embedding at index ${i} for note ${noteId}, skipping`);
           continue;
@@ -209,7 +209,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
         const chunkId = await this.noteRepository.insertNoteChunk({
           noteId,
           content: chunkContent,
-          embedding: embeddingResult.embedding,
+          embedding: embeddingResult,
           chunkIndex: i,
         });
         

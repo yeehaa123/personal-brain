@@ -2,7 +2,7 @@
  * Common types for Matrix formatters
  */
 
-import type { WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
 
 // Note model properties we need for formatting

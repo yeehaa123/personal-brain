@@ -7,7 +7,7 @@
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
 import { aiConfig, apiConfig } from './config';
-import { createUnifiedMcpServer } from './mcp';
+import { createUnifiedMcpServer } from './mcpServer';
 import logger from './utils/logger';
 
 /**

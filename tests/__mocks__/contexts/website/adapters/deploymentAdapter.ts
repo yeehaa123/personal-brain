@@ -4,7 +4,7 @@
 
 import { mock } from 'bun:test';
 
-import type { DeploymentAdapter } from '@/mcp/contexts/website/adapters/deploymentAdapter';
+import type { DeploymentAdapter } from '@/contexts/website/adapters/deploymentAdapter';
 
 /**
  * Mock implementation of deployment adapter for testing

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
+import type { WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
 import { getMarkdownFormatter, getResponseFormatter, MatrixBlockBuilder } from '@/interfaces/matrix/formatters';
 import type { 
   WebsiteBuildResult, 
@@ -7,7 +8,6 @@ import type {
   WebsiteStatusResult, 
 } from '@/interfaces/matrix/formatters/types';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
-import type { WebsiteConfig } from '@mcp/contexts/website/storage/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
 
 describe('Matrix Website Command Formatters', () => {

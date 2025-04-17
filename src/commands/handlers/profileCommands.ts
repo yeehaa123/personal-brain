@@ -3,9 +3,9 @@
  * Handles profile-related commands
  */
 
-import type { ProfileContext } from '@/mcp';
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import type { ProfileContext } from '@/mcpServer';
 import type { Note } from '@/models/note';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';

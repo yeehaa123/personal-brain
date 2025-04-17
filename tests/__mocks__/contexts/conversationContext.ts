@@ -7,16 +7,16 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
-import type { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
-import type { ConversationMcpFormatter, McpFormattedConversation } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
-import type { TieredHistory } from '@/mcp/contexts/conversations/memory/tieredMemoryManager';
-import type { ConversationResourceService } from '@/mcp/contexts/conversations/resources';
-import type { ConversationMemoryService, ConversationQueryService } from '@/mcp/contexts/conversations/services';
-import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/mcp/contexts/conversations/storage/conversationStorage';
-import type { ConversationToolService } from '@/mcp/contexts/conversations/tools';
-import type { ResourceDefinition } from '@/mcp/contexts/core/contextInterface';
-import type { Conversation, ConversationTurn } from '@/mcp/protocol/schemas/conversationSchemas';
+import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
+import type { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
+import type { ConversationMcpFormatter, McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
+import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
+import type { ConversationResourceService } from '@/contexts/conversations/resources';
+import type { ConversationMemoryService, ConversationQueryService } from '@/contexts/conversations/services';
+import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
+import type { ConversationToolService } from '@/contexts/conversations/tools';
+import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
 

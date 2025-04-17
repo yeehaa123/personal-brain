@@ -19,7 +19,7 @@
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { mock as viMock } from 'bun:test';
 
-import type { McpServer } from '@/mcp';
+import type { McpServer } from '@/mcpServer';
 
 /**
  * Set up mock environment for MCP tests
@@ -127,7 +127,7 @@ export function setupAnthropicMocks(mock: typeof viMock = viMock) {
   });
   
   // Add additional mock for error handling tests
-  mock.module('@/mcp/contexts/externalSources/externalSourceContext', () => {
+  mock.module('@/contexts/externalSources/externalSourceContext', () => {
     const mockSearchResult = [
       {
         title: 'Test External Result',

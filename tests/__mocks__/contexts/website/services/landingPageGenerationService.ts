@@ -1,6 +1,6 @@
 import { mock } from 'bun:test';
 
-import type { LandingPageData } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@/contexts/website/storage/websiteStorage';
 
 /**
  * Mock implementation of LandingPageGenerationService for testing

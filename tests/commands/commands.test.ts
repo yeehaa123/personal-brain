@@ -62,7 +62,7 @@ const mockExternalSourceContext = {
 };
 
 // Mock BrainProtocol
-mock.module('@mcp/protocol/brainProtocol', () => {
+mock.module('@/protocol/brainProtocol', () => {
   return {
     BrainProtocol: class MockBrainProtocol {
       useExternalSources = false;

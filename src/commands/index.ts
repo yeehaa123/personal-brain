@@ -4,7 +4,7 @@
  * and initializes the command system with handlers
  */
 
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 
 import { CommandHandler } from './core/commandHandler';
 import { ConversationCommandHandler } from './handlers/conversationCommands';

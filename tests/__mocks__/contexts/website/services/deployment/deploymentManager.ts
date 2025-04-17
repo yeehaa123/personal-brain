@@ -9,7 +9,7 @@ import type {
   EnvironmentStatus, 
   PromotionResult, 
   WebsiteDeploymentManager,
-} from '@/mcp/contexts/website/services/deployment';
+} from '@/contexts/website/services/deployment';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**

@@ -2,13 +2,13 @@
  * Service registry for dependency injection
  * Centralized registration of all application services
  */
-import { ConversationStorageAdapter } from '@/mcp/contexts/conversations/adapters/conversationStorageAdapter';
-import { ConversationFormatter } from '@/mcp/contexts/conversations/formatters/conversationFormatter';
-import { ConversationMcpFormatter } from '@/mcp/contexts/conversations/formatters/conversationMcpFormatter';
-import { ConversationResourceService } from '@/mcp/contexts/conversations/resources';
-import { ConversationMemoryService, ConversationQueryService } from '@/mcp/contexts/conversations/services';
-import { InMemoryStorage } from '@/mcp/contexts/conversations/storage/inMemoryStorage';
-import { ConversationToolService } from '@/mcp/contexts/conversations/tools';
+import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
+import { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
+import { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
+import { ConversationResourceService } from '@/contexts/conversations/resources';
+import { ConversationMemoryService, ConversationQueryService } from '@/contexts/conversations/services';
+import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
+import { ConversationToolService } from '@/contexts/conversations/tools';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { DependencyContainer } from '@/utils/dependencyContainer';

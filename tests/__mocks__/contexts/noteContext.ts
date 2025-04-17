@@ -6,7 +6,7 @@
 
 import { mock } from 'bun:test';
 
-import type { NoteStorageAdapter } from '@/mcp/contexts/notes/adapters/noteStorageAdapter';
+import type { NoteStorageAdapter } from '@/contexts/notes/adapters/noteStorageAdapter';
 import type { Note, NoteSearchParams } from '@/models/note';
 
 import { MockBaseContext } from './baseContext';

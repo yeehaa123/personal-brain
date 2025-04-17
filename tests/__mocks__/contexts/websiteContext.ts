@@ -1,8 +1,8 @@
 import { mock } from 'bun:test';
 
-import type { AstroContentService } from '@/mcp/contexts/website/services/astroContentService';
-import type { LandingPageGenerationService } from '@/mcp/contexts/website/services/landingPageGenerationService';
-import type { LandingPageData, WebsiteConfig } from '@/mcp/contexts/website/storage/websiteStorage';
+import type { AstroContentService } from '@/contexts/website/services/astroContentService';
+import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
+import type { LandingPageData, WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
 // Import the mock implementations from the contexts/website/services directory
 import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';

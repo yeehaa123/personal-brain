@@ -6,7 +6,7 @@ import { clearMockEnv, clearTestEnv, setMockEnv, setTestEnv } from '@test/helper
 
 import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
 import { MatrixRenderer } from '../../src/commands/matrix-renderer';
-import type { BrainProtocol } from '../../src/mcp/protocol/brainProtocol';
+import type { BrainProtocol } from '../../src/protocol/brainProtocol';
 
 // Mock environment variables
 beforeEach(() => {

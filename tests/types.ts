@@ -3,7 +3,7 @@
  */
 
 
-import type { ExternalSourceResult } from '@/mcp/contexts/externalSources/sources';
+import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 

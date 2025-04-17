@@ -3,9 +3,9 @@ import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 
 import { aiConfig, apiConfig, serverConfig } from './config';
-import { createUnifiedMcpServer } from './mcp';
-import { HeartbeatSSETransport } from './mcp/transport';
-import type { McpServer as ExtendedMcpServer } from './mcp/types';
+import { createUnifiedMcpServer } from './mcpServer';
+import type { McpServer as ExtendedMcpServer } from './mcpServer';
+import { HeartbeatSSETransport } from './transport';
 import logger from './utils/logger';
 
 

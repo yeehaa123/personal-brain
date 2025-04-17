@@ -4,6 +4,56 @@
 
 This document outlines an integrated plan to refactor our codebase to better align with the Model-Context-Protocol (MCP) architecture principles as part of our MVP delivery. Taking into account the progress already made on schema-based responses, deployment architecture, and landing page generation, this plan focuses on the remaining refactoring work needed to complete the MCP architecture alignment.
 
+## UPDATE: Flattened Directory Structure Approach
+
+After reviewing the current implementation and ongoing refactoring efforts, we've decided to adopt a flattened directory structure approach. This update supplements the original plan with a new objective to simplify our architecture by eliminating nested directory structures where not necessary.
+
+### Key Benefits of Flattening
+1. **Reduced Import Complexity**: Shorter, more intuitive import paths
+2. **Simplified Navigation**: Easier to locate and understand code organization
+3. **Clearer Component Boundaries**: More visible separation of concerns
+4. **Reduced Artificial Nesting**: Components that work together are closer in the structure
+
+### Updated Directory Structure
+```
+/src/
+├── models/                    # Domain models
+│   ├── note.ts
+│   └── profile.ts
+│
+├── contexts/                  # Context implementations
+│   ├── baseContext.ts
+│   ├── conversationContext.ts
+│   ├── noteContext.ts
+│   └── [...other contexts]
+│
+├── protocol/                  # Protocol implementation
+│   ├── brainProtocol.ts
+│   ├── components/
+│   ├── managers/
+│   └── [...other protocol components]
+│
+├── resources/                 # External resources
+│   ├── ai/                    # AI implementations
+│   │   ├── claude.ts
+│   │   ├── embeddings.ts
+│   │   └── interfaces.ts
+│   └── [...other resources]
+│
+├── services/                  # All services in one place
+│   ├── notes/                 # Note-related services
+│   ├── profiles/              # Profile-related services
+│   ├── common/                # Shared service implementations
+│   └── [...other services]
+│
+├── transport/                 # Communication layer
+│
+└── utils/                     # Utilities
+```
+
+### Implementation Approach
+This flattening will be integrated with the phases outlined below. We'll maintain the same logical separation of components while simplifying the physical directory structure by removing the intermediate `/src/mcp/` directory.
+
 ## Current Status and Progress
 
 ### Completed Components
@@ -62,13 +112,42 @@ This document outlines an integrated plan to refactor our codebase to better ali
 
 ## Integrated Implementation Plan
 
+### Phase 0: Directory Structure Flattening (Prerequisite)
+
+**Goal**: Simplify the directory structure by moving from nested MCP directory to a flat organization
+
+1. **Initial Directory Setup**
+   - Create top-level directories that don't already exist:
+     ```
+     /src/
+     ├── contexts/        # From /src/mcp/contexts/
+     ├── protocol/        # From /src/mcp/protocol/
+     ├── resources/       # From /src/mcp/resources/
+     └── transport/       # From /src/mcp/transport/
+     ```
+
+2. **Migration Strategy**
+   - Start with lower-level modules to minimize breakage
+   - Update one directory at a time, with full testing between each
+   - Create transitional barrel files to maintain backward compatibility
+
+3. **Import Path Updates**
+   - Update import paths incrementally as directories are moved
+   - Create temporary re-export files at original locations when needed
+   - Utilize TypeScript path aliases to simplify future refactoring
+
+4. **Testing Approach**
+   - Run existing tests after each directory migration
+   - Create additional tests for each migrated component
+   - Ensure end-to-end functionality is preserved
+
 ### Phase 1: Resource Layer Reorganization (MVP Week 2, Days 3-4)
 
 **Goal**: Move external service clients to an appropriate resource layer
 
 1. **Create Resource Directory Structure**
    ```
-   /src/mcp/resources/
+   /src/resources/       # Previously /src/mcp/resources/
    ├── ai/               # AI service providers
    │   ├── claude/       # Claude API client
    │   ├── embedding/    # Embedding services
@@ -78,8 +157,8 @@ This document outlines an integrated plan to refactor our codebase to better ali
    ```
 
 2. **Relocate AI Service Clients**
-   - Move `/src/mcp/model/claude.ts` to `/src/mcp/resources/ai/claude/index.ts`
-   - Move `/src/mcp/model/embeddings.ts` to `/src/mcp/resources/ai/embedding/index.ts`
+   - Move `/src/mcp/model/claude.ts` to `/src/resources/ai/claude/index.ts`
+   - Move `/src/mcp/model/embeddings.ts` to `/src/resources/ai/embedding/index.ts`
    - Create adapter interfaces that abstract provider-specific details
 
 3. **Implement Resource Registry**
@@ -100,7 +179,7 @@ This document outlines an integrated plan to refactor our codebase to better ali
 
 1. **Create Protocol Directory Structure**
    ```
-   /src/mcp/protocol/
+   /src/protocol/
    ├── formats/          # Message format definitions
    │   ├── schemas/      # Response schemas
    │   └── converters/   # Format conversion utilities
@@ -133,7 +212,7 @@ This document outlines an integrated plan to refactor our codebase to better ali
 
 1. **Create Component Architecture**
    ```
-   /src/mcp/protocol/
+   /src/protocol/
    ├── core/
    │   ├── brainProtocol.ts         # Focused on protocol concerns
    │   ├── contextOrchestrator.ts   # Handles context coordination

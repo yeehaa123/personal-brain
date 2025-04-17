@@ -1,8 +1,8 @@
 import { mock } from 'bun:test';
 
-import type { BrainProtocol } from '@/mcp/protocol/brainProtocol';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 import { MockProfile } from '@test/__mocks__/models/profile';
 

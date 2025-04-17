@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { CommandHandler } from '@commands/core/commandHandler';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
-import type { BrainProtocol } from '@mcp/protocol/brainProtocol';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
