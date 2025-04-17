@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { NoteContext } from "@/contexts";
+import { NoteContext } from '@/contexts';
 import { ServiceIdentifiers } from '@/services/serviceRegistry';
 import { createMockNotes } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';

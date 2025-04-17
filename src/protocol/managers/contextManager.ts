@@ -13,7 +13,7 @@ import {
   NoteContext,
   ProfileContext,
 } from '@/contexts';
-import { WebsiteContext } from "@/contexts";
+import type { WebsiteContext } from '@/contexts';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';

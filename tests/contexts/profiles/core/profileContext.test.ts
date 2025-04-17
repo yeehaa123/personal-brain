@@ -4,7 +4,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { describe, expect, mock, test } from 'bun:test';
 
-import { ProfileContext } from "@/contexts";
+import { ProfileContext } from '@/contexts';
 import type { Profile } from '@/models/profile';
 import { silenceLogger } from '@test/__mocks__';
 import logger from '@utils/logger';

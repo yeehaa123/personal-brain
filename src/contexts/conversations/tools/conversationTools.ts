@@ -12,8 +12,8 @@
 
 import { z } from 'zod';
 
+import type { ConversationContext } from '@/contexts';
 import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
-import { ConversationContext } from "@/contexts";
 import type { ConversationFormatter, FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';

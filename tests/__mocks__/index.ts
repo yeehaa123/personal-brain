@@ -20,8 +20,8 @@
 // Core mocks
 export * from './core/logger';
 
-// Model mocks
-export * from './model';
+// Resource mocks
+export * from './resources/ai/embedding/embeddings';
 
 // Utility mocks
 export * from './utils/embeddingUtils';

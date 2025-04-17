@@ -10,8 +10,8 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
+import type { ConversationContext } from '@/contexts';
 import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
-import { ConversationContext } from "@/contexts";
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import { Logger } from '@/utils/logger';

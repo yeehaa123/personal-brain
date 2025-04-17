@@ -14,7 +14,7 @@ import type {
   ExternalSourceContext, 
   NoteContext, 
   ProfileContext,
-  WebsiteContext 
+  WebsiteContext, 
 } from '@/contexts';
 import { createUnifiedMcpServer } from '@/mcpServer';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { ExternalSourceContext, NoteContext, ProfileContext } from "@/contexts";
+import { ExternalSourceContext, NoteContext, ProfileContext } from '@/contexts';
 // Import directly from the implementation files for testing
 
 describe('MCP SDK', () => {
