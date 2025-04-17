@@ -27,6 +27,7 @@ import { PromptFormatter } from '../components';
 import { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import { ConversationManager } from '../managers/conversationManager';
 import { ExternalSourceManager } from '../managers/externalSourceManager';
+import { NoteManager } from '../managers/noteManager';
 import { ProfileManager } from '../managers/profileManager';
 import { QueryProcessor } from '../pipeline/queryProcessor';
 import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
@@ -62,6 +63,7 @@ export class BrainProtocol {
   private featureCoordinator: FeatureCoordinator;
   private conversationManager: ConversationManager;
   private profileManager: ProfileManager;
+  private noteManager: NoteManager;
   private externalSourceManager: ExternalSourceManager;
   private queryProcessor: QueryProcessor;
   
@@ -121,6 +123,9 @@ export class BrainProtocol {
     }
     if (ProfileManager.resetInstance) {
       ProfileManager.resetInstance();
+    }
+    if (NoteManager.resetInstance) {
+      NoteManager.resetInstance();
     }
     if (ExternalSourceManager.resetInstance) {
       ExternalSourceManager.resetInstance();
@@ -198,6 +203,11 @@ export class BrainProtocol {
         apiKey: this.configManager.getApiKey(),
       });
       
+      // Initialize note manager with note context
+      this.noteManager = NoteManager.getInstance({
+        noteContext: this.contextOrchestrator.getNoteContext(),
+      });
+      
       // Initialize external source manager
       this.externalSourceManager = ExternalSourceManager.getInstance({
         externalSourceContext: this.contextOrchestrator.getExternalSourceContext(),
@@ -227,6 +237,7 @@ export class BrainProtocol {
         contextManager: this.contextOrchestrator.getContextManager(),
         conversationManager: this.conversationManager,
         profileManager: this.profileManager,
+        noteManager: this.noteManager,
         externalSourceManager: this.externalSourceManager,
         apiKey: this.configManager.getApiKey(),
       });
@@ -246,6 +257,14 @@ export class BrainProtocol {
    */
   getNoteContext() {
     return this.contextOrchestrator.getNoteContext();
+  }
+  
+  /**
+   * Get the note manager for external access
+   * @returns NoteManager instance
+   */
+  getNoteManager() {
+    return this.noteManager;
   }
 
   /**

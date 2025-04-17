@@ -7,4 +7,5 @@
 export * from './contextManager';
 export * from './conversationManager';
 export * from './externalSourceManager';
+export * from './noteManager';
 export * from './profileManager';

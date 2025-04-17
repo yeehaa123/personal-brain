@@ -208,6 +208,18 @@ export interface IProfileManager {
 }
 
 /**
+ * Interface for NoteManager
+ */
+export interface INoteManager {
+  getNoteContext(): NoteContext;
+  fetchRelevantNotes(query: string): Promise<Note[]>;
+  getRelatedNotes(notes: Note[], limit?: number): Promise<Note[]>;
+  searchByTags(tags: string[], limit?: number): Promise<Note[]>;
+  getNoteById(id: string): Promise<Note | null>;
+  getRecentNotes(limit?: number): Promise<Note[]>;
+}
+
+/**
  * Interface for ExternalSourceManager
  */
 export interface IExternalSourceManager {

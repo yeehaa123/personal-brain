@@ -14,13 +14,13 @@ import type {
 } from '@/contexts';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
-import { NoteService } from '@/protocol/components/noteService';
 import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import { QueryProcessor } from '@/protocol/pipeline/queryProcessor';
 import type {
   IContextManager,
   IConversationManager,
   IExternalSourceManager,
+  INoteManager,
   IProfileManager,
   ProfileAnalysisResult,
 } from '@/protocol/types/index';
@@ -69,21 +69,7 @@ class MockNoteContext {
 describe('QueryProcessor', () => {
   // Setup for mocking services
   beforeEach(() => {
-    // Mock NoteService methods
-    spyOn(NoteService.prototype, 'fetchRelevantContext').mockImplementation(
-      async (query: string): Promise<Note[]> => {
-        if (query.includes('ecosystem')) {
-          return [sampleNote];
-        }
-        return [];
-      },
-    );
-
-    spyOn(NoteService.prototype, 'getRelatedNotes').mockImplementation(
-      async (): Promise<Note[]> => {
-        return [sampleRelatedNote];
-      },
-    );
+    // No need to mock NoteService as we're using INoteManager now
 
     // Mock the ClaudeModel complete method
     spyOn(ClaudeModel.prototype, 'complete').mockImplementation(
@@ -192,6 +178,23 @@ describe('QueryProcessor', () => {
     };
   };
 
+  // Mock Note Manager
+  const createMockNoteManager = (): INoteManager => {
+    return {
+      getNoteContext: () => new MockNoteContext() as unknown as NoteContext,
+      fetchRelevantNotes: async (query: string): Promise<Note[]> => {
+        if (query.includes('ecosystem')) {
+          return [sampleNote];
+        }
+        return [];
+      },
+      getRelatedNotes: async (): Promise<Note[]> => [sampleRelatedNote],
+      searchByTags: async (): Promise<Note[]> => [],
+      getNoteById: async () => null,
+      getRecentNotes: async () => [],
+    };
+  };
+
   // Test basic query processing
   test('should process a basic query successfully', async () => {
     // Arrange
@@ -199,17 +202,20 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Set up spies
     const profileAnalyzeSpy = spyOn(profileManager, 'analyzeProfileRelevance');
     const historyGetSpy = spyOn(conversationManager, 'getConversationHistory');
     const externalGetSpy = spyOn(externalSourceManager, 'getExternalResults');
     const turnSaveSpy = spyOn(conversationManager, 'saveTurn');
+    spyOn(noteManager, 'getRelatedNotes');
 
     const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -238,6 +244,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Set up spies
     const profileGetSpy = spyOn(profileManager, 'getProfile');
@@ -246,6 +253,7 @@ describe('QueryProcessor', () => {
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -269,6 +277,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Set up spies
     const roomSetSpy = spyOn(conversationManager, 'setCurrentRoom');
@@ -281,6 +290,7 @@ describe('QueryProcessor', () => {
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -304,11 +314,13 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     const processor = QueryProcessor.createFresh({
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -330,6 +342,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Set up spy to capture the actual query used
     let capturedQuery = '';
@@ -343,6 +356,7 @@ describe('QueryProcessor', () => {
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -365,6 +379,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Mock a failure when saving turns
     spyOn(conversationManager, 'saveTurn').mockImplementation(async () => {
@@ -377,6 +392,7 @@ describe('QueryProcessor', () => {
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });
@@ -396,6 +412,7 @@ describe('QueryProcessor', () => {
     const conversationManager = createMockConversationManager();
     const profileManager = createMockProfileManager();
     const externalSourceManager = createMockExternalSourceManager();
+    const noteManager = createMockNoteManager();
 
     // Mock no active conversation
     spyOn(conversationManager, 'hasActiveConversation').mockImplementation(() => false);
@@ -407,6 +424,7 @@ describe('QueryProcessor', () => {
       contextManager,
       conversationManager,
       profileManager,
+      noteManager,
       externalSourceManager,
       apiKey: 'mock-api-key',
     });

@@ -5,7 +5,7 @@
 import { relevanceConfig } from '@/config';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
-import { NoteService } from '@/protocol/components/noteService';
+import type { INoteManager } from '../types';
 import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import { SystemPromptGenerator } from '@/protocol/components/systemPromptGenerator';
 import { ResourceRegistry } from '@/resources';
@@ -37,6 +37,8 @@ export interface QueryProcessorConfig {
   conversationManager: IConversationManager;
   /** Profile manager for profile analysis */
   profileManager: IProfileManager;
+  /** Note manager for note operations */
+  noteManager: INoteManager;
   /** External source manager for external knowledge */
   externalSourceManager: IExternalSourceManager;
   /** API key for model access */
@@ -62,7 +64,7 @@ export class QueryProcessor implements IQueryProcessor {
   private profileManager: IProfileManager;
   private externalSourceManager: IExternalSourceManager;
   
-  private noteService: NoteService;
+  private noteManager: INoteManager;
   private promptFormatter: PromptFormatter;
   private systemPromptGenerator: SystemPromptGenerator;
   private resourceRegistry: ResourceRegistry;
@@ -79,6 +81,7 @@ export class QueryProcessor implements IQueryProcessor {
         config.contextManager,
         config.conversationManager,
         config.profileManager,
+        config.noteManager,
         config.externalSourceManager,
         config.apiKey,
       );
@@ -115,6 +118,7 @@ export class QueryProcessor implements IQueryProcessor {
       config.contextManager,
       config.conversationManager,
       config.profileManager,
+      config.noteManager,
       config.externalSourceManager,
       config.apiKey,
     );
@@ -130,20 +134,19 @@ export class QueryProcessor implements IQueryProcessor {
    * @param apiKey API key for model
    */
   private constructor(
-    contextManager: IContextManager,
+    _contextManager: IContextManager,
     conversationManager: IConversationManager,
     profileManager: IProfileManager,
+    noteManager: INoteManager,
     externalSourceManager: IExternalSourceManager,
     _apiKey?: string,
   ) {
     this.conversationManager = conversationManager;
     this.profileManager = profileManager;
+    this.noteManager = noteManager;
     this.externalSourceManager = externalSourceManager;
     
     // Initialize helpers using their getInstance methods
-    this.noteService = NoteService.getInstance({
-      context: contextManager.getNoteContext(),
-    });
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
     this.resourceRegistry = ResourceRegistry.getInstance({
@@ -182,7 +185,7 @@ export class QueryProcessor implements IQueryProcessor {
     const profileAnalysis = await this.analyzeProfile(query);
     
     // 2. Retrieve relevant context
-    const context = await this.retrieveContext(query);
+    const context = await this.retrieveRelevantNotes(query);
     
     // 3. Get conversation history
     const history = await this.getConversationHistory();
@@ -214,7 +217,7 @@ export class QueryProcessor implements IQueryProcessor {
     await this.saveTurn(query, answer, options);
     
     // 8. Get related notes for the response
-    const relatedNotes = await this.noteService.getRelatedNotes(context.relevantNotes);
+    const relatedNotes = await this.noteManager.getRelatedNotes(context.relevantNotes);
     
     // 9. Determine if profile should be included in response
     const includeProfileInResponse = 
@@ -244,12 +247,12 @@ export class QueryProcessor implements IQueryProcessor {
   }
 
   /**
-   * Retrieve relevant context for a query
+   * Retrieve relevant notes for a query
    * @param query User query
    * @returns Context result with relevant notes and citations
    */
-  private async retrieveContext(query: string): Promise<ContextResult> {
-    const relevantNotes = await this.noteService.fetchRelevantContext(query);
+  private async retrieveRelevantNotes(query: string): Promise<ContextResult> {
+    const relevantNotes = await this.noteManager.fetchRelevantNotes(query);
     const notesFound = Array.isArray(relevantNotes) ? relevantNotes.length : 0;
     
     this.logger.info(`Found ${notesFound} relevant notes`);
