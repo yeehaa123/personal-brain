@@ -2,6 +2,8 @@
  * Types and interfaces for the BrainProtocol system
  * All types are exported for use by components
  */
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
 import type { 
   ConversationContext, 
   ExternalSourceContext, 
@@ -15,6 +17,9 @@ import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
+
+import type { ConfigurationManager } from '../core/configurationManager';
+import type { FeatureCoordinator } from '../core/featureCoordinator';
 
 /**
  * Interface type for the application
@@ -159,6 +164,9 @@ export interface TurnOptions {
 /**
  * Interface for ContextManager
  * Defines the contract for managing access to various contexts (notes, profile, external sources)
+ * 
+ * This aligns with the MCP specification by providing access to all resource-providing contexts
+ * that can be registered with an MCP server.
  */
 export interface IContextManager {
   /** Get access to the note context for data operations */
@@ -255,4 +263,40 @@ export interface ProtocolResponse {
   profile?: Profile;
   /** External source citations */
   externalSources?: Array<{ title: string; source: string; url: string; excerpt: string }>;
+}
+
+/**
+ * Interface for BrainProtocol
+ * Defines the contract for the core BrainProtocol class
+ * 
+ * This aligns with the MCP specification by providing:
+ * - Access to context resources through the ContextManager
+ * - Tools execution through the QueryProcessor
+ * - Feature control through the FeatureCoordinator
+ * - System status monitoring
+ */
+export interface IBrainProtocol {
+  /** Get the context manager for accessing all data contexts */
+  getContextManager(): IContextManager;
+  
+  /** Get the conversation manager for handling conversation state */
+  getConversationManager(): IConversationManager;
+  
+  /** Get the feature coordinator for managing system features */
+  getFeatureCoordinator(): FeatureCoordinator;
+  
+  /** Get the configuration manager for API settings (generally use FeatureCoordinator instead) */
+  getConfigManager(): ConfigurationManager;
+  
+  /** Get the MCP server for external communication */
+  getMcpServer(): McpServer;
+  
+  /** Check if the system is ready for use */
+  isReady(): boolean;
+  
+  /** Initialize asynchronous components */
+  initialize(): Promise<void>;
+  
+  /** Process a natural language query */
+  processQuery(query: string, options?: QueryOptions): Promise<QueryResult>;
 }

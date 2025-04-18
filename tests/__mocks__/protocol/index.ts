@@ -5,4 +5,7 @@
  */
 
 export * from './components';
+export * from './core';
 export * from './managers';
+export * from './pipeline';
+export { MockBrainProtocol } from './brainProtocol';

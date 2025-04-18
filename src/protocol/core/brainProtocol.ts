@@ -1,16 +1,14 @@
 /**
  * BrainProtocol Main Class
- * Coordinates protocol-level communication and integration between components
  * 
- * Acts as the main entry point for the protocol layer, handling high-level 
- * protocol concerns while delegating specific functionalities to dedicated components:
- * - Configuration management (ConfigurationManager)
- * - Context coordination (ContextOrchestrator)
- * - Status monitoring (StatusManager)
- * - MCP server management (McpServerManager)
- * - Conversation handling (ConversationManager)
- * - External knowledge (ExternalSourceManager)
- * - Query processing (QueryProcessor)
+ * The central coordination point for the protocol layer that connects
+ * all components of the personal brain system.
+ * 
+ * Core Responsibilities:
+ * - Provide access to all contexts through ContextManager
+ * - Manage conversations through ConversationManager
+ * - Control system-wide features through FeatureCoordinator
+ * - Process natural language queries through QueryProcessor
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
@@ -18,12 +16,21 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
 import { Logger } from '@/utils/logger';
 
 import { BrainProtocolConfig } from '../config/brainProtocolConfig';
 import { ConversationManager } from '../managers/conversationManager';
 import { QueryProcessor } from '../pipeline/queryProcessor';
-import type { BrainProtocolOptions, QueryOptions, QueryResult } from '../types';
+import type {
+  BrainProtocolOptions,
+  IBrainProtocol,
+  IContextManager,
+  IConversationManager,
+  QueryOptions,
+  QueryResult,
+} from '../types';
 
 import { ConfigurationManager } from './configurationManager';
 import { ContextOrchestrator } from './contextOrchestrator';
@@ -32,23 +39,42 @@ import { McpServerManager } from './mcpServerManager';
 import { StatusManager } from './statusManager';
 
 /**
+ * Dependency classes for BrainProtocol
+ * Allows overriding which classes to use without changing the instantiation logic
+ */
+export interface BrainProtocolDependencies {
+  ConfigManager: typeof ConfigurationManager;
+  ContextOrchestrator: typeof ContextOrchestrator;
+  McpServerManager: typeof McpServerManager;
+  ConversationManager: typeof ConversationManager;
+  StatusManager: typeof StatusManager;
+  FeatureCoordinator: typeof FeatureCoordinator;
+  QueryProcessor: typeof QueryProcessor;
+}
+
+/**
+ * Default dependency classes for BrainProtocol
+ * Makes constructor parameter optional while still providing proper defaults
+ */
+const defaultDependencies: BrainProtocolDependencies = {
+  ConfigManager: ConfigurationManager,
+  ContextOrchestrator: ContextOrchestrator,
+  McpServerManager: McpServerManager,
+  ConversationManager: ConversationManager,
+  StatusManager: StatusManager,
+  FeatureCoordinator: FeatureCoordinator,
+  QueryProcessor: QueryProcessor,
+};
+
+/**
  * Main BrainProtocol class that coordinates protocol components
  * 
  * This is the central class of the personal-brain application, providing a unified
  * interface for the protocol layer. It delegates specialized concerns to a small set
- * of essential components:
- * 
- * - Context access → ContextOrchestrator (single point of access for all contexts)
- * - Conversation state → ConversationManager (for conversation memory and roomIds)
- * - Feature management → FeatureCoordinator (for system-wide feature flags)
- * - Query processing → QueryProcessor (for processing natural language queries)
- * 
- * Implements the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
- * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
+ * of essential components.
  */
-export class BrainProtocol {
+
+export class BrainProtocol implements IBrainProtocol {
   // Essential components only
   private configManager: ConfigurationManager;
   private contextOrchestrator: ContextOrchestrator;
@@ -58,7 +84,7 @@ export class BrainProtocol {
   private mcpServerManager: McpServerManager;
   private queryProcessor: QueryProcessor;
 
-  // Singleton instance
+  // Singleton instance - but completely separate from dependencies
   private static instance: BrainProtocol | null = null;
 
   // Logger instance
@@ -68,15 +94,19 @@ export class BrainProtocol {
    * Get the singleton instance of BrainProtocol
    * 
    * @param options - Configuration options (only used when creating a new instance)
+   * @param dependencies - Optional dependency classes to use (only used when creating a new instance)
    * @returns The singleton instance
    */
-  public static getInstance(options?: BrainProtocolOptions): BrainProtocol {
+  public static getInstance(
+    options?: BrainProtocolOptions,
+    dependencies: BrainProtocolDependencies = defaultDependencies,
+  ): BrainProtocol {
     if (!BrainProtocol.instance) {
-      BrainProtocol.instance = new BrainProtocol(options);
-
+      // Create a new instance with the provided dependencies
+      BrainProtocol.instance = new BrainProtocol(options || {}, dependencies);
       const logger = Logger.getInstance();
       logger.debug('BrainProtocol singleton instance created');
-    } else if (options) {
+    } else if (options || (dependencies !== defaultDependencies)) {
       // Log a warning if trying to get instance with different config
       const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
@@ -86,38 +116,18 @@ export class BrainProtocol {
   }
 
   /**
-   * Reset the singleton instance
-   * This is primarily used for testing to ensure a clean state between tests
-   * Also resets all component singletons to ensure a clean state
+   * Reset the singleton instance only
+   * 
+   * This resets only the BrainProtocol instance itself, not its dependencies.
+   * This is important for maintaining proper dependency injection - the control
+   * of dependency lifecycle should be outside of BrainProtocol.
+   * 
+   * Tests should explicitly create instances with the dependencies they need.
    */
   public static resetInstance(): void {
     const logger = Logger.getInstance();
-
-    // Reset all specialized component singletons
-    if (ConfigurationManager.resetInstance) {
-      ConfigurationManager.resetInstance();
-    }
-    if (ContextOrchestrator.resetInstance) {
-      ContextOrchestrator.resetInstance();
-    }
-    if (McpServerManager.resetInstance) {
-      McpServerManager.resetInstance();
-    }
-    if (StatusManager.resetInstance) {
-      StatusManager.resetInstance();
-    }
-    if (FeatureCoordinator.resetInstance) {
-      FeatureCoordinator.resetInstance();
-    }
-    if (ConversationManager.resetInstance) {
-      ConversationManager.resetInstance();
-    }
-    // Profile, Note, and ExternalSource managers are no longer part of BrainProtocol
-    if (QueryProcessor.resetInstance) {
-      QueryProcessor.resetInstance();
-    }
-
-    // Finally reset the BrainProtocol instance
+    
+    // Only reset the BrainProtocol instance - proper DI means we don't touch dependencies
     if (BrainProtocol.instance) {
       BrainProtocol.instance = null;
       logger.debug('BrainProtocol singleton instance reset');
@@ -129,58 +139,60 @@ export class BrainProtocol {
    * This method is primarily used for testing to create isolated instances
    * 
    * @param options - Configuration options
+   * @param dependencies - Alternative classes to use for dependencies
    * @returns A new BrainProtocol instance
    */
-  public static createFresh(options?: BrainProtocolOptions): BrainProtocol {
+  public static createFresh(
+    options?: BrainProtocolOptions,
+    dependencies: BrainProtocolDependencies = defaultDependencies,
+  ): BrainProtocol {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh BrainProtocol instance');
 
-    return new BrainProtocol(options);
+    return new BrainProtocol(options || {}, dependencies);
   }
 
   /**
-   * Private constructor to enforce the use of getInstance() or createFresh()
+   * Constructor with class-based dependency injection
+   * Takes complete class dependencies for instantiating all components
    * 
-   * @param optionsOrApiKey - Options object or legacy API key string
-   * @param newsApiKey - Legacy news API key parameter
-   * @param useExternalSources - Legacy external sources flag
+   * @param options - Configuration options
+   * @param dependencies - Alternative classes to use for dependencies
    */
-  private constructor(
-    optionsOrApiKey?: BrainProtocolOptions | string,
-    newsApiKey?: string,
-    useExternalSources: boolean = false,
+  constructor(
+    options: BrainProtocolOptions = {},
+    dependencies: BrainProtocolDependencies = defaultDependencies,
   ) {
+    // Destructure all dependencies to ensure we catch any missing ones
+    const {
+      ConfigManager,
+      ContextOrchestrator,
+      McpServerManager,
+      ConversationManager,
+      StatusManager,
+      FeatureCoordinator,
+      QueryProcessor,
+    } = dependencies;
     try {
       // Initialize configuration
-      const config = new BrainProtocolConfig(optionsOrApiKey, newsApiKey, useExternalSources);
+      const config = new BrainProtocolConfig(options);
 
-      // Initialize configuration manager
-      this.configManager = ConfigurationManager.getInstance({
-        config,
-      });
-
-      // Initialize context orchestrator
-      this.contextOrchestrator = ContextOrchestrator.getInstance({
-        config,
-      });
+      // Initialize components using the specified classes
+      this.configManager = ConfigManager.getInstance({ config });
+      this.contextOrchestrator = ContextOrchestrator.getInstance({ config });
 
       // Ensure contexts are ready before proceeding
       if (!this.contextOrchestrator.areContextsReady()) {
         throw new Error('Context orchestration failed: contexts not ready');
       }
 
-      // Initialize MCP server manager
       this.mcpServerManager = McpServerManager.getInstance({
         contextOrchestrator: this.contextOrchestrator,
         configManager: this.configManager,
       });
 
-      // Initialize conversation manager
-      this.conversationManager = ConversationManager.getInstance({
-        config,
-      });
+      this.conversationManager = ConversationManager.getInstance({ config });
 
-      // Initialize status manager
       this.statusManager = StatusManager.getInstance({
         contextOrchestrator: this.contextOrchestrator,
         conversationManager: this.conversationManager,
@@ -188,14 +200,12 @@ export class BrainProtocol {
         externalSourcesEnabled: this.configManager.getUseExternalSources(),
       });
 
-      // Initialize feature coordinator with direct access to essential components only
       this.featureCoordinator = FeatureCoordinator.getInstance({
         configManager: this.configManager,
         contextOrchestrator: this.contextOrchestrator,
         statusManager: this.statusManager,
       });
 
-      // Initialize query processor with essential components only
       this.queryProcessor = QueryProcessor.getInstance({
         contextManager: this.contextOrchestrator.getContextManager(),
         conversationManager: this.conversationManager,
@@ -211,24 +221,13 @@ export class BrainProtocol {
     }
   }
 
-  /**
-   * NOTE: The following accessors have been removed in favor of using getContextManager():
-   * - getNoteManager()
-   * - getProfileManager()
-   * - getExternalSourceManager()
-   * 
-   * Access contexts directly through getContextManager() instead:
-   * 
-   * Example:
-   * - Old: brainProtocol.getNoteManager().getNoteContext()
-   * - New: brainProtocol.getContextManager().getNoteContext()
-   */
+  // PUBLIC API METHODS
 
   /**
    * Primary access point for contexts (notes, profiles, conversations, etc.)
    * @returns ContextManager instance
    */
-  getContextManager() {
+  getContextManager(): IContextManager {
     return this.contextOrchestrator.getContextManager();
   }
 
@@ -236,7 +235,7 @@ export class BrainProtocol {
    * Get the conversation manager for conversation access and state management
    * @returns ConversationManager instance
    */
-  getConversationManager(): ConversationManager {
+  getConversationManager(): IConversationManager {
     return this.conversationManager;
   }
 
@@ -249,7 +248,9 @@ export class BrainProtocol {
   }
 
   /**
-   * Get the configuration manager for API settings (generally use FeatureCoordinator instead)
+   * Get the configuration manager for API settings
+   * Generally use FeatureCoordinator instead for feature flags
+   * 
    * @returns ConfigurationManager instance
    */
   getConfigManager(): ConfigurationManager {
@@ -259,9 +260,14 @@ export class BrainProtocol {
   /**
    * Get the MCP server instance
    * @returns MCP server instance
+   * @throws If MCP server is not available
    */
-  getMcpServer() {
-    return this.mcpServerManager.getMcpServer();
+  getMcpServer(): McpServer {
+    const server = this.mcpServerManager.getMcpServer();
+    if (!server) {
+      throw new Error('MCP server not available');
+    }
+    return server;
   }
 
   /**
@@ -292,8 +298,6 @@ export class BrainProtocol {
 
         this.logger.info('Conversation initialization complete');
       }
-
-      // Additional async initialization can be added here
 
       this.logger.info('BrainProtocol initialization complete');
     } catch (error) {

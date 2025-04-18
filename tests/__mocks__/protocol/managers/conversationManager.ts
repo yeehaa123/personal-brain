@@ -78,6 +78,13 @@ export class MockConversationManager implements IConversationManager {
   hasActiveConversation(): boolean {
     return this.hasActive;
   }
+  
+  /**
+   * For testing - set the hasActive state
+   */
+  setHasActiveConversation(value: boolean): void {
+    this.hasActive = value;
+  }
 
   getCurrentConversationId(): string | null {
     return this.hasActive ? this.currentConversationId : null;

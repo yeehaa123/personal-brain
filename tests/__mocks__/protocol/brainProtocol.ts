@@ -33,6 +33,7 @@ export interface MockBrainProtocolOptions extends BrainProtocolOptions {
  * - Includes standard Component Interface Standardization pattern methods
  * - Returns mock data for query processing
  */
+
 export class MockBrainProtocol {
   private static instance: MockBrainProtocol | null = null;
   private contextManager: IContextManager;
@@ -55,18 +56,22 @@ export class MockBrainProtocol {
   }
 
   /**
-   * Reset the singleton instance
-   * Also resets all component singletons to ensure a clean state
+   * Reset the singleton instance only
+   * 
+   * This resets only the BrainProtocol instance itself, not its dependencies.
+   * This is important for maintaining proper dependency injection - the control
+   * of dependency lifecycle should be outside of BrainProtocol.
+   * 
+   * This perfectly matches the behavior of the real BrainProtocol.resetInstance()
    */
   static resetInstance(): void {
-    // Reset all specialized component singletons
-    MockContextManager.resetInstance();
-    MockConversationManager.resetInstance();
-    ConfigManager.resetInstance();
-    FeatureCoord.resetInstance();
+    const logger = Logger.getInstance();
     
-    // Reset the BrainProtocol instance itself
-    MockBrainProtocol.instance = null;
+    // Only reset the BrainProtocol instance - proper DI means we don't touch dependencies
+    if (MockBrainProtocol.instance) {
+      MockBrainProtocol.instance = null;
+      logger.debug('MockBrainProtocol singleton instance reset');
+    }
   }
 
   /**

@@ -49,24 +49,13 @@ export class BrainProtocolConfig {
 
   /**
    * Create a new configuration object from options
-   * @param optionsOrApiKey Options object or legacy API key string
-   * @param legacyNewsApiKey Legacy news API key parameter
-   * @param legacyUseExternalSources Legacy external sources flag
+   * @param options Options object containing configuration parameters
    */
-  constructor(
-    optionsOrApiKey?: BrainProtocolOptions | string,
-    legacyNewsApiKey?: string,
-    legacyUseExternalSources: boolean = false,
-  ) {
-    // Handle both new options object and legacy parameters
-    const options: BrainProtocolOptions = typeof optionsOrApiKey === 'string'
-      ? { apiKey: optionsOrApiKey, newsApiKey: legacyNewsApiKey, useExternalSources: legacyUseExternalSources }
-      : optionsOrApiKey || {};
-
+  constructor(options: BrainProtocolOptions = {}) {
     // Extract values with defaults
     this.apiKey = options.apiKey;
-    this.newsApiKey = options.newsApiKey || legacyNewsApiKey;
-    this.useExternalSources = options.useExternalSources ?? legacyUseExternalSources;
+    this.newsApiKey = options.newsApiKey;
+    this.useExternalSources = options.useExternalSources ?? false;
     
     // Set interface type (default to CLI if not specified)
     this.interfaceType = options.interfaceType || 'cli';
