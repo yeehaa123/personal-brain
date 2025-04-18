@@ -153,8 +153,12 @@ export class McpServerManager {
   /**
    * Get the MCP server instance
    * @returns The MCP server instance
+   * @throws Error if MCP server is not initialized
    */
-  getMcpServer(): McpServer | null {
+  getMcpServer(): McpServer {
+    if (!this.mcpServer) {
+      throw new Error('MCP server is not initialized');
+    }
     return this.mcpServer;
   }
   

@@ -1,7 +1,13 @@
 /**
- * Protocol Adapters Module
+ * Protocol Adapters
  * 
- * This module exports protocol adapters and adapter-related interfaces.
+ * This module provides adapters for translating between external interfaces
+ * and the internal protocol message format.
  */
 
-export * from './adapterInterface';
+// Export adapter interfaces
+export * from './protocolAdapter';
+
+// Export concrete adapter implementations
+export * from './cliAdapter';
+export * from './matrixAdapter';

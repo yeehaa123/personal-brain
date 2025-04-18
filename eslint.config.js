@@ -94,7 +94,7 @@ export default [
         'varsIgnorePattern': '^_',
         'ignoreRestSiblings': true
       }],
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/consistent-type-imports': ['error', { 'prefer': 'type-imports' }],
       
       // Bug prevention

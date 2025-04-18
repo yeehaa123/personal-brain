@@ -23,3 +23,10 @@ export {
 export type {
   WebsiteStorageAdapter,
 } from './adapters/websiteStorageAdapter';
+
+// Messaging exports
+export {
+  WebsiteContextMessaging,
+  WebsiteMessageHandler,
+  WebsiteNotifier,
+} from './messaging';
