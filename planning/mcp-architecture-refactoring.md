@@ -75,6 +75,10 @@ This flattening will be integrated with the phases outlined below. We'll maintai
   - Replace all imports and usage of BrainProtocol with BrainProtocolIntegrated
   - Update entry points (index.ts, cli.ts, matrix.ts) to use the new implementation
   - Ensure all interface implementations match the IBrainProtocol interface
+  - Merge ContextOrchestrator and ContextOrchestratorExtended into a single implementation
+    - Combine the functionality of both into ContextOrchestrator
+    - Ensure all messaging capabilities are preserved
+    - Update all code that references either implementation
   - After successful integration, rename BrainProtocolIntegrated to BrainProtocol
   - Remove the old BrainProtocol implementation entirely
   - No compatibility layer - direct replacement approach
