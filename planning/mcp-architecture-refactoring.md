@@ -70,6 +70,26 @@ This flattening will be integrated with the phases outlined below. We'll maintai
 ### In Progress
 - ⏳ **Phase 4: Cross-Context Communication** - Establishing patterns for standardized cross-context communication
 
+### Upcoming
+- 🔄 **Phase 5: Protocol Integration** - Direct replacement of current BrainProtocol with BrainProtocolIntegrated
+  - Replace all imports and usage of BrainProtocol with BrainProtocolIntegrated
+  - Update entry points (index.ts, cli.ts, matrix.ts) to use the new implementation
+  - Ensure all interface implementations match the IBrainProtocol interface
+  - After successful integration, rename BrainProtocolIntegrated to BrainProtocol
+  - Remove the old BrainProtocol implementation entirely
+  - No compatibility layer - direct replacement approach
+  - Update all tests to use the new implementation
+
+- 🔄 **Phase 6: Codebase Diet** - Aggressive cleanup and simplification of the architecture
+  - Remove ALL legacy code and backward compatibility remains without exception
+  - Eliminate all transitional adapters, intermediary layers, and duplicate implementations
+  - Remove deprecated code paths completely
+  - Flatten remaining overly nested directories
+  - Simplify interfaces by removing redundant methods
+  - Consolidate similar functionality across contexts
+  - Focus on reducing the overall codebase size and complexity
+  - Improve documentation of the simplified architecture
+
 ### Recently Completed
 - ✅ **Phase 2: Protocol Layer Organization** - Implemented protocol formatters, converters, adapters, and message routing components
 
