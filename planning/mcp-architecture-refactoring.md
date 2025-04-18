@@ -87,6 +87,11 @@ This flattening will be integrated with the phases outlined below. We'll maintai
   - Flatten remaining overly nested directories
   - Simplify interfaces by removing redundant methods
   - Consolidate similar functionality across contexts
+  - Standardize ResourceRegistry and ServiceRegistry implementations
+    - Unify registry pattern (class-based following Component Interface Standardization)
+    - Clear separation between resource types (external AI, databases) and services
+    - Establish consistent dependency flow from resources to services
+    - Comprehensive test coverage for all registries and their interactions
   - Focus on reducing the overall codebase size and complexity
   - Improve documentation of the simplified architecture
 
