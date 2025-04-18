@@ -240,4 +240,162 @@ describe('ContextMediator', () => {
     expect(mockHandler1).toHaveBeenCalled();
     expect(mockHandler2).not.toHaveBeenCalled();
   });
+  
+  // Tests for the new acknowledgment functionality
+  test('handleAcknowledgment should process acknowledgments correctly', () => {
+    const mediator = ContextMediator.createFresh();
+    
+    // Create a mock notification with acknowledgments required
+    const notification = MessageFactory.createNotification(
+      'source-context',
+      'target-context',
+      NotificationType.NOTE_CREATED,
+      { noteId: '123' },
+      true, // requiresAck = true
+    );
+    
+    // Set up pending acknowledgment manually
+    // Access private property for testing purposes
+    const pendingAcks = (mediator as unknown as { 
+      pendingAcknowledgments: Map<string, {
+        sourceContext: string;
+        targetContexts: Set<string>;
+        timestamp: Date;
+        timeout: number;
+        resolve: (...args: unknown[]) => void;
+        reject: (...args: unknown[]) => void;
+      }>;
+    }).pendingAcknowledgments;
+    
+    pendingAcks.set(notification.id, {
+      sourceContext: notification.sourceContext,
+      targetContexts: new Set(['target-context']),
+      timestamp: new Date(),
+      timeout: 30000,
+      resolve: mock(),
+      reject: mock(),
+    });
+    
+    // Create an acknowledgment
+    const ack = MessageFactory.createAcknowledgment(
+      'target-context',
+      'source-context',
+      notification.id,
+      'processed',
+    );
+    
+    // Handle the acknowledgment
+    const result = mediator.handleAcknowledgment(ack);
+    
+    // Verify the result
+    expect(result).toBe(true);
+    
+    // The pendingAck should be removed entirely when all targets have acknowledged
+    expect(pendingAcks.has(notification.id)).toBe(false);
+  });
+  
+  test('sendNotification with waitForAcks should wait for acknowledgments', async () => {
+    const mediator = ContextMediator.createFresh();
+    
+    // Create a mock handler that will immediately acknowledge notifications
+    const mockHandler = mock(async (message) => {
+      if (message.category === 'notification') {
+        // Create acknowledgment
+        return MessageFactory.createAcknowledgment(
+          'target-context',
+          message.sourceContext,
+          message.id,
+          'processed',
+        );
+      }
+      return undefined; // Explicit return for other message types
+    });
+    
+    // Register handler
+    mediator.registerHandler('target-context', mockHandler);
+    
+    // Subscribe to notification
+    mediator.subscribe('target-context', NotificationType.NOTE_CREATED);
+    
+    // Create a notification with acknowledgment required
+    const notification = MessageFactory.createNotification(
+      'source-context',
+      'target-context',
+      NotificationType.NOTE_CREATED,
+      { noteId: '123' },
+      true, // requiresAck = true
+    );
+    
+    // Send the notification with waitForAcks = true
+    await mediator.sendNotification(notification, true, 1000);
+    
+    // Verify the handler was called
+    expect(mockHandler).toHaveBeenCalled();
+    
+    // The notification should be acknowledged and removed from pendingAcknowledgments
+    // Access private property for testing purposes
+    const pendingAcks = (mediator as unknown as { 
+      pendingAcknowledgments: Map<string, unknown>;
+    }).pendingAcknowledgments;
+    expect(pendingAcks.has(notification.id)).toBe(false);
+  });
+  
+  test('cleanupTimedOut should clean up timed-out requests and acknowledgments', () => {
+    const mediator = ContextMediator.createFresh();
+    
+    // Create an old timestamp (1 minute ago)
+    const oldTimestamp = new Date();
+    oldTimestamp.setTime(oldTimestamp.getTime() - 60000);
+    
+    // Set up pending request manually
+    // Access private property for testing purposes
+    const pendingRequests = (mediator as unknown as {
+      pendingRequests: Map<string, {
+        timestamp: Date;
+        timeout: number;
+        resolve: (...args: unknown[]) => void;
+        reject: (...args: unknown[]) => void;
+      }>;
+    }).pendingRequests;
+    
+    const mockReject = mock();
+    pendingRequests.set('request-1', {
+      timestamp: oldTimestamp,
+      timeout: 30000, // 30 second timeout
+      resolve: mock(),
+      reject: mockReject,
+    });
+    
+    // Set up pending acknowledgment manually
+    // Access private property for testing purposes
+    const pendingAcks = (mediator as unknown as {
+      pendingAcknowledgments: Map<string, {
+        sourceContext: string;
+        targetContexts: Set<string>;
+        timestamp: Date;
+        timeout: number;
+        resolve: (...args: unknown[]) => void;
+        reject: (...args: unknown[]) => void;
+      }>;
+    }).pendingAcknowledgments;
+    
+    const mockAckReject = mock();
+    pendingAcks.set('notification-1', {
+      sourceContext: 'source-context',
+      targetContexts: new Set(['target-context']),
+      timestamp: oldTimestamp,
+      timeout: 30000, // 30 second timeout
+      resolve: mock(),
+      reject: mockAckReject,
+    });
+    
+    // Clean up timed-out items
+    mediator.cleanupTimedOut();
+    
+    // Verify the request and acknowledgment were cleaned up
+    expect(pendingRequests.has('request-1')).toBe(false);
+    expect(pendingAcks.has('notification-1')).toBe(false);
+    expect(mockReject).toHaveBeenCalled();
+    expect(mockAckReject).toHaveBeenCalled();
+  });
 });

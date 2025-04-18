@@ -64,6 +64,16 @@ export class ContextMediator {
   /** Map of notification types to interested contexts */
   private subscriptions: Map<string, Set<string>> = new Map();
   
+  /** Map of notification IDs to pending acknowledgments */
+  private pendingAcknowledgments: Map<string, {
+    sourceContext: string;
+    targetContexts: Set<string>;
+    timestamp: Date;
+    timeout: number;
+    resolve: (contexts: string[]) => void;
+    reject: (error: Error) => void;
+  }> = new Map();
+  
   /** Logger instance */
   private logger = Logger.getInstance();
   
@@ -300,9 +310,15 @@ export class ContextMediator {
    * Send a notification to interested contexts
    * 
    * @param notification Notification message
-   * @returns Array of contexts that received the notification
+   * @param waitForAcks Whether to wait for acknowledgments (if requiresAck is true)
+   * @param timeout Optional timeout for acknowledgments in milliseconds
+   * @returns Array of contexts that received the notification, or that acknowledged if waitForAcks is true
    */
-  async sendNotification(notification: NotificationMessage): Promise<string[]> {
+  async sendNotification(
+    notification: NotificationMessage, 
+    waitForAcks: boolean = false,
+    timeout: number = 30000,
+  ): Promise<string[]> {
     const notificationType = notification.notificationType;
     const subscribers = this.subscriptions.get(notificationType) || new Set();
     
@@ -337,10 +353,27 @@ export class ContextMediator {
           await handler(contextNotification);
           receivedBy.push(contextId);
           
-          // If acknowledgment is required, wait for it (not implemented yet)
+          // If acknowledgment is required, track it
           if (notification.requiresAck) {
-            // TODO: Implement acknowledgment tracking
-            this.logger.debug(`Acknowledgment required for notification to ${contextId}`);
+            // Add context to pending acknowledgments
+            const notificationId = notification.id;
+            
+            if (!this.pendingAcknowledgments.has(notificationId)) {
+              // This is the first context for this notification
+              this.pendingAcknowledgments.set(notificationId, {
+                sourceContext: notification.sourceContext,
+                targetContexts: new Set([contextId]),
+                timestamp: new Date(),
+                timeout: timeout,
+                resolve: () => {}, // Will be set when waitForAcknowledgments is called
+                reject: () => {},  // Will be set when waitForAcknowledgments is called
+              });
+            } else {
+              // Add to existing target contexts
+              this.pendingAcknowledgments.get(notificationId)?.targetContexts.add(contextId);
+            }
+            
+            this.logger.debug(`Tracking acknowledgment from ${contextId} for notification ${notificationId}`);
           }
         } catch (error) {
           this.logger.error(`Error sending notification to ${contextId}:`, error);
@@ -348,6 +381,23 @@ export class ContextMediator {
       }
     }
     
+    // If waiting for acknowledgments and they're required, wait for them
+    if (waitForAcks && notification.requiresAck) {
+      try {
+        // Wait for acknowledgments from all target contexts
+        const acknowledgedBy = await this.waitForAcknowledgments(notification.id, timeout);
+        this.logger.debug(`Notification ${notification.id} acknowledged by: ${acknowledgedBy.join(', ')}`);
+        
+        // Return the list of contexts that acknowledged
+        return acknowledgedBy;
+      } catch (error) {
+        // Log the error but return the list of contexts that received the notification
+        this.logger.warn(`Error waiting for acknowledgments: ${(error as Error).message}`);
+        return receivedBy;
+      }
+    }
+    
+    // Return the list of contexts that received the notification
     return receivedBy;
   }
   
@@ -358,8 +408,40 @@ export class ContextMediator {
    * @returns Whether the acknowledgment was handled
    */
   handleAcknowledgment(acknowledgment: AcknowledgmentMessage): boolean {
-    // TODO: Implement acknowledgment handling
-    this.logger.debug(`Received ${acknowledgment.status} acknowledgment for ${acknowledgment.notificationId}`);
+    const notificationId = acknowledgment.notificationId;
+    const senderContext = acknowledgment.sourceContext;
+    
+    // Check if we're tracking this notification
+    const pendingAck = this.pendingAcknowledgments.get(notificationId);
+    if (!pendingAck) {
+      this.logger.warn(`Received acknowledgment for unknown notification: ${notificationId}`);
+      return false;
+    }
+    
+    // Check if the sender is one of the target contexts
+    if (!pendingAck.targetContexts.has(senderContext)) {
+      this.logger.warn(`Received unexpected acknowledgment from ${senderContext} for notification ${notificationId}`);
+      return false;
+    }
+    
+    // Log the acknowledgment
+    this.logger.debug(`Received ${acknowledgment.status} acknowledgment from ${senderContext} for notification ${notificationId}`);
+    
+    // Remove the context from pending acknowledgments
+    pendingAck.targetContexts.delete(senderContext);
+    
+    // If all acknowledgments received, resolve the promise and clean up
+    if (pendingAck.targetContexts.size === 0) {
+      this.logger.debug(`All acknowledgments received for notification ${notificationId}`);
+      
+      // Create a list of acknowledged contexts (already removed from targetContexts)
+      const acknowledgedBy = [senderContext]; // At least the current sender acknowledged
+      pendingAck.resolve(acknowledgedBy);
+      
+      // Clean up
+      this.pendingAcknowledgments.delete(notificationId);
+    }
+    
     return true;
   }
   
@@ -384,11 +466,63 @@ export class ContextMediator {
   }
   
   /**
-   * Clean up timed-out requests
+   * Wait for acknowledgments from all target contexts
+   * 
+   * @param notificationId ID of the notification to wait for
+   * @param timeout Optional timeout in milliseconds
+   * @returns Promise that resolves with the contexts that acknowledged
    */
-  cleanupTimedOutRequests(): void {
+  waitForAcknowledgments(notificationId: string, timeout: number = 30000): Promise<string[]> {
+    const pendingAck = this.pendingAcknowledgments.get(notificationId);
+    
+    if (!pendingAck) {
+      return Promise.reject(new Error(`No pending acknowledgments for notification: ${notificationId}`));
+    }
+    
+    // Return a promise that resolves when all acknowledgments are received
+    return new Promise<string[]>((resolve, reject) => {
+      // Store the resolve and reject functions
+      pendingAck.resolve = resolve;
+      pendingAck.reject = reject;
+      pendingAck.timeout = timeout;
+      
+      // Set a timeout to reject the promise if all acknowledgments are not received
+      globalThis.setTimeout(() => {
+        if (this.pendingAcknowledgments.has(notificationId)) {
+          const pendingAck = this.pendingAcknowledgments.get(notificationId)!;
+          const remaining = Array.from(pendingAck.targetContexts);
+          
+          this.logger.warn(`Timed out waiting for acknowledgments from ${remaining.join(', ')} for notification ${notificationId}`);
+          
+          // Remove the pending acknowledgment
+          this.pendingAcknowledgments.delete(notificationId);
+          
+          // Reject with the list of contexts that didn't acknowledge
+          reject(new Error(`Timed out waiting for acknowledgments from: ${remaining.join(', ')}`));
+        }
+      }, timeout);
+      
+      // If all targets have already acknowledged, resolve immediately
+      if (pendingAck.targetContexts.size === 0) {
+        this.logger.debug(`All acknowledgments already received for notification ${notificationId}`);
+        
+        // Remove the pending acknowledgment
+        this.pendingAcknowledgments.delete(notificationId);
+        
+        // Resolve with empty array (no remaining contexts)
+        resolve([]);
+      }
+    });
+  }
+  
+  /**
+   * Clean up timed-out requests and acknowledgments
+   * This should be called periodically to prevent memory leaks
+   */
+  cleanupTimedOut(): void {
     const now = new Date();
     
+    // Clean up timed-out requests
     for (const [requestId, request] of this.pendingRequests.entries()) {
       const elapsed = now.getTime() - request.timestamp.getTime();
       
@@ -397,6 +531,19 @@ export class ContextMediator {
         
         request.reject(new Error(`Request timed out after ${elapsed}ms`));
         this.pendingRequests.delete(requestId);
+      }
+    }
+    
+    // Clean up timed-out acknowledgments
+    for (const [notificationId, ack] of this.pendingAcknowledgments.entries()) {
+      const elapsed = now.getTime() - ack.timestamp.getTime();
+      
+      if (elapsed > ack.timeout) {
+        this.logger.warn(`Acknowledgments for notification ${notificationId} timed out after ${elapsed}ms`);
+        
+        const remaining = Array.from(ack.targetContexts);
+        ack.reject(new Error(`Timed out waiting for acknowledgments from: ${remaining.join(', ')}`));
+        this.pendingAcknowledgments.delete(notificationId);
       }
     }
   }
