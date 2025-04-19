@@ -9,7 +9,7 @@
  */
 
 import type { NoteContext } from '@/mcpServer';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from "@/protocol/types";
 import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import { DependencyContainer } from '@/utils/dependencyContainer';
@@ -32,7 +32,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    * 
    * @param brainProtocol - The BrainProtocol instance
    */
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getContextManager().getNoteContext();
   }
@@ -43,7 +43,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
    * @returns The shared ConversationCommandHandler instance
    */
-  public static getInstance(brainProtocol: BrainProtocol): ConversationCommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol): ConversationCommandHandler {
     if (!ConversationCommandHandler.instance) {
       ConversationCommandHandler.instance = new ConversationCommandHandler(brainProtocol);
     }
@@ -65,7 +65,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use
    * @returns A new ConversationCommandHandler instance
    */
-  public static createFresh(brainProtocol: BrainProtocol): ConversationCommandHandler {
+  public static createFresh(brainProtocol: IBrainProtocol): ConversationCommandHandler {
     return new ConversationCommandHandler(brainProtocol);
   }
 

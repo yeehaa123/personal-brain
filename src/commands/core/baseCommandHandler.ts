@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 import { Logger } from '@/utils/logger';
 
 import type { CommandInfo, CommandResult } from './commandTypes';
@@ -18,8 +18,8 @@ import type { CommandInfo, CommandResult } from './commandTypes';
  * Provides common functionality for all command handlers
  */
 export abstract class BaseCommandHandler {
-  /** The BrainProtocol instance used for command operations */
-  protected brainProtocol: BrainProtocol;
+  /** The IBrainProtocol instance used for command operations */
+  protected brainProtocol: IBrainProtocol;
   
   /** Logger instance for this class and its derived classes */
   protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
@@ -27,9 +27,9 @@ export abstract class BaseCommandHandler {
   /**
    * Constructor for base command handler
    * 
-   * @param brainProtocol - The BrainProtocol instance for this handler
+   * @param brainProtocol - The IBrainProtocol instance for this handler
    */
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     this.brainProtocol = brainProtocol;
   }
 

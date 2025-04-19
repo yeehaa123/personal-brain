@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 import { Logger } from '@/utils/logger';
 
 import type { BaseCommandHandler } from './baseCommandHandler';
@@ -30,19 +30,19 @@ export class CommandHandler {
   /**
    * Private constructor to enforce the use of getInstance() or createFresh()
    * 
-   * @param _brainProtocol - The BrainProtocol instance (not used in this class but required for API consistency)
+   * @param _brainProtocol - The IBrainProtocol instance (not used in this class but required for API consistency)
    */
-  constructor(_brainProtocol: BrainProtocol) {
+  constructor(_brainProtocol: IBrainProtocol) {
     // BrainProtocol is not used directly in this class
   }
 
   /**
    * Get the singleton instance of CommandHandler
    * 
-   * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
+   * @param brainProtocol - The IBrainProtocol instance to use (only used when creating a new instance)
    * @returns The shared CommandHandler instance
    */
-  public static getInstance(brainProtocol: BrainProtocol): CommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol): CommandHandler {
     if (!CommandHandler.instance) {
       CommandHandler.instance = new CommandHandler(brainProtocol);
     }
@@ -61,10 +61,10 @@ export class CommandHandler {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param brainProtocol - The BrainProtocol instance to use
+   * @param brainProtocol - The IBrainProtocol instance to use
    * @returns A new CommandHandler instance
    */
-  public static createFresh(brainProtocol: BrainProtocol): CommandHandler {
+  public static createFresh(brainProtocol: IBrainProtocol): CommandHandler {
     return new CommandHandler(brainProtocol);
   }
 

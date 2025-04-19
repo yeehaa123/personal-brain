@@ -9,7 +9,7 @@
  */
 
 import type { NoteContext } from '@/mcpServer';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from "@/protocol/types";
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -29,7 +29,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
    * 
    * @param brainProtocol - The BrainProtocol instance
    */
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getContextManager().getNoteContext();
   }
@@ -40,7 +40,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
    * @returns The shared NoteCommandHandler instance
    */
-  public static getInstance(brainProtocol: BrainProtocol): NoteCommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol): NoteCommandHandler {
     if (!NoteCommandHandler.instance) {
       NoteCommandHandler.instance = new NoteCommandHandler(brainProtocol);
     }
@@ -62,7 +62,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use
    * @returns A new NoteCommandHandler instance
    */
-  public static createFresh(brainProtocol: BrainProtocol): NoteCommandHandler {
+  public static createFresh(brainProtocol: IBrainProtocol): NoteCommandHandler {
     return new NoteCommandHandler(brainProtocol);
   }
 

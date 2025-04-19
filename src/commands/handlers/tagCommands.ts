@@ -4,7 +4,7 @@
  */
 
 import type { NoteContext } from '@/mcpServer';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from "@/protocol/types";
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -15,7 +15,7 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
 export class TagCommandHandler extends BaseCommandHandler {
   private noteContext: NoteContext;
 
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getContextManager().getNoteContext();
   }

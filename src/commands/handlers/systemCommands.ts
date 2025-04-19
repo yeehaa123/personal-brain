@@ -9,7 +9,7 @@
  */
 
 import type { ExternalSourceContext, NoteContext } from '@/mcpServer';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from "@/protocol/types";
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -32,7 +32,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
    * 
    * @param brainProtocol - The BrainProtocol instance
    */
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     this.noteContext = brainProtocol.getContextManager().getNoteContext();
     this.externalContext = brainProtocol.getContextManager().getExternalSourceContext();
@@ -44,7 +44,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use (only used when creating a new instance)
    * @returns The shared SystemCommandHandler instance
    */
-  public static getInstance(brainProtocol: BrainProtocol): SystemCommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol): SystemCommandHandler {
     if (!SystemCommandHandler.instance) {
       SystemCommandHandler.instance = new SystemCommandHandler(brainProtocol);
     }
@@ -66,7 +66,7 @@ export class SystemCommandHandler extends BaseCommandHandler {
    * @param brainProtocol - The BrainProtocol instance to use
    * @returns A new SystemCommandHandler instance
    */
-  public static createFresh(brainProtocol: BrainProtocol): SystemCommandHandler {
+  public static createFresh(brainProtocol: IBrainProtocol): SystemCommandHandler {
     return new SystemCommandHandler(brainProtocol);
   }
 

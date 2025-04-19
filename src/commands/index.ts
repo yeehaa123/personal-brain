@@ -4,7 +4,7 @@
  * and initializes the command system with handlers
  */
 
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 
 import { CommandHandler } from './core/commandHandler';
 import { ConversationCommandHandler } from './handlers/conversationCommands';
@@ -22,7 +22,7 @@ export { CommandHandler } from './core/commandHandler';
 /**
  * Factory function to create and initialize a command handler
  */
-export function createCommandHandler(brainProtocol: BrainProtocol): CommandHandler {
+export function createCommandHandler(brainProtocol: IBrainProtocol): CommandHandler {
   const commandHandler = new CommandHandler(brainProtocol);
   
   // Register all handlers

@@ -1,5 +1,5 @@
 import type { WebsiteContext } from '@/contexts/website';
-import type { BrainProtocol } from '@/protocol';
+import type { IBrainProtocol } from "@/protocol/types";
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 // Direct file access replaced with WebsiteContext delegation
@@ -18,7 +18,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   /**
    * Get singleton instance of WebsiteCommandHandler
    */
-  public static getInstance(brainProtocol: BrainProtocol): WebsiteCommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol): WebsiteCommandHandler {
     if (!WebsiteCommandHandler.instance) {
       WebsiteCommandHandler.instance = new WebsiteCommandHandler(brainProtocol);
     }
@@ -35,14 +35,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   /**
    * Create a fresh instance (primarily for testing)
    */
-  public static createFresh(brainProtocol: BrainProtocol): WebsiteCommandHandler {
+  public static createFresh(brainProtocol: IBrainProtocol): WebsiteCommandHandler {
     return new WebsiteCommandHandler(brainProtocol);
   }
   
   /**
    * Constructor
    */
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     // Initialize the website context from contextManager
     this.websiteContext = brainProtocol.getContextManager().getWebsiteContext();

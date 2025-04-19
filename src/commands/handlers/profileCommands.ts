@@ -5,7 +5,7 @@
 
 import type { ProfileContext } from '@/mcpServer';
 import type { Note } from '@/models/note';
-import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { IBrainProtocol } from "@/protocol/types";
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -19,7 +19,7 @@ type NoteSource = 'import' | 'conversation' | 'user-created';
 export class ProfileCommandHandler extends BaseCommandHandler {
   private profileContext: ProfileContext;
 
-  constructor(brainProtocol: BrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
     this.profileContext = brainProtocol.getContextManager().getProfileContext();
   }

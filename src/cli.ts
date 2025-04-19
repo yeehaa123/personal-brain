@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { conversationConfig } from '@/config';
 import { getServerManager } from '@/contexts/website/services/serverManager';
-import { BrainProtocol } from '@/protocol/brainProtocol';
+import { BrainProtocolIntegrated } from '@/protocol/core/brainProtocolIntegrated';
 
 import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
@@ -29,12 +29,12 @@ async function main() {
   }
 
   // Initialize components using the singleton pattern with room ID
-  const brainProtocol = BrainProtocol.getInstance({
+  const brainProtocol = BrainProtocolIntegrated.getInstance({
     interfaceType: 'cli',
     roomId: conversationConfig.defaultCliRoomId,
   });
   
-  // Explicitly initialize the BrainProtocol to ensure all async components are ready
+  // Explicitly initialize the BrainProtocolIntegrated to ensure all async components are ready
   logger.info('Initializing BrainProtocol...');
   await brainProtocol.initialize();
   logger.info('BrainProtocol initialization complete');
@@ -74,7 +74,7 @@ async function main() {
       
       // Reset the brain protocol, which will cascade to reset other contexts
       logger.info('Resetting brain protocol...');
-      BrainProtocol.resetInstance();
+      BrainProtocolIntegrated.resetInstance();
       
       logger.info('Cleanup completed successfully.');
     } catch (error) {
@@ -127,7 +127,7 @@ main().catch(async error => {
     
     // Reset the brain protocol
     logger.info('Resetting brain protocol after error...');
-    BrainProtocol.resetInstance();
+    BrainProtocolIntegrated.resetInstance();
     
     logger.info('Cleanup after error completed.');
   } catch (cleanupError) {
