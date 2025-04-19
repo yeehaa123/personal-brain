@@ -1,5 +1,5 @@
 import type { WebsiteContext } from '@/contexts/website';
-import type { IBrainProtocol } from "@/protocol/types";
+import type { IBrainProtocol } from '@/protocol/types';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 // Direct file access replaced with WebsiteContext delegation

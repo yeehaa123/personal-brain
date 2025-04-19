@@ -9,7 +9,7 @@
  */
 
 import type { ExternalSourceContext, NoteContext } from '@/mcpServer';
-import type { IBrainProtocol } from "@/protocol/types";
+import type { IBrainProtocol } from '@/protocol/types';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
