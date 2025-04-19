@@ -7,7 +7,7 @@ import { RoomEvent } from 'matrix-js-sdk/lib/models/room';
 import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
 import { getServerManager } from '@/contexts/website/services/serverManager';
-import { BrainProtocolIntegrated } from '@/protocol/core/brainProtocolIntegrated';
+import { BrainProtocol } from '@/protocol/core/brainProtocol';
 
 import { createCommandHandler } from '../commands';
 import type { CommandHandler } from '../commands';
@@ -30,7 +30,7 @@ interface MatrixConfig {
 
 export class MatrixBrainInterface {
   private client: sdk.MatrixClient;
-  private brainProtocol: BrainProtocolIntegrated;
+  private brainProtocol: BrainProtocol;
   private commandHandler: CommandHandler;
   private renderer: MatrixRenderer;
   private isReady = false;
@@ -53,7 +53,7 @@ export class MatrixBrainInterface {
     });
 
     // Initialize brain protocol and command handler using singleton pattern
-    this.brainProtocol = BrainProtocolIntegrated.getInstance({ interfaceType: 'matrix', roomId: this.config.roomIds[0] });
+    this.brainProtocol = BrainProtocol.getInstance({ interfaceType: 'matrix', roomId: this.config.roomIds[0] });
     
     // Initialize the brain protocol asynchronously in the start() method
     

@@ -8,8 +8,8 @@ import type { ExternalSourceContext } from '@/contexts/externalSources';
 import type { NoteContext } from '@/contexts/notes';
 import type { ProfileContext } from '@/contexts/profiles';
 import type { WebsiteContext } from '@/contexts/website';
-import { BrainProtocolIntegrated } from '@/protocol/core/brainProtocolIntegrated';
-import type { BrainProtocolIntegratedDependencies } from '@/protocol/core/brainProtocolIntegrated';
+import { BrainProtocol } from '@/protocol/core/brainProtocol';
+import type { BrainProtocolDependencies } from '@/protocol/core/brainProtocol';
 import type { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
@@ -111,17 +111,17 @@ describe('Cross-Context Messaging Integration', () => {
     };
   };
 
-  let brainProtocol: BrainProtocolIntegrated;
+  let brainProtocol: BrainProtocol;
 
   // Set up a fresh instance before each test
   beforeEach(() => {
-    BrainProtocolIntegrated.resetInstance();
-    brainProtocol = BrainProtocolIntegrated.createFresh({}, createMockDependencies() as unknown as BrainProtocolIntegratedDependencies);
+    BrainProtocol.resetInstance();
+    brainProtocol = BrainProtocol.createFresh({}, createMockDependencies() as unknown as BrainProtocolDependencies);
   });
 
   // Reset after each test
   afterEach(() => {
-    BrainProtocolIntegrated.resetInstance();
+    BrainProtocol.resetInstance();
     MockNoteContext.resetInstance();
     MockProfileContext.resetInstance();
     MockConversationContext.resetInstance();

@@ -6,7 +6,7 @@
  */
 
 // Re-export protocol core implementations
-export * from './core/brainProtocolIntegrated';
+export * from './core/brainProtocol';
 export * from './brainProtocol';
 
 // Re-export protocol components
@@ -21,8 +21,6 @@ export * from './config/brainProtocolConfig';
 // Re-export message formats and schemas
 export * from './formats';
 
-// Re-export translators
-export * from './translators';
 
 // Re-export adapters
 export * from './adapters';

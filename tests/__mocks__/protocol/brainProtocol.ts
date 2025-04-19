@@ -4,7 +4,7 @@
  * Follows the Component Interface Standardization pattern with
  * getInstance(), resetInstance(), and createFresh()
  * 
- * This is a mock of BrainProtocolIntegrated, which has replaced BrainProtocol.
+ * This is a mock of BrainProtocol, which has replaced BrainProtocol.
  */
 
 import type { BrainProtocolOptions, IContextManager, IConversationManager, QueryOptions, QueryResult } from '@/protocol/types';

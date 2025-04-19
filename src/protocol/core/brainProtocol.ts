@@ -1,9 +1,8 @@
 /**
- * BrainProtocolIntegrated
+ * BrainProtocol
  * 
- * Enhanced version of BrainProtocol that integrates the cross-context messaging system.
- * This version uses ContextOrchestrator instead of ContextOrchestrator
- * to enable message-based communication between contexts.
+ * Core implementation of the BrainProtocol that integrates the cross-context messaging system.
+ * Uses ContextOrchestrator for context management and enables message-based communication.
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
@@ -36,10 +35,10 @@ import { McpServerManager } from './mcpServerManager';
 import { StatusManager } from './statusManager';
 
 /**
- * Dependency classes for BrainProtocolIntegrated
+ * Dependency classes for BrainProtocol
  * Allows overriding which classes to use without changing the instantiation logic
  */
-export interface BrainProtocolIntegratedDependencies {
+export interface BrainProtocolDependencies {
   ConfigManager: typeof ConfigurationManager;
   ContextOrchestrator: typeof ContextOrchestrator;
   ContextMediator: typeof ContextMediator;
@@ -51,13 +50,13 @@ export interface BrainProtocolIntegratedDependencies {
   QueryProcessor: typeof QueryProcessor;
 }
 
-// Default dependencies are now defined in the constructor to avoid circular references
+// Default dependencies are defined in the constructor to avoid circular references
 
 /**
- * Enhanced BrainProtocol that integrates cross-context messaging
+ * BrainProtocol with integrated cross-context messaging
  */
-export class BrainProtocolIntegrated implements IBrainProtocol {
-  private static instance: BrainProtocolIntegrated | null = null;
+export class BrainProtocol implements IBrainProtocol {
+  private static instance: BrainProtocol | null = null;
 
   // Essential components only
   private configManager: ConfigurationManager;
@@ -74,7 +73,7 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
   private logger = Logger.getInstance();
 
   /**
-   * Get the singleton instance of BrainProtocolIntegrated
+   * Get the singleton instance of BrainProtocol
    * 
    * @param options Configuration options
    * @param dependencies Class overrides for dependencies
@@ -82,20 +81,20 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
    */
   public static getInstance(
     options?: BrainProtocolOptions,
-    dependencies?: BrainProtocolIntegratedDependencies,
-  ): BrainProtocolIntegrated {
-    if (!BrainProtocolIntegrated.instance) {
+    dependencies?: BrainProtocolDependencies,
+  ): BrainProtocol {
+    if (!BrainProtocol.instance) {
       // Create a new instance with the provided dependencies
-      BrainProtocolIntegrated.instance = new BrainProtocolIntegrated(options || {}, dependencies);
+      BrainProtocol.instance = new BrainProtocol(options || {}, dependencies);
       const logger = Logger.getInstance();
-      logger.debug('BrainProtocolIntegrated singleton instance created');
+      logger.debug('BrainProtocol singleton instance created');
     } else if (options || dependencies) {
       // Log a warning if trying to get instance with different config
       const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
 
-    return BrainProtocolIntegrated.instance;
+    return BrainProtocol.instance;
   }
 
   /**
@@ -105,9 +104,9 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
     const logger = Logger.getInstance();
 
     // Only reset the instance - proper DI means we don't touch dependencies
-    if (BrainProtocolIntegrated.instance) {
-      BrainProtocolIntegrated.instance = null;
-      logger.debug('BrainProtocolIntegrated singleton instance reset');
+    if (BrainProtocol.instance) {
+      BrainProtocol.instance = null;
+      logger.debug('BrainProtocol singleton instance reset');
     }
   }
 
@@ -116,16 +115,16 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
    * 
    * @param options Configuration options
    * @param dependencies Alternative classes to use for dependencies
-   * @returns A new BrainProtocolIntegrated instance
+   * @returns A new BrainProtocol instance
    */
   public static createFresh(
     options?: BrainProtocolOptions,
-    dependencies?: BrainProtocolIntegratedDependencies,
-  ): BrainProtocolIntegrated {
+    dependencies?: BrainProtocolDependencies,
+  ): BrainProtocol {
     const logger = Logger.getInstance();
-    logger.debug('Creating fresh BrainProtocolIntegrated instance');
+    logger.debug('Creating fresh BrainProtocol instance');
 
-    return new BrainProtocolIntegrated(options || {}, dependencies);
+    return new BrainProtocol(options || {}, dependencies);
   }
 
   /**
@@ -136,7 +135,7 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
    */
   private constructor(
     options: BrainProtocolOptions = {},
-    dependencies?: BrainProtocolIntegratedDependencies,
+    dependencies?: BrainProtocolDependencies,
   ) {
     // Use default dependencies individually to avoid circular reference issues
     const deps = dependencies || {
@@ -181,14 +180,14 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
 
       // Initialize remaining components
       this.mcpServerManager = deps.McpServerManager.getInstance({
-        contextOrchestrator: this.contextOrchestrator, // Keep using the original for compatibility
+        contextOrchestrator: this.contextOrchestrator,
         configManager: this.configManager,
       });
 
       this.conversationManager = deps.ConversationManager.getInstance({ config });
 
       this.statusManager = deps.StatusManager.getInstance({
-        contextOrchestrator: this.contextOrchestrator, // Keep using the original for compatibility
+        contextOrchestrator: this.contextOrchestrator,
         conversationManager: this.conversationManager,
         mcpServer: this.mcpServerManager.getMcpServer(),
         externalSourcesEnabled: this.configManager.getUseExternalSources(),
@@ -196,12 +195,12 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
 
       this.featureCoordinator = deps.FeatureCoordinator.getInstance({
         configManager: this.configManager,
-        contextOrchestrator: this.contextOrchestrator, // Keep using the original for compatibility
+        contextOrchestrator: this.contextOrchestrator,
         statusManager: this.statusManager,
       });
 
       this.queryProcessor = deps.QueryProcessor.getInstance({
-        contextManager: this.contextOrchestrator.getContextManager(), // Keep using the original for compatibility
+        contextManager: this.contextOrchestrator.getContextManager(),
         conversationManager: this.conversationManager,
         apiKey: this.configManager.getApiKey(),
       });
@@ -211,8 +210,8 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
       this.logger.info('Cross-context messaging system enabled');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.logger.error(`Failed to initialize BrainProtocolIntegrated: ${errorMessage}`);
-      throw new Error(`BrainProtocolIntegrated initialization failed: ${errorMessage}`);
+      this.logger.error(`Failed to initialize BrainProtocol: ${errorMessage}`);
+      throw new Error(`BrainProtocol initialization failed: ${errorMessage}`);
     }
   }
 
@@ -223,7 +222,6 @@ export class BrainProtocolIntegrated implements IBrainProtocol {
    * @returns ContextManager instance
    */
   getContextManager(): IContextManager {
-    // Use the original context orchestrator's context manager for compatibility
     return this.contextOrchestrator.getContextManager();
   }
 

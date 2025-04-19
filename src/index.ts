@@ -1,6 +1,6 @@
 import { conversationConfig } from '@/config';
 import { NoteContext } from '@/contexts/notes';
-import { BrainProtocolIntegrated } from '@/protocol/core/brainProtocolIntegrated';
+import { BrainProtocol } from '@/protocol/core/brainProtocol';
 
 import { getEnv } from './utils/configUtils';
 import logger from './utils/logger';
@@ -21,8 +21,8 @@ async function main() {
 
     if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
-      // Use the singleton pattern for BrainProtocolIntegrated with room ID to ensure conversation is created
-      const protocol = BrainProtocolIntegrated.getInstance({
+      // Use the singleton pattern for BrainProtocol with room ID to ensure conversation is created
+      const protocol = BrainProtocol.getInstance({
         interfaceType: 'cli',
         roomId: conversationConfig.defaultCliRoomId,
       });
@@ -31,7 +31,7 @@ async function main() {
       protocol.getMcpServer(); // This confirms the MCP server can be accessed
       logger.info('MCP Server initialized successfully', { context: 'Main' });
       
-      // Explicitly initialize the BrainProtocolIntegrated to ensure all async components are ready
+      // Explicitly initialize the BrainProtocol to ensure all async components are ready
       await protocol.initialize();
       
       // Now we can safely process queries

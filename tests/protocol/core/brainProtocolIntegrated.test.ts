@@ -1,12 +1,12 @@
 /**
- * Tests for the BrainProtocolIntegrated class
+ * Tests for the BrainProtocol class
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { 
-  BrainProtocolIntegrated, 
-  type BrainProtocolIntegratedDependencies,
-} from '@/protocol/core/brainProtocolIntegrated';
+  BrainProtocol, 
+  type BrainProtocolDependencies,
+} from '@/protocol/core/brainProtocol';
 import { MockConfigurationManager } from '@test/__mocks__/protocol/core/configurationManager';
 import { MockContextOrchestrator } from '@test/__mocks__/protocol/core/contextOrchestrator';
 import { MockFeatureCoordinator } from '@test/__mocks__/protocol/core/featureCoordinator';
@@ -17,10 +17,10 @@ import { MockContextIntegrator } from '@test/__mocks__/protocol/messaging/contex
 import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextMediator';
 import { MockQueryProcessor } from '@test/__mocks__/protocol/pipeline/queryProcessor';
 
-describe('BrainProtocolIntegrated', () => {
+describe('BrainProtocol', () => {
   // Reset all singleton instances before each test
   beforeEach(() => {
-    BrainProtocolIntegrated.resetInstance();
+    BrainProtocol.resetInstance();
     MockConfigurationManager.resetInstance();
     MockContextOrchestrator.resetInstance();
     MockContextMediator.resetInstance();
@@ -34,7 +34,7 @@ describe('BrainProtocolIntegrated', () => {
   
   // Reset after each test to clean up
   afterEach(() => {
-    BrainProtocolIntegrated.resetInstance();
+    BrainProtocol.resetInstance();
     MockConfigurationManager.resetInstance();
     MockContextOrchestrator.resetInstance();
     MockContextMediator.resetInstance();
@@ -58,10 +58,10 @@ describe('BrainProtocolIntegrated', () => {
       StatusManager: MockStatusManager,
       FeatureCoordinator: MockFeatureCoordinator,
       QueryProcessor: MockQueryProcessor,
-    } as unknown as BrainProtocolIntegratedDependencies;
+    } as unknown as BrainProtocolDependencies;
 
     // Should not throw errors when initialized with dependencies
-    const brainProtocol = BrainProtocolIntegrated.createFresh({}, mockDependencies);
+    const brainProtocol = BrainProtocol.createFresh({}, mockDependencies);
     
     // Basic verification that we have an object
     expect(brainProtocol).toBeDefined();

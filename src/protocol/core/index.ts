@@ -2,10 +2,10 @@
  * Protocol Core Components
  * 
  * This module provides the core components of the protocol layer,
- * including the BrainProtocolIntegrated, ContextOrchestrator, and supporting classes.
+ * including the BrainProtocol, ContextOrchestrator, and supporting classes.
  */
 
-export * from './brainProtocolIntegrated';
+export * from './brainProtocol';
 export * from './contextOrchestrator';
 export * from './configurationManager';
 export * from './featureCoordinator';

@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { BrainProtocol } from '@/protocol/brainProtocol';
-import type { BrainProtocolIntegratedDependencies } from '@/protocol/core/brainProtocolIntegrated';
+import type { BrainProtocolDependencies } from '@/protocol/core/brainProtocol';
 import type { QueryOptions } from '@/protocol/types';
 import { 
   MockConfigurationManager,
@@ -31,21 +31,21 @@ console.log('BrainProtocol.resetInstance exists:', Boolean(BrainProtocol.resetIn
  * @returns A complete set of mock dependencies
  */
 function createMockDependencies(
-  overrides: Partial<BrainProtocolIntegratedDependencies> = {},
-): BrainProtocolIntegratedDependencies {
+  overrides: Partial<BrainProtocolDependencies> = {},
+): BrainProtocolDependencies {
   // Create a properly typed dependencies object
   // We need to use type assertions since the mock classes don't exactly match the expected types
   // but this is safer than using 'any'
   return {
-    ConfigManager: MockConfigurationManager as unknown as BrainProtocolIntegratedDependencies['ConfigManager'],
-    ContextOrchestrator: MockContextOrchestrator as unknown as BrainProtocolIntegratedDependencies['ContextOrchestrator'], 
-    ContextMediator: MockContextMediator as unknown as BrainProtocolIntegratedDependencies['ContextMediator'],
-    ContextIntegrator: MockContextIntegrator as unknown as BrainProtocolIntegratedDependencies['ContextIntegrator'],
-    McpServerManager: MockMcpServerManager as unknown as BrainProtocolIntegratedDependencies['McpServerManager'],
-    ConversationManager: MockConversationManager as unknown as BrainProtocolIntegratedDependencies['ConversationManager'],
-    StatusManager: MockStatusManager as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
-    FeatureCoordinator: MockFeatureCoordinator as unknown as BrainProtocolIntegratedDependencies['FeatureCoordinator'],
-    QueryProcessor: MockQueryProcessor as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+    ConfigManager: MockConfigurationManager as unknown as BrainProtocolDependencies['ConfigManager'],
+    ContextOrchestrator: MockContextOrchestrator as unknown as BrainProtocolDependencies['ContextOrchestrator'], 
+    ContextMediator: MockContextMediator as unknown as BrainProtocolDependencies['ContextMediator'],
+    ContextIntegrator: MockContextIntegrator as unknown as BrainProtocolDependencies['ContextIntegrator'],
+    McpServerManager: MockMcpServerManager as unknown as BrainProtocolDependencies['McpServerManager'],
+    ConversationManager: MockConversationManager as unknown as BrainProtocolDependencies['ConversationManager'],
+    StatusManager: MockStatusManager as unknown as BrainProtocolDependencies['StatusManager'],
+    FeatureCoordinator: MockFeatureCoordinator as unknown as BrainProtocolDependencies['FeatureCoordinator'],
+    QueryProcessor: MockQueryProcessor as unknown as BrainProtocolDependencies['QueryProcessor'],
     ...overrides,
   };
 }
@@ -141,7 +141,7 @@ describe('BrainProtocol', () => {
     const mockDeps = createMockDependencies({
       StatusManager: {
         getInstance: () => mockStatusManager,
-      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+      } as unknown as BrainProtocolDependencies['StatusManager'],
     });
     
     // Create a fresh instance with our explicit dependencies
@@ -185,10 +185,10 @@ describe('BrainProtocol', () => {
     const mockDepsReady = createMockDependencies({
       QueryProcessor: {
         getInstance: () => testQueryProcessor,
-      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+      } as unknown as BrainProtocolDependencies['QueryProcessor'],
       StatusManager: {
         getInstance: () => readyStatusManager,
-      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+      } as unknown as BrainProtocolDependencies['StatusManager'],
     });
     
     // Create brain protocol instance with ready system
@@ -218,10 +218,10 @@ describe('BrainProtocol', () => {
     const mockDepsNotReady = createMockDependencies({
       StatusManager: {
         getInstance: () => notReadyStatusManager,
-      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+      } as unknown as BrainProtocolDependencies['StatusManager'],
       QueryProcessor: {
         getInstance: () => notReadyQueryProcessor,
-      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+      } as unknown as BrainProtocolDependencies['QueryProcessor'],
     });
     
     // Create brain protocol with not-ready status
@@ -251,8 +251,8 @@ describe('BrainProtocol', () => {
     const mockDeps = createMockDependencies({
       QueryProcessor: {
         getInstance: () => customQueryProcessor,
-      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
-      ConversationManager: MockConversationManager as unknown as BrainProtocolIntegratedDependencies['ConversationManager'],
+      } as unknown as BrainProtocolDependencies['QueryProcessor'],
+      ConversationManager: MockConversationManager as unknown as BrainProtocolDependencies['ConversationManager'],
     });
     
     // Create brain protocol instance with our custom dependencies
