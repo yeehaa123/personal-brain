@@ -27,6 +27,8 @@ interface MockContextOrchestratorOptions {
   conversationContext?: ConversationContext;
   externalSourceContext?: ExternalSourceContext;
   websiteContext?: WebsiteContext;
+  mediator?: unknown; // For messaging tests
+  config?: unknown; // For config options
 }
 
 /**

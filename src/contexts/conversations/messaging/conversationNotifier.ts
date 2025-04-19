@@ -6,7 +6,7 @@
  * started, updated, or cleared.
  */
 
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { MessageFactory, NotificationType } from '@/protocol/messaging';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';

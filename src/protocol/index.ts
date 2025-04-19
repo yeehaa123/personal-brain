@@ -6,7 +6,7 @@
  */
 
 // Re-export protocol core implementations
-export * from './core/brainProtocol';
+export * from './core/brainProtocolIntegrated';
 export * from './brainProtocol';
 
 // Re-export protocol components

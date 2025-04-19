@@ -7,7 +7,7 @@
  */
 
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { MessageFactory, NotificationType } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';

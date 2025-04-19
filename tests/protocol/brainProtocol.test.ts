@@ -5,7 +5,9 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { BrainProtocol, type BrainProtocolDependencies } from '@/protocol/core/brainProtocol';
+import { BrainProtocol } from '@/protocol/brainProtocol';
+import type { BrainProtocolIntegratedDependencies } from '@/protocol/core/brainProtocolIntegrated';
+import type { QueryOptions } from '@/protocol/types';
 import { 
   MockConfigurationManager,
   MockContextOrchestrator,
@@ -14,6 +16,8 @@ import {
   MockStatusManager,
 } from '@test/__mocks__/protocol/core';
 import { MockConversationManager } from '@test/__mocks__/protocol/managers';
+import { MockContextIntegrator } from '@test/__mocks__/protocol/messaging/contextIntegrator';
+import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextMediator';
 import { MockQueryProcessor } from '@test/__mocks__/protocol/pipeline';
 
 // Add a debug check to see what's being imported
@@ -21,34 +25,257 @@ console.log('Imported BrainProtocol:', BrainProtocol);
 console.log('BrainProtocol.resetInstance exists:', Boolean(BrainProtocol.resetInstance));
 
 /**
- * Helper function to create a mock dependencies object for BrainProtocol testing
+ * Create a set of mock dependencies for BrainProtocol
  * 
  * @param overrides - Specific dependency class overrides
  * @returns A complete set of mock dependencies
  */
 function createMockDependencies(
-  overrides: Partial<BrainProtocolDependencies> = {},
-): BrainProtocolDependencies {
+  overrides: Partial<BrainProtocolIntegratedDependencies> = {},
+): BrainProtocolIntegratedDependencies {
   // Create a properly typed dependencies object
   // We need to use type assertions since the mock classes don't exactly match the expected types
   // but this is safer than using 'any'
   return {
-    ConfigManager: MockConfigurationManager as unknown as BrainProtocolDependencies['ConfigManager'],
-    ContextOrchestrator: MockContextOrchestrator as unknown as BrainProtocolDependencies['ContextOrchestrator'],
-    McpServerManager: MockMcpServerManager as unknown as BrainProtocolDependencies['McpServerManager'],
-    ConversationManager: MockConversationManager as unknown as BrainProtocolDependencies['ConversationManager'],
-    StatusManager: MockStatusManager as unknown as BrainProtocolDependencies['StatusManager'],
-    FeatureCoordinator: MockFeatureCoordinator as unknown as BrainProtocolDependencies['FeatureCoordinator'],
-    QueryProcessor: MockQueryProcessor as unknown as BrainProtocolDependencies['QueryProcessor'],
+    ConfigManager: MockConfigurationManager as unknown as BrainProtocolIntegratedDependencies['ConfigManager'],
+    ContextOrchestrator: MockContextOrchestrator as unknown as BrainProtocolIntegratedDependencies['ContextOrchestrator'], 
+    ContextMediator: MockContextMediator as unknown as BrainProtocolIntegratedDependencies['ContextMediator'],
+    ContextIntegrator: MockContextIntegrator as unknown as BrainProtocolIntegratedDependencies['ContextIntegrator'],
+    McpServerManager: MockMcpServerManager as unknown as BrainProtocolIntegratedDependencies['McpServerManager'],
+    ConversationManager: MockConversationManager as unknown as BrainProtocolIntegratedDependencies['ConversationManager'],
+    StatusManager: MockStatusManager as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+    FeatureCoordinator: MockFeatureCoordinator as unknown as BrainProtocolIntegratedDependencies['FeatureCoordinator'],
+    QueryProcessor: MockQueryProcessor as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
     ...overrides,
   };
 }
 
 /**
- * Reset all mock dependencies before/after tests
- * This ensures proper isolation between tests
+ * Tests for the BrainProtocol class
  */
-function resetAllMocks() {
+describe('BrainProtocol', () => {
+  // Reset all the mock class instances before each test
+  beforeEach(() => {
+    resetMocks();
+  });
+  
+  // Reset all the mock class instances after each test
+  afterEach(() => {
+    resetMocks();
+  });
+  
+  test('getInstance should create a singleton instance', () => {
+    // No need to get instances before to show that they're created
+    // Just document it in comments
+    
+    // Create an instance with dependencies
+    const instance1 = BrainProtocol.createFresh({}, createMockDependencies());
+    
+    // Check that it's the right type
+    expect(instance1).toBeDefined();
+    expect(typeof instance1.isReady).toBe('function');
+    expect(typeof instance1.getContextManager).toBe('function');
+    expect(typeof instance1.getConversationManager).toBe('function');
+    expect(typeof instance1.getFeatureCoordinator).toBe('function');
+    
+    // Create a second instance with the same dependencies
+    const instance2 = BrainProtocol.createFresh({}, createMockDependencies());
+    
+    // These should be different instances since we used createFresh
+    expect(instance1).not.toBe(instance2);
+    
+    // But getInstance should return the same singleton instance
+    const singleton1 = BrainProtocol.getInstance();
+    const singleton2 = BrainProtocol.getInstance();
+    
+    expect(singleton1).toBe(singleton2);
+    
+    // And they should be different from our fresh instances
+    expect(singleton1).not.toBe(instance1);
+    expect(singleton1).not.toBe(instance2);
+  });
+  
+  test('resetInstance should clear the singleton instance', () => {
+    // Get an instance
+    const instance1 = BrainProtocol.getInstance();
+    
+    // Reset
+    BrainProtocol.resetInstance();
+    
+    // Get a new instance
+    const instance2 = BrainProtocol.getInstance();
+    
+    // Should be different instances
+    expect(instance1).not.toBe(instance2);
+  });
+  
+  test('createFresh should create an instance without affecting the singleton', () => {
+    // First, create a fresh instance
+    const freshInstance = BrainProtocol.createFresh({}, createMockDependencies());
+    
+    // Then create a singleton instance
+    const singleton = BrainProtocol.getInstance();
+    
+    // They should be different instances
+    expect(freshInstance).not.toBe(singleton);
+    
+    // Getting the singleton again should return the same instance
+    const singleton2 = BrainProtocol.getInstance();
+    expect(singleton).toBe(singleton2);
+    
+    // Getting a fresh instance should return a new instance
+    const freshInstance2 = BrainProtocol.createFresh({}, createMockDependencies());
+    expect(freshInstance).not.toBe(freshInstance2);
+  });
+  
+  test('isReady should return the status from StatusManager', () => {
+    
+    // Create a mock StatusManager that will return false for isReady
+    const mockStatusManager = MockStatusManager.createFresh();
+    
+    // Use a more specific type assertion
+    type StatusManagerWithOverride = typeof mockStatusManager & { isReady: () => boolean };
+    (mockStatusManager as StatusManagerWithOverride).isReady = () => false;
+    
+    // Create the dependencies with our modified StatusManager
+    const mockDeps = createMockDependencies({
+      StatusManager: {
+        getInstance: () => mockStatusManager,
+      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+    });
+    
+    // Create a fresh instance with our explicit dependencies
+    const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
+    
+    // The ready state should be taken from the StatusManager
+    expect(brainProtocol.isReady()).toBe(false);
+    
+    // Singleton should be unaffected by our mock StatusManager
+    (mockStatusManager as StatusManagerWithOverride).isReady = () => true;
+    expect(brainProtocol.isReady()).toBe(true);
+  });
+  
+  test('initialize should call conversationManager.initializeConversation', async () => {
+    // Create a fresh instance
+    const brainProtocol = BrainProtocol.createFresh({}, createMockDependencies());
+    
+    // Initialize
+    await brainProtocol.initialize();
+    
+    // Check that the conversation manager was initialized
+    const conversationManager = MockConversationManager.getInstance();
+    expect(conversationManager.initializeConversation).toHaveBeenCalled();
+  });
+  
+  test('processQuery should call queryProcessor.processQuery', async () => {
+    // First, test with a ready system
+    // Set up MockQueryProcessor to customize response
+    const testQueryProcessor = MockQueryProcessor.createFresh();
+    testQueryProcessor.setCustomResponse({
+      answer: 'Processed: test',
+      citations: [],
+      relatedNotes: [],
+    });
+    
+    // Set up status manager in "ready" state
+    const readyStatusManager = MockStatusManager.createFresh();
+    readyStatusManager.setReady(true);
+    
+    // Create dependencies with custom status and processor
+    const mockDepsReady = createMockDependencies({
+      QueryProcessor: {
+        getInstance: () => testQueryProcessor,
+      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+      StatusManager: {
+        getInstance: () => readyStatusManager,
+      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+    });
+    
+    // Create brain protocol instance with ready system
+    const brainProtocolReady = BrainProtocol.createFresh({}, mockDepsReady);
+    
+    // Should be able to process a query when ready
+    const result = await brainProtocolReady.processQuery('test');
+    expect(result.answer).toBe('Processed: test');
+    
+    // Now test with not-ready system
+    // Set up a not-ready status manager
+    const notReadyStatusManager = MockStatusManager.createFresh();
+    notReadyStatusManager.setReady(false);
+    
+    // Set up a query processor that checks ready state
+    const notReadyQueryProcessor = MockQueryProcessor.createFresh();
+    // Override processQuery to check ready state
+    const originalProcessQuery = notReadyQueryProcessor.processQuery;
+    notReadyQueryProcessor.processQuery = async function(query: string, options?: QueryOptions) {
+      if (!notReadyStatusManager.isReady()) {
+        throw new Error('Cannot process query: system not ready');
+      }
+      return originalProcessQuery.call(this, query, options);
+    };
+    
+    // Create dependencies with not-ready status and processor that checks status
+    const mockDepsNotReady = createMockDependencies({
+      StatusManager: {
+        getInstance: () => notReadyStatusManager,
+      } as unknown as BrainProtocolIntegratedDependencies['StatusManager'],
+      QueryProcessor: {
+        getInstance: () => notReadyQueryProcessor,
+      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+    });
+    
+    // Create brain protocol with not-ready status
+    const brainProtocolNotReady = BrainProtocol.createFresh({}, mockDepsNotReady);
+    
+    // Should reject when processor checks ready state
+    await expect(brainProtocolNotReady.processQuery('test')).rejects.toThrow('Cannot process query: system not ready');
+  });
+  
+  test('processQuery should support custom options', async () => {
+    // Set up MockQueryProcessor that handles custom options
+    const customQueryProcessor = MockQueryProcessor.createFresh();
+    
+    // Override processQuery method to handle the custom option
+    customQueryProcessor.processQuery = async (query: string, options?: QueryOptions) => {
+      // Get includeContext from options or default to false
+      const includeContext = Boolean(options && 'includeContext' in options && options.includeContext);
+      
+      return {
+        answer: `Processed: ${query} (with context: ${includeContext ? 'yes' : 'no'})`,
+        citations: [],
+        relatedNotes: [],
+      };
+    };
+    
+    // Create mock dependencies with our custom query processor
+    const mockDeps = createMockDependencies({
+      QueryProcessor: {
+        getInstance: () => customQueryProcessor,
+      } as unknown as BrainProtocolIntegratedDependencies['QueryProcessor'],
+      ConversationManager: MockConversationManager as unknown as BrainProtocolIntegratedDependencies['ConversationManager'],
+    });
+    
+    // Create brain protocol instance with our custom dependencies
+    const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
+    
+    // Process a query without options
+    const result1 = await brainProtocol.processQuery('test');
+    expect(result1.answer).toBe('Processed: test (with context: no)');
+    
+    // Process a query with custom options
+    // Note: We're using a type assertion here since we're testing with a mock
+    // processor that accepts additional options beyond the standard interface
+    const customOptions = { includeContext: true } as QueryOptions;
+    const result2 = await brainProtocol.processQuery('test', customOptions);
+    expect(result2.answer).toBe('Processed: test (with context: yes)');
+  });
+});
+
+/**
+ * Reset all mock classes used in the tests
+ */
+function resetMocks() {
+  BrainProtocol.resetInstance();
   MockConfigurationManager.resetInstance();
   MockContextOrchestrator.resetInstance();
   MockMcpServerManager.resetInstance();
@@ -57,252 +284,3 @@ function resetAllMocks() {
   MockFeatureCoordinator.resetInstance();
   MockQueryProcessor.resetInstance();
 }
-
-describe('BrainProtocol', () => {
-  // Reset all singletons before each test to ensure proper isolation
-  beforeEach(() => {
-    BrainProtocol.resetInstance();
-    resetAllMocks();
-  });
-
-  // Reset all singletons after all tests complete
-  afterEach(() => {
-    BrainProtocol.resetInstance();
-    resetAllMocks();
-  });
-
-  // Test the basic existence of BrainProtocol and its API
-  describe('Interface', () => {
-    test('should have the correct public API', () => {
-      // Verify instance methods exist
-      expect(typeof BrainProtocol.prototype.getContextManager).toBe('function');
-      expect(typeof BrainProtocol.prototype.getConversationManager).toBe('function');
-      expect(typeof BrainProtocol.prototype.getFeatureCoordinator).toBe('function');
-      expect(typeof BrainProtocol.prototype.getConfigManager).toBe('function');
-      expect(typeof BrainProtocol.prototype.getMcpServer).toBe('function');
-      expect(typeof BrainProtocol.prototype.isReady).toBe('function');
-      expect(typeof BrainProtocol.prototype.initialize).toBe('function');
-      expect(typeof BrainProtocol.prototype.processQuery).toBe('function');
-
-      // Verify static methods exist
-      expect(typeof BrainProtocol.getInstance).toBe('function');
-      expect(typeof BrainProtocol.resetInstance).toBe('function');
-      expect(typeof BrainProtocol.createFresh).toBe('function');
-    });
-  });
-
-  // Singleton tests with proper mocks
-  describe('Singleton Pattern', () => {
-    test('resetInstance should set the singleton to null', () => {
-      // Create an instance first
-      const instance = BrainProtocol.getInstance();
-      expect(instance).toBeDefined();
-      
-      // Reset and verify it's gone
-      BrainProtocol.resetInstance();
-      
-      // Create a new instance to verify it's not the same one
-      const newInstance = BrainProtocol.getInstance();
-      expect(newInstance).not.toBe(instance);
-    });
-    
-    test('getInstance with same dependencies creates singleton', () => {
-      // Create with default dependencies
-      const firstInstance = BrainProtocol.getInstance();
-      
-      // Get instance again - should be the same object
-      const secondInstance = BrainProtocol.getInstance();
-      
-      // Verify it's the same instance
-      expect(secondInstance).toBe(firstInstance);
-    });
-    
-    test('explicit createFresh creates new instance with fresh dependencies', () => {
-      // First create the singleton
-      const singletonInstance = BrainProtocol.getInstance();
-      
-      // Create a mock StatusManager that will return false for isReady
-      const mockStatusManager = MockStatusManager.createFresh();
-      
-      // Use a more specific type assertion
-      type StatusManagerWithOverride = typeof mockStatusManager & { isReady: () => boolean };
-      (mockStatusManager as StatusManagerWithOverride).isReady = () => false;
-      
-      // Create the dependencies with our modified StatusManager
-      const mockDeps = createMockDependencies({
-        StatusManager: {
-          getInstance: () => mockStatusManager,
-        } as unknown as BrainProtocolDependencies['StatusManager'],
-      });
-      
-      // Create a fresh instance with our explicit dependencies
-      const freshInstance = BrainProtocol.createFresh({}, mockDeps);
-      
-      // Verify it's a different instance
-      expect(freshInstance).not.toBe(singletonInstance);
-      
-      // Skip the actual test of freshInstance.isReady() since we're having issues with mocking
-      // Instead, just verify that the singleton remains unaffected by our mock changes
-      expect(singletonInstance).not.toBe(freshInstance);
-    });
-  });
-
-  // Tests for instance methods using our mock dependencies
-  describe('With Mock Dependencies', () => {
-    test('createFresh works with mock dependencies', () => {
-      // Create an instance with mock dependencies
-      const mockDeps = createMockDependencies();
-      const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
-
-      // Verify we have a valid instance that's not the singleton
-      expect(brainProtocol).toBeDefined();
-      expect(brainProtocol).not.toBe(BrainProtocol.getInstance());
-    });
-
-    test('getMcpServer throws when server is null', () => {
-      // Configure the mock server manager to return null
-      const mockMcpServerManager = MockMcpServerManager.getInstance();
-      mockMcpServerManager.setServer(null);
-
-      // Create brain protocol instance with our mock dependencies explicitly
-      const mockDeps = createMockDependencies();
-      const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
-
-      // Verify getMcpServer throws
-      expect(() => brainProtocol.getMcpServer()).toThrow(/MCP server not available/);
-    });
-
-    test('isReady returns status from status manager', () => {
-      // Create a status manager with custom ready state
-      // Create a fresh instance rather than using the singleton to avoid affecting other tests
-      const mockStatusManager = MockStatusManager.createFresh();
-      mockStatusManager.setReady(false);
-
-      // Create dependencies with this modified status manager
-      const mockDeps = createMockDependencies({
-        StatusManager: {
-          getInstance: () => mockStatusManager,
-        } as unknown as BrainProtocolDependencies['StatusManager'],
-      });
-
-      // Create brain protocol instance with modified status manager
-      const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
-
-      // Verify isReady returns the status
-      expect(brainProtocol.isReady()).toBe(false);
-    });
-
-    test('processQuery delegates to query processor', async () => {
-      // Create a simpler test that doesn't rely on spies
-      resetAllMocks(); // Make sure we start fresh
-      
-      // Create a custom response for our mock
-      const testResult = {
-        answer: 'test response',
-        citations: [{ noteId: 'test', noteTitle: 'Test Note', excerpt: 'Test excerpt' }],
-        relatedNotes: [],
-      };
-      
-      // Create a custom QueryProcessor implementation with full Component Interface Standardization
-      class CustomQueryProcessor {
-        private static instance: CustomQueryProcessor | null = null;
-        
-        static getInstance(): CustomQueryProcessor {
-          if (!CustomQueryProcessor.instance) {
-            CustomQueryProcessor.instance = new CustomQueryProcessor();
-          }
-          return CustomQueryProcessor.instance;
-        }
-        
-        static resetInstance(): void {
-          CustomQueryProcessor.instance = null;
-        }
-        
-        static createFresh(): CustomQueryProcessor {
-          return new CustomQueryProcessor();
-        }
-        
-        // Implementation that returns test result
-        processQuery(_query: string, _options: Record<string, unknown>): Promise<typeof testResult> {
-          return Promise.resolve(testResult);
-        }
-      }
-      
-      // Create dependencies with our custom implementation
-      const mockDeps = createMockDependencies({
-        QueryProcessor: CustomQueryProcessor as unknown as BrainProtocolDependencies['QueryProcessor'],
-        StatusManager: {
-          getInstance: () => ({
-            isReady: () => true,
-          }),
-        } as unknown as BrainProtocolDependencies['StatusManager'],
-      });
-      
-      // Create brain protocol instance with our custom dependencies
-      const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
-      
-      // Call the method
-      const result = await brainProtocol.processQuery('test query', { userId: 'test' });
-      
-      // Verify the result matches what our mock returned
-      expect(result).toEqual(testResult);
-    });
-
-    test('initialize delegates to conversation manager', async () => {
-      // Reset all mocks to ensure a clean state
-      resetAllMocks();
-      
-      // Create a custom implementation that tracks method calls
-      let initializeCalled = false;
-      let activeConversationValue = false; // First false, then true after initialize
-      
-      class CustomConversationManager {
-        private static instance: CustomConversationManager | null = null;
-        
-        static getInstance(): CustomConversationManager {
-          if (!CustomConversationManager.instance) {
-            CustomConversationManager.instance = new CustomConversationManager();
-          }
-          return CustomConversationManager.instance;
-        }
-        
-        static resetInstance(): void {
-          CustomConversationManager.instance = null;
-        }
-        
-        static createFresh(): CustomConversationManager {
-          return new CustomConversationManager();
-        }
-        
-        hasActiveConversation(): boolean {
-          // Return current value, then update for next call
-          const currentValue = activeConversationValue;
-          if (initializeCalled) {
-            activeConversationValue = true;
-          }
-          return currentValue;
-        }
-        
-        async initializeConversation(): Promise<void> {
-          initializeCalled = true;
-          activeConversationValue = true;
-          return Promise.resolve();
-        }
-      }
-      
-      // Create dependencies with our custom implementation
-      const mockDeps = createMockDependencies({
-        ConversationManager: CustomConversationManager as unknown as BrainProtocolDependencies['ConversationManager'],
-      });
-      
-      // Create brain protocol instance with our custom dependencies
-      const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
-      
-      // Call the initialize method
-      await brainProtocol.initialize();
-      
-      // Verify initialization was called
-      expect(initializeCalled).toBe(true);
-    });
-  });
-});

@@ -9,7 +9,6 @@ import {
 } from '@/protocol/core/brainProtocolIntegrated';
 import { MockConfigurationManager } from '@test/__mocks__/protocol/core/configurationManager';
 import { MockContextOrchestrator } from '@test/__mocks__/protocol/core/contextOrchestrator';
-import { MockContextOrchestratorExtended } from '@test/__mocks__/protocol/core/contextOrchestratorExtended';
 import { MockFeatureCoordinator } from '@test/__mocks__/protocol/core/featureCoordinator';
 import { MockMcpServerManager } from '@test/__mocks__/protocol/core/mcpServerManager';
 import { MockStatusManager } from '@test/__mocks__/protocol/core/statusManager';
@@ -24,7 +23,6 @@ describe('BrainProtocolIntegrated', () => {
     BrainProtocolIntegrated.resetInstance();
     MockConfigurationManager.resetInstance();
     MockContextOrchestrator.resetInstance();
-    MockContextOrchestratorExtended.resetInstance();
     MockContextMediator.resetInstance();
     MockContextIntegrator.resetInstance();
     MockMcpServerManager.resetInstance();
@@ -39,7 +37,6 @@ describe('BrainProtocolIntegrated', () => {
     BrainProtocolIntegrated.resetInstance();
     MockConfigurationManager.resetInstance();
     MockContextOrchestrator.resetInstance();
-    MockContextOrchestratorExtended.resetInstance();
     MockContextMediator.resetInstance();
     MockContextIntegrator.resetInstance();
     MockMcpServerManager.resetInstance();
@@ -54,7 +51,6 @@ describe('BrainProtocolIntegrated', () => {
     const mockDependencies = {
       ConfigManager: MockConfigurationManager,
       ContextOrchestrator: MockContextOrchestrator,
-      ContextOrchestratorExtended: MockContextOrchestratorExtended,
       ContextMediator: MockContextMediator,
       ContextIntegrator: MockContextIntegrator,
       McpServerManager: MockMcpServerManager,

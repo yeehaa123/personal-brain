@@ -1,6 +1,7 @@
 import { mock } from 'bun:test';
 
 import type { AstroContentService } from '@/contexts/website/services/astroContentService';
+import type { DeploymentEnvironment, WebsiteDeploymentManager } from '@/contexts/website/services/deployment/deploymentManager';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
 import type { LandingPageData, WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
 // Import the mock implementations from the contexts/website/services directory
@@ -146,6 +147,25 @@ export class MockWebsiteContext {
 
   getLandingPageGenerationService(): LandingPageGenerationService {
     return this.mockLandingPageGenerationService as unknown as LandingPageGenerationService;
+  }
+  
+  async getDeploymentManager(): Promise<WebsiteDeploymentManager> {
+    return {
+      getEnvironmentStatus: async (environment: DeploymentEnvironment) => ({
+        environment,
+        buildStatus: 'Built' as const,
+        fileCount: 42,
+        serverStatus: 'Running' as const,
+        domain: environment === 'preview' ? 'preview.example.com' : 'example.com',
+        accessStatus: 'Accessible',
+        url: `https://${environment === 'preview' ? 'preview.example.com' : 'example.com'}`,
+      }),
+      promoteToProduction: async () => ({
+        success: true,
+        message: 'Preview successfully promoted to production',
+        url: 'https://example.com',
+      }),
+    };
   }
 
   // New methods for bot-controlled website deployment

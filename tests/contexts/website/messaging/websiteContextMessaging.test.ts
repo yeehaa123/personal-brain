@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { WebsiteContext } from '@/contexts/website';
 import { WebsiteContextMessaging } from '@/contexts/website/messaging/websiteContextMessaging';
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextMediator';
 

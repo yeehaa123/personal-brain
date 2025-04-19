@@ -6,7 +6,7 @@
  */
 
 import type { Profile } from '@/models/profile';
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 

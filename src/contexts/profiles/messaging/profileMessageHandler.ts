@@ -6,7 +6,7 @@
  * cross-context messaging system.
  */
 
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { DataRequestType, MessageFactory, NotificationType } from '@/protocol/messaging';
 import type { ContextCommunicationMessage, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';

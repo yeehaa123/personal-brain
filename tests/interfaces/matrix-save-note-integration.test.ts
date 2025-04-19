@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { BrainProtocol } from '@/protocol/core/brainProtocol';
+import { BrainProtocol } from '@/protocol/brainProtocol'; // Using the alias from brainProtocol.ts
 import { CommandHandler } from '@commands/index';
 import { setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 

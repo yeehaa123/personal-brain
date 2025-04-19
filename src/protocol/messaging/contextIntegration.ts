@@ -8,7 +8,7 @@
 
 import { Logger } from '@/utils/logger';
 
-import { ContextId } from '../core/contextOrchestratorExtended';
+import { ContextId } from '../core/contextOrchestrator';
 
 import type { ContextMediator } from './contextMediator';
 import { MessageFactory } from './messageFactory';

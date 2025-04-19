@@ -16,7 +16,7 @@ import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSour
 import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
-import { MockContextOrchestratorExtended } from '@test/__mocks__/protocol/core/contextOrchestratorExtended';
+import { MockContextOrchestrator } from '@test/__mocks__/protocol/core/contextOrchestrator';
 import { MockContextIntegrator } from '@test/__mocks__/protocol/messaging/contextIntegrator';
 import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextMediator';
 
@@ -29,7 +29,7 @@ describe('Cross-Context Messaging Integration', () => {
     MockConversationContext.resetInstance();
     MockExternalSourceContext.resetInstance();
     MockWebsiteContext.resetInstance();
-    MockContextOrchestratorExtended.resetInstance();
+    MockContextOrchestrator.resetInstance();
     MockContextMediator.resetInstance();
     MockContextIntegrator.resetInstance();
     
@@ -56,27 +56,15 @@ describe('Cross-Context Messaging Integration', () => {
         }),
       },
       ContextOrchestrator: {
-        getInstance: () => ({
-          areContextsReady: () => true,
-          getContextManager: () => ({}),
-          getNoteContext: () => noteContext,
-          getProfileContext: () => profileContext,
-          getConversationContext: () => conversationContext,
-          getExternalSourceContext: () => externalSourceContext,
-          getWebsiteContext: () => websiteContext,
-          getExternalSourcesEnabled: () => true,
-          setExternalSourcesEnabled: () => {},
-        }),
-      },
-      ContextOrchestratorExtended: {
-        getInstance: () => MockContextOrchestratorExtended.getInstance({
+        getInstance: () => MockContextOrchestrator.getInstance({
           noteContext,
           profileContext,
           conversationContext,
           externalSourceContext,
           websiteContext,
           mediator: contextMediator,
-        }) as unknown as typeof MockContextOrchestratorExtended,
+          config: { useExternalSources: true },
+        }) as unknown as typeof MockContextOrchestrator,
       },
       ContextMediator: {
         getInstance: () => contextMediator,
@@ -139,7 +127,7 @@ describe('Cross-Context Messaging Integration', () => {
     MockConversationContext.resetInstance();
     MockExternalSourceContext.resetInstance();
     MockWebsiteContext.resetInstance();
-    MockContextOrchestratorExtended.resetInstance();
+    MockContextOrchestrator.resetInstance();
     MockContextMediator.resetInstance();
     MockContextIntegrator.resetInstance();
   });

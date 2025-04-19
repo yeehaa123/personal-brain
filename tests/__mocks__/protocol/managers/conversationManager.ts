@@ -4,6 +4,8 @@
  * Follows the Component Interface Standardization pattern with
  * getInstance(), resetInstance(), and createFresh()
  */
+import { mock } from 'bun:test';
+
 import type { ConversationContext } from '@/contexts';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { IConversationManager } from '@/protocol/types';
@@ -71,9 +73,9 @@ export class MockConversationManager implements IConversationManager {
     this.currentConversationId = `mock-conversation-${roomId}`;
   }
 
-  async initializeConversation(): Promise<void> {
+  initializeConversation = mock(async () => {
     this.hasActive = true;
-  }
+  });
 
   hasActiveConversation(): boolean {
     return this.hasActive;

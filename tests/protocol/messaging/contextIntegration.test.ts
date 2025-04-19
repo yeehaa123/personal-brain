@@ -3,7 +3,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import { ContextId } from '@/protocol/core/contextOrchestratorExtended';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { 
   ContextMediator, 
   DataRequestType, 
