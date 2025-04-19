@@ -11,7 +11,6 @@
  */
 
 import { getEnv } from '@/utils/configUtils';
-import { DependencyContainer } from '@/utils/dependencyContainer';
 import { Logger } from '@/utils/logger';
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
@@ -21,10 +20,6 @@ import type {
   ExternalSourceResult,
 } from '../sources';
 import { NewsApiSource, WikipediaSource } from '../sources';
-
-// Constants for service identification in the DI container
-const SERVICE_WIKIPEDIA = 'external.source.wikipedia';
-const SERVICE_NEWSAPI = 'external.source.newsapi';
 
 /**
  * Cache item for storing retrieved results
@@ -80,9 +75,6 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
   /** Cache for storing search results */
   private sourceCache: Map<string, CacheItem> = new Map();
   
-  /** Dependency injection container */
-  private diContainer: DependencyContainer = DependencyContainer.getInstance();
-
   /**
    * Options with defaults
    */
@@ -143,42 +135,18 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    * @private
    */
   private initializeSources(): void {
-    // Helper function to avoid duplicate registrations
-    const registerIfNeeded = (
-      serviceId: string,
-      factory: () => unknown,
-      singleton = true,
-    ) => {
-      // Only register if not already registered
-      if (!this.diContainer.has(serviceId)) {
-        this.diContainer.register(serviceId, () => factory(), singleton);
-      }
-    };
+    // Create and register Wikipedia source
+    const wikipediaSource = WikipediaSource.getInstance(this.options.apiKey);
+    this.registerSource(wikipediaSource);
 
-    // Register Wikipedia source using singleton pattern
-    registerIfNeeded(
-      SERVICE_WIKIPEDIA,
-      () => WikipediaSource.getInstance(this.options.apiKey),
-    );
-
-    // Register NewsAPI source if key is provided
+    // Create and register NewsAPI source if key is provided
     if (this.options.newsApiKey) {
-      registerIfNeeded(
-        SERVICE_NEWSAPI,
-        () => NewsApiSource.getInstance(this.options.newsApiKey, this.options.apiKey),
+      const newsApiSource = NewsApiSource.getInstance(
+        this.options.newsApiKey, 
+        this.options.apiKey,
       );
-
-      if (!this.diContainer.has(SERVICE_NEWSAPI)) {
-        this.logger.debug('NewsAPI source registered in container', { context: 'ExternalSourceStorage' });
-      }
-    }
-
-    // Register available sources from container
-    this.registerSource(this.diContainer.resolve(SERVICE_WIKIPEDIA) as ExternalSourceInterface);
-
-    // Register NewsAPI source if available
-    if (this.diContainer.has(SERVICE_NEWSAPI)) {
-      this.registerSource(this.diContainer.resolve(SERVICE_NEWSAPI) as ExternalSourceInterface);
+      this.registerSource(newsApiSource);
+      this.logger.debug('NewsAPI source registered', { context: 'ExternalSourceStorage' });
     }
   }
 

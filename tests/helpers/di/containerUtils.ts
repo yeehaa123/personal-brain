@@ -6,36 +6,27 @@
  */
 import { afterAll, beforeAll } from 'bun:test';
 
-import { DependencyContainer } from '@/utils/dependencyContainer';
+import { SimpleContainer } from '@/utils/registry';
 
 import { mockFetch } from '../outputUtils';
 
 /**
- * Manage the dependency container for tests
+ * Manage a test container for unit tests
  * This ensures clean isolation between test suites that use DI
  */
-export function setupDependencyContainer(): { cleanup: () => void } {
-  // Store the original instance
-  const originalInstance = DependencyContainer.getInstance();
-  
+export function setupDependencyContainer(): { 
+  container: SimpleContainer;
+  cleanup: () => void; 
+  } {
   // Create a fresh container for this test suite
-  const testContainer = DependencyContainer.createFresh();
-  
-  // Temporarily replace the singleton with our test container
-  DependencyContainer.resetInstance();
-  // Using type assertion for testing purposes only
-  (DependencyContainer as unknown as { instance: DependencyContainer }).instance = testContainer;
+  const testContainer = new SimpleContainer();
   
   return {
-    // Provide cleanup that restores the original container and clears the test container
+    container: testContainer,
+    // Provide cleanup that clears the test container
     cleanup: () => {
       // Clear the test container
       testContainer.clear();
-      
-      // Restore the original instance
-      DependencyContainer.resetInstance();
-      // Using type assertion for testing purposes only
-      (DependencyContainer as unknown as { instance: DependencyContainer }).instance = originalInstance;
     },
   };
 }
@@ -46,31 +37,42 @@ export function setupDependencyContainer(): { cleanup: () => void } {
  */
 export function setupDITestSuite(
   options: { mockFetch?: boolean } = { mockFetch: true },
-): void {
-  let diCleanup: (() => void) | null = null;
+): { container: SimpleContainer } {
+  let diContainer: SimpleContainer | null = null;
   let fetchCleanup: (() => void) | null = null;
   
   // Use hooks from bun:test
   beforeAll(() => {
     // Setup dependency container isolation
-    const container = setupDependencyContainer();
-    diCleanup = container.cleanup;
+    const { container, cleanup } = setupDependencyContainer();
+    diContainer = container;
     
     // Setup fetch mocking if requested
     if (options.mockFetch) {
       const [restoreFn] = mockFetch();
       fetchCleanup = restoreFn;
     }
+    
+    // Ensure cleanup runs after the test suite
+    afterAll(() => {
+      // Clean up in reverse order
+      if (fetchCleanup) {
+        fetchCleanup();
+      }
+      
+      if (cleanup) {
+        cleanup();
+      }
+    });
   });
   
-  afterAll(() => {
-    // Clean up in reverse order
-    if (fetchCleanup) {
-      fetchCleanup();
-    }
-    
-    if (diCleanup) {
-      diCleanup();
-    }
-  });
+  return {
+    // Expose the container to test suites
+    get container(): SimpleContainer {
+      if (!diContainer) {
+        throw new Error('Container not initialized. Make sure to use this within a test suite.');
+      }
+      return diContainer;
+    },
+  };
 }

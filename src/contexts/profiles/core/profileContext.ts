@@ -21,9 +21,7 @@ import type {
   ProfileSearchService,
   ProfileTagService,
 } from '@/services/profiles';
-import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { DependencyContainer } from '@/utils/dependencyContainer';
-import { getService } from '@/utils/dependencyContainer';
+import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
@@ -61,15 +59,9 @@ export class ProfileContext extends BaseContext {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
-  // Dependencies
-  private repository: ProfileRepository;
-  private embeddingService: ProfileEmbeddingService;
-  private tagService: ProfileTagService;
-  private searchService: ProfileSearchService;
-  private formatter: ProfileFormatter;
-  
-  // Storage adapter
+  // Storage adapter and formatter
   private storage: StorageInterface<Profile>;
+  private formatter: ProfileFormatter;
   
   // Optional note context for related note operations
   private noteContext?: NoteContext;
@@ -85,7 +77,7 @@ export class ProfileContext extends BaseContext {
    */
   static override getInstance(options: ProfileContextConfig = {}): ProfileContext {
     if (!ProfileContext.instance) {
-      ProfileContext.instance = new ProfileContext(options);
+      ProfileContext.instance = ProfileContext.createWithDependencies(options);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileContext singleton instance created');
@@ -123,27 +115,51 @@ export class ProfileContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileContext instance');
     
-    return new ProfileContext(options);
+    return ProfileContext.createWithDependencies(options);
   }
 
   /**
-   * Constructor for ProfileContext
+   * Factory method for creating an instance with dependencies from ServiceRegistry
    * 
-   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
-   * @param config Configuration for the context
+   * @param config Configuration options
+   * @returns A new ProfileContext instance with resolved dependencies
    */
-  constructor(config: ProfileContextConfig = {}) {
+  public static createWithDependencies(config: ProfileContextConfig = {}): ProfileContext {
+    const serviceRegistry = ServiceRegistry.getInstance({
+      apiKey: config.apiKey,
+    });
+    
+    const repository = serviceRegistry.getProfileRepository() as ProfileRepository;
+    const embeddingService = serviceRegistry.getProfileEmbeddingService() as ProfileEmbeddingService; 
+    const tagService = serviceRegistry.getProfileTagService();
+    const searchService = serviceRegistry.getProfileSearchService() as ProfileSearchService;
+    
+    return new ProfileContext(
+      config,
+      repository,
+      embeddingService,
+      tagService,
+      searchService,
+    );
+  }
+
+  /**
+   * Constructor for ProfileContext with explicit dependency injection
+   * 
+   * @param config Configuration for the context
+   * @param repository Profile repository instance
+   * @param embeddingService Profile embedding service instance
+   * @param tagService Profile tag service instance
+   * @param searchService Profile search service instance
+   */
+  constructor(
+    config: ProfileContextConfig,
+    private readonly repository: ProfileRepository,
+    private readonly embeddingService: ProfileEmbeddingService,
+    private readonly tagService: ProfileTagService, 
+    private readonly searchService: ProfileSearchService,
+  ) {
     super(config as Record<string, unknown>);
-    
-    // Register services in the container
-    const container = DependencyContainer.getInstance();
-    registerServices(container, { apiKey: config.apiKey });
-    
-    // Resolve dependencies from container
-    this.repository = getService<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
-    this.embeddingService = getService<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
-    this.tagService = getService<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-    this.searchService = getService<ProfileSearchService>(ServiceIdentifiers.ProfileSearchService);
     
     // Initialize storage adapter
     this.storage = new ProfileStorageAdapter(this.repository);
@@ -151,7 +167,7 @@ export class ProfileContext extends BaseContext {
     // Initialize formatter
     this.formatter = new ProfileFormatter();
     
-    this.logger.debug('ProfileContext initialized with BaseContext architecture', { context: 'ProfileContext' });
+    this.logger.debug('ProfileContext initialized with dependency injection', { context: 'ProfileContext' });
   }
 
   /**

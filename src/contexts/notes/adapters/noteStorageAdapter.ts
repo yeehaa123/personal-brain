@@ -12,7 +12,7 @@
 
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
-import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
+import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
@@ -36,7 +36,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
    * @param repository Optional repository to use (useful for testing)
    */
   constructor(repository?: NoteRepository) {
-    this.repository = repository || getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
+    this.repository = repository || ServiceRegistry.getInstance().getNoteRepository() as NoteRepository;
   }
   
   /**

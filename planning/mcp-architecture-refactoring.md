@@ -66,6 +66,11 @@ This flattening will be integrated with the phases outlined below. We'll maintai
 - ✅ **Phase 1: Resource Layer Reorganization** - Created ResourceRegistry and moved AI services to resources layer 
 - ✅ **Phase 3: BrainProtocol Decomposition** - Implemented ContextOrchestrator, StatusManager, and FeatureCoordinator
 - ✅ **Command Interface Integration** - CLI and Matrix commands for website management
+- ✅ **Phase 6B: Context Dependency Injection** - Implemented dependency injection pattern for multiple contexts:
+  - ✅ NoteContext - Refactored to use explicit dependency injection
+  - ✅ ProfileContext - Converted to use dependency injection pattern
+  - ✅ ConversationContext - Refactored with explicit dependencies
+  - ✅ ExternalSourceContext - Implemented dependency injection pattern
 
 ### In Progress
 - ⏳ **Phase 4: Cross-Context Communication** - Establishing patterns for standardized cross-context communication
@@ -91,6 +96,7 @@ This flattening will be integrated with the phases outlined below. We'll maintai
   - Flatten remaining overly nested directories
   - Simplify interfaces by removing redundant methods
   - Consolidate similar functionality across contexts
+  - Complete remaining dependency injection implementations for all contexts
   - Standardize ResourceRegistry and ServiceRegistry implementations
     - Unify registry pattern (class-based following Component Interface Standardization)
     - Clear separation between resource types (external AI, databases) and services
@@ -101,6 +107,7 @@ This flattening will be integrated with the phases outlined below. We'll maintai
 
 ### Recently Completed
 - ✅ **Phase 2: Protocol Layer Organization** - Implemented protocol formatters, converters, adapters, and message routing components
+- ✅ **Context Dependency Injection Pattern** - Implemented dependency injection for NoteContext, ProfileContext, ConversationContext, and ExternalSourceContext
 
 ## Current Architecture Analysis
 
@@ -354,6 +361,114 @@ This flattening will be integrated with the phases outlined below. We'll maintai
    - More intuitive architecture
    - Better testability
 
+## Dependency Injection Implementation
+
+### Phase 6B: Context Decoupling with Dependency Injection
+
+As part of the Phase 6 "Codebase Diet" efforts, we will implement a comprehensive dependency injection approach to decouple contexts from registry implementations. This will reduce tight coupling, improve testability, and eliminate the need for global mocks in tests.
+
+#### Current Problems
+
+1. **Tight Coupling**: Context classes directly instantiate and use registries with direct constructor calls
+2. **Global State Dependency**: Contexts rely on singleton instances, making isolated testing difficult
+3. **Brittle Tests**: Most tests require global mocks or registry reset operations
+4. **Unclear Dependencies**: Dependencies are hidden inside constructors rather than explicitly declared
+
+#### Solution: Pure Dependency Injection
+
+We will implement a pure dependency injection approach without backward compatibility fallbacks:
+
+1. **Explicit Dependencies**: Context constructors will require their dependencies as parameters
+2. **No Fallbacks**: No auto-resolution of dependencies, all dependencies must be provided
+3. **Factory Methods**: Factory methods for creating instances with resolved dependencies
+4. **Clear Interfaces**: Use of interface types instead of concrete implementations
+
+#### Implementation Pattern
+
+```typescript
+export class NoteContext extends BaseContext {
+  // Singleton instance
+  private static instance: NoteContext | null = null;
+  
+  // Pure constructor with explicit dependencies
+  constructor(
+    config: NoteContextConfig,
+    private repository: NoteRepository,
+    private embeddingService: NoteEmbeddingService,
+    private searchService: NoteSearchService
+  ) {
+    super(config);
+    
+    // Initialize storage adapter
+    this.storage = new NoteStorageAdapter(this.repository);
+  }
+  
+  // Factory method for dependency resolution
+  public static createWithDependencies(config: NoteContextConfig = {}): NoteContext {
+    const serviceRegistry = ServiceRegistry.getInstance({
+      apiKey: config.apiKey
+    });
+    
+    return new NoteContext(
+      config,
+      serviceRegistry.getNoteRepository(),
+      serviceRegistry.getNoteEmbeddingService(),
+      serviceRegistry.getNoteSearchService()
+    );
+  }
+  
+  // Use factory method in getInstance
+  static override getInstance(options?: NoteContextConfig): NoteContext {
+    if (!NoteContext.instance) {
+      NoteContext.instance = NoteContext.createWithDependencies(options);
+    }
+    
+    return NoteContext.instance;
+  }
+  
+  // Methods remain unchanged
+  // ...
+}
+```
+
+#### Testing Benefits
+
+With this approach, tests become much simpler:
+
+```typescript
+// Testing with directly provided mock dependencies
+test('NoteContext with explicit dependencies', () => {
+  // Create mock dependencies
+  const repository = MockNoteRepository.createFresh();
+  const embeddingService = MockNoteEmbeddingService.createFresh();
+  const searchService = MockNoteSearchService.createFresh();
+  
+  // Create context with explicit dependencies
+  const context = new NoteContext(
+    { name: 'Test' },
+    repository,
+    embeddingService,
+    searchService
+  );
+  
+  // Test context with controlled dependencies
+  // No need to reset global state
+  // No interference with other tests
+});
+```
+
+#### Implementation Strategy
+
+1. **Update BaseContext**: Ensure BaseContext supports dependency injection
+2. **Apply to One Context**: Implement in NoteContext first as a prototype
+3. **Test with Real Use Cases**: Verify it works in actual code paths
+4. **Standardize Pattern**: Document the pattern and apply to all contexts
+5. **Update Tests**: Convert existing tests to use explicit dependencies
+
+#### Timeline
+
+This work will be done as part of Phase 6 "Codebase Diet" following the other registry standardization work.
+
 ## Risk Assessment and Mitigation
 
 | Risk | Impact | Likelihood | Mitigation |
@@ -364,6 +479,7 @@ This flattening will be integrated with the phases outlined below. We'll maintai
 | Scope creep | High | High | Strict phase boundaries, regular progress reviews |
 | MVP timeline impact | High | Medium | Align refactoring with related MVP tasks, prioritize phases |
 | MCP Inspector compatibility | Medium | Medium | Test integration at each phase with MCP tools |
+| Dependency injection disruption | Medium | Medium | Start with isolated contexts, thorough testing suite |
 
 ## Implementation Dependencies
 

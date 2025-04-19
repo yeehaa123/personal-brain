@@ -9,8 +9,100 @@
  * and lifecycle management.
  */
 
-import type { DependencyContainer } from './dependencyContainer';
 import { Logger } from './logger';
+
+/**
+ * Type for a factory function that creates a service instance
+ */
+export type ServiceFactory<T = unknown> = (container: SimpleContainer) => T;
+
+/**
+ * Configuration for a service registration
+ */
+export interface ServiceConfig<T = unknown> {
+  factory: ServiceFactory<T>;
+  singleton?: boolean;
+}
+
+/**
+ * Simple container implementation to replace DependencyContainer
+ * Provides the same interface but with a simplified implementation
+ */
+export class SimpleContainer {
+  private services = new Map<string, ServiceConfig<unknown>>();
+  private instances = new Map<string, unknown>();
+  private logger: Logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Register a service with the container
+   * @param name Unique service identifier
+   * @param factory Factory function to create the service
+   * @param singleton Whether to create only one instance (default: true)
+   */
+  register<T>(name: string, factory: ServiceFactory<T>, singleton = true): void {
+    if (this.services.has(name)) {
+      this.logger.warn(`Service '${name}' is already registered. Overwriting previous registration.`);
+    }
+    this.services.set(name, { factory, singleton });
+    // Clear instance if service is re-registered
+    this.instances.delete(name);
+  }
+
+  /**
+   * Get a service instance from the container
+   * @param name Service identifier
+   * @returns Service instance
+   * @throws Error if service is not registered
+   */
+  resolve<T>(name: string): T {
+    const serviceConfig = this.services.get(name);
+    
+    if (!serviceConfig) {
+      throw new Error(`Service '${name}' is not registered in the container`);
+    }
+    
+    // For singletons, return the cached instance if available
+    if (serviceConfig.singleton && this.instances.has(name)) {
+      return this.instances.get(name) as T;
+    }
+    
+    // Create a new instance
+    const instance = serviceConfig.factory(this);
+    
+    // Cache the instance if it's a singleton
+    if (serviceConfig.singleton) {
+      this.instances.set(name, instance);
+    }
+    
+    return instance as T;
+  }
+
+  /**
+   * Check if a service is registered
+   * @param name Service identifier
+   * @returns True if service is registered
+   */
+  has(name: string): boolean {
+    return this.services.has(name);
+  }
+
+  /**
+   * Remove a service registration
+   * @param name Service identifier
+   */
+  unregister(name: string): void {
+    this.services.delete(name);
+    this.instances.delete(name);
+  }
+
+  /**
+   * Clear all service registrations and instances
+   */
+  clear(): void {
+    this.services.clear();
+    this.instances.clear();
+  }
+}
 
 /**
  * Basic options for Registry configuration
@@ -27,10 +119,10 @@ export interface RegistryOptions {
   silent?: boolean;
   
   /**
-   * Optional dependency container to use
+   * Optional container to use
    * If not provided, each Registry will create its own container
    */
-  container?: DependencyContainer;
+  container?: SimpleContainer;
   
   /**
    * Additional configuration properties
@@ -42,7 +134,7 @@ export interface RegistryOptions {
  * Registry factory function type
  * Used to create registry entries with proper dependency injection
  */
-export type RegistryFactory<T = any> = (container: DependencyContainer) => T;
+export type RegistryFactory<T = unknown> = (container: SimpleContainer) => T;
 
 /**
  * Abstract base class for all registries
@@ -76,7 +168,7 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   /**
    * Internal container for dependency management
    */
-  protected container: DependencyContainer;
+  protected container: SimpleContainer;
   
   /**
    * Protected constructor to enforce singleton pattern
@@ -93,10 +185,12 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   }
   
   /**
-   * Abstract method to create internal container
-   * Allows derived classes to use different container implementations
+   * Create a new SimpleContainer instance
+   * Override this method if you need a different container implementation
    */
-  protected abstract createContainer(): DependencyContainer;
+  protected createContainer(): SimpleContainer {
+    return new SimpleContainer();
+  }
   
   /**
    * Registers a component in the registry
@@ -120,7 +214,7 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * @param id Unique identifier for the component
    * @returns The resolved component
    */
-  public resolve<T = any>(id: string): T {
+  public resolve<T = unknown>(id: string): T {
     return this.container.resolve<T>(id);
   }
   

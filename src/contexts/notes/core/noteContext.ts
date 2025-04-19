@@ -20,9 +20,7 @@ import type {
   NoteSearchService,
 } from '@/services/notes';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
-import { registerServices, ServiceIdentifiers } from '@/services/serviceRegistry';
-import { DependencyContainer } from '@/utils/dependencyContainer';
-import { getService } from '@/utils/dependencyContainer';
+import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
@@ -58,11 +56,6 @@ export class NoteContext extends BaseContext {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
-  // Dependencies
-  private repository: NoteRepository;
-  private embeddingService: NoteEmbeddingService;
-  private searchService: NoteSearchService;
-  
   // Storage adapter
   private storage: StorageInterface<Note>;
   
@@ -77,12 +70,15 @@ export class NoteContext extends BaseContext {
    */
   static override getInstance(options?: NoteContextConfig | string): NoteContext {
     if (!NoteContext.instance) {
-      // Handle legacy string-only API key parameter
+      // Convert string config to object if needed
+      let config: NoteContextConfig = {};
       if (typeof options === 'string') {
-        options = { apiKey: options };
+        config = { apiKey: options };
+      } else if (options) {
+        config = options;
       }
       
-      NoteContext.instance = new NoteContext(options);
+      NoteContext.instance = NoteContext.createWithDependencies(config);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('NoteContext singleton instance created');
@@ -120,36 +116,56 @@ export class NoteContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh NoteContext instance');
     
-    return new NoteContext(options);
+    // Convert string config to object if needed
+    let config: NoteContextConfig = {};
+    if (typeof options === 'string') {
+      config = { apiKey: options };
+    } else if (options) {
+      config = options;
+    }
+    
+    return NoteContext.createWithDependencies(config);
+  }
+  
+  /**
+   * Factory method for creating an instance with dependencies from ServiceRegistry
+   * 
+   * @param config Configuration options
+   * @returns A new NoteContext instance with resolved dependencies
+   */
+  public static createWithDependencies(config: NoteContextConfig = {}): NoteContext {
+    const serviceRegistry = ServiceRegistry.getInstance({
+      apiKey: config.apiKey,
+    });
+    
+    return new NoteContext(
+      config,
+      serviceRegistry.getNoteRepository() as NoteRepository,
+      serviceRegistry.getNoteEmbeddingService() as NoteEmbeddingService,
+      serviceRegistry.getNoteSearchService() as NoteSearchService,
+    );
   }
 
   /**
-   * Constructor for NoteContext
+   * Constructor for NoteContext with explicit dependency injection
    * 
-   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
-   * @param config Configuration or API key for the context
+   * @param config Configuration for the context
+   * @param repository Note repository instance
+   * @param embeddingService Note embedding service instance
+   * @param searchService Note search service instance
    */
-  constructor(config?: NoteContextConfig | string) {
-    // Handle legacy string-only API key parameter
-    if (typeof config === 'string') {
-      config = { apiKey: config };
-    }
-    
+  constructor(
+    config: NoteContextConfig,
+    private readonly repository: NoteRepository,
+    private readonly embeddingService: NoteEmbeddingService,
+    private readonly searchService: NoteSearchService,
+  ) {
     super(config as Record<string, unknown>);
-    
-    // Register services in the container
-    const container = DependencyContainer.getInstance();
-    registerServices(container, { apiKey: config?.apiKey });
-    
-    // Resolve dependencies from container
-    this.repository = getService<NoteRepository>(ServiceIdentifiers.NoteRepository);
-    this.embeddingService = getService<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
-    this.searchService = getService<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
     
     // Initialize storage adapter
     this.storage = new NoteStorageAdapter(this.repository);
     
-    this.logger.debug('NoteContext initialized with BaseContext architecture', { context: 'NoteContext' });
+    this.logger.debug('NoteContext initialized with dependency injection', { context: 'NoteContext' });
   }
 
   /**

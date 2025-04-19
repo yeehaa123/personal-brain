@@ -2,23 +2,16 @@
  * Tests for the refactored ProfileContext using BaseContext
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ProfileContext } from '@/contexts';
 import type { Profile } from '@/models/profile';
+import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
+import type { ProfileRepository } from '@/services/profiles/profileRepository';
+import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
+import type { ProfileTagService } from '@/services/profiles/profileTagService';
 import { silenceLogger } from '@test/__mocks__';
 import logger from '@utils/logger';
-
-// Mock the dependency container and service registry functions
-mock.module('@/services/serviceRegistry', () => ({
-  registerServices: mock(() => {}),
-  ServiceIdentifiers: {
-    ProfileRepository: 'ProfileRepository',
-    ProfileEmbeddingService: 'ProfileEmbeddingService',
-    ProfileTagService: 'ProfileTagService',
-    ProfileSearchService: 'ProfileSearchService',
-  },
-}));
 
 // Mock profile for testing
 const mockProfile: Profile = {
@@ -53,129 +46,179 @@ const mockProfile: Profile = {
 };
 
 // Create mock services
-const createMockServices = () => {
-  return {
-    ProfileRepository: {
-      getProfile: mock(() => Promise.resolve(mockProfile)),
-      insertProfile: mock((profile: Profile) => Promise.resolve(profile.id || 'new-id')),
-      updateProfile: mock(() => Promise.resolve(true)),
-      deleteProfile: mock(() => Promise.resolve(true)),
-    },
-    ProfileEmbeddingService: {
-      generateEmbedding: mock(() => Promise.resolve([0.1, 0.2, 0.3])),
-      getProfileTextForEmbedding: mock(() => 'Profile text for embedding'),
-      shouldRegenerateEmbedding: mock(() => true),
-      generateEmbeddingForProfile: mock(() => Promise.resolve({ updated: true })),
-    },
-    ProfileTagService: {
-      generateProfileTags: mock(() => Promise.resolve(['developer', 'typescript'])),
-      updateProfileTags: mock(() => Promise.resolve(['developer', 'typescript'])),
-      extractProfileKeywords: mock(() => ['developer', 'typescript']),
-    },
-    ProfileSearchService: {
-      findRelatedNotes: mock(() => Promise.resolve([{ id: 'note-1', similarity: 0.8 }])),
-      findNotesWithSimilarTags: mock(() => Promise.resolve([{ id: 'note-2', similarity: 0.7 }])),
-    },
-  };
+const mockProfileRepository = {
+  getProfile: mock(() => Promise.resolve(mockProfile)),
+  insertProfile: mock((profile: Profile) => Promise.resolve(profile.id || 'new-id')),
+  updateProfile: mock(() => Promise.resolve(true)),
+  deleteProfile: mock(() => Promise.resolve(true)),
 };
 
-// Mock dependency container
-mock.module('@/utils/dependencyContainer', () => {
-  const mockServices = createMockServices();
-  
-  return {
-    getContainer: mock(() => ({
-      register: mock(() => {}),
-      resolve: mock(() => {}),
-    })),
-    getService: mock((serviceId: string) => {
-      return mockServices[serviceId as keyof typeof mockServices];
-    }),
-  };
-});
+const mockProfileEmbeddingService = {
+  generateEmbedding: mock(() => Promise.resolve([0.1, 0.2, 0.3])),
+  getProfileTextForEmbedding: mock(() => 'Profile text for embedding'),
+  shouldRegenerateEmbedding: mock(() => true),
+  generateEmbeddingForProfile: mock(() => Promise.resolve({ updated: true })),
+};
+
+const mockProfileTagService = {
+  generateProfileTags: mock(() => Promise.resolve(['developer', 'typescript'])),
+  updateProfileTags: mock(() => Promise.resolve(['developer', 'typescript'])),
+  extractProfileKeywords: mock(() => ['developer', 'typescript']),
+};
+
+const mockProfileSearchService = {
+  findRelatedNotes: mock(() => Promise.resolve([{ id: 'note-1', similarity: 0.8 }])),
+  findNotesWithSimilarTags: mock(() => Promise.resolve([{ id: 'note-2', similarity: 0.7 }])),
+};
 
 describe('ProfileContext', () => {
   // Mock the logger to prevent output in tests
   silenceLogger(logger);
   
-  // In Bun we can't do automatic cleanup, but we could do manual cleanup in each test if needed
+  // Create a new context for each test with direct dependency injection
+  let profileContext: ProfileContext;
   
-  // Note: In Bun, we need to manually reset in each test
-  
-  test('getInstance should return a singleton instance', () => {
-    // Ensure ProfileContext is completely reset
+  beforeEach(() => {
+    // Reset the singleton instance first
     ProfileContext.resetInstance();
     
-    // Create a fresh instance and capture it
-    const instance1 = ProfileContext.getInstance();
+    // Create a fresh context with directly injected dependencies
+    profileContext = new ProfileContext(
+      { apiKey: 'mock-api-key' },
+      mockProfileRepository as unknown as ProfileRepository,
+      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+      mockProfileTagService as unknown as ProfileTagService,
+      mockProfileSearchService as unknown as ProfileSearchService,
+    );
+  });
+  
+  test('getInstance should return a singleton instance', () => {
+    // We'll need to patch the createWithDependencies method temporarily for testing singleton
+    const origCreateWithDependencies = ProfileContext.createWithDependencies;
+    ProfileContext.createWithDependencies = mock(() => {
+      return new ProfileContext(
+        { apiKey: 'test-api-key' },
+        mockProfileRepository as unknown as ProfileRepository,
+        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        mockProfileTagService as unknown as ProfileTagService,
+        mockProfileSearchService as unknown as ProfileSearchService,
+      );
+    });
     
-    // Get the instance again - should be the same object reference
-    const instance2 = ProfileContext.getInstance();
-    
-    // Compare directly using strict equality
-    expect(instance1 === instance2).toBe(true);
+    try {
+      // Create a fresh instance and capture it
+      const instance1 = ProfileContext.getInstance();
+      
+      // Get the instance again - should be the same object reference
+      const instance2 = ProfileContext.getInstance();
+      
+      // Compare directly using strict equality
+      expect(instance1 === instance2).toBe(true);
+    } finally {
+      // Restore original implementation
+      ProfileContext.createWithDependencies = origCreateWithDependencies;
+    }
   });
   
   test('createFresh should return a new instance', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const instance1 = ProfileContext.getInstance();
-    const instance2 = ProfileContext.createFresh();
+    // We'll need to patch the createWithDependencies method temporarily for testing
+    const origCreateWithDependencies = ProfileContext.createWithDependencies;
+    ProfileContext.createWithDependencies = mock(() => {
+      return new ProfileContext(
+        { apiKey: 'test-api-key' },
+        mockProfileRepository as unknown as ProfileRepository,
+        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        mockProfileTagService as unknown as ProfileTagService,
+        mockProfileSearchService as unknown as ProfileSearchService,
+      );
+    });
     
-    expect(instance1).not.toBe(instance2);
+    try {
+      const instance1 = ProfileContext.getInstance();
+      const instance2 = ProfileContext.createFresh();
+      
+      expect(instance1).not.toBe(instance2);
+    } finally {
+      // Restore original implementation
+      ProfileContext.createWithDependencies = origCreateWithDependencies;
+    }
   });
   
   test('resetInstance should clear the singleton instance', () => {
-    // Reset the singleton instance first
-    ProfileContext.resetInstance();
-    const instance1 = ProfileContext.getInstance();
-    ProfileContext.resetInstance();
-    const instance2 = ProfileContext.getInstance();
+    // We'll need to patch the createWithDependencies method temporarily for testing
+    const origCreateWithDependencies = ProfileContext.createWithDependencies;
+    ProfileContext.createWithDependencies = mock(() => {
+      return new ProfileContext(
+        { apiKey: 'test-api-key' },
+        mockProfileRepository as unknown as ProfileRepository,
+        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        mockProfileTagService as unknown as ProfileTagService,
+        mockProfileSearchService as unknown as ProfileSearchService,
+      );
+    });
     
-    expect(instance1).not.toBe(instance2);
+    try {
+      // Get first instance
+      const instance1 = ProfileContext.getInstance();
+      
+      // Reset the singleton instance
+      ProfileContext.resetInstance();
+      
+      // Get a new instance - should be different
+      const instance2 = ProfileContext.getInstance();
+      
+      expect(instance1).not.toBe(instance2);
+    } finally {
+      // Restore original implementation
+      ProfileContext.createWithDependencies = origCreateWithDependencies;
+    }
   });
   
   test('getContextName should return the configured name or default', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const defaultContext = ProfileContext.createFresh();
-    const namedContext = ProfileContext.createFresh({ name: 'CustomProfile' });
+    // Test the instance created in beforeEach (default name)
+    expect(profileContext.getContextName()).toBe('ProfileBrain');
     
-    expect(defaultContext.getContextName()).toBe('ProfileBrain');
+    // Create a context with a custom name
+    const namedContext = new ProfileContext(
+      { name: 'CustomProfile' },
+      mockProfileRepository as unknown as ProfileRepository,
+      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+      mockProfileTagService as unknown as ProfileTagService,
+      mockProfileSearchService as unknown as ProfileSearchService,
+    );
+    
     expect(namedContext.getContextName()).toBe('CustomProfile');
   });
   
   test('getContextVersion should return the configured version or default', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const defaultContext = ProfileContext.createFresh();
-    const versionedContext = ProfileContext.createFresh({ version: '2.0.0' });
+    // Test the instance created in beforeEach (default version)
+    expect(profileContext.getContextVersion()).toBe('1.0.0');
     
-    expect(defaultContext.getContextVersion()).toBe('1.0.0');
+    // Create a context with a custom version
+    const versionedContext = new ProfileContext(
+      { version: '2.0.0' },
+      mockProfileRepository as unknown as ProfileRepository,
+      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+      mockProfileTagService as unknown as ProfileTagService,
+      mockProfileSearchService as unknown as ProfileSearchService,
+    );
+    
     expect(versionedContext.getContextVersion()).toBe('2.0.0');
   });
   
   test('initialize should set readyState to true', async () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
     // Initial state should be not ready
-    expect(context.isReady()).toBe(false);
+    expect(profileContext.isReady()).toBe(false);
     
     // Initialize the context
-    await context.initialize();
+    await profileContext.initialize();
     
     // Context should now be ready
-    expect(context.isReady()).toBe(true);
+    expect(profileContext.isReady()).toBe(true);
   });
   
   test('getStatus should return correct status object', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
-    const status = context.getStatus();
+    const status = profileContext.getStatus();
     expect(status).toEqual({
       name: 'ProfileBrain',
       version: '1.0.0',
@@ -186,21 +229,12 @@ describe('ProfileContext', () => {
   });
   
   test('getProfile should retrieve the user profile', async () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
-    const profile = await context.getProfile();
-    
+    const profile = await profileContext.getProfile();
     expect(profile).toEqual(mockProfile);
   });
   
   test('saveProfile should create a new profile', async () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
-    const id = await context.saveProfile({
+    const id = await profileContext.saveProfile({
       fullName: 'New User',
       headline: 'New Developer',
     });
@@ -209,49 +243,32 @@ describe('ProfileContext', () => {
   });
   
   test('updateProfile should update an existing profile', async () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
-    await context.updateProfile({
+    await profileContext.updateProfile({
       fullName: 'Updated Name',
     });
     
-    // Ensure the storage.update was called
-    // We can't easily check this directly with the mocks, but we can
-    // verify that no error was thrown
+    // Verify the mock was called
+    expect(mockProfileRepository.updateProfile).toHaveBeenCalled();
   });
   
   test('setNoteContext and getNoteContext should work correctly', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
     const mockNoteContext = { 
       getStatus: () => ({ ready: true }),
       searchNotesWithEmbedding: mock(() => Promise.resolve([])),
       searchNotes: mock(() => Promise.resolve([])),
     };
     
-    context.setNoteContext(mockNoteContext);
-    
-    expect(context.getNoteContext()).toBe(mockNoteContext);
+    profileContext.setNoteContext(mockNoteContext);
+    expect(profileContext.getNoteContext()).toBe(mockNoteContext);
   });
   
   test('extractProfileKeywords should call tagService', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
-    const keywords = context.extractProfileKeywords(mockProfile);
-    
+    const keywords = profileContext.extractProfileKeywords(mockProfile);
     expect(keywords).toEqual(['developer', 'typescript']);
+    expect(mockProfileTagService.extractProfileKeywords).toHaveBeenCalled();
   });
   
   test('registerOnServer should register resources and tools', () => {
-    // Reset the singleton instance
-    ProfileContext.resetInstance();
-    const context = ProfileContext.createFresh();
-    
     // Create a mock server
     const mockServer = {
       resource: mock(() => {}),
@@ -259,9 +276,11 @@ describe('ProfileContext', () => {
     } as unknown as McpServer;
     
     // Register on the server
-    const result = context.registerOnServer(mockServer);
+    const result = profileContext.registerOnServer(mockServer);
     
     // Check the result
     expect(result).toBe(true);
+    expect(mockServer.resource).toHaveBeenCalled();
+    expect(mockServer.tool).toHaveBeenCalled();
   });
 });

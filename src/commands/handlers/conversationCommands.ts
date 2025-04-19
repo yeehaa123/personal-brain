@@ -12,7 +12,7 @@ import type { NoteContext } from '@/mcpServer';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import type { IBrainProtocol } from '@/protocol/types';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
-import { DependencyContainer } from '@/utils/dependencyContainer';
+import { ServiceRegistry } from '@/services/serviceRegistry';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
@@ -313,10 +313,10 @@ export class ConversationCommandHandler extends BaseCommandHandler {
    * Get or create the ConversationToNoteService
    */
   private getConversationToNoteService(): ConversationToNoteService {
-    const serviceRegistry = DependencyContainer.getInstance();
+    const serviceRegistry = ServiceRegistry.getInstance();
     
-    if (serviceRegistry.isRegistered('conversationToNoteService')) {
-      return serviceRegistry.resolve('conversationToNoteService');
+    if (serviceRegistry.has('conversationToNoteService')) {
+      return serviceRegistry.resolve<ConversationToNoteService>('conversationToNoteService');
     } else {
       // Create the service with required dependencies
       const noteRepository = this.noteContext.getNoteRepository();
@@ -330,7 +330,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       );
       
       // Register for future use
-      serviceRegistry.register('conversationToNoteService', () => conversationToNoteService, true);
+      serviceRegistry.register('conversationToNoteService', () => conversationToNoteService);
       return conversationToNoteService;
     }
   }

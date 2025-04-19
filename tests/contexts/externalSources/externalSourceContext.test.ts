@@ -2,66 +2,51 @@
  * Tests for ExternalSourceContext
  * 
  * This test suite focuses on testing the ExternalSourceContext class in isolation,
- * with all dependencies properly mocked.
+ * using direct dependency injection for mocked dependencies.
  */
 
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ExternalSourceContext } from '@/contexts';
-import { ExternalSourceStorageAdapter } from '@/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import type { ExternalSourceContextConfig } from '@/contexts/externalSources/core/externalSourceContext';
 import type { ExternalSourceInterface } from '@/contexts/externalSources/sources/externalSourceInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
-import { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
-
-// Mock dependencies with spies
 
 // Suppress logs in tests
 const origLoggerWarn = Logger.getInstance().warn;
 Logger.getInstance().warn = mock(() => {});
 
-// Create mock for EmbeddingService
-const mockEmbeddingService = {
-  getEmbedding: mock(() => Promise.resolve({ embedding: [0.1, 0.2, 0.3] })),
-  cosineSimilarity: mock(() => 0.85),
-};
-
-// Spy on the getInstance method
-const origEmbeddingServiceGetInstance = EmbeddingService.getInstance;
-const embeddingServiceGetInstanceSpy = mock<typeof EmbeddingService.getInstance>(() => mockEmbeddingService as unknown as EmbeddingService);
-
-// Mock the storage adapter's getInstance method
-const origStorageAdapterGetInstance = ExternalSourceStorageAdapter.getInstance;
-const mockStorageAdapter = MockExternalSourceStorageAdapter.createFresh();
-const storageAdapterGetInstanceSpy = mock<typeof ExternalSourceStorageAdapter.getInstance>(() => mockStorageAdapter as unknown as ExternalSourceStorageAdapter);
-
 describe('ExternalSourceContext', () => {
+  // Create mock dependencies directly
+  let mockStorageAdapter: MockExternalSourceStorageAdapter;
+  let mockEmbeddingService: MockEmbeddingService;
+  
   // Set up before each test to ensure isolation
   beforeEach(() => {
     // Set up environment
     setMockEnv();
     
-    // Install spies/mocks
-    EmbeddingService.getInstance = embeddingServiceGetInstanceSpy;
-    ExternalSourceStorageAdapter.getInstance = storageAdapterGetInstanceSpy;
-    
-    // Reset instances
-    mockStorageAdapter.setMockResults([]);
-    MockExternalSourceStorageAdapter.resetInstance();
+    // Reset any instances
     ExternalSourceContext.resetInstance();
+    MockEmbeddingService.resetInstance();
+    
+    // Create fresh mock dependencies for each test
+    mockStorageAdapter = MockExternalSourceStorageAdapter.createFresh();
+    mockEmbeddingService = MockEmbeddingService.createFresh();
+    
+    // Add spies to the embedding service methods we'll use
+    mockEmbeddingService.getEmbedding = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
+    mockEmbeddingService.cosineSimilarity = mock(() => 0.85);
   });
   
   // Clean up after each test
   afterEach(() => {
     // Reset all instances to avoid test interference
-    MockExternalSourceStorageAdapter.resetInstance();
     ExternalSourceContext.resetInstance();
-    
-    // Restore original implementations
-    EmbeddingService.getInstance = origEmbeddingServiceGetInstance;
-    ExternalSourceStorageAdapter.getInstance = origStorageAdapterGetInstance;
     
     // Clean up environment
     clearMockEnv();
@@ -74,46 +59,98 @@ describe('ExternalSourceContext', () => {
   });
   
   test('should initialize with proper configuration', () => {
-    // Create a fresh instance
-    const context = ExternalSourceContext.createFresh({
-      apiKey: 'test-api-key',
-      newsApiKey: 'test-news-api-key',
-      name: 'TestContext',
-      version: '2.0.0',
-    });
+    // Create a context instance with direct dependency injection
+    const context = new ExternalSourceContext(
+      {
+        name: 'TestContext',
+        version: '2.0.0',
+        apiKey: 'test-api-key',
+        newsApiKey: 'test-news-api-key',
+      },
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Check context name and version
     expect(context.getContextName()).toBe('TestContext');
     expect(context.getContextVersion()).toBe('2.0.0');
-    
-    // Verify our mocks were called
-    expect(storageAdapterGetInstanceSpy).toHaveBeenCalled();
-    expect(embeddingServiceGetInstanceSpy).toHaveBeenCalled();
   });
   
   test('should handle singleton pattern correctly', () => {
-    // Reset instance to ensure clean test
-    ExternalSourceContext.resetInstance();
-    
-    // Get the first instance
-    const instance1 = ExternalSourceContext.getInstance({
-      apiKey: 'test-api-key',
+    // We'll need to patch the createWithDependencies method temporarily for testing singleton
+    const origCreateWithDependencies = ExternalSourceContext.createWithDependencies;
+    ExternalSourceContext.createWithDependencies = mock(() => {
+      return new ExternalSourceContext(
+        { apiKey: 'test-api-key' },
+        mockStorageAdapter,
+        mockEmbeddingService,
+      );
     });
     
-    // Get another instance without config - should be the same object
-    const instance2 = ExternalSourceContext.getInstance();
+    try {
+      // Reset instance to ensure clean test
+      ExternalSourceContext.resetInstance();
+      
+      // Get the first instance
+      const instance1 = ExternalSourceContext.getInstance({
+        apiKey: 'test-api-key',
+      });
+      
+      // Get another instance without config - should be the same object
+      const instance2 = ExternalSourceContext.getInstance();
+      
+      // They should be the same instance
+      expect(instance1).toBe(instance2);
+      
+      // Reset the instance
+      ExternalSourceContext.resetInstance();
+      
+      // Get a new instance after reset
+      const instance3 = ExternalSourceContext.getInstance();
+      
+      // Should be a different instance
+      expect(instance1).not.toBe(instance3);
+    } finally {
+      // Restore original implementation
+      ExternalSourceContext.createWithDependencies = origCreateWithDependencies;
+    }
+  });
+  
+  test('createWithDependencies should create an instance with proper dependencies', async () => {
+    // Import the actual dependencies to test the factory method
+    // Use dynamic imports instead of require()
+    const EmbeddingModule = await import('@/resources/ai/embedding');
+    const AdapterModule = await import('@/contexts/externalSources/adapters/externalSourceStorageAdapter');
     
-    // They should be the same instance
-    expect(instance1).toBe(instance2);
+    const EmbeddingService = EmbeddingModule.EmbeddingService;
+    const ExternalSourceStorageAdapter = AdapterModule.ExternalSourceStorageAdapter;
     
-    // Reset the instance
-    ExternalSourceContext.resetInstance();
+    // Mock the getInstance methods for the duration of this test
+    const origEmbeddingServiceGetInstance = EmbeddingService.getInstance;
+    const origStorageAdapterGetInstance = ExternalSourceStorageAdapter.getInstance;
     
-    // Get a new instance after reset
-    const instance3 = ExternalSourceContext.getInstance();
-    
-    // Should be a different instance
-    expect(instance1).not.toBe(instance3);
+    try {
+      // Set up spies on getInstance methods
+      EmbeddingService.getInstance = mock(() => mockEmbeddingService);
+      ExternalSourceStorageAdapter.getInstance = mock(() => mockStorageAdapter);
+      
+      // Call the factory method
+      const context = ExternalSourceContext.createWithDependencies({
+        apiKey: 'test-api-key',
+        name: 'FactoryTest',
+      });
+      
+      // Verify the context was created with proper config
+      expect(context.getContextName()).toBe('FactoryTest');
+      
+      // Verify the factory methods were called
+      expect(EmbeddingService.getInstance).toHaveBeenCalled();
+      expect(ExternalSourceStorageAdapter.getInstance).toHaveBeenCalled();
+    } finally {
+      // Restore original implementations
+      EmbeddingService.getInstance = origEmbeddingServiceGetInstance;
+      ExternalSourceStorageAdapter.getInstance = origStorageAdapterGetInstance;
+    }
   });
   
   test('should register a custom source', () => {
@@ -121,8 +158,12 @@ describe('ExternalSourceContext', () => {
     const registerSourceMock = mock(() => {});
     mockStorageAdapter.registerSource = registerSourceMock;
     
-    // Create a context with mock storage
-    const context = ExternalSourceContext.createFresh();
+    // Create a context with direct dependency injection
+    const context = new ExternalSourceContext(
+      { name: 'TestContext' },
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Create a mock custom source
     const mockSource: ExternalSourceInterface = {
@@ -166,8 +207,12 @@ describe('ExternalSourceContext', () => {
     const searchSpy = mock((_criteria) => Promise.resolve(mockResults));
     mockStorageAdapter.search = searchSpy;
     
-    // Create a context with our mocked storage
-    const context = ExternalSourceContext.createFresh();
+    // Create a context with direct dependency injection
+    const context = new ExternalSourceContext(
+      {} as ExternalSourceContextConfig,
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Perform a search
     const results = await context.search('test query');
@@ -215,8 +260,12 @@ describe('ExternalSourceContext', () => {
     const searchSpy = mock(() => Promise.resolve(mockResults));
     mockStorageAdapter.search = searchSpy;
     
-    // Create a context with our mocked dependencies
-    const context = ExternalSourceContext.createFresh();
+    // Create a context with direct dependency injection
+    const context = new ExternalSourceContext(
+      {} as ExternalSourceContextConfig,
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Perform a semantic search
     const results = await context.semanticSearch('test query', 2);
@@ -251,8 +300,12 @@ describe('ExternalSourceContext', () => {
     const checkAvailabilitySpy = mock(() => Promise.resolve(availabilityResult));
     mockStorageAdapter.checkSourcesAvailability = checkAvailabilitySpy;
     
-    // Create a context with our mocked storage
-    const context = ExternalSourceContext.createFresh();
+    // Create a context with direct dependency injection
+    const context = new ExternalSourceContext(
+      {} as ExternalSourceContextConfig,
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Check sources availability
     const availability = await context.checkSourcesAvailability();
@@ -288,8 +341,12 @@ describe('ExternalSourceContext', () => {
     const getEnabledSourcesSpy = mock(() => mockSources);
     mockStorageAdapter.getEnabledSources = getEnabledSourcesSpy;
     
-    // Create a context with our mocked storage
-    const context = ExternalSourceContext.createFresh();
+    // Create a context with direct dependency injection
+    const context = new ExternalSourceContext(
+      {} as ExternalSourceContextConfig,
+      mockStorageAdapter,
+      mockEmbeddingService,
+    );
     
     // Get enabled sources
     const enabledSources = context.getEnabledSources();

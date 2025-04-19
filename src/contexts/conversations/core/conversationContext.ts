@@ -33,7 +33,7 @@ import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorag
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
-import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
+// No need to import ServiceRegistry anymore
 import { Logger } from '@/utils/logger';
 
 /**
@@ -122,24 +122,7 @@ export class ConversationContext extends BaseContext {
   declare protected config: Record<string, unknown>;
   protected contextConfig: Required<ConversationContextConfig>;
 
-  /**
-   * Storage adapter for conversations
-   */
-  private storageAdapter: ConversationStorageAdapter;
-
-  /**
-   * Formatters for output
-   */
-  private formatter: ConversationFormatter;
-  private mcpFormatter: ConversationMcpFormatter;
-
-  /**
-   * Services
-   */
-  private resourceService: ConversationResourceService;
-  private toolService: ConversationToolService;
-  private queryService: ConversationQueryService;
-  private memoryService: ConversationMemoryService;
+  // Properties are declared in the constructor with private readonly modifiers
 
   /**
    * Get the singleton instance of ConversationContext
@@ -149,7 +132,7 @@ export class ConversationContext extends BaseContext {
    */
   static override getInstance(options: Record<string, unknown> = {}): ConversationContext {
     if (!ConversationContext.instance) {
-      ConversationContext.instance = new ConversationContext(options as ConversationContextConfig);
+      ConversationContext.instance = ConversationContext.createWithDependencies(options as ConversationContextConfig);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ConversationContext singleton instance created');
@@ -187,7 +170,7 @@ export class ConversationContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ConversationContext instance');
     
-    return new ConversationContext(options as ConversationContextConfig);
+    return ConversationContext.createWithDependencies(options as ConversationContextConfig);
   }
 
   /**
@@ -202,22 +185,18 @@ export class ConversationContext extends BaseContext {
   }
 
   /**
-   * Private constructor to enforce the use of getInstance() or createFresh()
+   * Factory method for creating an instance with dependencies from ServiceRegistry
+   * 
    * @param config Configuration options
+   * @returns A new ConversationContext instance with resolved dependencies
    */
-  private constructor(config: ConversationContextConfig = {}) {
-    // Extract values before calling super
+  public static createWithDependencies(config: ConversationContextConfig = {}): ConversationContext {
+    // Extract values for use in config preparation
     const name = config.name || 'ConversationBrain';
     const version = config.version || '1.0.0';
-
-    // Call super first with the name and version
-    super({
-      name,
-      version,
-    } as Record<string, unknown>);
-
-    // Now initialize the full config object with defaults
-    this.contextConfig = {
+    
+    // Prepare full configuration with defaults
+    const fullConfig: Required<ConversationContextConfig> = {
       name,
       version,
       storage: config.storage || InMemoryStorage.getInstance(),
@@ -232,60 +211,90 @@ export class ConversationContext extends BaseContext {
     
     // Handle backwards compatibility with old config format
     if ('anchorName' in config) {
-      this.contextConfig.display.anchorName = config.anchorName as string || 'Host';
+      fullConfig.display.anchorName = config.anchorName as string || 'Host';
     }
     if ('anchorId' in config) {
-      this.contextConfig.display.anchorId = config.anchorId as string || '';
+      fullConfig.display.anchorId = config.anchorId as string || '';
     }
     if ('defaultUserName' in config) {
-      this.contextConfig.display.defaultUserName = config.defaultUserName as string || 'User';
+      fullConfig.display.defaultUserName = config.defaultUserName as string || 'User';
     }
     if ('defaultUserId' in config) {
-      this.contextConfig.display.defaultUserId = config.defaultUserId as string || '';
+      fullConfig.display.defaultUserId = config.defaultUserId as string || '';
     }
+    
+    // We don't need the service registry anymore since we're creating components directly
+    
+    // Create storage adapter instance
+    const storageAdapter = ConversationStorageAdapter.getInstance(
+      fullConfig.storage || InMemoryStorage.getInstance(),
+    );
+    
+    // Create service instances
+    const formatter = ConversationFormatter.getInstance();
+    const mcpFormatter = ConversationMcpFormatter.getInstance();
+    const resourceService = ConversationResourceService.getInstance();
+    const toolService = ConversationToolService.getInstance();
+    const queryService = ConversationQueryService.getInstance(storageAdapter);
+    const memoryService = ConversationMemoryService.getInstance(
+      storageAdapter,
+      fullConfig.tieredMemoryConfig,
+    );
+    
+    // Create context with dependencies
+    return new ConversationContext(
+      fullConfig,
+      storageAdapter,
+      formatter,
+      mcpFormatter,
+      resourceService,
+      toolService,
+      queryService,
+      memoryService,
+    );
+  }
+  
+  /**
+   * Constructor for ConversationContext with explicit dependency injection
+   * 
+   * @param config Configuration options
+   * @param storageAdapter Storage adapter
+   * @param formatter Conversation formatter
+   * @param mcpFormatter MCP formatter
+   * @param resourceService Resource service
+   * @param toolService Tool service
+   * @param queryService Query service
+   * @param memoryService Memory service
+   */
+  constructor(
+    config: Required<ConversationContextConfig>,
+    private readonly storageAdapter: ConversationStorageAdapter,
+    private readonly formatter: ConversationFormatter,
+    private readonly mcpFormatter: ConversationMcpFormatter,
+    private readonly resourceService: ConversationResourceService,
+    private readonly toolService: ConversationToolService,
+    private readonly queryService: ConversationQueryService,
+    private readonly memoryService: ConversationMemoryService,
+  ) {
+    // Call super first with the name and version
+    super({
+      name: config.name,
+      version: config.version,
+    } as Record<string, unknown>);
 
-    // Get services from dependency injection container
-    try {
-      // Get all required services from the container
-      this.storageAdapter = getService<ConversationStorageAdapter>(ServiceIdentifiers.ConversationStorageAdapter);
-      this.formatter = getService<ConversationFormatter>(ServiceIdentifiers.ConversationFormatter);
-      this.mcpFormatter = getService<ConversationMcpFormatter>(ServiceIdentifiers.ConversationMcpFormatter);
-      this.resourceService = getService<ConversationResourceService>(ServiceIdentifiers.ConversationResourceService);
-      this.toolService = getService<ConversationToolService>(ServiceIdentifiers.ConversationToolService);
-      this.queryService = getService<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
-      this.memoryService = getService<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
-      
-      // If tieredMemoryConfig is provided, update the memory service configuration
-      if (Object.keys(this.contextConfig.tieredMemoryConfig).length > 0) {
-        this.memoryService.updateConfig(this.contextConfig.tieredMemoryConfig);
-      }
-    } catch (error) {
-      // Fall back to direct instantiation if DI fails
-      this.logger.warn('Failed to resolve services via DI, falling back to direct instantiation', {
-        context: 'ConversationContext',
-        error,
-      });
-      
-      // Create services directly as a fallback
-      this.storageAdapter = ConversationStorageAdapter.getInstance(
-        this.contextConfig.storage || InMemoryStorage.getInstance(),
-      );
-      this.formatter = ConversationFormatter.getInstance();
-      this.mcpFormatter = ConversationMcpFormatter.getInstance();
-      this.resourceService = ConversationResourceService.getInstance();
-      this.toolService = ConversationToolService.getInstance();
-      this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
-      this.memoryService = ConversationMemoryService.getInstance(
-        this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig,
-      );
+    // Store the full config
+    this.contextConfig = config;
+    
+    // If tieredMemoryConfig is provided, update the memory service configuration
+    if (Object.keys(this.contextConfig.tieredMemoryConfig).length > 0) {
+      this.memoryService.updateConfig(this.contextConfig.tieredMemoryConfig);
     }
 
     // Now that services are initialized, set resources and tools
     this.resources = this.resourceService.getResources(this);
     this.tools = this.toolService.getTools(this);
 
-    this.logger.debug('ConversationContext initialized with BaseContext architecture and services', {
+    this.logger.debug('ConversationContext initialized with dependency injection', {
       context: 'ConversationContext',
     });
   }
@@ -383,69 +392,28 @@ export class ConversationContext extends BaseContext {
    * @param storage The new storage adapter
    */
   setStorage(storage: ConversationStorageAdapter): void {
-    this.storageAdapter = storage;
+    // Use assignment with type assertion to modify the readonly property for internal use
+    (this.storageAdapter as ConversationStorageAdapter) = storage;
     
-    try {
-      // Get the container instance from the imported registry - using dynamic import to avoid circular deps
-      import('@/utils/dependencyContainer').then(module => {
-        const container = module.DependencyContainer.getInstance();
-        
-        // Try to update the storage adapter in the container
-        if (container.has(ServiceIdentifiers.ConversationStorageAdapter)) {
-          container.unregister(ServiceIdentifiers.ConversationStorageAdapter);
-          container.register(ServiceIdentifiers.ConversationStorageAdapter, () => storage);
-          
-          // Recreate services that depend on the storage adapter
-          this.queryService = getService<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
-          this.memoryService = getService<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
-          
-          // Update resources and tools with new services
-          this.resources = this.resourceService.getResources(this);
-          this.tools = this.toolService.getTools(this);
-        } else {
-          // Fall back to direct instantiation
-          this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
-          this.memoryService = ConversationMemoryService.getInstance(
-            this.storageAdapter,
-            this.contextConfig.tieredMemoryConfig,
-          );
-          
-          // Update resources and tools with new services
-          this.resources = this.resourceService.getResources(this);
-          this.tools = this.toolService.getTools(this);
-        }
-      }).catch(_error => {
-        // Fall back to direct instantiation if dynamic import fails
-        this.logger.warn('Failed to update DI container, falling back to direct instantiation', { 
-          context: 'ConversationContext', 
-        });
-        
-        this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
-        this.memoryService = ConversationMemoryService.getInstance(
-          this.storageAdapter,
-          this.contextConfig.tieredMemoryConfig,
-        );
-        
-        // Refresh MCP components
-        this.resources = this.resourceService.getResources(this);
-        this.tools = this.toolService.getTools(this);
-      });
-    } catch (_error) {
-      // Fall back to direct instantiation if DI fails
-      this.logger.warn('Error in setStorage, falling back to direct instantiation', {
-        context: 'ConversationContext',
-      });
-      
-      this.queryService = ConversationQueryService.getInstance(this.storageAdapter);
-      this.memoryService = ConversationMemoryService.getInstance(
-        this.storageAdapter,
-        this.contextConfig.tieredMemoryConfig,
-      );
-      
-      // Refresh MCP components
-      this.resources = this.resourceService.getResources(this);
-      this.tools = this.toolService.getTools(this);
+    // Create new services that depend on the storage adapter
+    (this.queryService as ConversationQueryService) = ConversationQueryService.getInstance(storage);
+    (this.memoryService as ConversationMemoryService) = ConversationMemoryService.getInstance(
+      storage,
+      this.contextConfig.tieredMemoryConfig,
+    );
+    
+    // Update memory service config if needed
+    if (Object.keys(this.contextConfig.tieredMemoryConfig).length > 0) {
+      this.memoryService.updateConfig(this.contextConfig.tieredMemoryConfig);
     }
+    
+    // Refresh MCP components
+    this.resources = this.resourceService.getResources(this);
+    this.tools = this.toolService.getTools(this);
+    
+    this.logger.debug('Storage adapter updated with direct dependency injection', {
+      context: 'ConversationContext',
+    });
   }
 
   /**

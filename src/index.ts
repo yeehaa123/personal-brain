@@ -11,7 +11,7 @@ async function main() {
     logger.info('Welcome to your Personal Brain!', { context: 'Main' });
 
     // Initialize the context manager
-    const context = new NoteContext();
+    const context = NoteContext.createWithDependencies();
 
     // Fetch all notes from the database
     const allNotes = await context.searchNotes({ limit: 100 });

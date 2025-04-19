@@ -8,6 +8,8 @@
  * - getInstance(): Returns the singleton instance 
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * 
+ * Uses the Dependency Injection pattern to improve testability and reduce coupling.
  */
 
 import { z } from 'zod';
@@ -52,12 +54,6 @@ export class ExternalSourceContext extends BaseContext {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
-  // Dependencies
-  private embeddingService: EmbeddingService;
-  
-  // Storage adapter
-  private storage: ExternalSourceStorageAdapter;
-  
   // Singleton instance
   private static instance: ExternalSourceContext | null = null;
   
@@ -69,7 +65,7 @@ export class ExternalSourceContext extends BaseContext {
    */
   static override getInstance(options: Record<string, unknown> = {}): ExternalSourceContext {
     if (!ExternalSourceContext.instance) {
-      ExternalSourceContext.instance = new ExternalSourceContext(options as ExternalSourceContextConfig);
+      ExternalSourceContext.instance = ExternalSourceContext.createWithDependencies(options as ExternalSourceContextConfig);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ExternalSourceContext singleton instance created');
@@ -107,20 +103,18 @@ export class ExternalSourceContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ExternalSourceContext instance');
     
-    return new ExternalSourceContext(options as ExternalSourceContextConfig);
+    return ExternalSourceContext.createWithDependencies(options as ExternalSourceContextConfig);
   }
-
+  
   /**
-   * Constructor for ExternalSourceContext
+   * Factory method that resolves dependencies and creates a new instance
    * 
-   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
-   * @param config Configuration for the context
+   * @param config Configuration options
+   * @returns A new ExternalSourceContext instance with resolved dependencies
    */
-  constructor(config: ExternalSourceContextConfig = {}) {
-    super(config as Record<string, unknown>);
-    
-    // Initialize storage adapter
-    this.storage = ExternalSourceStorageAdapter.getInstance({
+  public static createWithDependencies(config: ExternalSourceContextConfig = {}): ExternalSourceContext {
+    // Create instances of required dependencies
+    const storageAdapter = ExternalSourceStorageAdapter.getInstance({
       apiKey: config.apiKey,
       newsApiKey: config.newsApiKey,
       enabledSources: config.enabledSources,
@@ -128,9 +122,33 @@ export class ExternalSourceContext extends BaseContext {
       cacheTtl: config.cacheTtl,
     });
     
-    // Initialize embedding service
-    this.embeddingService = EmbeddingService.getInstance({ apiKey: config.apiKey });
+    // Use the imported EmbeddingService class
+    const embeddingService = EmbeddingService.getInstance({ 
+      apiKey: config.apiKey, 
+    });
     
+    // Create and return context with explicit dependencies
+    return new ExternalSourceContext(
+      config,
+      storageAdapter,
+      embeddingService,
+    );
+  }
+
+  /**
+   * Constructor for ExternalSourceContext
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
+   * @param config Configuration for the context
+   * @param storage External source storage adapter
+   * @param embeddingService Service for generating and comparing embeddings
+   */
+  constructor(
+    config: ExternalSourceContextConfig = {}, 
+    private readonly storage: ExternalSourceStorageAdapter,
+    private readonly embeddingService: EmbeddingService,
+  ) {
+    super(config as Record<string, unknown>);
     this.logger.debug('ExternalSourceContext initialized with BaseContext architecture', { context: 'ExternalSourceContext' });
   }
 

@@ -11,7 +11,7 @@ export class ProfileImporter {
   private profileContext: ProfileContext;
 
   constructor() {
-    this.profileContext = new ProfileContext();
+    this.profileContext = ProfileContext.createWithDependencies();
   }
 
   /**

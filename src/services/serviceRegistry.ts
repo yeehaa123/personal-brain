@@ -1,10 +1,15 @@
 /**
- * Service registry for dependency injection
- * Centralized registration of all application services
+ * Service Registry - Central access point for internal services
  * 
- * @deprecated Use UnifiedServiceRegistry from @/utils/unifiedServiceRegistry instead.
- * This module is kept for backward compatibility during the transition period.
+ * This module provides a centralized registry for accessing internal services
+ * such as repositories, embedding services, search services, and more.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
+
 import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
 import { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
@@ -14,10 +19,8 @@ import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorag
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import { DependencyContainer } from '@/utils/dependencyContainer';
-import type { ServiceFactory } from '@/utils/dependencyContainer';
-import { Logger } from '@/utils/logger';
-import { ServiceIdentifiers as UnifiedServiceIdentifiers } from '@/utils/unifiedServiceRegistry';
+import { ResourceRegistry } from '@/resources/resourceRegistry';
+import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
 import type { IRepository } from './interfaces/IRepository';
@@ -30,168 +33,361 @@ import { ProfileRepository } from './profiles/profileRepository';
 import { ProfileSearchService } from './profiles/profileSearchService';
 import { ProfileTagService } from './profiles/profileTagService';
 
+/**
+ * ServiceRegistry configuration options
+ */
+export interface ServiceRegistryOptions extends RegistryOptions {
+  /** Optional ResourceRegistry instance to use */
+  resourceRegistry?: ResourceRegistry;
+  /** API key for services that require it */
+  apiKey?: string;
+}
 
 /**
  * Service identifier constants for consistent naming
- * @deprecated Use ServiceIdentifiers from @/utils/unifiedServiceRegistry instead
  */
-export const ServiceIdentifiers = UnifiedServiceIdentifiers;
-
-// Track if services have been registered to avoid duplicate logs
-let servicesRegistered = false;
-
-// Logger instance for service registry operations
-const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+export const ServiceIdentifiers = {
+  // Repository identifiers
+  NoteRepository: 'service.repositories.note',
+  ProfileRepository: 'service.repositories.profile',
+  
+  // Embedding service identifiers
+  NoteEmbeddingService: 'service.embedding.note',
+  ProfileEmbeddingService: 'service.embedding.profile',
+  
+  // Search service identifiers
+  NoteSearchService: 'service.search.note',
+  ProfileSearchService: 'service.search.profile',
+  
+  // Tag service identifiers
+  ProfileTagService: 'service.tag.profile',
+  
+  // Conversation service identifiers
+  ConversationResourceService: 'service.conversation.resources',
+  ConversationToolService: 'service.conversation.tools',
+  ConversationQueryService: 'service.conversation.query',
+  ConversationMemoryService: 'service.conversation.memory',
+  ConversationStorageAdapter: 'service.conversation.storage',
+  ConversationFormatter: 'service.conversation.formatter',
+  ConversationMcpFormatter: 'service.conversation.mcpFormatter',
+};
 
 /**
- * Reset service registration state (for testing)
+ * Central registry for accessing internal services
+ * 
+ * This registry provides a single point of access for all application services,
+ * ensuring consistent initialization and configuration.
  */
-export function resetServiceRegistration(): void {
-  servicesRegistered = false;
-}
-
-/**
- * Register all services with the DI container
- * @param container The dependency container to register services with
- * @param config Optional configuration for services
- */
-export function registerServices(
-  diContainer: DependencyContainer = DependencyContainer.getInstance(),
-  config: { apiKey?: string } = {},
-): void {
-  // Only log the first time services are registered
-  if (!servicesRegistered) {
-    logger.info('Registering services with dependency container');
-  }
-
-  // Helper function to avoid duplicate registrations
-  const registerIfNeeded = <T>(serviceId: string, factory: ServiceFactory<T>, singleton = true) => {
-    // Only register if not already registered
-    if (!diContainer.has(serviceId)) {
-      diContainer.register<T>(serviceId, factory, singleton);
+export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
+  /** Singleton instance storage */
+  private static instance: ServiceRegistry | null = null;
+  
+  /** Reference to the resource registry */
+  private resourceRegistry: ResourceRegistry;
+  
+  /** Track if services have been registered */
+  private servicesRegistered = false;
+  
+  /**
+   * Get the singleton instance of the ServiceRegistry
+   * 
+   * @param options Configuration options
+   * @returns The shared instance
+   */
+  public static getInstance(options?: ServiceRegistryOptions): ServiceRegistry {
+    if (!ServiceRegistry.instance) {
+      ServiceRegistry.instance = new ServiceRegistry(options || {});
+      ServiceRegistry.instance.logger.debug('ServiceRegistry singleton instance created');
+      ServiceRegistry.instance.registerStandardServices();
+    } else if (options) {
+      // Update options if instance exists but options were provided
+      ServiceRegistry.instance.updateOptions(options);
     }
-  };
-
-  // Register repositories
-  registerIfNeeded<IRepository<Note>>(
-    ServiceIdentifiers.NoteRepository,
-    () => NoteRepository.getInstance(),
-  );
-
-  registerIfNeeded<IRepository<Profile>>(
-    ServiceIdentifiers.ProfileRepository,
-    () => ProfileRepository.getInstance(),
-  );
-
-  // Register embedding services
-  registerIfNeeded<IEmbeddingService>(
-    ServiceIdentifiers.NoteEmbeddingService,
-    () => NoteEmbeddingService.getInstance(config.apiKey),
-  );
-
-  registerIfNeeded<IEmbeddingService>(
-    ServiceIdentifiers.ProfileEmbeddingService,
-    () => ProfileEmbeddingService.getInstance(config.apiKey),
-  );
-
-  // Register tag services
-  registerIfNeeded(
-    ServiceIdentifiers.ProfileTagService,
-    () => ProfileTagService.getInstance(),
-  );
-
-  // Register search services with dependencies
-  registerIfNeeded<ISearchService<Note>>(
-    ServiceIdentifiers.NoteSearchService,
-    (container) => {
-      // Get dependencies from container
-      const repository = container.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
-      const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
-
-      // Create service with injected dependencies
-      return NoteSearchService.getInstance(repository, embeddingService);
-    },
-  );
-
-  registerIfNeeded<ISearchService<Profile>>(
-    ServiceIdentifiers.ProfileSearchService,
-    (container) => {
-      // Get dependencies from container
-      const repository = container.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
-      const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
-      const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-
-      // Create service with injected dependencies
-      return ProfileSearchService.getInstance(repository, embeddingService, tagService);
-    },
-  );
+    
+    return ServiceRegistry.instance;
+  }
   
-  // Register conversation services
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    if (ServiceRegistry.instance) {
+      ServiceRegistry.instance.clear();
+      ServiceRegistry.instance = null;
+    }
+  }
   
-  // Register storage adapter and formatters first since other services depend on them
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationStorageAdapter,
-    () => {
-      const storage = InMemoryStorage.getInstance();
-      return ConversationStorageAdapter.getInstance(storage);
-    },
-  );
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new instance
+   */
+  public static createFresh(options?: ServiceRegistryOptions): ServiceRegistry {
+    const registry = new ServiceRegistry(options || {});
+    registry.registerStandardServices();
+    return registry;
+  }
   
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationFormatter,
-    () => ConversationFormatter.getInstance(),
-  );
+  /**
+   * Protected constructor to enforce the use of getInstance() or createFresh()
+   * 
+   * @param options Configuration options
+   */
+  protected constructor(options: ServiceRegistryOptions) {
+    super({
+      name: 'ServiceRegistry',
+      ...options,
+    });
+    
+    // Initialize or reference the resource registry
+    this.resourceRegistry = options.resourceRegistry || ResourceRegistry.getInstance({
+      anthropicApiKey: options.apiKey,
+      openAiApiKey: options.apiKey,
+    });
+  }
   
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationMcpFormatter,
-    () => ConversationMcpFormatter.getInstance(),
-  );
+  /**
+   * Create the dependency container
+   * 
+   * @returns A new SimpleContainer
+   */
+  protected override createContainer(): SimpleContainer {
+    return new SimpleContainer();
+  }
   
-  // Register resource and tool services
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationResourceService,
-    () => ConversationResourceService.getInstance(),
-  );
+  /**
+   * Register standard services with the registry
+   * This is called automatically by getInstance() and createFresh()
+   */
+  private registerStandardServices(): void {
+    if (this.servicesRegistered) {
+      return;
+    }
+    
+    this.logger.info('Registering standard services');
+    
+    // Register repositories
+    this.register<IRepository<Note>>(
+      ServiceIdentifiers.NoteRepository,
+      () => NoteRepository.getInstance(),
+    );
+    
+    this.register<IRepository<Profile>>(
+      ServiceIdentifiers.ProfileRepository,
+      () => ProfileRepository.getInstance(),
+    );
+    
+    // Register embedding services
+    this.register<IEmbeddingService>(
+      ServiceIdentifiers.NoteEmbeddingService,
+      () => {
+        // Get embedding service from resource registry (used internally by NoteEmbeddingService)
+        this.resourceRegistry.getEmbeddingService(); // Ensure it's initialized
+        return NoteEmbeddingService.getInstance();
+      },
+    );
+    
+    this.register<IEmbeddingService>(
+      ServiceIdentifiers.ProfileEmbeddingService,
+      () => {
+        // Get embedding service from resource registry (used internally by ProfileEmbeddingService)
+        this.resourceRegistry.getEmbeddingService(); // Ensure it's initialized
+        return ProfileEmbeddingService.getInstance();
+      },
+    );
+    
+    // Register tag services
+    this.register(
+      ServiceIdentifiers.ProfileTagService,
+      () => ProfileTagService.getInstance(),
+    );
+    
+    // Register search services with dependencies
+    this.register<ISearchService<Note>>(
+      ServiceIdentifiers.NoteSearchService,
+      (container) => {
+        // Get dependencies from container
+        const repository = container.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
+        const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
+        
+        // Create service with injected dependencies
+        return NoteSearchService.getInstance(repository, embeddingService);
+      },
+    );
+    
+    this.register<ISearchService<Profile>>(
+      ServiceIdentifiers.ProfileSearchService,
+      (container) => {
+        // Get dependencies from container
+        const repository = container.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
+        const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
+        const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
+        
+        // Create service with injected dependencies
+        return ProfileSearchService.getInstance(repository, embeddingService, tagService);
+      },
+    );
+    
+    // Register conversation services
+    
+    // Register storage adapter and formatters first since other services depend on them
+    this.register(
+      ServiceIdentifiers.ConversationStorageAdapter,
+      () => {
+        const storage = InMemoryStorage.getInstance();
+        return ConversationStorageAdapter.getInstance(storage);
+      },
+    );
+    
+    this.register(
+      ServiceIdentifiers.ConversationFormatter,
+      () => ConversationFormatter.getInstance(),
+    );
+    
+    this.register(
+      ServiceIdentifiers.ConversationMcpFormatter,
+      () => ConversationMcpFormatter.getInstance(),
+    );
+    
+    // Register resource and tool services
+    this.register(
+      ServiceIdentifiers.ConversationResourceService,
+      () => ConversationResourceService.getInstance(),
+    );
+    
+    this.register(
+      ServiceIdentifiers.ConversationToolService,
+      () => ConversationToolService.getInstance(),
+    );
+    
+    // Register query service with its dependencies
+    this.register(
+      ServiceIdentifiers.ConversationQueryService,
+      (container) => {
+        const storageAdapter = container.resolve<ConversationStorageAdapter>(
+          ServiceIdentifiers.ConversationStorageAdapter,
+        );
+        return ConversationQueryService.getInstance(storageAdapter);
+      },
+    );
+    
+    // Register memory service with its dependencies
+    this.register(
+      ServiceIdentifiers.ConversationMemoryService,
+      (container) => {
+        const storageAdapter = container.resolve<ConversationStorageAdapter>(
+          ServiceIdentifiers.ConversationStorageAdapter,
+        );
+        return ConversationMemoryService.getInstance(storageAdapter);
+      },
+    );
+    
+    this.servicesRegistered = true;
+    this.logger.info('Standard services registered');
+  }
   
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationToolService,
-    () => ConversationToolService.getInstance(),
-  );
+  /**
+   * Get the note repository
+   * 
+   * @returns Note repository
+   */
+  public getNoteRepository(): IRepository<Note> {
+    return this.resolve<IRepository<Note>>(ServiceIdentifiers.NoteRepository);
+  }
   
-  // Register query service with its dependencies
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationQueryService,
-    (container) => {
-      const storageAdapter = container.resolve<ConversationStorageAdapter>(
-        ServiceIdentifiers.ConversationStorageAdapter,
-      );
-      return ConversationQueryService.getInstance(storageAdapter);
-    },
-  );
+  /**
+   * Get the profile repository
+   * 
+   * @returns Profile repository
+   */
+  public getProfileRepository(): IRepository<Profile> {
+    return this.resolve<IRepository<Profile>>(ServiceIdentifiers.ProfileRepository);
+  }
   
-  // Register memory service with its dependencies
-  registerIfNeeded(
-    ServiceIdentifiers.ConversationMemoryService,
-    (container) => {
-      const storageAdapter = container.resolve<ConversationStorageAdapter>(
-        ServiceIdentifiers.ConversationStorageAdapter,
-      );
-      return ConversationMemoryService.getInstance(storageAdapter);
-    },
-  );
-
-  // Only log the first time services are registered
-  if (!servicesRegistered) {
-    logger.info('Service registration complete');
-    servicesRegistered = true;
+  /**
+   * Get the note embedding service
+   * 
+   * @returns Note embedding service
+   */
+  public getNoteEmbeddingService(): IEmbeddingService {
+    return this.resolve<IEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
+  }
+  
+  /**
+   * Get the profile embedding service
+   * 
+   * @returns Profile embedding service
+   */
+  public getProfileEmbeddingService(): IEmbeddingService {
+    return this.resolve<IEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
+  }
+  
+  /**
+   * Get the note search service
+   * 
+   * @returns Note search service
+   */
+  public getNoteSearchService(): ISearchService<Note> {
+    return this.resolve<ISearchService<Note>>(ServiceIdentifiers.NoteSearchService);
+  }
+  
+  /**
+   * Get the profile search service
+   * 
+   * @returns Profile search service
+   */
+  public getProfileSearchService(): ISearchService<Profile> {
+    return this.resolve<ISearchService<Profile>>(ServiceIdentifiers.ProfileSearchService);
+  }
+  
+  /**
+   * Get the profile tag service
+   * 
+   * @returns Profile tag service
+   */
+  public getProfileTagService(): ProfileTagService {
+    return this.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
+  }
+  
+  /**
+   * Get the conversation query service
+   * 
+   * @returns Conversation query service
+   */
+  public getConversationQueryService(): ConversationQueryService {
+    return this.resolve<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
+  }
+  
+  /**
+   * Get the conversation memory service
+   * 
+   * @returns Conversation memory service
+   */
+  public getConversationMemoryService(): ConversationMemoryService {
+    return this.resolve<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
+  }
+  
+  /**
+   * Helper method for getting any service with proper typing
+   * 
+   * @param serviceId Service identifier
+   * @returns The service instance
+   */
+  public getService<T>(serviceId: string): T {
+    return this.resolve<T>(serviceId);
   }
 }
 
 /**
- * Helper for getting services from container with proper typing
+ * Global accessor for the service registry
+ * This provides a simpler API for accessing services
+ * 
  * @param serviceId Service identifier
  * @returns The service instance
  */
 export function getService<T>(serviceId: string): T {
-  return DependencyContainer.getInstance().resolve<T>(serviceId);
+  return ServiceRegistry.getInstance().getService<T>(serviceId);
 }

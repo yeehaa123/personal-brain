@@ -4,10 +4,9 @@
  * These tests verify that the base Registry class provides the expected
  * functionality for extension by more specific registry implementations.
  */
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 
-import { DependencyContainer } from '@/utils/dependencyContainer';
-import { Registry, type RegistryOptions } from '@/utils/registry';
+import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
 
 // Concrete implementation for testing the abstract Registry class
 class TestRegistry extends Registry {
@@ -36,8 +35,8 @@ class TestRegistry extends Registry {
     });
   }
   
-  protected createContainer(): DependencyContainer {
-    return DependencyContainer.createFresh();
+  protected override createContainer(): SimpleContainer {
+    return new SimpleContainer();
   }
   
   // Add a public method to access the protected logger
