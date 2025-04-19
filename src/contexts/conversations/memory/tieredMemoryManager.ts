@@ -8,7 +8,7 @@ import type {
   ConversationStorage, 
   ConversationSummary, 
 } from '@/contexts/conversations/storage/conversationStorage';
-import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import logger from '@/utils/logger';
 
 /**

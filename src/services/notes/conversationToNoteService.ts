@@ -10,7 +10,7 @@ import { nanoid } from 'nanoid';
 
 import { ConversationContext, type ConversationStorage } from '@/contexts/conversations';
 import type { NewNote, Note } from '@/models/note';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 import { extractTags } from '@/utils/tagExtractor';
 

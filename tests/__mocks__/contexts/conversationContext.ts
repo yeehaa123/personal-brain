@@ -16,7 +16,7 @@ import type { ConversationMemoryService, ConversationQueryService } from '@/cont
 import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
 import type { ConversationToolService } from '@/contexts/conversations/tools';
 import type { ResourceDefinition } from '@/contexts/core/contextInterface';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
 

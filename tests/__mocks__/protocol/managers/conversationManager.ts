@@ -7,7 +7,7 @@
 import { mock } from 'bun:test';
 
 import type { ConversationContext } from '@/contexts';
-import type { Conversation } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 import type { IConversationManager } from '@/protocol/types';
 import { MockConversationContext } from '@test/__mocks__/contexts';
 

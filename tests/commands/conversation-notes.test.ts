@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';

@@ -13,7 +13,7 @@ import { nanoid } from 'nanoid';
 
 import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ConversationInfo, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 /**

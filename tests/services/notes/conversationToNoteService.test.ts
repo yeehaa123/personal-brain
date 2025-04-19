@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
 import type { NewNote, Note } from '@/models/note';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';

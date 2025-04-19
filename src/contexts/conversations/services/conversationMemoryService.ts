@@ -13,7 +13,7 @@ import type { ConversationStorageAdapter } from '@/contexts/conversations/adapte
 import type { TieredHistory, TieredMemoryConfig } from '@/contexts/conversations/memory/tieredMemoryManager';
 import { TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationStorage, ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 /**

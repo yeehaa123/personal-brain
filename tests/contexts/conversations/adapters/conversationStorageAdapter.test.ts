@@ -5,7 +5,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 
 import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ListOptions, SearchCriteria } from '@/contexts/core/storageInterface';
-import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { MockConversationStorage } from '@test/__mocks__/storage';
 
 // The InMemoryStorage mock is now set up globally in setup.ts

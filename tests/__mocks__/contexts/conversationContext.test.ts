@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockConversationContext } from './conversationContext';
 

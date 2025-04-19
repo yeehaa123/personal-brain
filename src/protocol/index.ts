@@ -37,24 +37,7 @@ export * from './router/rules/commandRules';
 // Re-export messaging system for cross-context communication
 export * from './messaging';
 
-// Re-export schemas (for backward compatibility, with explicit exports to avoid naming conflicts)
-// These will be moved to formats/schemas in a future refactoring step
-export type { ConversationContextConfig } from './schemas/conversationContextConfig';
-export type { 
-  Conversation, 
-  ConversationOptions, 
-  ConversationSummary, 
-  ConversationTurn,
-  MemoryTier,
-} from './schemas/conversationSchemas';
-export { 
-  ConversationOptionsSchema, 
-  ConversationSchema, 
-  ConversationSummarySchema, 
-  ConversationTurnSchema,
-  MemoryTierEnum,
-} from './schemas/conversationSchemas';
-export * from './schemas/standardResponseSchema';
+// All schema definitions are now exported from formats/schemas
 
 // Re-export types
 export * from './types';

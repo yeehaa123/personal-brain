@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { ConversationMcpFormatter, type McpFormattedConversation, type McpFormattedSummaries, type McpFormattedTurns } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 describe('ConversationMcpFormatter', () => {
   // Mock data for testing

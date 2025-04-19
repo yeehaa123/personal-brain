@@ -3,8 +3,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { generateStandardSystemPrompt, StandardResponseSchema, standardToProtocolResponse } from '@/protocol/schemas/standardResponseSchema';
-import type { StandardResponse } from '@/protocol/schemas/standardResponseSchema';
+import { generateStandardSystemPrompt, StandardResponseSchema } from '@/protocol/formats/schemas/standardResponseSchema';
+import { standardToProtocolResponse } from '@/protocol/translators/standardToProtocolTranslator';
+import type { StandardResponse } from '@/protocol/formats/schemas/standardResponseSchema';
 import { createMockNote } from '@test/__mocks__/models/note';
 
 describe('Standard schema-based responses', () => {

@@ -9,7 +9,7 @@
  */
 
 import type { NoteContext } from '@/mcpServer';
-import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import type { IBrainProtocol } from '@/protocol/types';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import { DependencyContainer } from '@/utils/dependencyContainer';

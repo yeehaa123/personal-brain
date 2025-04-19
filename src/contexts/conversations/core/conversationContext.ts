@@ -32,7 +32,7 @@ import type {
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import { BaseContext } from '@/contexts/core/baseContext';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { getService, ServiceIdentifiers } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
