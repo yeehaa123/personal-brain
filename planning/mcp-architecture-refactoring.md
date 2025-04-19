@@ -311,12 +311,14 @@ Based on our assessment of the codebase, most phases of the MCP architecture ref
 - 🚩 Clean up unnecessary or duplicative tests, especially for removed components or implementation patterns
 - 🚩 Analyze and remove any transitional adapters that are no longer needed
 - 🚩 Update imports and barrel files to reflect the new, flattened architecture
+- 🚩 DO NOT introduce legacy or backward compatibility code paths - implement clean breaks only
 
 ### 2. Protocol Integration (Phase 5 Completion)
 - 🚩 Complete merging of ContextOrchestrator with message-based cross-context communication
 - 🚩 Replace remaining BrainProtocol references to use the new integrated approach
 - 🚩 Perform final cleanup of protocol-related code
 - 🚩 Update documentation to reflect the final architecture
+- 🚩 DO NOT introduce legacy or backward compatibility code paths - implement clean breaks only
 
 This focused cleanup will significantly reduce the codebase size and complexity while completing the MCP architecture transition. By removing legacy code and unnecessary tests, we'll make the codebase more maintainable and easier to understand for future development.
 
