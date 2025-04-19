@@ -1,6 +1,9 @@
 /**
  * Service registry for dependency injection
  * Centralized registration of all application services
+ * 
+ * @deprecated Use UnifiedServiceRegistry from @/utils/unifiedServiceRegistry instead.
+ * This module is kept for backward compatibility during the transition period.
  */
 import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
 import { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
@@ -14,6 +17,7 @@ import type { Profile } from '@/models/profile';
 import { DependencyContainer } from '@/utils/dependencyContainer';
 import type { ServiceFactory } from '@/utils/dependencyContainer';
 import { Logger } from '@/utils/logger';
+import { ServiceIdentifiers as UnifiedServiceIdentifiers } from '@/utils/unifiedServiceRegistry';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
 import type { IRepository } from './interfaces/IRepository';
@@ -29,32 +33,9 @@ import { ProfileTagService } from './profiles/profileTagService';
 
 /**
  * Service identifier constants for consistent naming
+ * @deprecated Use ServiceIdentifiers from @/utils/unifiedServiceRegistry instead
  */
-export const ServiceIdentifiers = {
-  // Repositories
-  NoteRepository: 'repositories.note',
-  ProfileRepository: 'repositories.profile',
-
-  // Embedding Services
-  NoteEmbeddingService: 'embedding.note',
-  ProfileEmbeddingService: 'embedding.profile',
-
-  // Search Services
-  NoteSearchService: 'search.note',
-  ProfileSearchService: 'search.profile',
-
-  // Tag Services
-  ProfileTagService: 'tag.profile',
-  
-  // Conversation Services
-  ConversationResourceService: 'conversation.resources',
-  ConversationToolService: 'conversation.tools',
-  ConversationQueryService: 'conversation.query',
-  ConversationMemoryService: 'conversation.memory',
-  ConversationStorageAdapter: 'conversation.storage',
-  ConversationFormatter: 'conversation.formatter',
-  ConversationMcpFormatter: 'conversation.mcpFormatter',
-};
+export const ServiceIdentifiers = UnifiedServiceIdentifiers;
 
 // Track if services have been registered to avoid duplicate logs
 let servicesRegistered = false;

@@ -3,8 +3,12 @@
  * 
  * This module provides a centralized registry for accessing external resources
  * like AI services, databases, and external APIs.
+ * 
+ * @deprecated Use UnifiedServiceRegistry from @/utils/unifiedServiceRegistry instead.
+ * This module is kept for backward compatibility during the transition period.
  */
 
+import { UnifiedServiceRegistry, ServiceIdentifiers } from '@/utils/unifiedServiceRegistry';
 import { ClaudeModel } from './ai/claude';
 import { EmbeddingService } from './ai/embedding';
 import type { EmbeddingModelAdapter, LanguageModelAdapter } from './ai/interfaces';
@@ -24,6 +28,8 @@ export interface ResourceRegistryOptions {
  * 
  * This registry provides a single point of access for all external resources,
  * ensuring consistent initialization and configuration.
+ * 
+ * @deprecated Use UnifiedServiceRegistry from @/utils/unifiedServiceRegistry instead
  */
 export class ResourceRegistry {
   private static instance: ResourceRegistry | null = null;
@@ -35,8 +41,14 @@ export class ResourceRegistry {
   // Configuration
   private options: ResourceRegistryOptions;
   
+  // Reference to unified registry for transitional period
+  private unifiedRegistry: UnifiedServiceRegistry;
+  
   private constructor(options: ResourceRegistryOptions = {}) {
     this.options = options;
+    this.unifiedRegistry = UnifiedServiceRegistry.getInstance({
+      apiKey: options.anthropicApiKey || options.openAiApiKey,
+    });
   }
   
   /**
@@ -82,10 +94,24 @@ export class ResourceRegistry {
         throw new Error('Anthropic API key is required to use Claude');
       }
       
-      // We don't need to set the API key in the environment anymore
-      // The ClaudeModel will use the environment variable if it exists
-      
-      this.claudeModel = ClaudeModel.getInstance();
+      // Try to get from unified registry first
+      try {
+        if (this.unifiedRegistry.has(ServiceIdentifiers.ClaudeModel)) {
+          this.claudeModel = this.unifiedRegistry.resolve<ClaudeModel>(ServiceIdentifiers.ClaudeModel);
+        } else {
+          // Fall back to direct instantiation
+          this.claudeModel = ClaudeModel.getInstance();
+          
+          // Register with unified registry for future use
+          this.unifiedRegistry.register(
+            ServiceIdentifiers.ClaudeModel,
+            () => this.claudeModel as ClaudeModel
+          );
+        }
+      } catch (e) {
+        // Fall back to direct instantiation
+        this.claudeModel = ClaudeModel.getInstance();
+      }
     }
     return this.claudeModel;
   }
@@ -101,10 +127,24 @@ export class ResourceRegistry {
         throw new Error('OpenAI API key is required to use embeddings');
       }
       
-      // We don't need to set the API key in the environment anymore
-      // The EmbeddingService will use the environment variable if it exists
-      
-      this.embeddingService = EmbeddingService.getInstance();
+      // Try to get from unified registry first
+      try {
+        if (this.unifiedRegistry.has(ServiceIdentifiers.EmbeddingService)) {
+          this.embeddingService = this.unifiedRegistry.resolve<EmbeddingService>(ServiceIdentifiers.EmbeddingService);
+        } else {
+          // Fall back to direct instantiation
+          this.embeddingService = EmbeddingService.getInstance();
+          
+          // Register with unified registry for future use
+          this.unifiedRegistry.register(
+            ServiceIdentifiers.EmbeddingService,
+            () => this.embeddingService as EmbeddingService
+          );
+        }
+      } catch (e) {
+        // Fall back to direct instantiation
+        this.embeddingService = EmbeddingService.getInstance();
+      }
     }
     return this.embeddingService;
   }
@@ -116,5 +156,10 @@ export class ResourceRegistry {
    */
   public updateOptions(options: Partial<ResourceRegistryOptions>): void {
     this.options = { ...this.options, ...options };
+    
+    // Update unified registry options as well
+    this.unifiedRegistry.updateOptions({
+      apiKey: this.options.anthropicApiKey || this.options.openAiApiKey,
+    });
   }
 }
