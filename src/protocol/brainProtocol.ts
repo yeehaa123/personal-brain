@@ -8,4 +8,4 @@ import { BrainProtocol } from './core/brainProtocol';
 export { BrainProtocol };
 
 // Export types needed by consumers of the protocol
-export type { BrainProtocolOptions, ProtocolResponse, QueryOptions, QueryResult } from './types';
+export type { BrainProtocolOptions, QueryOptions, QueryResult } from './types';

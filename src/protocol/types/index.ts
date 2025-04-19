@@ -249,21 +249,6 @@ export interface IQueryProcessor {
   processQuery(query: string, options?: QueryOptions): Promise<QueryResult>;
 }
 
-/**
- * Protocol response for backward compatibility
- */
-export interface ProtocolResponse {
-  /** The answer text */
-  answer: string;
-  /** Citations to notes used in the answer */
-  citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>;
-  /** Related notes for follow-up */
-  relatedNotes: Note[];
-  /** User profile if relevant to the query */
-  profile?: Profile;
-  /** External source citations */
-  externalSources?: Array<{ title: string; source: string; url: string; excerpt: string }>;
-}
 
 /**
  * Interface for BrainProtocol
