@@ -8,13 +8,13 @@ import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
 // Import types directly
+import type { 
+  ConversationInfo, 
+  ConversationStorage, 
+  ConversationSummary,
+} from '@/contexts/conversations/storage/conversationStorage';
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
-import type { 
-  ConversationSummary, 
-  ConversationInfo, 
-  ConversationStorage,
-} from '@/contexts/conversations/storage/conversationStorage';
 
 /**
  * Mock implementation of ConversationStorageAdapter
@@ -208,7 +208,7 @@ export class MockConversationStorageAdapter implements StorageInterface<Conversa
       conversation.activeTurns.push(fullTurn);
       await this.update(conversationId, { 
         activeTurns: conversation.activeTurns,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
     }
     
@@ -259,7 +259,7 @@ export class MockConversationStorageAdapter implements StorageInterface<Conversa
       conversation.summaries.push(fullSummary);
       await this.update(conversationId, { 
         summaries: conversation.summaries,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       });
     }
     

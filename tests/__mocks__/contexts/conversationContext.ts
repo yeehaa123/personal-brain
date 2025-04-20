@@ -4,21 +4,23 @@
  * Provides a standardized mock for the ConversationContext class.
  */
 
-import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
-import type { ConversationMcpFormatter, McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
+// Import only what we need from the real implementations - primarily just types
+import type { McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
-import type { ConversationResourceService } from '@/contexts/conversations/resources';
-import type { ConversationMemoryService, ConversationQueryService } from '@/contexts/conversations/services';
 import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
-import type { ConversationToolService } from '@/contexts/conversations/tools';
 import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
+import { MockConversationFormatter } from './conversationFormatter';
+import { MockConversationMcpFormatter } from './conversationMcpFormatter';
+import { MockConversationMemoryService } from './conversationMemoryService';
+import { MockConversationQueryService } from './conversationQueryService';
+import { MockConversationResourceService } from './conversationResourceService';
 import { MockConversationStorageAdapter } from './conversationStorageAdapter';
+import { MockConversationToolService } from './conversationToolService';
 
 /**
  * Mock implementation for the ConversationContext
@@ -28,38 +30,12 @@ export class MockConversationContext extends MockBaseContext {
   
   // Mock services
   public storageAdapter: MockConversationStorageAdapter;
-  public formatter: { 
-    formatConversation: (turns: ConversationTurn[], summaries: ConversationSummary[], options: unknown) => string;
-  };
-  public mcpFormatter: {
-    formatConversationForMcp: (conversation: Conversation, turns: ConversationTurn[], summaries: ConversationSummary[], options: unknown) => Promise<McpFormattedConversation | null>;
-  };
-  public resourceService: {
-    getResources: (context: unknown) => unknown[];
-  };
-  public toolService: {
-    getTools: (context: unknown) => unknown[];
-  };
-  public queryService: {
-    createConversation: (interfaceType: 'cli' | 'matrix', roomId: string) => Promise<string>;
-    getConversation: (conversationId: string) => Promise<Conversation | null>;
-    getConversationIdByRoom: (roomId: string, interfaceType?: 'cli' | 'matrix') => Promise<string | null>;
-    getOrCreateConversationForRoom: (roomId: string, interfaceType: 'cli' | 'matrix') => Promise<string>;
-    findConversations: (criteria: SearchCriteria) => Promise<ConversationInfo[]>;
-    getConversationsByRoom: (roomId: string, interfaceType?: 'cli' | 'matrix') => Promise<ConversationInfo[]>;
-    getRecentConversations: (limit?: number, interfaceType?: 'cli' | 'matrix') => Promise<ConversationInfo[]>;
-    updateMetadata: (conversationId: string, metadata: Record<string, unknown>) => Promise<boolean>;
-    deleteConversation: (conversationId: string) => Promise<boolean>;
-  };
-  public memoryService: {
-    addTurn: (conversationId: string, turn: Partial<ConversationTurn>) => Promise<string>;
-    getTurns: (conversationId: string, limit?: number, offset?: number) => Promise<ConversationTurn[]>;
-    getSummaries: (conversationId: string) => Promise<ConversationSummary[]>;
-    forceSummarize: (conversationId: string) => Promise<boolean>;
-    getTieredHistory: (conversationId: string) => Promise<TieredHistory>;
-    formatHistoryForPrompt: (conversationId: string, maxTokens?: number) => Promise<string>;
-    updateConfig: (config: Record<string, unknown>) => void;
-  };
+  public formatter: MockConversationFormatter;
+  public mcpFormatter: MockConversationMcpFormatter;
+  public resourceService: MockConversationResourceService;
+  public toolService: MockConversationToolService;
+  public queryService: MockConversationQueryService;
+  public memoryService: MockConversationMemoryService;
   
   // Configuration properties
   protected contextName: string;
@@ -127,64 +103,14 @@ export class MockConversationContext extends MockBaseContext {
                          '';
     this.tieredMemoryConfig = (config['tieredMemoryConfig'] as Record<string, unknown>) || {};
     
-    // Initialize mock services
+    // Initialize mock services using standardized pattern
     this.storageAdapter = MockConversationStorageAdapter.createFresh();
-    
-    this.formatter = {
-      formatConversation: mock(() => 'Formatted conversation'),
-    };
-    
-    this.mcpFormatter = {
-      formatConversationForMcp: mock(() => Promise.resolve({
-        id: 'conv-123',
-        interfaceType: 'cli' as 'cli' | 'matrix',
-        roomId: 'test-room',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        turnCount: 0,
-        summaryCount: 0,
-        statistics: {},
-        turns: [],
-      })),
-    };
-    
-    this.resourceService = {
-      getResources: mock(() => [
-        { protocol: 'conversation', path: 'list', handler: mock(() => Promise.resolve([])) },
-      ]),
-    };
-    
-    this.toolService = {
-      getTools: mock(() => [
-        { protocol: 'conversation', path: 'create', handler: mock(() => Promise.resolve('conv-123')) },
-      ]),
-    };
-    
-    this.queryService = {
-      createConversation: mock(() => Promise.resolve('conv-123')),
-      getConversation: mock(() => Promise.resolve(null)),
-      getConversationIdByRoom: mock(() => Promise.resolve(null)),
-      getOrCreateConversationForRoom: mock(() => Promise.resolve('conv-123')),
-      findConversations: mock(() => Promise.resolve([])),
-      getConversationsByRoom: mock(() => Promise.resolve([])),
-      getRecentConversations: mock(() => Promise.resolve([])),
-      updateMetadata: mock(() => Promise.resolve(true)),
-      deleteConversation: mock(() => Promise.resolve(true)),
-    };
-    
-    this.memoryService = {
-      addTurn: mock(() => Promise.resolve(`turn-${nanoid()}`)),
-      getTurns: mock(() => Promise.resolve([])),
-      getSummaries: mock(() => Promise.resolve([])),
-      forceSummarize: mock(() => Promise.resolve(true)),
-      getTieredHistory: mock(() => Promise.resolve({ 
-        activeTurns: [], 
-        summaries: [], 
-        archivedTurns: [], 
-      })),
-      formatHistoryForPrompt: mock(() => Promise.resolve('')),
-      updateConfig: mock(() => {}),
-    };
+    this.formatter = MockConversationFormatter.createFresh();
+    this.mcpFormatter = MockConversationMcpFormatter.createFresh();
+    this.resourceService = MockConversationResourceService.createFresh();
+    this.toolService = MockConversationToolService.createFresh();
+    this.queryService = MockConversationQueryService.createFresh();
+    this.memoryService = MockConversationMemoryService.createFresh();
     
     // Set resources and tools
     const resources = this.resourceService.getResources(this);
@@ -218,15 +144,15 @@ export class MockConversationContext extends MockBaseContext {
   /**
    * Get the formatter
    */
-  getFormatter(): ConversationFormatter {
-    return this.formatter as unknown as ConversationFormatter;
+  getFormatter(): MockConversationFormatter {
+    return this.formatter;
   }
   
   /**
    * Get the MCP formatter
    */
-  getMcpFormatter(): ConversationMcpFormatter {
-    return this.mcpFormatter as unknown as ConversationMcpFormatter;
+  getMcpFormatter(): MockConversationMcpFormatter {
+    return this.mcpFormatter;
   }
   
   /**
@@ -239,29 +165,29 @@ export class MockConversationContext extends MockBaseContext {
   /**
    * Get the query service
    */
-  getQueryService(): ConversationQueryService {
-    return this.queryService as unknown as ConversationQueryService;
+  getQueryService(): MockConversationQueryService {
+    return this.queryService;
   }
   
   /**
    * Get the memory service
    */
-  getMemoryService(): ConversationMemoryService {
-    return this.memoryService as unknown as ConversationMemoryService;
+  getMemoryService(): MockConversationMemoryService {
+    return this.memoryService;
   }
   
   /**
    * Get the resource service
    */
-  getResourceService(): ConversationResourceService {
-    return this.resourceService as unknown as ConversationResourceService;
+  getResourceService(): MockConversationResourceService {
+    return this.resourceService;
   }
   
   /**
    * Get the tool service
    */
-  getToolService(): ConversationToolService {
-    return this.toolService as unknown as ConversationToolService;
+  getToolService(): MockConversationToolService {
+    return this.toolService;
   }
   
   /**
