@@ -13,7 +13,7 @@
 
 import { nanoid } from 'nanoid';
 
-import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
+import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import { ConversationFormatter, type FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import {
   ConversationMcpFormatter,

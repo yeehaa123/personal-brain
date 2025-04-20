@@ -6,8 +6,8 @@
  */
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
+import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { NotificationType } from '@/protocol/messaging/messageTypes';
 
 // Create a simple mock for the ContextManager

@@ -10,7 +10,7 @@ import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/
 import type { ContextMediator } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { ConversationContext } from '../core/conversationContext';
+import type { ConversationContext } from '../conversationContext';
 
 import { ConversationMessageHandler } from './conversationMessageHandler';
 import { ConversationNotifier } from './conversationNotifier';

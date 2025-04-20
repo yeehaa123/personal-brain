@@ -6,15 +6,15 @@
  */
 
 // Export the core context class
-export { ConversationContext } from './core/conversationContext';
+export { ConversationContext } from './conversationContext';
 export type { 
   ConversationContextConfig,
   TurnOptions,
   HistoryOptions,
-} from './core/conversationContext';
+} from './conversationContext';
 
 // Export the storage adapter
-export { ConversationStorageAdapter } from './adapters/conversationStorageAdapter';
+export { ConversationStorageAdapter } from './conversationStorageAdapter';
 
 // Export the storage interfaces and implementations
 export { type ConversationStorage } from './storage/conversationStorage';

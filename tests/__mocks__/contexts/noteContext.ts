@@ -7,9 +7,10 @@
 import { mock } from 'bun:test';
 
 import type { Note, NoteSearchParams } from '@/models/note';
-import { MockNoteStorageAdapter } from './noteStorageAdapter';
 
 import { MockBaseContext } from './baseContext';
+import type { MockNoteStorageAdapter } from './noteStorageAdapter';
+
 
 /**
  * Mock implementation for the NoteContext

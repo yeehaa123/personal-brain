@@ -16,7 +16,7 @@ import {
 } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { ConversationContext } from '../core/conversationContext';
+import type { ConversationContext } from '../conversationContext';
 
 /**
  * Interface for message with common properties

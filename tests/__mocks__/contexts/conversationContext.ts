@@ -7,7 +7,6 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
 import type { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationMcpFormatter, McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
@@ -19,6 +18,7 @@ import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
+import { MockConversationStorageAdapter } from './conversationStorageAdapter';
 
 /**
  * Mock implementation for the ConversationContext
@@ -27,10 +27,7 @@ export class MockConversationContext extends MockBaseContext {
   private static instance: MockConversationContext | null = null;
   
   // Mock services
-  public storageAdapter: { 
-    read: (id: string) => Promise<Conversation | null>;
-    [key: string]: unknown;
-  };
+  public storageAdapter: MockConversationStorageAdapter;
   public formatter: { 
     formatConversation: (turns: ConversationTurn[], summaries: ConversationSummary[], options: unknown) => string;
   };
@@ -131,12 +128,7 @@ export class MockConversationContext extends MockBaseContext {
     this.tieredMemoryConfig = (config['tieredMemoryConfig'] as Record<string, unknown>) || {};
     
     // Initialize mock services
-    this.storageAdapter = {
-      read: mock(() => Promise.resolve(null)),
-    } as {
-      read: (id: string) => Promise<Conversation | null>;
-      [key: string]: unknown;
-    };
+    this.storageAdapter = MockConversationStorageAdapter.createFresh();
     
     this.formatter = {
       formatConversation: mock(() => 'Formatted conversation'),
@@ -219,8 +211,8 @@ export class MockConversationContext extends MockBaseContext {
   /**
    * Get the storage adapter
    */
-  getStorage(): ConversationStorageAdapter {
-    return this.storageAdapter as unknown as ConversationStorageAdapter;
+  getStorage(): MockConversationStorageAdapter {
+    return this.storageAdapter;
   }
   
   /**
@@ -240,8 +232,8 @@ export class MockConversationContext extends MockBaseContext {
   /**
    * Set a new storage adapter
    */
-  setStorage(storage: ConversationStorageAdapter): void {
-    this.storageAdapter = storage as unknown as typeof this.storageAdapter;
+  setStorage(storage: MockConversationStorageAdapter): void {
+    this.storageAdapter = storage;
   }
   
   /**

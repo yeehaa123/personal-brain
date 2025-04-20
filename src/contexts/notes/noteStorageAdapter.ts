@@ -10,13 +10,13 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 
 /**
  * Adapter to provide standard StorageInterface for notes

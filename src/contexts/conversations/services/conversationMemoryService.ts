@@ -9,7 +9,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
+import type { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import type { TieredHistory, TieredMemoryConfig } from '@/contexts/conversations/memory/tieredMemoryManager';
 import { TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationStorage, ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';

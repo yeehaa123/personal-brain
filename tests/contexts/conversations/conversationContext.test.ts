@@ -5,7 +5,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ConversationContext } from '@/contexts';
-import { ConversationStorageAdapter } from '@/contexts/conversations/adapters/conversationStorageAdapter';
+import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import type { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationResourceService } from '@/contexts/conversations/resources/conversationResources';
