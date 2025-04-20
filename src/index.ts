@@ -1,6 +1,7 @@
 import { conversationConfig } from '@/config';
 import { NoteContext } from '@/contexts/notes';
 import { BrainProtocol } from '@/protocol/core/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 
 import { getEnv } from './utils/configUtils';
 import logger from './utils/logger';
@@ -22,7 +23,7 @@ async function main() {
     if (getEnv('ANTHROPIC_API_KEY')) {
       logger.info('--- Example Query using MCP ---', { context: 'Main' });
       // Use the singleton pattern for BrainProtocol with room ID to ensure conversation is created
-      const protocol = BrainProtocol.getInstance({
+      const protocol: IBrainProtocol = BrainProtocol.getInstance({
         interfaceType: 'cli',
         roomId: conversationConfig.defaultCliRoomId,
       });

@@ -8,6 +8,7 @@ import { RoomMemberEvent } from 'matrix-js-sdk/lib/models/room-member';
 
 import { getServerManager } from '@/contexts/website/services/serverManager';
 import { BrainProtocol } from '@/protocol/core/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 
 import { createCommandHandler } from '../commands';
 import type { CommandHandler } from '../commands';
@@ -30,7 +31,7 @@ interface MatrixConfig {
 
 export class MatrixBrainInterface {
   private client: sdk.MatrixClient;
-  private brainProtocol: BrainProtocol;
+  private brainProtocol: IBrainProtocol;
   private commandHandler: CommandHandler;
   private renderer: MatrixRenderer;
   private isReady = false;

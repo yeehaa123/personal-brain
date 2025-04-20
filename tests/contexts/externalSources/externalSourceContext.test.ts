@@ -8,9 +8,11 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ExternalSourceContext } from '@/contexts';
+import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/adapters/externalSourceStorageAdapter';
 import type { ExternalSourceContextConfig } from '@/contexts/externalSources/core/externalSourceContext';
 import type { ExternalSourceInterface } from '@/contexts/externalSources/sources/externalSourceInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
@@ -67,8 +69,8 @@ describe('ExternalSourceContext', () => {
         apiKey: 'test-api-key',
         newsApiKey: 'test-news-api-key',
       },
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Check context name and version
@@ -82,8 +84,8 @@ describe('ExternalSourceContext', () => {
     ExternalSourceContext.createWithDependencies = mock(() => {
       return new ExternalSourceContext(
         { apiKey: 'test-api-key' },
-        mockStorageAdapter,
-        mockEmbeddingService,
+        mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+        mockEmbeddingService as unknown as EmbeddingService,
       );
     });
     
@@ -131,8 +133,8 @@ describe('ExternalSourceContext', () => {
     
     try {
       // Set up spies on getInstance methods
-      EmbeddingService.getInstance = mock(() => mockEmbeddingService);
-      ExternalSourceStorageAdapter.getInstance = mock(() => mockStorageAdapter);
+      EmbeddingService.getInstance = mock(() => mockEmbeddingService as unknown as EmbeddingService);
+      ExternalSourceStorageAdapter.getInstance = mock(() => mockStorageAdapter as unknown as ExternalSourceStorageAdapter);
       
       // Call the factory method
       const context = ExternalSourceContext.createWithDependencies({
@@ -161,8 +163,8 @@ describe('ExternalSourceContext', () => {
     // Create a context with direct dependency injection
     const context = new ExternalSourceContext(
       { name: 'TestContext' },
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Create a mock custom source
@@ -210,8 +212,8 @@ describe('ExternalSourceContext', () => {
     // Create a context with direct dependency injection
     const context = new ExternalSourceContext(
       {} as ExternalSourceContextConfig,
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Perform a search
@@ -263,8 +265,8 @@ describe('ExternalSourceContext', () => {
     // Create a context with direct dependency injection
     const context = new ExternalSourceContext(
       {} as ExternalSourceContextConfig,
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Perform a semantic search
@@ -303,8 +305,8 @@ describe('ExternalSourceContext', () => {
     // Create a context with direct dependency injection
     const context = new ExternalSourceContext(
       {} as ExternalSourceContextConfig,
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Check sources availability
@@ -344,8 +346,8 @@ describe('ExternalSourceContext', () => {
     // Create a context with direct dependency injection
     const context = new ExternalSourceContext(
       {} as ExternalSourceContextConfig,
-      mockStorageAdapter,
-      mockEmbeddingService,
+      mockStorageAdapter as unknown as ExternalSourceStorageAdapter,
+      mockEmbeddingService as unknown as EmbeddingService,
     );
     
     // Get enabled sources

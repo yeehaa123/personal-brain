@@ -2,6 +2,7 @@
 import { conversationConfig } from '@/config';
 import { getServerManager } from '@/contexts/website/services/serverManager';
 import { BrainProtocol } from '@/protocol/core/brainProtocol';
+import type { IBrainProtocol } from '@/protocol/types';
 
 import { createCommandHandler } from './commands';
 import { CLIRenderer } from './commands/cli-renderer';
@@ -29,7 +30,7 @@ async function main() {
   }
 
   // Initialize components using the singleton pattern with room ID
-  const brainProtocol = BrainProtocol.getInstance({
+  const brainProtocol: IBrainProtocol = BrainProtocol.getInstance({
     interfaceType: 'cli',
     roomId: conversationConfig.defaultCliRoomId,
   });
