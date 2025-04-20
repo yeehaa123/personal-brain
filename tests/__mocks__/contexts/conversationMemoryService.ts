@@ -114,7 +114,7 @@ export class MockConversationMemoryService {
   public formatHistoryForPrompt = mock((_conversationId: string, _maxTokens?: number) => {
     return Promise.resolve(
       'User: What is the weather like?\nAssistant: It\'s sunny today!\n\n' +
-      'User: How hot is it?\nAssistant: Around 25°C.\n\n'
+      'User: How hot is it?\nAssistant: Around 25°C.\n\n',
     );
   });
   

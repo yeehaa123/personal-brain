@@ -21,7 +21,7 @@ import type {
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
-import type { ProfileFormattingOptions } from '../types/profileTypes';
+import type { ProfileFormattingOptions } from '../profileTypes';
 
 /**
  * ProfileFormatter handles converting profile objects to human-readable text

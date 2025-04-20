@@ -3,7 +3,7 @@
  */
 import { describe, expect, mock, test } from 'bun:test';
 
-import { ProfileStorageAdapter } from '@/contexts/profiles/adapters/profileStorageAdapter';
+import { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAdapter';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { silenceLogger } from '@test/__mocks__';

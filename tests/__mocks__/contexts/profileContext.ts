@@ -7,11 +7,18 @@
 import { mock } from 'bun:test';
 
 import type { NoteContext } from '@/contexts';
-import type { ProfileStorageAdapter } from '@/contexts/profiles/adapters/profileStorageAdapter';
+import type { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAdapter';
+import type { NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 
 import { MockBaseContext } from './baseContext';
+import { MockProfileStorageAdapter } from './profileStorageAdapter';
+import { 
+  MockProfileEmbeddingService,
+  MockProfileSearchService,
+  MockProfileTagService,
+} from '@test/__mocks__/services/profiles';
 
 /**
  * Mock implementation for the ProfileContext
@@ -20,17 +27,15 @@ export class MockProfileContext extends MockBaseContext {
   private static instance: MockProfileContext | null = null;
   
   // Mock services and dependencies
-  protected storageAdapter: {
-    read: (id: string) => Promise<Profile | null>;
-    create: (profile: Partial<Profile>) => Promise<string>;
-    update: (id: string, profile: Partial<Profile>) => Promise<boolean>;
-    delete: (id: string) => Promise<boolean>;
-    getProfile: () => Promise<Profile | null>;
-  };
+  public storageAdapter: MockProfileStorageAdapter;
+  public embeddingService: MockProfileEmbeddingService;
+  public tagService: MockProfileTagService;
+  public searchService: MockProfileSearchService;
   
   // Mock note context reference
   protected noteContext: {
     searchNotes: (params: Record<string, unknown>) => Promise<Note[]>;
+    searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<NoteWithSimilarity[]>;
   } | null = null;
   
   /**
@@ -66,14 +71,11 @@ export class MockProfileContext extends MockBaseContext {
       version: config['version'] || '1.0.0',
     });
     
-    // Initialize mock storage adapter
-    this.storageAdapter = {
-      read: mock(() => Promise.resolve(null)),
-      create: mock(() => Promise.resolve('profile-123')),
-      update: mock(() => Promise.resolve(true)),
-      delete: mock(() => Promise.resolve(true)),
-      getProfile: mock(() => Promise.resolve(null)),
-    };
+    // Initialize mock services
+    this.storageAdapter = MockProfileStorageAdapter.createFresh();
+    this.embeddingService = MockProfileEmbeddingService.createFresh();
+    this.tagService = MockProfileTagService.createFresh();
+    this.searchService = MockProfileSearchService.createFresh();
     
     // Initialize mock resources
     this.resources = [
@@ -109,7 +111,7 @@ export class MockProfileContext extends MockBaseContext {
    * Set a new storage adapter
    */
   setStorage(storage: ProfileStorageAdapter): void {
-    this.storageAdapter = storage as unknown as typeof this.storageAdapter;
+    this.storageAdapter = storage as unknown as MockProfileStorageAdapter;
   }
   
   /**
@@ -122,15 +124,52 @@ export class MockProfileContext extends MockBaseContext {
   /**
    * Create a new profile
    */
-  async createProfile(profile: Partial<Profile>): Promise<string> {
-    return this.storageAdapter.create(profile);
+  async saveProfile(profile: Partial<Profile> & { fullName: string }): Promise<string> {
+    // Generate profile text for embedding and tagging
+    const profileText = this.embeddingService.getProfileTextForEmbedding(profile);
+    
+    // Generate embedding and tags
+    const embedding = await this.embeddingService.generateEmbedding(profileText);
+    const tags = await this.tagService.generateProfileTags(profileText);
+    
+    // Create profile with embedding and tags
+    const profileWithData = {
+      ...profile,
+      embedding,
+      tags,
+    } as Partial<Profile>;
+    
+    return this.storageAdapter.create(profileWithData);
   }
   
   /**
    * Update the profile
    */
-  async updateProfile(id: string, updates: Partial<Profile>): Promise<boolean> {
-    return this.storageAdapter.update(id, updates);
+  async updateProfile(profileData: Partial<Profile>): Promise<void> {
+    const profile = await this.getProfile();
+    
+    // For testing purposes, if no profile exists we'll create one first
+    if (!profile) {
+      await this.saveProfile({
+        ...profileData,
+        fullName: profileData.fullName || 'Test User',
+      });
+      return; // Profile saved, nothing else to do
+    }
+    
+    // Check if we need to regenerate embedding
+    if (this.embeddingService.shouldRegenerateEmbedding(profileData)) {
+      const updatedProfile = { ...profile, ...profileData };
+      const profileText = this.embeddingService.getProfileTextForEmbedding(updatedProfile);
+      const embedding = await this.embeddingService.generateEmbedding(profileText);
+      
+      if (embedding) {
+        profileData.embedding = embedding;
+      }
+    }
+    
+    // Update the profile
+    await this.storageAdapter.update(profile.id, profileData);
   }
   
   /**
@@ -157,8 +196,39 @@ export class MockProfileContext extends MockBaseContext {
   /**
    * Extract profile keywords
    */
-  async extractProfileKeywords(_profile: Profile): Promise<string[]> {
-    // Mock implementation that returns some standard keywords
-    return ['interests', 'skills', 'personal', 'professional', 'background'];
+  extractProfileKeywords(profile: Partial<Profile>): string[] {
+    return this.tagService.extractProfileKeywords(profile);
+  }
+  
+  /**
+   * Find notes related to the profile using tags or embeddings
+   */
+  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<NoteWithSimilarity[]> {
+    return this.searchService.findRelatedNotes(noteContext, limit);
+  }
+  
+  /**
+   * Find notes that have similar tags to the profile
+   */
+  async findNotesWithSimilarTags(
+    noteContext: NoteContext,
+    profileTags: string[],
+    limit = 5,
+  ): Promise<NoteWithSimilarity[]> {
+    return this.searchService.findNotesWithSimilarTags(noteContext, profileTags, limit);
+  }
+  
+  /**
+   * Generate or update embeddings for the profile
+   */
+  async generateEmbeddingForProfile(): Promise<{ updated: boolean }> {
+    return this.embeddingService.generateEmbeddingForProfile();
+  }
+  
+  /**
+   * Update or generate tags for an existing profile
+   */
+  async updateProfileTags(forceRegenerate = false): Promise<string[] | null> {
+    return this.tagService.updateProfileTags(forceRegenerate);
   }
 }

@@ -11,7 +11,7 @@ import { DataRequestType, MessageFactory, NotificationType } from '@/protocol/me
 import type { ContextCommunicationMessage, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { ProfileContext } from '../core/profileContext';
+import type { ProfileContext } from '../profileContext';
 
 /**
  * Handler for profile context messages

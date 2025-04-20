@@ -4,12 +4,12 @@
  * Exports all components of the profiles module for easy access
  */
 
-// Export the main context class using the new standardized implementation
-export { ProfileContext } from './core/profileContext';
-export type { ProfileContextConfig } from './core/profileContext';
+// Export the main context class
+export { ProfileContext } from './profileContext';
+export type { ProfileContextConfig } from './profileContext';
 
 // Export standardized adapters
-export { ProfileStorageAdapter } from './adapters/profileStorageAdapter';
+export { ProfileStorageAdapter } from './profileStorageAdapter';
 
 // Export formatters
 export { ProfileFormatter } from './formatters/profileFormatter';
@@ -19,4 +19,9 @@ export type {
   NoteContext, 
   NoteWithSimilarity,
   ProfileFormattingOptions, 
-} from './types/profileTypes';
+} from './profileTypes';
+
+// Export messaging
+export { ProfileContextMessaging } from './messaging/profileContextMessaging';
+export { ProfileMessageHandler } from './messaging/profileMessageHandler';
+export { ProfileNotifier } from './messaging/profileNotifier';

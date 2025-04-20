@@ -25,9 +25,9 @@ import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
-import { ProfileStorageAdapter } from '../adapters/profileStorageAdapter';
-import { ProfileFormatter } from '../formatters/profileFormatter';
-import type { NoteContext, NoteWithSimilarity, ProfileFormattingOptions } from '../types/profileTypes';
+import { ProfileStorageAdapter } from './profileStorageAdapter';
+import { ProfileFormatter } from './formatters/profileFormatter';
+import type { NoteContext, NoteWithSimilarity, ProfileFormattingOptions } from './profileTypes';
 
 /**
  * Configuration for the ProfileContext

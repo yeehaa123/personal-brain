@@ -11,8 +11,8 @@ import type { ContextMediator } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
 import type { NoteContext } from '../../notes/noteContext';
-import type { ProfileContext } from '../core/profileContext';
-import type { NoteWithSimilarity } from '../types/profileTypes';
+import type { ProfileContext } from '../profileContext';
+import type { NoteWithSimilarity } from '../profileTypes';
 
 import { ProfileMessageHandler } from './profileMessageHandler';
 import { ProfileNotifier } from './profileNotifier';

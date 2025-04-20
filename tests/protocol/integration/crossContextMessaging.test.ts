@@ -171,6 +171,8 @@ describe('Cross-Context Messaging Integration', () => {
     });
 
     // For this test, we just verify the operation completes without errors
-    expect(await profileContext.getProfile()).toBeNull();
+    const profile = await profileContext.getProfile();
+    expect(profile).toBeDefined();
+    expect(profile?.summary).toBe('Updated profile summary');
   });
 });

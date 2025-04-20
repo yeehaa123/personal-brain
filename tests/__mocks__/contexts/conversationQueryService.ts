@@ -7,8 +7,8 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 import type { ConversationInfo, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
+import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 
 /**
  * Mock implementation of ConversationQueryService
