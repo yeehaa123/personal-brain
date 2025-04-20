@@ -191,8 +191,8 @@ export class MockWebsiteCommandHandler {
     }
     
     case 'website-status': {
-      const environment = args.trim().toLowerCase() === 'production' ? 'production' : 'preview';
-      const result = await websiteContext.handleWebsiteStatus(environment);
+      // We simply pass nothing to the mock handler, which will use the default 'preview' environment
+      const result = await websiteContext.handleWebsiteStatus();
       return {
         type: 'website-status',
         success: result.success,

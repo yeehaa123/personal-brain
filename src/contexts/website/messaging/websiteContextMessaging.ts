@@ -9,8 +9,8 @@ import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { WebsiteContext } from '../core/websiteContext';
-import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
+import type { WebsiteContext } from '../websiteContext';
+import type { LandingPageData, WebsiteConfig } from '../websiteStorage';
 
 import { WebsiteMessageHandler } from './websiteMessageHandler';
 import { WebsiteNotifier } from './websiteNotifier';

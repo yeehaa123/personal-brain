@@ -3,26 +3,35 @@
  */
 
 // Core exports
-export { WebsiteContext } from './core/websiteContext';
-export type { WebsiteContextOptions } from './core/websiteContext';
+export { WebsiteContext } from './websiteContext';
+export type { WebsiteContextOptions } from './websiteContext';
 
 // Storage types
 export { 
   WebsiteConfigSchema,
   LandingPageSchema, 
-} from './storage/websiteStorage';
+} from './websiteStorage';
 export type { 
   WebsiteConfig,
   LandingPageData, 
-} from './storage/websiteStorage';
+} from './websiteStorage';
 
 // Adapter exports
 export { 
   InMemoryWebsiteStorageAdapter,
-} from './adapters/websiteStorageAdapter';
+} from './websiteStorageAdapter';
 export type {
   WebsiteStorageAdapter,
-} from './adapters/websiteStorageAdapter';
+} from './websiteStorageAdapter';
+
+// Deployment exports
+export {
+  PM2DeploymentAdapter,
+  getDeploymentAdapter,
+} from './deploymentAdapter';
+export type {
+  DeploymentAdapter,
+} from './deploymentAdapter';
 
 // Messaging exports
 export {

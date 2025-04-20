@@ -16,7 +16,7 @@ import {
 } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { WebsiteContext } from '../core/websiteContext';
+import type { WebsiteContext } from '../websiteContext';
 
 /**
  * Interface for message with common properties

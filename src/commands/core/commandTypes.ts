@@ -24,7 +24,7 @@ export interface CommandInfo {
 export type WebsiteCommandResult =
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
-  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }
+  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string; path?: string }
   | { type: 'website-promote'; success: boolean; message: string; url?: string }
   | { type: 'website-status'; success: boolean; message: string; data?: { 
       environment: string;
@@ -64,7 +64,7 @@ export type CommandResult =
   | { type: 'conversation-notes'; notes: Note[] }
   | { type: 'website-config'; success?: boolean; config?: WebsiteConfig; message: string }
   | { type: 'landing-page'; success?: boolean; message?: string; data?: LandingPageData }
-  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string }
+  | { type: 'website-build'; success: boolean; message: string; url?: string; output?: string; path?: string }
   | { type: 'website-promote'; success: boolean; message: string; url?: string }
   | { type: 'website-status'; success: boolean; message: string; data?: { 
       environment: string;

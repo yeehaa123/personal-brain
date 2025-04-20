@@ -8,8 +8,8 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ExternalSourceContext } from '@/contexts';
-import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/externalSourceStorageAdapter';
 import type { ExternalSourceContextConfig } from '@/contexts/externalSources/externalSourceContext';
+import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/externalSourceStorageAdapter';
 import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';

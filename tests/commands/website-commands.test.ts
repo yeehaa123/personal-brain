@@ -92,6 +92,33 @@ describe('WebsiteCommandHandler', () => {
   });
 
   test('should handle website config command with updates', async () => {
+    // Setup mock to return the updated config
+    mockWebsiteContext.updateConfig = mock((updates) => Promise.resolve({
+      title: updates.title as string || 'Personal Brain',
+      description: 'Mock Description',
+      author: updates.author as string || 'Anonymous',
+      baseUrl: 'http://localhost:4321',
+      astroProjectPath: 'src/website',
+      deployment: {
+        type: 'local-dev',
+        previewPort: 4321,
+        productionPort: 4322,
+      },
+    }));
+    
+    mockWebsiteContext.getConfig = mock(() => Promise.resolve({
+      title: 'New Title',
+      description: 'Mock Description',
+      author: 'New Author',
+      baseUrl: 'http://localhost:4321',
+      astroProjectPath: 'src/website',
+      deployment: {
+        type: 'local-dev',
+        previewPort: 4321,
+        productionPort: 4322,
+      },
+    }));
+    
     // Then update the config
     const result = await commandHandler.processCommand('website-config', 'title="New Title" author="New Author"');
 
@@ -141,6 +168,7 @@ describe('WebsiteCommandHandler', () => {
     mockWebsiteContext.handleWebsiteBuild = mock(() => Promise.resolve({
       success: true,
       message: 'Website built successfully for preview',
+      path: '/dist/preview',
       url: 'https://preview.example.com',
     }));
     

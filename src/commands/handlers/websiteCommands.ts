@@ -326,6 +326,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         success: result.success,
         message: result.message,
         url: result.url,
+        path: result.path,
       };
     } catch (error) {
       this.logger.error(`Error in website build command: ${error}`);
