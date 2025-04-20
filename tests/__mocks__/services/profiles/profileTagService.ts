@@ -6,6 +6,7 @@
  */
 
 import { mock } from 'bun:test';
+
 import type { Profile } from '@/models/profile';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
 

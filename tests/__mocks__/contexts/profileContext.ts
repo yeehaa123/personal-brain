@@ -11,14 +11,14 @@ import type { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAd
 import type { NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-
-import { MockBaseContext } from './baseContext';
-import { MockProfileStorageAdapter } from './profileStorageAdapter';
 import { 
   MockProfileEmbeddingService,
   MockProfileSearchService,
   MockProfileTagService,
 } from '@test/__mocks__/services/profiles';
+
+import { MockBaseContext } from './baseContext';
+import { MockProfileStorageAdapter } from './profileStorageAdapter';
 
 /**
  * Mock implementation for the ProfileContext

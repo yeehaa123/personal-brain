@@ -22,12 +22,12 @@ import { Logger } from '@/utils/logger';
 import { 
   ExternalSourceStorageAdapter, 
   type ExternalSourceStorageConfig, 
-} from '../adapters/externalSourceStorageAdapter';
+} from './externalSourceStorageAdapter';
 import type { 
   ExternalSearchOptions, 
   ExternalSourceInterface,
   ExternalSourceResult, 
-} from '../sources';
+} from './sources';
 
 /**
  * Configuration for the ExternalSourceContext

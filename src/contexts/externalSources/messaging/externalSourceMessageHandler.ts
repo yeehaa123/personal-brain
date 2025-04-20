@@ -20,7 +20,7 @@ import type {
 } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { ExternalSourceContext } from '../core/externalSourceContext';
+import type { ExternalSourceContext } from '../externalSourceContext';
 
 /**
  * Handler for external source context messages

@@ -6,11 +6,8 @@
  */
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
-import type { ExternalSourceStorageConfig } from '@/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import type { ExternalSourceStorageConfig } from '@/contexts/externalSources/externalSourceStorageAdapter';
 import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
-
-import { MockNewsApiSource } from '../sources/newsApiSource';
-import { MockWikipediaSource } from '../sources/wikipediaSource';
 
 /**
  * Mock adapter for external source storage
@@ -27,17 +24,9 @@ export class MockExternalSourceStorageAdapter implements StorageInterface<Extern
   
   /**
    * Create a new MockExternalSourceStorageAdapter
-   * @param config Configuration options
+   * @param _config Configuration options
    */
-  private constructor(config: ExternalSourceStorageConfig = {}) {
-    // Initialize with mock sources
-    this.registerSource(MockWikipediaSource.getInstance());
-    
-    // Register NewsAPI if enabled
-    if (!config.enabledSources || config.enabledSources.includes('NewsAPI')) {
-      this.registerSource(MockNewsApiSource.getInstance());
-    }
-    
+  private constructor(_config: ExternalSourceStorageConfig = {}) {
     // Add some default mock results
     this.mockResults = [
       {

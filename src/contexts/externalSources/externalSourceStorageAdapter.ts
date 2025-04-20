@@ -13,13 +13,13 @@
 import { getEnv } from '@/utils/configUtils';
 import { Logger } from '@/utils/logger';
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '../core/storageInterface';
 import type {
   ExternalSearchOptions,
   ExternalSourceInterface,
   ExternalSourceResult,
-} from '../sources';
-import { NewsApiSource, WikipediaSource } from '../sources';
+} from './sources';
+import { NewsApiSource, WikipediaSource } from './sources';
 
 /**
  * Cache item for storing retrieved results

@@ -6,7 +6,7 @@
 
 import { mock } from 'bun:test';
 
-import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 
 import { MockBaseContext } from './baseContext';
 

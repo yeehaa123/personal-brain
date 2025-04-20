@@ -6,7 +6,7 @@
  * operations occur.
  */
 
-import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSourceResult } from '../sources';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { MessageFactory, NotificationType } from '@/protocol/messaging';

@@ -6,6 +6,7 @@
  */
 
 import { mock } from 'bun:test';
+
 import type { Profile } from '@/models/profile';
 import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';

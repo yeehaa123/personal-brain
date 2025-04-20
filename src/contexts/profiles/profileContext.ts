@@ -25,8 +25,8 @@ import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
-import { ProfileStorageAdapter } from './profileStorageAdapter';
 import { ProfileFormatter } from './formatters/profileFormatter';
+import { ProfileStorageAdapter } from './profileStorageAdapter';
 import type { NoteContext, NoteWithSimilarity, ProfileFormattingOptions } from './profileTypes';
 
 /**

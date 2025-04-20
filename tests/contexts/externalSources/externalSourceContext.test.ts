@@ -8,13 +8,12 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ExternalSourceContext } from '@/contexts';
-import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/adapters/externalSourceStorageAdapter';
-import type { ExternalSourceContextConfig } from '@/contexts/externalSources/core/externalSourceContext';
-import type { ExternalSourceInterface } from '@/contexts/externalSources/sources/externalSourceInterface';
-import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
+import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/externalSourceStorageAdapter';
+import type { ExternalSourceContextConfig } from '@/contexts/externalSources/externalSourceContext';
+import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
-import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSources/adapters/externalSourceStorageAdapter';
+import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSourceStorageAdapter';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
@@ -122,7 +121,7 @@ describe('ExternalSourceContext', () => {
     // Import the actual dependencies to test the factory method
     // Use dynamic imports instead of require()
     const EmbeddingModule = await import('@/resources/ai/embedding');
-    const AdapterModule = await import('@/contexts/externalSources/adapters/externalSourceStorageAdapter');
+    const AdapterModule = await import('@/contexts/externalSources/externalSourceStorageAdapter');
     
     const EmbeddingService = EmbeddingModule.EmbeddingService;
     const ExternalSourceStorageAdapter = AdapterModule.ExternalSourceStorageAdapter;

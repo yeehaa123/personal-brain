@@ -8,8 +8,8 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { NoteContext, NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
+import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 
 /**
  * MockProfileSearchService class with standardized interface
