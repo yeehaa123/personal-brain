@@ -6,8 +6,8 @@
 
 import { mock } from 'bun:test';
 
-import type { NoteStorageAdapter } from '@/contexts/notes/adapters/noteStorageAdapter';
 import type { Note, NoteSearchParams } from '@/models/note';
+import { MockNoteStorageAdapter } from './noteStorageAdapter';
 
 import { MockBaseContext } from './baseContext';
 
@@ -116,14 +116,14 @@ export class MockNoteContext extends MockBaseContext {
   /**
    * Get the storage adapter
    */
-  getStorage(): NoteStorageAdapter {
-    return this.storageAdapter as unknown as NoteStorageAdapter;
+  getStorage(): MockNoteStorageAdapter {
+    return this.storageAdapter as unknown as MockNoteStorageAdapter;
   }
   
   /**
    * Set a new storage adapter
    */
-  setStorage(storage: NoteStorageAdapter): void {
+  setStorage(storage: MockNoteStorageAdapter): void {
     this.storageAdapter = storage as unknown as typeof this.storageAdapter;
   }
   

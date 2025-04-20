@@ -11,7 +11,7 @@ import { DataRequestType, MessageFactory, NotificationType } from '@/protocol/me
 import type { ContextCommunicationMessage, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { NoteContext } from '../core/noteContext';
+import type { NoteContext } from '../noteContext';
 
 /**
  * Handler for note context messages

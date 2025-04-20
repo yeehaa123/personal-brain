@@ -10,7 +10,7 @@ import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { NoteContext } from '../../notes/core/noteContext';
+import type { NoteContext } from '../../notes/noteContext';
 import type { ProfileContext } from '../core/profileContext';
 import type { NoteWithSimilarity } from '../types/profileTypes';
 

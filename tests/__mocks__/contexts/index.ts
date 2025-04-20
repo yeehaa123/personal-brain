@@ -9,6 +9,7 @@
 export { MockBaseContext } from './baseContext';
 export { MockConversationContext } from './conversationContext';
 export { MockNoteContext } from './noteContext';
+export { MockNoteStorageAdapter } from './noteStorageAdapter';
 export { MockProfileContext } from './profileContext';
 export { MockExternalSourceContext } from './externalSources';
 export { MockWebsiteContext } from './websiteContext';

@@ -1,6 +1,6 @@
 /**
  * Export NoteContext implementation
  */
-export { NoteContext } from './core/noteContext';
-export { NoteStorageAdapter } from './adapters/noteStorageAdapter';
-export type { NoteContextConfig } from './core/noteContext';
+export { NoteContext } from './noteContext';
+export { NoteStorageAdapter } from './noteStorageAdapter';
+export type { NoteContextConfig } from './noteContext';

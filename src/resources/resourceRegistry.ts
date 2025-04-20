@@ -168,4 +168,14 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   public getEmbeddingService(): EmbeddingModelAdapter {
     return this.resolve<EmbeddingModelAdapter>(ResourceIdentifiers.EmbeddingService);
   }
+  
+  /**
+   * Get a resource by its identifier with proper typing
+   * 
+   * @param resourceId Resource identifier
+   * @returns The resource instance
+   */
+  public getResource<T>(resourceId: string): T {
+    return this.resolve<T>(resourceId);
+  }
 }

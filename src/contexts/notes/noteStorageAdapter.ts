@@ -16,7 +16,7 @@ import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '../../core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 
 /**
  * Adapter to provide standard StorageInterface for notes

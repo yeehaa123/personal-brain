@@ -24,7 +24,7 @@ import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
-import { NoteStorageAdapter } from '../adapters/noteStorageAdapter';
+import { NoteStorageAdapter } from './noteStorageAdapter';
 
 /**
  * Configuration for the NoteContext

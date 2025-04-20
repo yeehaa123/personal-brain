@@ -3,7 +3,7 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { NoteStorageAdapter } from '@/contexts/notes/adapters/noteStorageAdapter';
+import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository'; import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
