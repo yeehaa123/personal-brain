@@ -58,6 +58,29 @@ export class MockNoteContext extends MockBaseContext<
   }
   
   /**
+   * Factory method that creates a new instance with dependencies
+   * @param config Configuration options or dependencies
+   * @returns A new MockNoteContext instance
+   */
+  public static createWithDependencies(config: Record<string, unknown> = {}): MockNoteContext {
+    // Handle the case where storage or formatter are provided as dependencies
+    const storage = config['storage'] as MockNoteStorageAdapter;
+    const formatter = config['formatter'] as MockNoteFormatter;
+    
+    const instance = new MockNoteContext(config);
+    
+    if (storage) {
+      instance.setStorage(storage);
+    }
+    
+    if (formatter) {
+      instance.formatter = formatter;
+    }
+    
+    return instance;
+  }
+  
+  /**
    * Constructor
    */
   constructor(config: Record<string, unknown> = {}) {
@@ -204,5 +227,15 @@ export class MockNoteContext extends MockBaseContext<
     // In a real implementation, this would delegate to the storage adapter's getRelated method
     // For mock purposes, we'll just return an empty array
     return [];
+  }
+  
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * Required for FullContextInterface compatibility
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with provided dependencies
+   */
+  override createWithDependencies(dependencies: Record<string, unknown>): MockNoteContext {
+    return MockNoteContext.createWithDependencies(dependencies);
   }
 }

@@ -27,7 +27,7 @@ export class MockExternalSourceFormatter {
     
     // Simple mock implementation that returns formatted results
     return data.map(result => 
-      `## ${result.title}\n\n${result.content}\n\n**Source:** ${result.source}`
+      `## ${result.title}\n\n${result.content}\n\n**Source:** ${result.source}`,
     ).join('\n\n---\n\n');
   });
   

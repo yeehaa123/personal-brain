@@ -811,7 +811,7 @@ export class WebsiteContext extends BaseContext<
     TFormatter extends FormatterInterface<unknown, unknown>
   >(
     config: Record<string, unknown>,
-    dependencies?: ContextDependencies<TStorage, TFormatter>
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
   ): WebsiteContext {
     // Convert the parameters to WebsiteContextOptions for backward compatibility
     const options: WebsiteContextOptions = { ...config };

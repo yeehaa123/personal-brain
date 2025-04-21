@@ -128,10 +128,11 @@ Remove legacy code and transitional adapters:
     - ✅ ConversationContext now properly implements FullContextInterface
     - ✅ WebsiteContext now properly implements FullContextInterface
     - ✅ ExternalSourceContext already properly implements FullContextInterface
-    - ✅ NoteContext updated with compatible type signatures
+    - ✅ NoteContext properly implements FullContextInterface
     - ✅ ProfileContext updated with compatible type signatures
     - ✅ Required config types now extend Record<string, unknown> for compatibility
     - ✅ Storage adapters now properly implement StorageInterface
+    - ✅ Added missing createWithDependencies to MockNoteContext
     - ⏳ Any remaining contexts need verification for interface compatibility
 - ⏳ Simplify interfaces by removing redundancy
 - ⏳ Consolidate similar functionality
