@@ -47,6 +47,8 @@ Dependency injection implementation is in progress:
 - ✅ NoteContext properly uses explicit dependency injection with required parameters
 - ✅ ExternalSourceContext now uses proper dependency injection with nested components
 - ✅ WebsiteContext updated with factory method for dependency resolution
+- ✅ ProfileContext updated with object-based dependency injection pattern
+- ✅ ProfileStorageAdapter updated with createWithDependencies factory method
 - ✅ Created createWithDependencies factory methods in multiple contexts
 - ⏳ Finish dependency injection for remaining contexts
 - ⏳ Remove any remaining direct dependencies in constructors
@@ -96,9 +98,12 @@ Remove legacy code and transitional adapters:
   - ✅ NoteContext updated with proper DI pattern
   - ✅ ExternalSourceContext and its components (WikipediaSource, NewsApiSource) updated
   - ✅ WebsiteContext using createWithDependencies factory method
-  - ⏳ Remaining contexts to be updated
+  - ✅ ProfileContext updated with object-based dependency injection
+  - ✅ ProfileStorageAdapter with createWithDependencies factory method
+  - ⏳ ConversationContext to be updated
 - 🔄 Remove direct dependencies on concrete implementations
   - ✅ ExternalSourceStorageAdapter no longer directly creates its dependencies
+  - ✅ ProfileStorageAdapter properly takes explicit repository dependency
   - ✅ Improved test mocks to work with the new dependency injection patterns
   - ⏳ Continue removing direct dependencies in other contexts
 
@@ -121,7 +126,8 @@ Remove legacy code and transitional adapters:
 
 1. **Continue Dependency Injection Completion** (High Priority):
    - ✅ Made significant progress with ExternalSourceContext, NoteContext, and WebsiteContext
-   - Focus on ProfileContext and ConversationContext next
+   - ✅ Completed ProfileContext with object-based dependency injection pattern
+   - Focus on ConversationContext next
    - Continue updating constructors to require dependencies as parameters
    - Create factory methods for dependency resolution in remaining contexts
    - Ensure all components follow the Component Interface Standardization pattern

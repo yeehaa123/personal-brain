@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { NewsApiSource } from '@/contexts/externalSources/sources/newsApiSource';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { EmbeddingService } from '@/resources/ai/embedding';
 import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 

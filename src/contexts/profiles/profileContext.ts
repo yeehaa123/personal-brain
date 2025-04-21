@@ -15,13 +15,12 @@ import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { 
   Profile,
 } from '@/models/profile';
-import type {
+import { 
   ProfileEmbeddingService,
   ProfileRepository,
   ProfileSearchService,
   ProfileTagService,
 } from '@/services/profiles';
-import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
@@ -50,6 +49,22 @@ export interface ProfileContextConfig {
 }
 
 /**
+ * Dependencies for ProfileContext
+ */
+export interface ProfileContextDependencies {
+  /** Profile repository instance */
+  repository: ProfileRepository;
+  /** Profile embedding service instance */
+  embeddingService: ProfileEmbeddingService;
+  /** Profile tag service instance */
+  tagService: ProfileTagService;
+  /** Profile search service instance */
+  searchService: ProfileSearchService;
+  /** Optional storage adapter (will be created if not provided) */
+  storageAdapter?: ProfileStorageAdapter;
+}
+
+/**
  * Context for working with user profiles
  * 
  * Acts as a facade for profile-related operations, coordinating between
@@ -65,6 +80,11 @@ export class ProfileContext extends BaseContext {
   
   // Optional note context for related note operations
   private noteContext?: NoteContext;
+  
+  // Service dependencies
+  private readonly embeddingService: ProfileEmbeddingService;
+  private readonly tagService: ProfileTagService;
+  private readonly searchService: ProfileSearchService;
   
   // Singleton instance
   private static instance: ProfileContext | null = null;
@@ -119,50 +139,67 @@ export class ProfileContext extends BaseContext {
   }
 
   /**
-   * Factory method for creating an instance with dependencies from ServiceRegistry
+   * Factory method for creating an instance with explicit dependencies
    * 
    * @param config Configuration options
    * @returns A new ProfileContext instance with resolved dependencies
    */
   public static createWithDependencies(config: ProfileContextConfig = {}): ProfileContext {
-    const serviceRegistry = ServiceRegistry.getInstance({
-      apiKey: config.apiKey,
-    });
+    // Create embedding service first, it will be needed by other components
+    const embeddingService = ProfileEmbeddingService.getInstance(config.apiKey);
     
-    const repository = serviceRegistry.getProfileRepository() as ProfileRepository;
-    const embeddingService = serviceRegistry.getProfileEmbeddingService() as ProfileEmbeddingService; 
-    const tagService = serviceRegistry.getProfileTagService();
-    const searchService = serviceRegistry.getProfileSearchService() as ProfileSearchService;
+    // Create repository
+    const repository = ProfileRepository.getInstance();
     
-    return new ProfileContext(
-      config,
+    // Create tag service
+    const tagService = ProfileTagService.getInstance();
+    
+    // Create search service with explicit dependencies
+    const searchService = ProfileSearchService.getInstance(
       repository,
       embeddingService,
       tagService,
-      searchService,
+    );
+    
+    // Create storage adapter with explicit repository dependency
+    const storageAdapter = ProfileStorageAdapter.createWithDependencies({
+      repository,
+    });
+    
+    // Create and return the context with explicit dependencies
+    return new ProfileContext(
+      config,
+      {
+        repository,
+        embeddingService,
+        tagService,
+        searchService,
+        storageAdapter,
+      }
     );
   }
 
+  
   /**
    * Constructor for ProfileContext with explicit dependency injection
    * 
    * @param config Configuration for the context
-   * @param repository Profile repository instance
-   * @param embeddingService Profile embedding service instance
-   * @param tagService Profile tag service instance
-   * @param searchService Profile search service instance
+   * @param dependencies Service dependencies for the context
    */
   constructor(
     config: ProfileContextConfig,
-    private readonly repository: ProfileRepository,
-    private readonly embeddingService: ProfileEmbeddingService,
-    private readonly tagService: ProfileTagService, 
-    private readonly searchService: ProfileSearchService,
+    dependencies: ProfileContextDependencies,
   ) {
     super(config as Record<string, unknown>);
     
-    // Initialize storage adapter
-    this.storage = new ProfileStorageAdapter(this.repository);
+    // Store dependencies
+    this.embeddingService = dependencies.embeddingService;
+    this.tagService = dependencies.tagService;
+    this.searchService = dependencies.searchService;
+    
+    // Initialize storage adapter (use provided one or create new one with the repository)
+    this.storage = dependencies.storageAdapter || 
+      ProfileStorageAdapter.createWithDependencies({ repository: dependencies.repository });
     
     // Initialize formatter
     this.formatter = new ProfileFormatter();

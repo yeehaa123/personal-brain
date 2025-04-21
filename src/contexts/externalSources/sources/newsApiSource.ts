@@ -113,7 +113,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   constructor(
     apiKey?: string,
     embeddingService?: EmbeddingService | null,
-    maxAgeHours = 24 * 7
+    maxAgeHours = 24 * 7,
   ) {
     this.apiKey = apiKey || getEnv('NEWSAPI_KEY');
     this.maxAgeHours = maxAgeHours;

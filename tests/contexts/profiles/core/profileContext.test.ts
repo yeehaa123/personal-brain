@@ -86,10 +86,12 @@ describe('ProfileContext', () => {
     // Create a fresh context with directly injected dependencies
     profileContext = new ProfileContext(
       { apiKey: 'mock-api-key' },
-      mockProfileRepository as unknown as ProfileRepository,
-      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-      mockProfileTagService as unknown as ProfileTagService,
-      mockProfileSearchService as unknown as ProfileSearchService,
+      {
+        repository: mockProfileRepository as unknown as ProfileRepository,
+        embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        tagService: mockProfileTagService as unknown as ProfileTagService,
+        searchService: mockProfileSearchService as unknown as ProfileSearchService,
+      }
     );
   });
   
@@ -99,10 +101,12 @@ describe('ProfileContext', () => {
     ProfileContext.createWithDependencies = mock(() => {
       return new ProfileContext(
         { apiKey: 'test-api-key' },
-        mockProfileRepository as unknown as ProfileRepository,
-        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-        mockProfileTagService as unknown as ProfileTagService,
-        mockProfileSearchService as unknown as ProfileSearchService,
+        {
+          repository: mockProfileRepository as unknown as ProfileRepository,
+          embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+          tagService: mockProfileTagService as unknown as ProfileTagService,
+          searchService: mockProfileSearchService as unknown as ProfileSearchService,
+        }
       );
     });
     
@@ -127,10 +131,12 @@ describe('ProfileContext', () => {
     ProfileContext.createWithDependencies = mock(() => {
       return new ProfileContext(
         { apiKey: 'test-api-key' },
-        mockProfileRepository as unknown as ProfileRepository,
-        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-        mockProfileTagService as unknown as ProfileTagService,
-        mockProfileSearchService as unknown as ProfileSearchService,
+        {
+          repository: mockProfileRepository as unknown as ProfileRepository,
+          embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+          tagService: mockProfileTagService as unknown as ProfileTagService,
+          searchService: mockProfileSearchService as unknown as ProfileSearchService,
+        }
       );
     });
     
@@ -151,10 +157,12 @@ describe('ProfileContext', () => {
     ProfileContext.createWithDependencies = mock(() => {
       return new ProfileContext(
         { apiKey: 'test-api-key' },
-        mockProfileRepository as unknown as ProfileRepository,
-        mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-        mockProfileTagService as unknown as ProfileTagService,
-        mockProfileSearchService as unknown as ProfileSearchService,
+        {
+          repository: mockProfileRepository as unknown as ProfileRepository,
+          embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+          tagService: mockProfileTagService as unknown as ProfileTagService,
+          searchService: mockProfileSearchService as unknown as ProfileSearchService,
+        }
       );
     });
     
@@ -182,10 +190,12 @@ describe('ProfileContext', () => {
     // Create a context with a custom name
     const namedContext = new ProfileContext(
       { name: 'CustomProfile' },
-      mockProfileRepository as unknown as ProfileRepository,
-      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-      mockProfileTagService as unknown as ProfileTagService,
-      mockProfileSearchService as unknown as ProfileSearchService,
+      {
+        repository: mockProfileRepository as unknown as ProfileRepository,
+        embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        tagService: mockProfileTagService as unknown as ProfileTagService,
+        searchService: mockProfileSearchService as unknown as ProfileSearchService,
+      }
     );
     
     expect(namedContext.getContextName()).toBe('CustomProfile');
@@ -198,10 +208,12 @@ describe('ProfileContext', () => {
     // Create a context with a custom version
     const versionedContext = new ProfileContext(
       { version: '2.0.0' },
-      mockProfileRepository as unknown as ProfileRepository,
-      mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-      mockProfileTagService as unknown as ProfileTagService,
-      mockProfileSearchService as unknown as ProfileSearchService,
+      {
+        repository: mockProfileRepository as unknown as ProfileRepository,
+        embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
+        tagService: mockProfileTagService as unknown as ProfileTagService,
+        searchService: mockProfileSearchService as unknown as ProfileSearchService,
+      }
     );
     
     expect(versionedContext.getContextVersion()).toBe('2.0.0');

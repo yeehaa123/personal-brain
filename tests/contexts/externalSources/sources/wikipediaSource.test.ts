@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { WikipediaSource } from '@/contexts/externalSources/sources/wikipediaSource';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { EmbeddingService } from '@/resources/ai/embedding';
 import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
 import { mockFetch } from '@test/helpers/outputUtils';
 
