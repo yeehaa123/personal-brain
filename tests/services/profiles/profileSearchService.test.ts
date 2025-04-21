@@ -146,20 +146,18 @@ const mockNoteContext: NoteContext = {
   },
 };
 
-// Add the static factory method to the class constructor for testing
-ProfileSearchService.createWithApiKey = (_apiKey?: string) => {
-  // Mock the embeddingService and tagService with empty objects
-  const mockEmbeddingService = {} as ProfileEmbeddingService;
-  const mockTagService = {} as ProfileTagService;
-  return new ProfileSearchService(mockRepository as unknown as ProfileRepository, mockEmbeddingService, mockTagService);
-};
-
 describe('ProfileSearchService', () => {
   let searchService: ProfileSearchService;
 
   beforeEach(() => {
-    // Go back to using the factory method which we've mocked
-    searchService = ProfileSearchService.createWithApiKey('mock-api-key');
+    // Create a fresh instance for testing using the standardized factory method
+    const mockEmbeddingService = {} as ProfileEmbeddingService;
+    const mockTagService = {} as ProfileTagService;
+    searchService = ProfileSearchService.createFresh(
+      mockRepository as unknown as ProfileRepository,
+      mockEmbeddingService,
+      mockTagService
+    );
   });
 
   test('should properly initialize', () => {
@@ -167,7 +165,13 @@ describe('ProfileSearchService', () => {
   });
 
   test('should create instance using factory method', () => {
-    const service = ProfileSearchService.createWithApiKey('mock-api-key');
+    const mockEmbeddingService = {} as ProfileEmbeddingService;
+    const mockTagService = {} as ProfileTagService;
+    const service = ProfileSearchService.createFresh(
+      mockRepository as unknown as ProfileRepository,
+      mockEmbeddingService,
+      mockTagService
+    );
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileSearchService);
   });

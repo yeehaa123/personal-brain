@@ -1,27 +1,13 @@
 /**
  * Profiles Module Index
  * 
- * Exports all components of the profiles module for easy access
+ * Exports only the public API of the profiles module
+ * Implementation details should be imported directly from their source files
  */
 
-// Export the main context class
+// Export only the main context class and its configuration
 export { ProfileContext } from './profileContext';
 export type { ProfileContextConfig } from './profileContext';
 
-// Export standardized adapters
+// Export standardized adapter for extension/configuration
 export { ProfileStorageAdapter } from './profileStorageAdapter';
-
-// Export formatters
-export { ProfileFormatter } from './formatters/profileFormatter';
-
-// Export types
-export type { 
-  NoteContext, 
-  NoteWithSimilarity,
-  ProfileFormattingOptions, 
-} from './profileTypes';
-
-// Export messaging
-export { ProfileContextMessaging } from './messaging/profileContextMessaging';
-export { ProfileMessageHandler } from './messaging/profileMessageHandler';
-export { ProfileNotifier } from './messaging/profileNotifier';

@@ -7,8 +7,9 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import { ConversationContext, InMemoryStorage } from '@/contexts/conversations';
+import { ConversationContext } from '@/contexts/conversations';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
+import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 

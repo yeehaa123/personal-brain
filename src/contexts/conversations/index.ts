@@ -1,46 +1,17 @@
 /**
  * ConversationContext module for managing conversations
  * 
- * Exports the context class and its dependencies
- * Organized using the BaseContext architecture with modular components
+ * Exports only the core public API for the conversation context
+ * Consumers should import implementation details directly from their source files
  */
 
-// Export the core context class
+// Export only the main context class and its public configuration types
 export { ConversationContext } from './conversationContext';
-export type { 
-  ConversationContextConfig,
-  TurnOptions,
-  HistoryOptions,
-} from './conversationContext';
+export type { ConversationContextConfig } from './conversationContext';
 
-// Export the storage adapter
+// Export the storage adapter as it's needed for extension/configuration
 export { ConversationStorageAdapter } from './conversationStorageAdapter';
 
-// Export the storage interfaces and implementations
-export { type ConversationStorage } from './storage/conversationStorage';
-export type {
-  NewConversation,
-  ConversationSummary,
-  SearchCriteria,
-  ConversationInfo,
-} from './storage/conversationStorage';
-export { InMemoryStorage } from './storage/inMemoryStorage';
-
-// Export tiered memory components
-export { TieredMemoryManager } from './memory/tieredMemoryManager';
-export type { TieredMemoryConfig, TieredHistory } from './memory/tieredMemoryManager';
-export { ConversationSummarizer } from './memory/summarizer';
-
-// Export formatting components
-export { ConversationFormatter } from './formatters/conversationFormatter';
-export type { FormattingOptions } from './formatters/conversationFormatter';
-export { 
-  ConversationMcpFormatter,
-  type McpFormattedConversation,
-  type McpFormattingOptions,
-} from './formatters/conversationMcpFormatter';
-
-// Export service components
-export { ConversationMemoryService, ConversationQueryService } from './services';
-export { ConversationResourceService } from './resources';
-export { ConversationToolService } from './tools';
+// Export primary storage interfaces needed by public API users
+export type { ConversationStorage } from './storage/conversationStorage';
+export type { NewConversation, ConversationSummary } from './storage/conversationStorage';

@@ -55,10 +55,9 @@ function groupByFile(unusedExports) {
 
 // Check if we should process this file (skip some files)
 function shouldProcessFile(filePath) {
-  // Skip configuration files and test files for safety
+  // Skip only configuration files and third-party files for safety
   const skipPatterns = [
     /\.config\.(ts|js)$/,   // Config files
-    /test/,                 // Test files
     /\.d\.ts$/,             // Declaration files
     /node_modules/,         // Node modules
     /\.astro\//             // Astro files

@@ -132,22 +132,6 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     this.logger.debug('NoteSearchService instance created with dependencies');
   }
 
-  /**
-   * Legacy constructor support for backwards compatibility
-   * @deprecated Use getInstance() or createFresh() instead
-   * @param apiKey Optional API key for embeddings
-   */
-  static createWithApiKey(apiKey?: string): NoteSearchService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.warn('createWithApiKey is deprecated, use getInstance() or createFresh() instead');
-    
-    const repository = NoteRepository.getInstance();
-    const embeddingService = apiKey ? 
-      NoteEmbeddingService.createFresh(apiKey) : 
-      NoteEmbeddingService.getInstance();
-      
-    return new NoteSearchService(repository, embeddingService);
-  }
 
   /**
    * Search notes with various strategies

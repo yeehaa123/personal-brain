@@ -170,24 +170,6 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     this.logger.debug('ProfileSearchService instance created');
   }
   
-  /**
-   * Legacy constructor support for backwards compatibility
-   * @deprecated Use getInstance or createFresh instead
-   * @param apiKey Optional API key for embeddings
-   * @returns ProfileSearchService instance
-   */
-  static createWithApiKey(apiKey?: string): ProfileSearchService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.warn('createWithApiKey is deprecated, use getInstance() or createFresh() instead');
-    
-    const repository = ProfileRepository.getInstance();
-    const embeddingService = apiKey ? 
-      ProfileEmbeddingService.createFresh(apiKey) : 
-      ProfileEmbeddingService.getInstance();
-    const tagService = new ProfileTagService();
-    
-    return ProfileSearchService.getInstance(repository, embeddingService, tagService);
-  }
 
   /**
    * Search profiles with various strategies
