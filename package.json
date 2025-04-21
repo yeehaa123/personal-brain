@@ -38,6 +38,7 @@
     "test:all": "./test-runner.sh --all",
     "test:website": "./test-runner.sh tests/commands/website-commands.test.ts",
     "find-dead-code": "ts-prune",
+    "find-real-dead-code": "node scripts/cleanup-unused-exports.js",
     "find-deprecated": "grep -r \"@deprecated\" --include=\"*.ts\" src/",
     "prepare": "husky",
     "website:dev": "astro dev --root ./src/website",

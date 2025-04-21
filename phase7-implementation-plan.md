@@ -52,17 +52,25 @@ Identify and remove all remaining legacy code, compatibility layers, and transit
    - Remove deprecated methods in ProfileSearchService (`src/services/profiles/profileSearchService.ts`)
    - Remove deprecated methods in NoteSearchService (`src/services/notes/noteSearchService.ts`)
 
-2. Use `bun run find-dead-code` to systematically identify and remove dead exports:
+2. Use `bun run find-real-dead-code` to systematically identify and remove truly dead exports:
+   - This uses our custom script which filters out irrelevant entries
    - Focus on files with multiple unused exports
    - Prioritize cleaning up the core modules first
    - Look for patterns of dead code in related modules
 
-3. Use `bun run lint:fix` with the newly added unused-imports plugin to clean up unused imports:
+3. Refactor barrel files to reduce implementation leakage:
+   - Review each barrel file to identify what's actually needed by upstream consumers
+   - Only export what's truly part of the public API
+   - Remove unnecessary re-exports that leak implementation details
+   - Use direct imports for implementation details that aren't part of the public API
+   - Focus especially on the main context barrel files (in src/contexts/*/index.ts)
+
+4. Use `bun run lint:fix` with the newly added unused-imports plugin to clean up unused imports:
    - Run periodically during the cleanup process
    - Will automatically remove imports that aren't being used
    - Particularly useful after removing unused exports
 
-4. Review code marked for removal:
+5. Review code marked for removal:
    - Remove transitional adapters in protocol messaging
    - Update configuration handling in config.ts
    - Clean up legacy error handling in various components
