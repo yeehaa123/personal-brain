@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import typescriptParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
+import unusedImportsPlugin from 'eslint-plugin-unused-imports';
 import customRules from './.eslint/index.js';
 
 export default [
@@ -82,13 +83,19 @@ export default [
     plugins: {
       '@typescript-eslint': typescriptEslint,
       'import': importPlugin,
+      'unused-imports': unusedImportsPlugin,
       'custom': customRules,
     },
     rules: {
       ...typescriptEslint.configs.recommended.rules,
       // TypeScript-specific rules
       '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-unused-vars': ['warn', { 
+      // Replace TypeScript no-unused-vars with unused-imports version for better code cleanup
+      '@typescript-eslint/no-unused-vars': 'off', // turned off in favor of unused-imports/no-unused-vars
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': ['warn', { 
+        'vars': 'all',
+        'args': 'after-used',
         'argsIgnorePattern': '^_',
         'caughtErrorsIgnorePattern': '^_',
         'varsIgnorePattern': '^_',

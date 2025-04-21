@@ -37,6 +37,8 @@
     "test": "./test-runner.sh",
     "test:all": "./test-runner.sh --all",
     "test:website": "./test-runner.sh tests/commands/website-commands.test.ts",
+    "find-dead-code": "ts-prune",
+    "find-deprecated": "grep -r \"@deprecated\" --include=\"*.ts\" src/",
     "prepare": "husky",
     "website:dev": "astro dev --root ./src/website",
     "website:build": "astro build --outDir ./dist/production --root ./src/website",
@@ -48,6 +50,7 @@
     "prerestart": "bun run website:cleanup"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.5.0",
     "@eslint/js": "^9.23.0",
     "@modelcontextprotocol/inspector": "^0.7.0",
     "@types/bun": "latest",
@@ -55,14 +58,15 @@
     "@types/sanitize-html": "^2.15.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
+    "astro": "^4.5.0",
     "drizzle-kit": "^0.30.5",
     "eslint": "^9.23.0",
     "eslint-import-resolver-typescript": "^4.3.1",
     "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "husky": "^9.1.7",
     "pm2": "^5.3.1",
-    "astro": "^4.5.0",
-    "@astrojs/check": "^0.5.0"
+    "ts-prune": "^0.10.3"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

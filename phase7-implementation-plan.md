@@ -47,12 +47,25 @@ Identify and remove all remaining legacy code, compatibility layers, and transit
 - Update imports and references to use the new standardized structure
 
 **Specific Tasks:**
-1. Remove deprecated methods in StatusManager
-2. Remove any remaining backward compatibility in ProfileSearchService
-3. Remove legacy code in NoteSearchService
-4. Update configuration handling in config.ts
-5. Remove transitional adapters in protocol messaging
-6. Clean up legacy error handling in various components
+1. Use `bun run find-deprecated` to identify and remove all deprecated methods:
+   - Remove deprecated methods in StatusManager
+   - Remove deprecated methods in ProfileSearchService (`src/services/profiles/profileSearchService.ts`)
+   - Remove deprecated methods in NoteSearchService (`src/services/notes/noteSearchService.ts`)
+
+2. Use `bun run find-dead-code` to systematically identify and remove dead exports:
+   - Focus on files with multiple unused exports
+   - Prioritize cleaning up the core modules first
+   - Look for patterns of dead code in related modules
+
+3. Use `bun run lint:fix` with the newly added unused-imports plugin to clean up unused imports:
+   - Run periodically during the cleanup process
+   - Will automatically remove imports that aren't being used
+   - Particularly useful after removing unused exports
+
+4. Review code marked for removal:
+   - Remove transitional adapters in protocol messaging
+   - Update configuration handling in config.ts
+   - Clean up legacy error handling in various components
 
 ### 2. Dependency Injection Completion (Priority: High)
 
