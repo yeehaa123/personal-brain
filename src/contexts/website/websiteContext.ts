@@ -93,7 +93,7 @@ export class WebsiteContext extends BaseContext {
    */
   static override getInstance(options?: WebsiteContextOptions): WebsiteContext {
     if (!WebsiteContext.instance) {
-      WebsiteContext.instance = new WebsiteContext(options);
+      WebsiteContext.instance = options ? new WebsiteContext(options) : WebsiteContext.createWithDependencies();
     }
     return WebsiteContext.instance;
   }
@@ -128,6 +128,42 @@ export class WebsiteContext extends BaseContext {
    */
   static override createFresh(options?: WebsiteContextOptions): WebsiteContext {
     return new WebsiteContext(options);
+  }
+  
+  /**
+   * Factory method for creating an instance with proper dependencies
+   * This is the preferred way to create a new instance with all required dependencies
+   * 
+   * @returns A new WebsiteContext instance with resolved dependencies
+   */
+  public static createWithDependencies(): WebsiteContext {
+    // Create storage adapter
+    const storage = new GlobalConfigWebsiteStorageAdapter();
+    
+    // Create AstroContentService - doesn't use getInstance pattern, so create directly
+    const websiteRoot = process.env['WEBSITE_ROOT'] || './src/website';
+    const astroContentService = new AstroContentService(websiteRoot);
+    
+    // Create LandingPageGenerationService
+    const landingPageGenerationService = LandingPageGenerationService.getInstance();
+    
+    // Get ProfileContext - optional dependency
+    const profileContext = ProfileContext.getInstance();
+    
+    // Create DeploymentManager
+    const deploymentManager = DeploymentManagerFactory.getInstance()
+      .createDeploymentManager({
+        baseDir: process.env['WEBSITE_ROOT'] || './src/website',
+      });
+    
+    // Create context with all dependencies
+    return new WebsiteContext({
+      storage,
+      astroContentService,
+      landingPageGenerationService,
+      profileContext,
+      deploymentManager,
+    });
   }
   
   /**

@@ -153,17 +153,19 @@ export class NoteContext extends BaseContext {
    * @param repository Note repository instance
    * @param embeddingService Note embedding service instance
    * @param searchService Note search service instance
+   * @param storageAdapter Optional storage adapter instance (created from repository if not provided)
    */
   constructor(
     config: NoteContextConfig,
     private readonly repository: NoteRepository,
     private readonly embeddingService: NoteEmbeddingService,
     private readonly searchService: NoteSearchService,
+    storageAdapter?: StorageInterface<Note>,
   ) {
     super(config as Record<string, unknown>);
     
-    // Initialize storage adapter
-    this.storage = new NoteStorageAdapter(this.repository);
+    // Initialize storage adapter - explicitly use the provided adapter or create one
+    this.storage = storageAdapter || new NoteStorageAdapter(this.repository);
     
     this.logger.debug('NoteContext initialized with dependency injection', { context: 'NoteContext' });
   }
