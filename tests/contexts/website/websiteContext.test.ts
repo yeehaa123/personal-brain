@@ -5,7 +5,7 @@ import type { ProfileContext } from '@/contexts/profiles';
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
-import type { LandingPageData } from '@/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 // Import our mock implementations directly

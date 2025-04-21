@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import type { WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
+import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import { getMarkdownFormatter, getResponseFormatter, MatrixBlockBuilder } from '@/interfaces/matrix/formatters';
 import type { 
   WebsiteBuildResult, 

@@ -2,7 +2,7 @@ import config from '@/config';
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 import { Logger } from '@/utils/logger';
 
-import type { LandingPageData, WebsiteConfig } from '../storage/websiteStorage';
+import type { LandingPageData, WebsiteConfig } from '../websiteStorage';
 
 
 /**

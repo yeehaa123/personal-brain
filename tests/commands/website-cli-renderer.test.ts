@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { WebsiteConfig } from '@/contexts/website/storage/websiteStorage';
+import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandResult, WebsiteCommandResult } from '@commands/core/commandTypes';
 import { createMockLogger, MockLogger } from '@test/__mocks__/core/logger';

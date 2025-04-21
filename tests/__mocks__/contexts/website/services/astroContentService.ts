@@ -1,7 +1,7 @@
 import { mock } from 'bun:test';
 
 import type { AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
-import type { LandingPageData } from '@/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**

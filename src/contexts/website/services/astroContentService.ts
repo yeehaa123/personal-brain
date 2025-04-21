@@ -3,7 +3,7 @@ import path from 'path';
 
 import { Logger } from '@/utils/logger';
 
-import type { LandingPageData } from '../storage/websiteStorage';
+import type { LandingPageData } from '../websiteStorage';
 
 // Type for the spawn function we'll use to run Astro commands
 export type SpawnFunction = (options: {

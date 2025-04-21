@@ -1,6 +1,7 @@
 import { BaseContext } from '@/contexts/core/baseContext';
-import type { FullContextInterface } from '@/contexts/core/contextInterface';
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { ContextDependencies, FullContextInterface } from '@/contexts/core/contextInterface';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { StorageInterface } from '@/contexts/core/storageInterface';
 import { ProfileContext } from '@/contexts/profiles';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
@@ -368,42 +369,8 @@ export class WebsiteContext extends BaseContext<
     return registry.resolve<T>(serviceType.name);
   }
   
-  /**
-   * Instance method that delegates to static getInstance
-   * (Required for interface compatibility)
-   * @returns The singleton instance
-   */
-  getInstance(): WebsiteContext {
-    return WebsiteContext.getInstance();
-  }
-  
-  /**
-   * Instance method that delegates to static resetInstance
-   * (Required for interface compatibility)
-   */
-  resetInstance(): void {
-    WebsiteContext.resetInstance();
-  }
-  
-  /**
-   * Instance method that delegates to static createFresh
-   * (Required for interface compatibility)
-   * @param options Optional configuration
-   * @returns A new instance
-   */
-  createFresh(options?: Record<string, unknown>): WebsiteContext {
-    return WebsiteContext.createFresh(options as WebsiteContextOptions);
-  }
-  
-  /**
-   * Instance method that delegates to static createWithDependencies
-   * (Required for interface compatibility)
-   * @param dependencies Dependencies for the context
-   * @returns A new instance with the specified dependencies
-   */
-  createWithDependencies(dependencies: Record<string, unknown>): WebsiteContext {
-    return WebsiteContext.createWithDependencies(dependencies);
-  }
+  // Instance method implementations are defined at the end of the class
+  // to comply with FullContextInterface requirements
   
   /**
    * Get the deployment manager
@@ -802,5 +769,59 @@ export class WebsiteContext extends BaseContext<
         message: error instanceof Error ? error.message : 'Unknown error checking website status',
       };
     }
+  }
+
+  /**
+   * Instance method that delegates to static getInstance
+   * Required by FullContextInterface
+   * @returns The singleton instance
+   */
+  getInstance(): WebsiteContext {
+    return WebsiteContext.getInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static resetInstance
+   * Required by FullContextInterface
+   */
+  resetInstance(): void {
+    WebsiteContext.resetInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static createFresh
+   * Required by FullContextInterface
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: WebsiteContextOptions): WebsiteContext {
+    return WebsiteContext.createFresh(options);
+  }
+  
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * Required by FullContextInterface
+   * 
+   * @param config Configuration options
+   * @param dependencies Optional dependencies for the context
+   * @returns A new instance with the provided dependencies
+   */
+  createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown>,
+    dependencies?: ContextDependencies<TStorage, TFormatter>
+  ): WebsiteContext {
+    // Convert the parameters to WebsiteContextOptions for backward compatibility
+    const options: WebsiteContextOptions = { ...config };
+    if (dependencies?.storage) {
+      options.storage = dependencies.storage as unknown as WebsiteStorageAdapter;
+    }
+    if (dependencies?.formatter) {
+      options.formatter = dependencies.formatter as unknown as WebsiteFormatter;
+    }
+    
+    return WebsiteContext.createWithDependencies(options);
   }
 }

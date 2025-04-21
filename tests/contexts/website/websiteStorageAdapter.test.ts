@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { 
   InMemoryWebsiteStorageAdapter, 
 } from '@/contexts/website/adapters/websiteStorageAdapter';
-import type { LandingPageData } from '@/contexts/website/storage/websiteStorage';
+import type { LandingPageData } from '@/contexts/website/websiteStorage';
 
 describe('WebsiteStorageAdapter', () => {
   describe('InMemoryWebsiteStorageAdapter', () => {

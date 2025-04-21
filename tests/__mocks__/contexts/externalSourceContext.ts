@@ -2,18 +2,30 @@
  * ExternalSourceContext mock implementation
  * 
  * Provides a standardized mock for the ExternalSourceContext class.
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { mock } from 'bun:test';
 
+import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 
 import { MockBaseContext } from './baseContext';
+import { MockExternalSourceFormatter } from './externalSources/formatters';
+import { MockExternalSourceStorageAdapter } from './externalSourceStorageAdapter';
 
 /**
  * Mock implementation for the ExternalSourceContext
  */
-export class MockExternalSourceContext extends MockBaseContext {
+export class MockExternalSourceContext extends MockBaseContext<
+  StorageInterface<ExternalSourceResult>,
+  MockExternalSourceFormatter,
+  ExternalSourceResult[],
+  string
+> {
   private static instance: MockExternalSourceContext | null = null;
   
   // Mock sources
@@ -50,6 +62,13 @@ export class MockExternalSourceContext extends MockBaseContext {
   }
   
   /**
+   * Create with dependencies factory method
+   */
+  public static createWithDependencies(config: Record<string, unknown> = {}): MockExternalSourceContext {
+    return new MockExternalSourceContext(config);
+  }
+  
+  /**
    * Constructor
    */
   constructor(config: Record<string, unknown> = {}) {
@@ -57,6 +76,13 @@ export class MockExternalSourceContext extends MockBaseContext {
       name: config['name'] || 'ExternalSourceBrain',
       version: config['version'] || '1.0.0',
     });
+    
+    // Set up storage and formatter
+    this.storage = config['storage'] as StorageInterface<ExternalSourceResult> || 
+      MockExternalSourceStorageAdapter.createFresh();
+    
+    this.formatter = config['formatter'] as MockExternalSourceFormatter || 
+      MockExternalSourceFormatter.createFresh();
     
     // Initialize mock sources
     this.sources = [
@@ -150,28 +176,56 @@ export class MockExternalSourceContext extends MockBaseContext {
   }
   
   /**
-   * Check if any sources are available
+   * Check if sources are available
    */
-  async checkSourcesAvailability(): Promise<boolean> {
-    let anyAvailable = false;
+  async checkSourcesAvailability(): Promise<Record<string, boolean>> {
+    const result: Record<string, boolean> = {};
     
     for (const source of this.sources) {
       const isAvailable = await source.checkAvailability();
       source.isAvailable = isAvailable;
-      if (isAvailable) {
-        anyAvailable = true;
-      }
+      result[source.name] = isAvailable;
     }
     
-    return anyAvailable;
+    return result;
   }
   
   /**
-   * Get all available sources
+   * Get enabled sources
+   */
+  getEnabledSources(): Array<{
+    name: string;
+    search: (query: string, options?: Record<string, unknown>) => Promise<ExternalSourceResult[]>;
+    checkAvailability: () => Promise<boolean>;
+  }> {
+    return this.sources.filter(source => source.isAvailable);
+  }
+  
+  /**
+   * Get all available source names
    */
   getAvailableSources(): string[] {
     return this.sources
       .filter(source => source.isAvailable)
       .map(source => source.name);
+  }
+  
+  /**
+   * Required implementation of interface methods from FullContextInterface
+   */
+  override getInstance(): MockExternalSourceContext {
+    return MockExternalSourceContext.getInstance();
+  }
+  
+  override resetInstance(): void {
+    MockExternalSourceContext.resetInstance();
+  }
+  
+  override createFresh(options?: Record<string, unknown>): MockExternalSourceContext {
+    return MockExternalSourceContext.createFresh(options);
+  }
+  
+  override createWithDependencies(dependencies: Record<string, unknown>): MockExternalSourceContext {
+    return MockExternalSourceContext.createWithDependencies(dependencies);
   }
 }

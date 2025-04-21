@@ -126,17 +126,21 @@ Remove legacy code and transitional adapters:
   - ✅ Updated BaseContext with standardized interface contract
   - 🔄 Update context implementations to use new interfaces
     - ✅ ConversationContext now properly implements FullContextInterface
+    - ✅ WebsiteContext now properly implements FullContextInterface
+    - ✅ ExternalSourceContext already properly implements FullContextInterface
     - ✅ NoteContext updated with compatible type signatures
     - ✅ ProfileContext updated with compatible type signatures
     - ✅ Required config types now extend Record<string, unknown> for compatibility
     - ✅ Storage adapters now properly implement StorageInterface
-    - ⏳ Remaining contexts need verification for interface compatibility
+    - ⏳ Any remaining contexts need verification for interface compatibility
 - ⏳ Simplify interfaces by removing redundancy
 - ⏳ Consolidate similar functionality
 - 🔄 Update references to use simplified interfaces
   - ✅ Fixed createWithDependencies method signatures in contexts
   - ✅ Updated mock implementations to be compatible with new interface requirements
-  - ⏳ Update remaining mocks and references
+  - ✅ Added MockExternalSourceFormatter implementation
+  - ✅ Updated MockExternalSourceContext to fully implement interface requirements
+  - ⏳ Update any remaining mocks and references
 
 ### Milestone 4: Directory Restructuring ✅ COMPLETED
 - ✅ Flatten nested directories while preserving logical structure

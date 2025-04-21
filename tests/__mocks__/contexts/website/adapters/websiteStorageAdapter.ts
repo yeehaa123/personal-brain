@@ -7,7 +7,7 @@ import type {
 import type {
   LandingPageData,
   WebsiteConfig,
-} from '@/contexts/website/storage/websiteStorage';
+} from '@/contexts/website/websiteStorage';
 
 /**
  * Mock implementation of WebsiteStorageAdapter for testing
