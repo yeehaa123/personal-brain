@@ -27,7 +27,7 @@ Phase 6 focuses on aggressive cleanup and simplification of the architecture. No
   - ✅ Website context
 - ⏳ Simplify interfaces
 - ⏳ Consolidate similar functionality
-- ⏳ Complete dependency injection for all contexts
+- 🔄 Complete dependency injection for all contexts (in progress)
 - ✅ Standardize ResourceRegistry and ServiceRegistry implementations
 
 ## Implementation Approach
@@ -41,13 +41,15 @@ Registry standardization has been completed:
 - Fixed all type checking and testing issues
 - Registry implementations now have a clear separation of concerns and consistent API
 
-### 2. Dependency Injection Completion (Priority: High)
+### 2. Dependency Injection Completion (Priority: High) - IN PROGRESS
 
-Complete dependency injection for remaining contexts:
-- Review all contexts and identify those not using explicit dependency injection
-- Update constructors to require dependencies as parameters
-- Create factory methods for dependency resolution
-- Ensure no direct instance creation in code
+Dependency injection implementation is in progress:
+- ✅ NoteContext properly uses explicit dependency injection with required parameters
+- ✅ ExternalSourceContext now uses proper dependency injection with nested components
+- ✅ WebsiteContext updated with factory method for dependency resolution
+- ✅ Created createWithDependencies factory methods in multiple contexts
+- ⏳ Finish dependency injection for remaining contexts
+- ⏳ Remove any remaining direct dependencies in constructors
 
 ### 3. Interface Simplification (Priority: Medium)
 
@@ -89,9 +91,16 @@ Remove legacy code and transitional adapters:
 - ✅ Fixed context registration with MCP server
 - ✅ All tests pass with the updated implementations
 
-### Milestone 2: Dependency Injection
-- Complete dependency injection for all contexts
-- Remove direct dependencies on concrete implementations
+### Milestone 2: Dependency Injection 🔄 IN PROGRESS
+- 🔄 Complete dependency injection for all contexts
+  - ✅ NoteContext updated with proper DI pattern
+  - ✅ ExternalSourceContext and its components (WikipediaSource, NewsApiSource) updated
+  - ✅ WebsiteContext using createWithDependencies factory method
+  - ⏳ Remaining contexts to be updated
+- 🔄 Remove direct dependencies on concrete implementations
+  - ✅ ExternalSourceStorageAdapter no longer directly creates its dependencies
+  - ✅ Improved test mocks to work with the new dependency injection patterns
+  - ⏳ Continue removing direct dependencies in other contexts
 
 ### Milestone 3: Interface Simplification
 - Simplify interfaces
@@ -110,16 +119,18 @@ Remove legacy code and transitional adapters:
 
 ## Next Steps
 
-1. **Begin Dependency Injection Completion** (High Priority):
-   - Review all contexts and identify which ones don't yet use explicit dependency injection
-   - Update constructors to require dependencies as parameters
-   - Create factory methods for dependency resolution
-   - Ensure no direct instance creation in code
+1. **Continue Dependency Injection Completion** (High Priority):
+   - ✅ Made significant progress with ExternalSourceContext, NoteContext, and WebsiteContext
+   - Focus on ProfileContext and ConversationContext next
+   - Continue updating constructors to require dependencies as parameters
+   - Create factory methods for dependency resolution in remaining contexts
+   - Ensure all components follow the Component Interface Standardization pattern
 
 2. **Start Interface Simplification** (Medium Priority):
    - Review interfaces for redundancy and consolidation opportunities
    - Prioritize high-use interfaces for simplification
    - Remove duplicate methods and consolidate related functionality
+   - Focus on source interfaces and context interface standardization
 
 3. **Begin Code Cleanup** (High Priority):
    - Identify and remove any remaining backward compatibility layers

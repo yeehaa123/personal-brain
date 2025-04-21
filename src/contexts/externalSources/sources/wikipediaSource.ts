@@ -72,7 +72,8 @@ export class WikipediaSource implements ExternalSourceInterface {
    */
   public static getInstance(apiKey?: string): WikipediaSource {
     if (!WikipediaSource.instance) {
-      WikipediaSource.instance = new WikipediaSource(apiKey);
+      const embeddingService = apiKey ? EmbeddingService.getInstance({ apiKey }) : null;
+      WikipediaSource.instance = new WikipediaSource(embeddingService);
     }
     return WikipediaSource.instance;
   }
@@ -87,16 +88,33 @@ export class WikipediaSource implements ExternalSourceInterface {
   /**
    * Create a fresh instance (primarily for testing)
    * 
-   * @param apiKey Optional OpenAI API key for embeddings
+   * @param embeddingService Optional embedding service for semantic search
    * @returns A new WikipediaSource instance
    */
-  public static createFresh(apiKey?: string): WikipediaSource {
-    return new WikipediaSource(apiKey);
+  public static createFresh(embeddingService?: EmbeddingService | null): WikipediaSource {
+    return new WikipediaSource(embeddingService);
+  }
+  
+  /**
+   * Factory method that resolves dependencies and creates a new instance
+   * 
+   * @param apiKey Optional OpenAI API key for embeddings
+   * @returns A new WikipediaSource instance with resolved dependencies
+   */
+  public static createWithDependencies(apiKey?: string): WikipediaSource {
+    const embeddingService = apiKey ? EmbeddingService.getInstance({ apiKey }) : null;
+    return new WikipediaSource(embeddingService);
   }
 
-  constructor(apiKey?: string) {
-    if (apiKey) {
-      this.embeddingService = EmbeddingService.getInstance({ apiKey });
+  /**
+   * Create a new WikipediaSource with explicit dependencies
+   * 
+   * @param embeddingService Optional embedding service for semantic search
+   */
+  constructor(embeddingService?: EmbeddingService | null) {
+    this.embeddingService = embeddingService || null;
+    
+    if (this.embeddingService) {
       logger.debug('Wikipedia source initialized with embedding service');
     } else {
       logger.debug('Wikipedia source initialized without embedding service');

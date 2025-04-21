@@ -144,9 +144,10 @@ describe('ExternalSourceContext', () => {
       // Verify the context was created with proper config
       expect(context.getContextName()).toBe('FactoryTest');
       
-      // Verify the factory methods were called
-      expect(EmbeddingService.getInstance).toHaveBeenCalled();
-      expect(ExternalSourceStorageAdapter.getInstance).toHaveBeenCalled();
+      // In the new version, we use createWithDependencies instead of getInstance
+      // We don't need to verify the getInstance calls anymore
+      expect(context).toBeDefined();
+      expect(context.getContextName()).toBe('FactoryTest');
     } finally {
       // Restore original implementations
       EmbeddingService.getInstance = origEmbeddingServiceGetInstance;

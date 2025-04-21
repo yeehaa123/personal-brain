@@ -58,7 +58,7 @@ export class NewsApiSource implements ExternalSourceInterface {
     maxAgeHours = 24 * 7,
   ): NewsApiSource {
     if (!NewsApiSource.instance) {
-      NewsApiSource.instance = new NewsApiSource(apiKey, openAiKey, maxAgeHours);
+      NewsApiSource.instance = NewsApiSource.createWithDependencies(apiKey, openAiKey, maxAgeHours);
     }
     return NewsApiSource.instance;
   }
@@ -73,29 +73,57 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Create a fresh instance (primarily for testing)
    * 
-   * @param apiKey Optional NewsAPI key
-   * @param openAiKey Optional OpenAI API key for embeddings
+   * @param apiKey NewsAPI key
+   * @param embeddingService Optional embedding service
    * @param maxAgeHours Maximum age of news articles in hours
    * @returns A new NewsApiSource instance
    */
   public static createFresh(
     apiKey?: string,
+    embeddingService?: EmbeddingService | null,
+    maxAgeHours = 24 * 7,
+  ): NewsApiSource {
+    return new NewsApiSource(apiKey, embeddingService, maxAgeHours);
+  }
+  
+  /**
+   * Factory method that resolves dependencies and creates a new instance
+   * 
+   * @param apiKey Optional NewsAPI key
+   * @param openAiKey Optional OpenAI API key for embeddings
+   * @param maxAgeHours Maximum age of news articles in hours
+   * @returns A new NewsApiSource instance with resolved dependencies
+   */
+  public static createWithDependencies(
+    apiKey?: string,
     openAiKey?: string,
     maxAgeHours = 24 * 7,
   ): NewsApiSource {
-    return new NewsApiSource(apiKey, openAiKey, maxAgeHours);
+    const embeddingService = openAiKey ? EmbeddingService.getInstance({ apiKey: openAiKey }) : null;
+    return new NewsApiSource(apiKey, embeddingService, maxAgeHours);
   }
 
-  constructor(apiKey?: string, openAiKey?: string, maxAgeHours = 24 * 7) {
+  /**
+   * Create a new NewsApiSource with explicit dependencies
+   * 
+   * @param apiKey NewsAPI key - required for this source to function
+   * @param embeddingService Optional embedding service for semantic search
+   * @param maxAgeHours Maximum age of news articles in hours
+   */
+  constructor(
+    apiKey?: string,
+    embeddingService?: EmbeddingService | null,
+    maxAgeHours = 24 * 7
+  ) {
     this.apiKey = apiKey || getEnv('NEWSAPI_KEY');
     this.maxAgeHours = maxAgeHours;
+    this.embeddingService = embeddingService || null;
     
     if (!this.apiKey) {
       logger.warn('NewsAPI source initialized without API key');
     }
     
-    if (openAiKey) {
-      this.embeddingService = EmbeddingService.getInstance({ apiKey: openAiKey });
+    if (this.embeddingService) {
       logger.debug('NewsAPI source initialized with embedding service');
     } else {
       logger.debug('NewsAPI source initialized without embedding service');

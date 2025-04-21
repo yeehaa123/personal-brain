@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { NewsApiSource } from '@/contexts/externalSources/sources/newsApiSource';
-import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
+import { EmbeddingService } from '@/resources/ai/embedding';
 import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
@@ -40,9 +41,6 @@ mock.module('@/utils/configUtils', () => {
   };
 });
 
-// Set up embedding service mocks
-setupEmbeddingMocks(mock);
-
 describe('NewsApiSource', () => {
   // No shared source instance to avoid test contamination
   
@@ -62,14 +60,16 @@ describe('NewsApiSource', () => {
   test('should initialize correctly', () => {
     // Reset singleton before test
     NewsApiSource.resetInstance();
-    const source = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const source = NewsApiSource.createFresh('mock-newsapi-key', mockEmbeddingService as unknown as EmbeddingService);
     expect(source).toBeDefined();
     expect(source.name).toBe('NewsAPI');
   });
   
   test('should handle search properly', async () => {
-    // Create a custom source with mocked methods
-    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
+    // Create a custom source with mocked methods and explicit embedding service
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const customSource = NewsApiSource.createFresh('mock-api-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Create the mock article object
     const mockArticle = {
@@ -109,8 +109,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should handle search with embedding generation', async () => {
-    // Create a custom source with mocked methods
-    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
+    // Create a custom source with mocked methods and explicit embedding service
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const customSource = NewsApiSource.createFresh('mock-api-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Create the mock article object
     const mockArticle = {
@@ -158,8 +159,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should handle API errors gracefully', async () => {
-    // Create an isolated instance
-    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
+    // Create an isolated instance with explicit dependencies
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Directly mock the searchEverything method to simulate API error
     const originalMethod = getPrivateProperty(testSource, 'searchEverything');
@@ -177,8 +179,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should handle empty results gracefully', async () => {
-    // Create an isolated instance
-    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
+    // Create an isolated instance with explicit dependencies
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Directly mock the searchEverything method to return empty results
     const originalMethod = getPrivateProperty(testSource, 'searchEverything');
@@ -196,8 +199,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should fail search with missing API key', async () => {
-    // Create a new source without API key
-    const sourceWithoutKey = NewsApiSource.createFresh('', '');
+    // Create a new source without API key but with explicit embedding service
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const sourceWithoutKey = NewsApiSource.createFresh('', mockEmbeddingService as unknown as EmbeddingService);
     
     // Mock the searchEverything method directly to simulate what happens without API key
     const originalSearchMethod = getPrivateProperty(sourceWithoutKey, 'searchEverything');
@@ -215,8 +219,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should check availability correctly', async () => {
-    // Create a custom source
-    const customSource = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
+    // Create a custom source with explicit dependencies
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const customSource = NewsApiSource.createFresh('mock-api-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Override the checkAvailability method to return true
     const originalMethod = customSource.checkAvailability;
@@ -233,8 +238,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should report unavailability when API is down', async () => {
-    // Create a new instance with our direct mock
-    const testSourceForError = NewsApiSource.createFresh('mock-api-key', 'mock-openai-key');
+    // Create a new instance with our direct mock and explicit dependencies
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const testSourceForError = NewsApiSource.createFresh('mock-api-key', mockEmbeddingService as unknown as EmbeddingService);
     
     // Override checkAvailability method temporarily
     const originalCheckMethod = testSourceForError.checkAvailability;
@@ -250,8 +256,8 @@ describe('NewsApiSource', () => {
   });
   
   test('should report unavailability with missing API key', async () => {
-    // Create a source without API key
-    const sourceWithoutKey = NewsApiSource.createFresh('', '');
+    // Create a source without API key but with explicit embedding service
+    const sourceWithoutKey = NewsApiSource.createFresh('', null);
     
     // Directly override the API key property to ensure it's empty
     Object.defineProperty(sourceWithoutKey, 'apiKey', { 
@@ -278,8 +284,9 @@ describe('NewsApiSource', () => {
   });
   
   test('should provide source metadata', async () => {
-    // Create a fresh source instance
-    const testSource = NewsApiSource.createFresh('mock-newsapi-key', 'mock-openai-key');
+    // Create a fresh source instance with explicit dependencies
+    const mockEmbeddingService = MockEmbeddingService.getInstance();
+    const testSource = NewsApiSource.createFresh('mock-newsapi-key', mockEmbeddingService as unknown as EmbeddingService);
     
     const metadata = await testSource.getSourceMetadata();
     
@@ -287,8 +294,9 @@ describe('NewsApiSource', () => {
     expect(metadata['name']).toBe('NewsAPI');
     expect(metadata['type']).toBe('news');
     
-    // Create a custom source with controlled implementation
-    const customSource = NewsApiSource.createFresh('explicit-api-key', '');
+    // Create a custom source with controlled implementation and explicit dependencies
+    const nullEmbeddingService = null;
+    const customSource = NewsApiSource.createFresh('explicit-api-key', nullEmbeddingService);
     
     // Override the getSourceMetadata method to return what we expect
     const originalMethod = customSource.getSourceMetadata;

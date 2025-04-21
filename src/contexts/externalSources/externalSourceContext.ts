@@ -113,18 +113,18 @@ export class ExternalSourceContext extends BaseContext {
    * @returns A new ExternalSourceContext instance with resolved dependencies
    */
   public static createWithDependencies(config: ExternalSourceContextConfig = {}): ExternalSourceContext {
-    // Create instances of required dependencies
-    const storageAdapter = ExternalSourceStorageAdapter.getInstance({
+    // Create instances of required dependencies with explicit dependency injection
+    const embeddingService = EmbeddingService.getInstance({ 
+      apiKey: config.apiKey, 
+    });
+    
+    // Create storage adapter with explicit dependency injection
+    const storageAdapter = ExternalSourceStorageAdapter.createWithDependencies({
       apiKey: config.apiKey,
       newsApiKey: config.newsApiKey,
       enabledSources: config.enabledSources,
       maxResults: config.maxResults,
       cacheTtl: config.cacheTtl,
-    });
-    
-    // Use the imported EmbeddingService class
-    const embeddingService = EmbeddingService.getInstance({ 
-      apiKey: config.apiKey, 
     });
     
     // Create and return context with explicit dependencies

@@ -10,6 +10,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
+import { EmbeddingService } from '@/resources/ai/embedding';
 import { getEnv } from '@/utils/configUtils';
 import { Logger } from '@/utils/logger';
 
@@ -107,9 +108,19 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    */
   public static getInstance(config?: ExternalSourceStorageConfig): ExternalSourceStorageAdapter {
     if (!ExternalSourceStorageAdapter.instance) {
-      ExternalSourceStorageAdapter.instance = new ExternalSourceStorageAdapter(config);
+      ExternalSourceStorageAdapter.instance = ExternalSourceStorageAdapter.createWithDependencies(config);
     }
     return ExternalSourceStorageAdapter.instance;
+  }
+  
+  /**
+   * Factory method that resolves dependencies and creates a new instance
+   * 
+   * @param config Configuration options
+   * @returns A new ExternalSourceStorageAdapter instance with resolved dependencies
+   */
+  public static createWithDependencies(config?: ExternalSourceStorageConfig): ExternalSourceStorageAdapter {
+    return new ExternalSourceStorageAdapter(config);
   }
   
   /**
@@ -136,15 +147,18 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    * @private
    */
   private initializeSources(): void {
-    // Create and register Wikipedia source
-    const wikipediaSource = WikipediaSource.getInstance(this.options.apiKey);
+    // Create and register Wikipedia source with explicit dependency injection
+    const embeddingService = EmbeddingService.getInstance({ apiKey: this.options.apiKey });
+    
+    // Create and register Wikipedia source with explicit dependency
+    const wikipediaSource = WikipediaSource.createFresh(embeddingService);
     this.registerSource(wikipediaSource);
 
     // Create and register NewsAPI source if key is provided
     if (this.options.newsApiKey) {
-      const newsApiSource = NewsApiSource.getInstance(
-        this.options.newsApiKey, 
-        this.options.apiKey,
+      const newsApiSource = NewsApiSource.createFresh(
+        this.options.newsApiKey,
+        embeddingService,
       );
       this.registerSource(newsApiSource);
       this.logger.debug('NewsAPI source registered', { context: 'ExternalSourceStorage' });
