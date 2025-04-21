@@ -47,7 +47,11 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
    */
   public static getInstance(storage: ConversationStorage): ConversationStorageAdapter {
     if (!ConversationStorageAdapter.instance) {
-      ConversationStorageAdapter.instance = new ConversationStorageAdapter(storage);
+      ConversationStorageAdapter.instance = ConversationStorageAdapter.createWithDependencies(storage);
+    } else if (storage) {
+      // Log at debug level if trying to get instance with different storage
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.debug('getInstance called with storage but instance already exists. Storage ignored.');
     }
     return ConversationStorageAdapter.instance;
   }
@@ -68,6 +72,16 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
    * @returns A new ConversationStorageAdapter instance
    */
   public static createFresh(storage: ConversationStorage): ConversationStorageAdapter {
+    return new ConversationStorageAdapter(storage);
+  }
+  
+  /**
+   * Factory method for creating an instance with explicit dependencies
+   * 
+   * @param storage The storage implementation to use
+   * @returns A new ConversationStorageAdapter instance with resolved dependencies
+   */
+  public static createWithDependencies(storage: ConversationStorage): ConversationStorageAdapter {
     return new ConversationStorageAdapter(storage);
   }
 

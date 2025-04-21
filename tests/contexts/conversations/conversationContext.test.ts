@@ -142,17 +142,19 @@ describe('ConversationContext', () => {
       },
     };
 
-    // Create the context with explicit dependencies
-    // Use type assertion to ConversationFormatter for the mock formatter
+    // Create the context with explicit dependencies using the new object-based approach
+    // Use type assertion for the mock implementations
     conversationContext = new ConversationContext(
       config,
-      adapter,
-      formatter as unknown as ConversationFormatter,
-      mcpFormatter as unknown as ConversationMcpFormatter,
-      resourceService as unknown as ConversationResourceService,
-      toolService as unknown as ConversationToolService,
-      queryService as unknown as ConversationQueryService,
-      memoryService as unknown as ConversationMemoryService,
+      {
+        storageAdapter: adapter,
+        formatter: formatter as unknown as ConversationFormatter,
+        mcpFormatter: mcpFormatter as unknown as ConversationMcpFormatter,
+        resourceService: resourceService as unknown as ConversationResourceService,
+        toolService: toolService as unknown as ConversationToolService,
+        queryService: queryService as unknown as ConversationQueryService,
+        memoryService: memoryService as unknown as ConversationMemoryService,
+      }
     );
   });
 

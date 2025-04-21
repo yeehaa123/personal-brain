@@ -88,6 +88,26 @@ export interface ConversationContextConfig {
 }
 
 /**
+ * Dependencies for ConversationContext
+ */
+export interface ConversationContextDependencies {
+  /** Storage adapter for managing conversation storage */
+  storageAdapter: ConversationStorageAdapter;
+  /** Formatter for conversation text formatting */
+  formatter: ConversationFormatter;
+  /** Formatter for MCP-specific responses */
+  mcpFormatter: ConversationMcpFormatter;
+  /** Service for providing conversation resources */
+  resourceService: ConversationResourceService;
+  /** Service for providing conversation tools */
+  toolService: ConversationToolService;
+  /** Service for conversation queries and searches */
+  queryService: ConversationQueryService;
+  /** Service for memory management */
+  memoryService: ConversationMemoryService;
+}
+
+/**
  * Options for adding a turn
  */
 export interface TurnOptions {
@@ -122,6 +142,15 @@ export class ConversationContext extends BaseContext {
    */
   declare protected config: Record<string, unknown>;
   protected contextConfig: Required<ConversationContextConfig>;
+  
+  // Service dependencies
+  private readonly storageAdapter: ConversationStorageAdapter;
+  private readonly formatter: ConversationFormatter;
+  private readonly mcpFormatter: ConversationMcpFormatter;
+  private readonly resourceService: ConversationResourceService;
+  private readonly toolService: ConversationToolService;
+  private readonly queryService: ConversationQueryService;
+  private readonly memoryService: ConversationMemoryService;
 
   // Properties are declared in the constructor with private readonly modifiers
 
@@ -186,7 +215,7 @@ export class ConversationContext extends BaseContext {
   }
 
   /**
-   * Factory method for creating an instance with dependencies from ServiceRegistry
+   * Factory method for creating an instance with explicit dependencies
    * 
    * @param config Configuration options
    * @returns A new ConversationContext instance with resolved dependencies
@@ -224,14 +253,12 @@ export class ConversationContext extends BaseContext {
       fullConfig.display.defaultUserId = config.defaultUserId as string || '';
     }
     
-    // We don't need the service registry anymore since we're creating components directly
-    
-    // Create storage adapter instance
-    const storageAdapter = ConversationStorageAdapter.getInstance(
-      fullConfig.storage || InMemoryStorage.getInstance(),
+    // Create storage adapter instance with explicit dependency injection
+    const storageAdapter = ConversationStorageAdapter.createWithDependencies(
+      fullConfig.storage
     );
     
-    // Create service instances
+    // Create service instances with explicit dependency injection
     const formatter = ConversationFormatter.getInstance();
     const mcpFormatter = ConversationMcpFormatter.getInstance();
     const resourceService = ConversationResourceService.getInstance();
@@ -242,16 +269,18 @@ export class ConversationContext extends BaseContext {
       fullConfig.tieredMemoryConfig,
     );
     
-    // Create context with dependencies
+    // Create context with dependencies object
     return new ConversationContext(
       fullConfig,
-      storageAdapter,
-      formatter,
-      mcpFormatter,
-      resourceService,
-      toolService,
-      queryService,
-      memoryService,
+      {
+        storageAdapter,
+        formatter,
+        mcpFormatter,
+        resourceService,
+        toolService,
+        queryService,
+        memoryService,
+      }
     );
   }
   
@@ -259,23 +288,11 @@ export class ConversationContext extends BaseContext {
    * Constructor for ConversationContext with explicit dependency injection
    * 
    * @param config Configuration options
-   * @param storageAdapter Storage adapter
-   * @param formatter Conversation formatter
-   * @param mcpFormatter MCP formatter
-   * @param resourceService Resource service
-   * @param toolService Tool service
-   * @param queryService Query service
-   * @param memoryService Memory service
+   * @param dependencies Service dependencies for the context
    */
   constructor(
     config: Required<ConversationContextConfig>,
-    private readonly storageAdapter: ConversationStorageAdapter,
-    private readonly formatter: ConversationFormatter,
-    private readonly mcpFormatter: ConversationMcpFormatter,
-    private readonly resourceService: ConversationResourceService,
-    private readonly toolService: ConversationToolService,
-    private readonly queryService: ConversationQueryService,
-    private readonly memoryService: ConversationMemoryService,
+    dependencies: ConversationContextDependencies,
   ) {
     // Call super first with the name and version
     super({
@@ -283,6 +300,15 @@ export class ConversationContext extends BaseContext {
       version: config.version,
     } as Record<string, unknown>);
 
+    // Store dependencies
+    this.storageAdapter = dependencies.storageAdapter;
+    this.formatter = dependencies.formatter;
+    this.mcpFormatter = dependencies.mcpFormatter;
+    this.resourceService = dependencies.resourceService;
+    this.toolService = dependencies.toolService;
+    this.queryService = dependencies.queryService;
+    this.memoryService = dependencies.memoryService;
+    
     // Store the full config
     this.contextConfig = config;
     
@@ -401,19 +427,21 @@ export class ConversationContext extends BaseContext {
   }
 
   /**
-   * Set a new storage adapter
+   * Set a new storage adapter 
    * @param storage The new storage adapter
    */
   setStorage(storage: ConversationStorageAdapter): void {
-    // Use assignment with type assertion to modify the readonly property for internal use
-    (this.storageAdapter as ConversationStorageAdapter) = storage;
-    
-    // Create new services that depend on the storage adapter
-    (this.queryService as ConversationQueryService) = ConversationQueryService.getInstance(storage);
-    (this.memoryService as ConversationMemoryService) = ConversationMemoryService.getInstance(
+    // Create new dependent services with explicit dependency injection
+    const queryService = ConversationQueryService.getInstance(storage);
+    const memoryService = ConversationMemoryService.getInstance(
       storage,
-      this.contextConfig.tieredMemoryConfig,
+      this.contextConfig.tieredMemoryConfig
     );
+    
+    // Use assignment with type assertion to modify the readonly properties for internal use
+    (this.storageAdapter as ConversationStorageAdapter) = storage;
+    (this.queryService as ConversationQueryService) = queryService;
+    (this.memoryService as ConversationMemoryService) = memoryService;
     
     // Update memory service config if needed
     if (Object.keys(this.contextConfig.tieredMemoryConfig).length > 0) {
