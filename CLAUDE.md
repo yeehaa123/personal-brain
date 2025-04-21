@@ -32,6 +32,89 @@
 - Run `lint:fix` frequently during refactoring to prevent import ordering issues
 - Use TypeScript path aliases (@/ prefix) consistently for internal imports
 
+## Registry Standardization Pattern
+
+The project uses standardized Registry classes for dependency management:
+
+```typescript
+// Registry interface to ensure consistent implementation
+export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
+  // Core methods
+  initialize(): boolean;
+  isInitialized(): boolean;
+  
+  // Component management
+  register<C>(id: string, factory: RegistryFactory<C>, singleton?: boolean): void;
+  resolve<C>(id: string): C;
+  has(id: string): boolean;
+  unregister(id: string): void;
+  clear(): void;
+  
+  // Configuration
+  updateOptions(options: Partial<T>): void;
+}
+
+// Registry base class implementation
+export abstract class Registry<TOptions extends RegistryOptions = RegistryOptions> implements IRegistry<TOptions> {
+  // Initialization tracking
+  private initialized = false;
+  
+  // Registry type for context-specific operations
+  protected abstract readonly registryType: 'resource' | 'service';
+  
+  // Standard initialization method
+  public initialize(): boolean {
+    if (this.initialized) return true;
+    
+    try {
+      // Call the abstract method implemented by derived classes
+      this.registerComponents();
+      this.initialized = true;
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  // Abstract method to be implemented by derived classes
+  protected abstract registerComponents(): void;
+  
+  // Check initialization state
+  public isInitialized(): boolean {
+    return this.initialized;
+  }
+}
+```
+
+Key aspects of this pattern:
+1. Explicit initialization tracking with isInitialized()
+2. Standardized component registration via abstract registerComponents()
+3. Consistent error handling for dependency resolution
+4. Auto-initialization on getInstance()
+5. Dependency validation between registries
+
+When extending Registry:
+```typescript
+export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
+  protected readonly registryType = 'service';
+  
+  // Implementation of abstract method
+  protected registerComponents(): void {
+    // Register standard services
+  }
+  
+  // Helper for registering with dependency validation
+  private registerService<T>(
+    id: string, 
+    factory: (container: SimpleContainer) => T,
+    dependencies: string[] = []
+  ): void {
+    // Validate dependencies before registration
+    // Register with validated factory
+  }
+}
+```
+
 ## Testing Guidelines
 
 ### Test Organization
@@ -253,6 +336,10 @@ test('component with isolated dependencies', () => {
      public static getInstance(options?: Options): MyClass {
        if (!MyClass.instance) {
          MyClass.instance = new MyClass(options);
+         // Auto-initialize for components with initialize method
+         if ('initialize' in MyClass.instance && typeof MyClass.instance.initialize === 'function') {
+           MyClass.instance.initialize();
+         }
        }
        return MyClass.instance;
      }
@@ -276,7 +363,31 @@ test('component with isolated dependencies', () => {
       * @returns A new instance
       */
      public static createFresh(options?: Options): MyClass {
-       return new MyClass(options);
+       const instance = new MyClass(options);
+       // Auto-initialize for components with initialize method
+       if ('initialize' in instance && typeof instance.initialize === 'function') {
+         instance.initialize();
+       }
+       return instance;
+     }
+     
+     /**
+      * Initialize the component (if applicable)
+      * This performs any required setup like registering components
+      * @returns Success status
+      */
+     public initialize(): boolean {
+       // Initialization logic (for components that need it)
+       return true;
+     }
+     
+     /**
+      * Check if the component is initialized
+      * @returns Initialization status
+      */
+     public isInitialized(): boolean {
+       // Return initialization state
+       return true;
      }
    }
    ```
@@ -288,6 +399,7 @@ test('component with isolated dependencies', () => {
    3. **Services**: All repository and service classes in services/ directory
    4. **Protocol**: BrainProtocol
    5. **Transport**: HeartbeatSSETransport
+   6. **Registries**: ResourceRegistry, ServiceRegistry
    
    Using this pattern consistently provides several benefits:
    
@@ -296,6 +408,8 @@ test('component with isolated dependencies', () => {
    - **Flexibility**: createFresh() enables creating instances for special test cases
    - **Clear configuration**: Config interfaces provide type safety for initialization options
    - **Consistent API**: All components have the same interface for instantiation
+   - **Explicit initialization**: Components with complex setup use initialize/isInitialized methods
+   - **Auto-initialization**: getInstance() and createFresh() handle initialization automatically
 
    > Note: An ESLint rule enforces that any class with getInstance() must also include resetInstance() and createFresh() methods.
 
