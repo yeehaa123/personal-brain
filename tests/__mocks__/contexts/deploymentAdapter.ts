@@ -1,6 +1,6 @@
 import { mock } from 'bun:test';
 
-import type { DeploymentAdapter as IDeploymentAdapter } from '@/contexts/website/deploymentAdapter';
+import type { DeploymentAdapter as IDeploymentAdapter } from '@/contexts/website/adapters/deploymentAdapter';
 
 /**
  * Mock implementation of DeploymentAdapter for testing

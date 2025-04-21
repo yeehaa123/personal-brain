@@ -13,9 +13,17 @@ class TestRegistry extends Registry {
   // Singleton implementation following Component Interface Standardization pattern
   private static instance: TestRegistry | null = null;
   
+  // Required implementation of abstract registryType property
+  protected readonly registryType = 'resource' as 'resource' | 'service';
+  
+  // Track components registration
+  private componentsRegistered = false;
+  
   public static getInstance(options?: RegistryOptions): TestRegistry {
     if (!TestRegistry.instance) {
       TestRegistry.instance = new TestRegistry(options || {});
+      // Auto-initialize on getInstance
+      TestRegistry.instance.initialize();
     }
     return TestRegistry.instance;
   }
@@ -25,7 +33,9 @@ class TestRegistry extends Registry {
   }
   
   public static createFresh(options?: RegistryOptions): TestRegistry {
-    return new TestRegistry(options || {});
+    const registry = new TestRegistry(options || {});
+    registry.initialize();
+    return registry;
   }
   
   protected constructor(options: RegistryOptions) {
@@ -33,6 +43,16 @@ class TestRegistry extends Registry {
       name: 'TestRegistry',
       ...options,
     });
+  }
+  
+  // Required implementation of abstract registerComponents method
+  protected registerComponents(): void {
+    if (this.componentsRegistered) return;
+    
+    // Register a test component
+    this.register('test.default', () => ({ value: 'default' }));
+    
+    this.componentsRegistered = true;
   }
   
   protected override createContainer(): SimpleContainer {
@@ -52,6 +72,11 @@ class TestRegistry extends Registry {
   // Add a public method to access the protected options
   public getOptions() {
     return this.options;
+  }
+  
+  // Add method to check if components are registered
+  public areComponentsRegistered(): boolean {
+    return this.componentsRegistered;
   }
 }
 
@@ -172,6 +197,42 @@ describe('Registry', () => {
       
       expect(singleton).not.toBe(fresh);
       expect(fresh).toBeInstanceOf(TestRegistry);
+    });
+  });
+  
+  describe('Initialization pattern', () => {
+    test('should initialize components on getInstance', () => {
+      TestRegistry.resetInstance();
+      const registry = TestRegistry.getInstance();
+      
+      expect(registry.isInitialized()).toBe(true);
+      expect(registry.areComponentsRegistered()).toBe(true);
+    });
+    
+    test('should initialize components on createFresh', () => {
+      const registry = TestRegistry.createFresh();
+      
+      expect(registry.isInitialized()).toBe(true);
+      expect(registry.areComponentsRegistered()).toBe(true);
+    });
+    
+    test('should reset initialization state on clear', () => {
+      const registry = TestRegistry.createFresh();
+      expect(registry.isInitialized()).toBe(true);
+      
+      registry.clear();
+      expect(registry.isInitialized()).toBe(false);
+    });
+    
+    test('should register default components on initialization', () => {
+      const registry = TestRegistry.createFresh();
+      
+      // Default component should exist after initialization
+      expect(registry.has('test.default')).toBe(true);
+      
+      // Component should be resolvable
+      const component = registry.resolve('test.default');
+      expect(component).toEqual({ value: 'default' });
     });
   });
 });

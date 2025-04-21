@@ -19,19 +19,19 @@ export type {
 // Adapter exports
 export { 
   InMemoryWebsiteStorageAdapter,
-} from './websiteStorageAdapter';
+} from './adapters/websiteStorageAdapter';
 export type {
   WebsiteStorageAdapter,
-} from './websiteStorageAdapter';
+} from './adapters/websiteStorageAdapter';
 
 // Deployment exports
 export {
   PM2DeploymentAdapter,
   getDeploymentAdapter,
-} from './deploymentAdapter';
+} from './adapters/deploymentAdapter';
 export type {
   DeploymentAdapter,
-} from './deploymentAdapter';
+} from './adapters/deploymentAdapter';
 
 // Messaging exports
 export {

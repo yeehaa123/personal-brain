@@ -88,6 +88,9 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   /** Track if services have been registered */
   private servicesRegistered = false;
   
+  /** Registry type for context-specific operations */
+  protected readonly registryType = 'service';
+  
   /**
    * Get the singleton instance of the ServiceRegistry
    * 
@@ -98,7 +101,8 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
     if (!ServiceRegistry.instance) {
       ServiceRegistry.instance = new ServiceRegistry(options || {});
       ServiceRegistry.instance.logger.debug('ServiceRegistry singleton instance created');
-      ServiceRegistry.instance.registerStandardServices();
+      // Auto-initialize on getInstance
+      ServiceRegistry.instance.initialize();
     } else if (options) {
       // Update options if instance exists but options were provided
       ServiceRegistry.instance.updateOptions(options);
@@ -127,7 +131,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    */
   public static createFresh(options?: ServiceRegistryOptions): ServiceRegistry {
     const registry = new ServiceRegistry(options || {});
-    registry.registerStandardServices();
+    registry.initialize();
     return registry;
   }
   
@@ -147,6 +151,15 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       anthropicApiKey: options.apiKey,
       openAiApiKey: options.apiKey,
     });
+    
+    // Ensure ResourceRegistry is initialized
+    if (!this.resourceRegistry.isInitialized()) {
+      this.logger.info(`Initializing ResourceRegistry dependency`);
+      const success = this.resourceRegistry.initialize();
+      if (!success) {
+        this.logger.warn(`ResourceRegistry initialization failed, some services may not work`);
+      }
+    }
   }
   
   /**
@@ -160,9 +173,9 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   
   /**
    * Register standard services with the registry
-   * This is called automatically by getInstance() and createFresh()
+   * This is called automatically by initialize()
    */
-  private registerStandardServices(): void {
+  protected registerComponents(): void {
     if (this.servicesRegistered) {
       return;
     }
@@ -206,7 +219,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
     );
     
     // Register search services with dependencies
-    this.register<ISearchService<Note>>(
+    this.registerService<ISearchService<Note>>(
       ServiceIdentifiers.NoteSearchService,
       (container) => {
         // Get dependencies from container
@@ -216,9 +229,10 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         // Create service with injected dependencies
         return NoteSearchService.getInstance(repository, embeddingService);
       },
+      [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService]
     );
     
-    this.register<ISearchService<Profile>>(
+    this.registerService<ISearchService<Profile>>(
       ServiceIdentifiers.ProfileSearchService,
       (container) => {
         // Get dependencies from container
@@ -229,6 +243,11 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         // Create service with injected dependencies
         return ProfileSearchService.getInstance(repository, embeddingService, tagService);
       },
+      [
+        ServiceIdentifiers.ProfileRepository, 
+        ServiceIdentifiers.ProfileEmbeddingService,
+        ServiceIdentifiers.ProfileTagService
+      ]
     );
     
     // Register conversation services
@@ -378,6 +397,53 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    */
   public getService<T>(serviceId: string): T {
     return this.resolve<T>(serviceId);
+  }
+  
+  /**
+   * Helper method to get the ResourceRegistry
+   * 
+   * @returns The ResourceRegistry instance
+   */
+  public getResourceRegistry(): ResourceRegistry {
+    return this.resourceRegistry;
+  }
+  
+  /**
+   * Standardized service registration helper
+   * Validates dependencies before registering a service
+   * 
+   * @param id Service identifier
+   * @param factory Factory function to create the service
+   * @param dependencies Optional array of dependency identifiers
+   */
+  private registerService<T>(
+    id: string,
+    factory: (container: SimpleContainer) => T,
+    dependencies: string[] = []
+  ): void {
+    // Validate dependencies before registration
+    let dependenciesValid = true;
+    
+    for (const dependencyId of dependencies) {
+      if (this.has(dependencyId)) continue;
+      
+      // For cross-registry dependencies, check the resource registry
+      if (dependencyId.startsWith('resource.') && this.resourceRegistry) {
+        if (!this.resourceRegistry.has(dependencyId)) {
+          this.logger.warn(`Service "${id}" depends on resource "${dependencyId}" which is not registered`);
+          dependenciesValid = false;
+        }
+      } else {
+        this.logger.warn(`Service "${id}" depends on "${dependencyId}" which is not registered`);
+        dependenciesValid = false;
+      }
+    }
+    
+    if (!dependenciesValid) {
+      this.logger.warn(`Registering service "${id}" with missing dependencies. It may not work correctly.`);
+    }
+    
+    this.register<T>(id, factory);
   }
 }
 

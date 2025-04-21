@@ -137,13 +137,32 @@ export interface RegistryOptions {
 export type RegistryFactory<T = unknown> = (container: SimpleContainer) => T;
 
 /**
+ * Registry interface to ensure consistent implementation
+ */
+export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
+  // Core methods
+  initialize(): boolean;
+  isInitialized(): boolean;
+  
+  // Component management
+  register<C>(id: string, factory: RegistryFactory<C>, singleton?: boolean): void;
+  resolve<C>(id: string): C;
+  has(id: string): boolean;
+  unregister(id: string): void;
+  clear(): void;
+  
+  // Configuration
+  updateOptions(options: Partial<T>): void;
+}
+
+/**
  * Abstract base class for all registries
  * Follows the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-export abstract class Registry<TOptions extends RegistryOptions = RegistryOptions> {
+export abstract class Registry<TOptions extends RegistryOptions = RegistryOptions> implements IRegistry<TOptions> {
   /**
    * Internal singleton instance storage
    * Implemented by derived classes
@@ -154,6 +173,11 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * Registry name for logging purposes
    */
   protected readonly name: string;
+  
+  /**
+   * Registry type for context-specific operations
+   */
+  protected abstract readonly registryType: 'resource' | 'service';
   
   /**
    * Logger instance
@@ -169,6 +193,11 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * Internal container for dependency management
    */
   protected container: SimpleContainer;
+  
+  /**
+   * Initialization state tracking
+   */
+  private initialized = false;
   
   /**
    * Protected constructor to enforce singleton pattern
@@ -190,6 +219,57 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    */
   protected createContainer(): SimpleContainer {
     return new SimpleContainer();
+  }
+  
+  /**
+   * Standard initialization method
+   * Calls the abstract registerComponents method implemented by derived classes
+   * 
+   * @returns Whether initialization was successful
+   */
+  public initialize(): boolean {
+    if (this.initialized) return true;
+    
+    this.logger.info(`Initializing ${this.name} (${this.registryType})`);
+    try {
+      this.registerComponents();
+      this.initialized = true;
+      this.logger.info(`${this.name} initialized successfully`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Error initializing ${this.name}`, { error });
+      return false;
+    }
+  }
+  
+  /**
+   * Abstract method for standardized component registration
+   * Must be implemented by derived classes
+   */
+  protected abstract registerComponents(): void;
+  
+  /**
+   * Check if registry is initialized
+   * 
+   * @returns Whether registry is initialized
+   */
+  public isInitialized(): boolean {
+    return this.initialized;
+  }
+  
+  /**
+   * Helper method to validate dependencies
+   * 
+   * @param id Component ID
+   * @param dependencyId Dependency ID
+   * @returns Whether dependency is valid
+   */
+  protected validateDependency(id: string, dependencyId: string): boolean {
+    if (!this.has(dependencyId)) {
+      this.logger.error(`Component "${id}" is missing dependency "${dependencyId}"`);
+      return false;
+    }
+    return true;
   }
   
   /**
@@ -215,7 +295,12 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * @returns The resolved component
    */
   public resolve<T = unknown>(id: string): T {
-    return this.container.resolve<T>(id);
+    try {
+      return this.container.resolve<T>(id);
+    } catch (error) {
+      this.logger.error(`Failed to resolve ${this.registryType} with ID "${id}"`, { error });
+      throw error;
+    }
   }
   
   /**
@@ -243,6 +328,7 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    */
   public clear(): void {
     this.container.clear();
+    this.initialized = false;
     this.logger.debug(`Cleared all registrations from ${this.name}`);
   }
   

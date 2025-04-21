@@ -48,6 +48,9 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   /** Track if resources have been registered */
   private resourcesRegistered = false;
   
+  /** Registry type for context-specific operations */
+  protected readonly registryType = 'resource';
+  
   /**
    * Get the singleton instance of the ResourceRegistry
    * 
@@ -58,7 +61,8 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
     if (!ResourceRegistry.instance) {
       ResourceRegistry.instance = new ResourceRegistry(options || {});
       ResourceRegistry.instance.logger.debug('ResourceRegistry singleton instance created');
-      ResourceRegistry.instance.registerStandardResources();
+      // Auto-initialize on getInstance
+      ResourceRegistry.instance.initialize();
     } else if (options) {
       // Update options if instance exists but options were provided
       ResourceRegistry.instance.updateOptions(options);
@@ -87,7 +91,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    */
   public static createFresh(options?: ResourceRegistryOptions): ResourceRegistry {
     const registry = new ResourceRegistry(options || {});
-    registry.registerStandardResources();
+    registry.initialize();
     return registry;
   }
   
@@ -114,41 +118,76 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   
   /**
    * Register standard resources with the registry
-   * This is called automatically by getInstance() and createFresh()
+   * This is called automatically by initialize()
    */
-  private registerStandardResources(): void {
+  protected registerComponents(): void {
     if (this.resourcesRegistered) {
       return;
     }
     
     this.logger.info('Registering standard resources');
     
-    // Register Claude model
-    this.register(
+    // Register Claude model with validation
+    this.registerResource(
       ResourceIdentifiers.ClaudeModel,
       () => {
-        const apiKey = this.options.anthropicApiKey || process.env['ANTHROPIC_API_KEY'];
-        if (!apiKey) {
-          throw new Error('Anthropic API key is required to use Claude');
-        }
+        this.validateApiKey('anthropic'); // Validate API key exists
         return ClaudeModel.getInstance();
-      },
+      }
     );
     
-    // Register embedding service
-    this.register(
+    // Register embedding service with validation
+    this.registerResource(
       ResourceIdentifiers.EmbeddingService,
       () => {
-        const apiKey = this.options.openAiApiKey || process.env['OPENAI_API_KEY'];
-        if (!apiKey) {
-          throw new Error('OpenAI API key is required to use embeddings');
-        }
+        this.validateApiKey('openai'); // Validate API key exists
         return EmbeddingService.getInstance();
-      },
+      }
     );
     
     this.resourcesRegistered = true;
     this.logger.info('Standard resources registered');
+  }
+  
+  /**
+   * Standardized resource registration helper
+   * 
+   * @param id Resource identifier
+   * @param factory Factory function to create the resource
+   * @param dependencies Optional array of dependency identifiers
+   */
+  private registerResource<T>(
+    id: string,
+    factory: () => T,
+    dependencies: string[] = []
+  ): void {
+    // Validate dependencies before registration
+    for (const dependencyId of dependencies) {
+      this.validateDependency(id, dependencyId);
+    }
+    
+    this.register(id, () => factory());
+  }
+  
+  /**
+   * Enhanced API key validation with better error messages
+   * 
+   * @param keyType Type of API key (anthropic or openai)
+   * @returns The validated API key
+   * @throws Error if API key is missing
+   */
+  protected validateApiKey(keyType: 'anthropic' | 'openai'): string {
+    const optionsKey = keyType === 'anthropic' ? 'anthropicApiKey' : 'openAiApiKey';
+    const envKey = keyType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+    
+    const apiKey = this.options[optionsKey] || process.env[envKey];
+    if (!apiKey) {
+      const error = new Error(`${keyType.toUpperCase()} API key is required but not provided`);
+      this.logger.error(`Missing ${keyType} API key`, { error });
+      throw error;
+    }
+    
+    return apiKey;
   }
   
   /**

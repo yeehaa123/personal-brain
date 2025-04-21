@@ -20,7 +20,12 @@ Phase 6 focuses on aggressive cleanup and simplification of the architecture. No
 - ⏳ Remove legacy code and backward compatibility layers
 - ⏳ Eliminate transitional adapters and intermediary layers
 - ⏳ Remove deprecated code paths
-- ⏳ Flatten remaining nested directories
+- 🔄 Flatten remaining nested directories (in progress)
+  - ✅ Conversations context
+  - ✅ Profiles context
+  - ✅ ExternalSources context
+  - ✅ Website context
+  - ⏳ Remaining contexts
 - ⏳ Simplify interfaces
 - ⏳ Consolidate similar functionality
 - ⏳ Complete dependency injection for all contexts
@@ -57,10 +62,12 @@ Simplify interfaces by removing redundant methods:
 
 ### 4. Directory Flattening (Priority: Medium)
 
-Flatten overly nested directories:
-- Remove unnecessary nesting
-- Consolidate related functionality
+Flatten overly nested directories while preserving logical structure:
+- Remove unnecessary nesting layers (especially for single files in subdirectories)
+- Move primary context files to root level while keeping logical groupings in subdirectories
+- Maintain specialized subdirectories (messaging, formatters, etc.) where they add value
 - Ensure imports use clean paths
+- Follow the balanced approach demonstrated in conversations and notes contexts
 
 ### 5. Code Cleanup (Priority: High)
 
@@ -94,7 +101,8 @@ Remove legacy code and transitional adapters:
 - Update references to use simplified interfaces
 
 ### Milestone 4: Directory Restructuring
-- Flatten nested directories
+- Flatten nested directories while preserving logical structure
+- Move core context files to root level while maintaining specialized subdirectories
 - Update imports and references
 
 ### Milestone 5: Final Cleanup
@@ -103,4 +111,15 @@ Remove legacy code and transitional adapters:
 
 ## Next Steps
 
-Begin with Registry Standardization and Dependency Injection as these are high-priority items that will provide a foundation for the other cleanup tasks.
+1. Continue with the Directory Restructuring that's already in progress:
+   - Complete flattening of remaining contexts using the balanced approach
+   - Follow patterns established in conversations, profiles, externalSources, and website contexts
+   - Maintain logical groupings while removing unnecessary nesting
+
+2. Begin Registry Standardization and Dependency Injection as high-priority items:
+   - Focus on ResourceRegistry and ServiceRegistry standardization
+   - Identify contexts without proper dependency injection and address them
+   
+3. Begin Interface Simplification work:
+   - Review interfaces for redundancy and consolidation opportunities
+   - Prioritize high-use interfaces for simplification
