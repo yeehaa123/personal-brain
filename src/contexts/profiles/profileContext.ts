@@ -11,6 +11,11 @@
  */
 
 import { BaseContext } from '@/contexts/core/baseContext';
+import type { 
+  ContextDependencies,
+  FullContextInterface,
+} from '@/contexts/core/contextInterface';
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { 
   Profile,
@@ -21,6 +26,7 @@ import {
   ProfileSearchService,
   ProfileTagService,
 } from '@/services/profiles';
+import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
@@ -31,7 +37,7 @@ import type { NoteContext, NoteWithSimilarity, ProfileFormattingOptions } from '
 /**
  * Configuration for the ProfileContext
  */
-export interface ProfileContextConfig {
+export interface ProfileContextConfig extends Record<string, unknown> {
   /**
    * API key for embedding service
    */
@@ -69,13 +75,28 @@ export interface ProfileContextDependencies {
  * 
  * Acts as a facade for profile-related operations, coordinating between
  * services, repositories, and MCP components.
+ * 
+ * Implements the standardized interfaces:
+ * - StorageAccess: For accessing profile storage operations
+ * - FormatterAccess: For formatting profile data
+ * - ServiceAccess: For accessing profile-related services
  */
-export class ProfileContext extends BaseContext {
+export class ProfileContext extends BaseContext<
+  ProfileStorageAdapter,
+  ProfileFormatter,
+  Profile,
+  string
+> implements FullContextInterface<
+  ProfileStorageAdapter,
+  ProfileFormatter,
+  Profile,
+  string
+> {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   // Storage adapter and formatter
-  private storage: StorageInterface<Profile>;
+  private storage: ProfileStorageAdapter;
   private formatter: ProfileFormatter;
   
   // Optional note context for related note operations
@@ -97,7 +118,11 @@ export class ProfileContext extends BaseContext {
    */
   static override getInstance(options: ProfileContextConfig = {}): ProfileContext {
     if (!ProfileContext.instance) {
-      ProfileContext.instance = ProfileContext.createWithDependencies(options);
+      // Prepare config with defaults
+      const config = options || {};
+      
+      // Use the config directly - ProfileContextConfig extends Record<string, unknown>
+      ProfileContext.instance = ProfileContext.createWithDependencies(config);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileContext singleton instance created');
@@ -135,50 +160,94 @@ export class ProfileContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileContext instance');
     
-    return ProfileContext.createWithDependencies(options);
+    // Prepare config with defaults
+    const config = options || {};
+    
+    // Use the config directly - ProfileContextConfig extends Record<string, unknown>
+    return ProfileContext.createWithDependencies(config);
   }
 
   /**
    * Factory method for creating an instance with explicit dependencies
+   * This implementation matches the BaseContext abstract method signature
    * 
-   * @param config Configuration options
-   * @returns A new ProfileContext instance with resolved dependencies
+   * @param config Configuration options object
+   * @param dependencies Optional dependencies for the context
+   * @returns A new ProfileContext instance with the provided dependencies
    */
-  public static createWithDependencies(config: ProfileContextConfig = {}): ProfileContext {
-    // Create embedding service first, it will be needed by other components
-    const embeddingService = ProfileEmbeddingService.getInstance(config.apiKey);
+  public static override createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown> = {},
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ): ProfileContext {
+    // Convert the generic config to our specific config type
+    const profileConfig: ProfileContextConfig = {
+      name: config['name'] as string || 'ProfileBrain',
+      version: config['version'] as string || '1.0.0',
+      apiKey: config['apiKey'] as string,
+    };
     
-    // Create repository
-    const repository = ProfileRepository.getInstance();
-    
-    // Create tag service
-    const tagService = ProfileTagService.getInstance();
-    
-    // Create search service with explicit dependencies
-    const searchService = ProfileSearchService.getInstance(
-      repository,
-      embeddingService,
-      tagService,
-    );
-    
-    // Create storage adapter with explicit repository dependency
-    const storageAdapter = ProfileStorageAdapter.createWithDependencies({
-      repository,
-    });
-    
-    // Create and return the context with explicit dependencies
-    return new ProfileContext(
-      config,
-      {
+    // If dependencies are provided, use them with proper casting
+    if (dependencies) {
+      // Get the repository from the storage adapter or create one
+      const typedStorage = dependencies.storage as unknown as ProfileStorageAdapter;
+      const repository = typedStorage?.repository || ProfileRepository.getInstance();
+      
+      // Create service instances from registry or defaults
+      const serviceRegistry = (dependencies.registry || ServiceRegistry.getInstance()) as ServiceRegistry;
+      const embeddingService = serviceRegistry.getProfileEmbeddingService() as unknown as ProfileEmbeddingService;
+      const tagService = serviceRegistry.getProfileTagService() as unknown as ProfileTagService;
+      const searchService = serviceRegistry.getProfileSearchService() as unknown as ProfileSearchService;
+      
+      // Create context with provided dependencies
+      return new ProfileContext(
+        profileConfig,
+        {
+          repository,
+          embeddingService,
+          tagService,
+          searchService,
+          storageAdapter: typedStorage,
+        },
+      );
+    } else {
+      // No dependencies provided, create from config
+      // Create embedding service first, it will be needed by other components
+      const embeddingService = ProfileEmbeddingService.getInstance(profileConfig.apiKey);
+      
+      // Create repository
+      const repository = ProfileRepository.getInstance();
+      
+      // Create tag service
+      const tagService = ProfileTagService.getInstance();
+      
+      // Create search service with explicit dependencies
+      const searchService = ProfileSearchService.getInstance(
         repository,
         embeddingService,
         tagService,
-        searchService,
-        storageAdapter,
-      }
-    );
+      );
+      
+      // Create storage adapter with explicit repository dependency
+      const storageAdapter = ProfileStorageAdapter.createWithDependencies({
+        repository,
+      });
+      
+      // Create and return the context with explicit dependencies
+      return new ProfileContext(
+        profileConfig,
+        {
+          repository,
+          embeddingService,
+          tagService,
+          searchService,
+          storageAdapter,
+        },
+      );
+    }
   }
-
   
   /**
    * Constructor for ProfileContext with explicit dependency injection
@@ -202,7 +271,7 @@ export class ProfileContext extends BaseContext {
       ProfileStorageAdapter.createWithDependencies({ repository: dependencies.repository });
     
     // Initialize formatter
-    this.formatter = new ProfileFormatter();
+    this.formatter = ProfileFormatter.getInstance();
     
     this.logger.debug('ProfileContext initialized with dependency injection', { context: 'ProfileContext' });
   }
@@ -311,6 +380,97 @@ export class ProfileContext extends BaseContext {
     return this.noteContext;
   }
   
+  /**
+   * Get the storage adapter
+   * Implements StorageAccess interface
+   * @returns The storage adapter
+   */
+  override getStorage(): ProfileStorageAdapter {
+    return this.storage;
+  }
+  
+  /**
+   * Get the formatter
+   * Implements FormatterAccess interface
+   * @returns The formatter
+   */
+  override getFormatter(): ProfileFormatter {
+    return this.formatter;
+  }
+  
+  /**
+   * Get a service by type from the registry
+   * Implements ServiceAccess interface
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  override getService<T>(serviceType: new () => T): T {
+    // Simple implementation that doesn't actually use the serviceType parameter
+    // This handles the common cases for ProfileContext services
+    
+    if (serviceType.name === 'ProfileEmbeddingService') {
+      return this.embeddingService as unknown as T;
+    }
+    
+    if (serviceType.name === 'ProfileTagService') {
+      return this.tagService as unknown as T;
+    }
+    
+    if (serviceType.name === 'ProfileSearchService') {
+      return this.searchService as unknown as T;
+    }
+    
+    if (serviceType.name === 'ProfileRepository') {
+      return ProfileRepository.getInstance() as unknown as T;
+    }
+    
+    throw new Error(`Service not found: ${serviceType.name}`);
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   * @returns The singleton instance
+   */
+  getInstance(): ProfileContext {
+    return ProfileContext.getInstance();
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   */
+  resetInstance(): void {
+    ProfileContext.resetInstance();
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): ProfileContext {
+    return ProfileContext.createFresh(options as ProfileContextConfig);
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by ExtendedContextInterface
+   * @param config Configuration options
+   * @param dependencies Optional dependencies for the context
+   * @returns A new instance with the provided dependencies
+   */
+  createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown>,
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ): ProfileContext {
+    return ProfileContext.createWithDependencies(config, dependencies);
+  }
+
   /**
    * Format profile for display in a readable text format
    * @param profile The profile to format

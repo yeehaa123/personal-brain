@@ -25,6 +25,8 @@ export class MockLogger {
   // Configuration options
   private config: MockLoggerConfig;
   
+  // We don't need winstonLogger as we're using type assertions in our Registry implementation
+  
   // Tracking logged messages for assertions
   messages: {
     info: string[];

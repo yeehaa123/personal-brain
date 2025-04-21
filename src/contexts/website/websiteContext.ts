@@ -1,9 +1,13 @@
 import { BaseContext } from '@/contexts/core/baseContext';
+import type { FullContextInterface } from '@/contexts/core/contextInterface';
+import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 import { ProfileContext } from '@/contexts/profiles';
 import { Logger } from '@/utils/logger';
+import { Registry } from '@/utils/registry';
 
 import { GlobalConfigWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
+import { type WebsiteData, WebsiteFormatter } from './formatters';
 import { AstroContentService } from './services/astroContentService';
 import { DeploymentManagerFactory } from './services/deployment';
 import type { WebsiteDeploymentManager } from './services/deployment';
@@ -15,6 +19,7 @@ import type { LandingPageData, WebsiteConfig } from './websiteStorage';
  */
 export interface WebsiteContextOptions {
   storage?: WebsiteStorageAdapter;
+  formatter?: WebsiteFormatter;
   name?: string;
   version?: string;
   astroContentService?: AstroContentService;
@@ -25,10 +30,22 @@ export interface WebsiteContextOptions {
 
 /**
  * WebsiteContext - Manages website generation and publication
+ * 
+ * Implements FullContextInterface to provide standardized access methods
+ * for storage, formatting, and service dependencies.
  */
-export class WebsiteContext extends BaseContext {
+export class WebsiteContext extends BaseContext<
+  WebsiteStorageAdapter,
+  WebsiteFormatter,
+  WebsiteData,
+  string
+> implements FullContextInterface<
+  WebsiteStorageAdapter,
+  WebsiteFormatter,
+  WebsiteData,
+  string
+> {
   private static instance: WebsiteContext | null = null;
-  private storage: WebsiteStorageAdapter;
   private contextName: string;
   private contextVersion: string;
   protected override logger = Logger.getInstance({ silent: process.env['NODE_ENV'] === 'test' });
@@ -37,17 +54,19 @@ export class WebsiteContext extends BaseContext {
   private profileContext: ProfileContext | null = null;
   private deploymentManager: WebsiteDeploymentManager | null = null;
   
-  // No need to track server processes - the deployment manager handles that
-  
   /**
    * Create a new WebsiteContext instance
    */
+  protected storage!: WebsiteStorageAdapter;
+  protected formatter!: WebsiteFormatter;
+  
   constructor(options?: WebsiteContextOptions) {
-    super();
+    super({});
     
     this.contextName = options?.name || 'website';
     this.contextVersion = options?.version || '1.0.0';
     this.storage = options?.storage || new GlobalConfigWebsiteStorageAdapter();
+    this.formatter = options?.formatter || WebsiteFormatter.getInstance();
     
     // Initialize services if provided (primarily for testing)
     if (options?.astroContentService) {
@@ -70,21 +89,21 @@ export class WebsiteContext extends BaseContext {
   /**
    * Get the name of this context
    */
-  getContextName(): string {
+  override getContextName(): string {
     return this.contextName;
   }
   
   /**
    * Get the version of this context
    */
-  getContextVersion(): string {
+  override getContextVersion(): string {
     return this.contextVersion;
   }
   
   /**
    * Initialize MCP components - resources and tools
    */
-  protected initializeMcpComponents(): void {
+  protected override initializeMcpComponents(): void {
     // No resources or tools yet, will be implemented in later phases
   }
   
@@ -120,9 +139,6 @@ export class WebsiteContext extends BaseContext {
     WebsiteContext.instance = null;
   }
   
-  // Server management is now handled by the deployment manager
-  // The resetInstance method directly calls the deployment manager to stop servers
-  
   /**
    * Create a fresh instance without affecting the singleton
    */
@@ -134,11 +150,26 @@ export class WebsiteContext extends BaseContext {
    * Factory method for creating an instance with proper dependencies
    * This is the preferred way to create a new instance with all required dependencies
    * 
+   * @param configOrDependencies Configuration or dependencies for the context
    * @returns A new WebsiteContext instance with resolved dependencies
    */
-  public static createWithDependencies(): WebsiteContext {
+  public static override createWithDependencies(
+    configOrDependencies: WebsiteContextOptions | Record<string, unknown> = {},
+  ): WebsiteContext {
+    // Handle the case where this is called with a dependencies object that has specific properties
+    if ('storage' in configOrDependencies || 'formatter' in configOrDependencies) {
+      const dependencies = configOrDependencies as WebsiteContextOptions;
+      
+      // Create and return context with explicit dependencies
+      return new WebsiteContext(dependencies);
+    }
+    
+    // Handle the case where this is called with a config object
     // Create storage adapter
     const storage = new GlobalConfigWebsiteStorageAdapter();
+    
+    // Create formatter
+    const formatter = WebsiteFormatter.getInstance();
     
     // Create AstroContentService - doesn't use getInstance pattern, so create directly
     const websiteRoot = process.env['WEBSITE_ROOT'] || './src/website';
@@ -159,6 +190,7 @@ export class WebsiteContext extends BaseContext {
     // Create context with all dependencies
     return new WebsiteContext({
       storage,
+      formatter,
       astroContentService,
       landingPageGenerationService,
       profileContext,
@@ -219,7 +251,7 @@ export class WebsiteContext extends BaseContext {
         });
         
         // Path to the template file
-        const templatePath = path.join(rootDir, 'src', 'mcp', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+        const templatePath = path.join(rootDir, 'src', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
         
         // Read the template file and write it to the production directory
         const template = await fs.readFile(templatePath, 'utf-8');
@@ -237,9 +269,6 @@ export class WebsiteContext extends BaseContext {
       // Continue even if this fails - the system will still function
     }
   }
-  
-  // Server management is now handled by the deployment manager
-  
   
   /**
    * Set the ready state
@@ -277,17 +306,103 @@ export class WebsiteContext extends BaseContext {
   }
   
   /**
-   * Get the storage adapter (useful for testing)
+   * Get the storage adapter
+   * Implements StorageAccess interface
    */
-  getStorage(): WebsiteStorageAdapter {
+  override getStorage(): WebsiteStorageAdapter {
     return this.storage;
   }
   
   /**
    * Set a new storage adapter
+   * Mainly used for testing
+   * @param storage The new storage adapter
    */
   setStorage(storage: WebsiteStorageAdapter): void {
     this.storage = storage;
+  }
+  
+  /**
+   * Get the formatter implementation
+   * Implements FormatterAccess interface
+   */
+  override getFormatter(): WebsiteFormatter {
+    return this.formatter;
+  }
+  
+  /**
+   * Format website data using the formatter
+   * Implements FormatterAccess interface
+   * 
+   * @param data The data to format
+   * @param options Optional formatting options
+   * @returns Formatted data
+   */
+  override format(data: WebsiteData, options?: FormattingOptions): string {
+    return this.formatter.format(data, options);
+  }
+  
+  /**
+   * Get a service by type
+   * Implements ServiceAccess interface
+   * 
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  override getService<T>(serviceType: new () => T): T {
+    // First check for known service types
+    if (serviceType === AstroContentService as unknown as new () => T) {
+      return this.getAstroContentService() as unknown as T;
+    }
+    
+    if (serviceType === LandingPageGenerationService as unknown as new () => T) {
+      return this.getLandingPageGenerationService() as unknown as T;
+    }
+    
+    if (serviceType === ProfileContext as unknown as new () => T) {
+      return this.getProfileContext() as unknown as T;
+    }
+    
+    // Use registry for other service types
+    const registry = Registry.getInstance();
+    return registry.resolve<T>(serviceType.name);
+  }
+  
+  /**
+   * Instance method that delegates to static getInstance
+   * (Required for interface compatibility)
+   * @returns The singleton instance
+   */
+  getInstance(): WebsiteContext {
+    return WebsiteContext.getInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static resetInstance
+   * (Required for interface compatibility)
+   */
+  resetInstance(): void {
+    WebsiteContext.resetInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static createFresh
+   * (Required for interface compatibility)
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): WebsiteContext {
+    return WebsiteContext.createFresh(options as WebsiteContextOptions);
+  }
+  
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * (Required for interface compatibility)
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  createWithDependencies(dependencies: Record<string, unknown>): WebsiteContext {
+    return WebsiteContext.createWithDependencies(dependencies);
   }
   
   /**
@@ -688,5 +803,4 @@ export class WebsiteContext extends BaseContext {
       };
     }
   }
-  
 }

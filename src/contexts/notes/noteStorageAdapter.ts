@@ -20,8 +20,9 @@ import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 /**
  * Adapter to provide standard StorageInterface for notes
+ * Implements the StorageInterface and follows the Component Interface Standardization pattern
  */
-export class NoteStorageAdapter implements StorageInterface<Note> {
+export class NoteStorageAdapter implements StorageInterface<Note, string> {
   /** The singleton instance */
   private static instance: NoteStorageAdapter | null = null;
   
@@ -29,7 +30,7 @@ export class NoteStorageAdapter implements StorageInterface<Note> {
   private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
   /** The note repository instance */
-  private repository: NoteRepository;
+  public readonly repository: NoteRepository;
 
   /**
    * Create a new NoteStorageAdapter with explicit dependency injection

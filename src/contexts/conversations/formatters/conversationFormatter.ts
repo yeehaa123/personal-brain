@@ -5,7 +5,10 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * 
+ * Implements the FormatterInterface for consistent formatting operations
  */
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
@@ -52,8 +55,9 @@ interface FormattedSummary {
 /**
  * Service for formatting conversations in different output formats
  * Follows the Component Interface Standardization pattern
+ * Implements the FormatterInterface
  */
-export class ConversationFormatter {
+export class ConversationFormatter implements FormatterInterface<ConversationTurn[], string> {
   /** The singleton instance */
   private static instance: ConversationFormatter | null = null;
   
@@ -95,6 +99,16 @@ export class ConversationFormatter {
    */
   public static createFresh(): ConversationFormatter {
     return new ConversationFormatter();
+  }
+  
+  /**
+   * Format method implementing FormatterInterface
+   * @param data The data to format (conversation turns)
+   * @param options Optional formatting options
+   * @returns Formatted string representation of the conversation
+   */
+  format(data: ConversationTurn[], options?: FormattingOptions): string {
+    return this.formatTurns(data, options || {});
   }
   /**
    * Format turns for display or export

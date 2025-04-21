@@ -7,7 +7,10 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * 
+ * Implements the FormatterInterface for consistent formatting operations
  */
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { 
   Profile, 
   ProfileAward, 
@@ -26,8 +29,9 @@ import type { ProfileFormattingOptions } from '../profileTypes';
 /**
  * ProfileFormatter handles converting profile objects to human-readable text
  * Follows the Component Interface Standardization pattern
+ * Implements FormatterInterface for Profile objects
  */
-export class ProfileFormatter {
+export class ProfileFormatter implements FormatterInterface<Profile, string> {
   /** The singleton instance */
   private static instance: ProfileFormatter | null = null;
   
@@ -62,6 +66,18 @@ export class ProfileFormatter {
    */
   public static createFresh(): ProfileFormatter {
     return new ProfileFormatter();
+  }
+  
+  /**
+   * Format method implementing FormatterInterface
+   * Maps to formatProfileForDisplay for compatibility
+   * 
+   * @param data The profile data to format
+   * @param options Optional formatting options
+   * @returns Formatted string representation of the profile
+   */
+  format(data: Profile, options?: ProfileFormattingOptions): string {
+    return this.formatProfileForDisplay(data, options || {});
   }
   /**
    * Formats a profile for display to users

@@ -21,7 +21,7 @@ async function generateTags() {
   }
 
   // Initialize services
-  const profileContext = ProfileContext.createWithDependencies();
+  const profileContext = ProfileContext.createWithDependencies({});
 
   logger.info(`Generating tags${entityType !== 'all' ? ` for ${entityType}` : ''}${forceRegenerate ? ' (forced regeneration)' : ''}...`);
 

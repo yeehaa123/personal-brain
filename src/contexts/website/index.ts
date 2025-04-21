@@ -33,6 +33,15 @@ export type {
   DeploymentAdapter,
 } from './adapters/deploymentAdapter';
 
+// Formatter exports
+export {
+  WebsiteFormatter,
+} from './formatters';
+export type {
+  WebsiteData,
+  WebsiteFormattingOptions,
+} from './formatters';
+
 // Messaging exports
 export {
   WebsiteContextMessaging,

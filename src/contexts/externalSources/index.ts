@@ -25,6 +25,12 @@ export {
   WikipediaSource,
 } from './sources';
 
+// Export formatters
+export {
+  ExternalSourceFormatter,
+  type ExternalSourceFormattingOptions,
+} from './formatters';
+
 // Export messaging
 export { ExternalSourceContextMessaging } from './messaging/externalSourceContextMessaging';
 export { ExternalSourceMessageHandler } from './messaging/externalSourceMessageHandler';

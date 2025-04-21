@@ -32,7 +32,13 @@ import type {
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import { BaseContext } from '@/contexts/core/baseContext';
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { 
+  ContextDependencies,
+  FullContextInterface,
+  ResourceDefinition,
+} from '@/contexts/core/contextInterface';
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
+import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 // No need to import ServiceRegistry anymore
 import { Logger } from '@/utils/logger';
@@ -53,8 +59,9 @@ export interface ConversationContextConfig {
 
   /**
    * Storage implementation - if provided, will override the registered storage adapter
+   * Note: For type compatibility with ContextDependencies, we only support ConversationStorageAdapter
    */
-  storage?: ConversationStorage;
+  storage?: ConversationStorageAdapter;
 
   /**
    * Tiered memory configuration
@@ -132,8 +139,23 @@ export interface HistoryOptions {
  * 
  * This context manages conversations, turns, and summaries in the MCP architecture.
  * It delegates specialized functionality to service components.
+ * 
+ * Implements the standardized interfaces:
+ * - StorageAccess: For accessing storage operations
+ * - FormatterAccess: For formatting operations
+ * - ServiceAccess: For service resolution
  */
-export class ConversationContext extends BaseContext {
+export class ConversationContext extends BaseContext<
+  ConversationStorageAdapter,
+  ConversationFormatter,
+  ConversationTurn[],
+  string
+> implements FullContextInterface<
+  ConversationStorageAdapter,
+  ConversationFormatter,
+  ConversationTurn[],
+  string
+> {
   /** The singleton instance */
   private static instance: ConversationContext | null = null;
 
@@ -162,7 +184,7 @@ export class ConversationContext extends BaseContext {
    */
   static override getInstance(options: Record<string, unknown> = {}): ConversationContext {
     if (!ConversationContext.instance) {
-      ConversationContext.instance = ConversationContext.createWithDependencies(options as ConversationContextConfig);
+      ConversationContext.instance = ConversationContext.createWithDependencies(options);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ConversationContext singleton instance created');
@@ -200,7 +222,7 @@ export class ConversationContext extends BaseContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ConversationContext instance');
     
-    return ConversationContext.createWithDependencies(options as ConversationContextConfig);
+    return ConversationContext.createWithDependencies(options);
   }
 
   /**
@@ -216,62 +238,78 @@ export class ConversationContext extends BaseContext {
 
   /**
    * Factory method for creating an instance with explicit dependencies
+   * This implementation matches the BaseContext abstract method signature
    * 
-   * @param config Configuration options
-   * @returns A new ConversationContext instance with resolved dependencies
+   * @param config Configuration options object
+   * @param dependencies Optional dependencies for the context
+   * @returns A new ConversationContext instance with the provided dependencies
    */
-  public static createWithDependencies(config: ConversationContextConfig = {}): ConversationContext {
-    // Extract values for use in config preparation
-    const name = config.name || 'ConversationBrain';
-    const version = config.version || '1.0.0';
-    
-    // Prepare full configuration with defaults
-    const fullConfig: Required<ConversationContextConfig> = {
-      name,
-      version,
-      storage: config.storage || InMemoryStorage.getInstance(),
-      tieredMemoryConfig: config.tieredMemoryConfig || {},
+  public static override createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown>,
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ): ConversationContext {
+    // Create standard config with defaults
+    const contextConfig: Required<ConversationContextConfig> = {
+      name: 'ConversationBrain',
+      version: '1.0.0',
+      storage: ConversationStorageAdapter.getInstance(InMemoryStorage.getInstance()),
+      tieredMemoryConfig: {},
       display: {
-        anchorName: config.display?.anchorName || 'Host',
-        anchorId: config.display?.anchorId || '',
-        defaultUserName: config.display?.defaultUserName || 'User',
-        defaultUserId: config.display?.defaultUserId || '',
+        anchorName: 'Host',
+        anchorId: '',
+        defaultUserName: 'User',
+        defaultUserId: '',
       },
     };
     
-    // Handle backwards compatibility with old config format
-    if ('anchorName' in config) {
-      fullConfig.display.anchorName = config.anchorName as string || 'Host';
-    }
-    if ('anchorId' in config) {
-      fullConfig.display.anchorId = config.anchorId as string || '';
-    }
-    if ('defaultUserName' in config) {
-      fullConfig.display.defaultUserName = config.defaultUserName as string || 'User';
-    }
-    if ('defaultUserId' in config) {
-      fullConfig.display.defaultUserId = config.defaultUserId as string || '';
+    // Merge provided config values
+    if (config) {
+      if ('name' in config) contextConfig.name = config['name'] as string;
+      if ('version' in config) contextConfig.version = config['version'] as string;
+      if ('tieredMemoryConfig' in config) contextConfig.tieredMemoryConfig = config['tieredMemoryConfig'] as Record<string, unknown>;
+      
+      // Handle display properties
+      if ('display' in config && typeof config['display'] === 'object') {
+        const display = config['display'] as Partial<Required<ConversationContextConfig>['display']>;
+        if (display.anchorName) contextConfig.display.anchorName = display.anchorName;
+        if (display.anchorId) contextConfig.display.anchorId = display.anchorId;
+        if (display.defaultUserName) contextConfig.display.defaultUserName = display.defaultUserName;
+        if (display.defaultUserId) contextConfig.display.defaultUserId = display.defaultUserId;
+      }
     }
     
-    // Create storage adapter instance with explicit dependency injection
-    const storageAdapter = ConversationStorageAdapter.createWithDependencies(
-      fullConfig.storage
-    );
+    // Get storage adapter - either from dependencies or create default
+    let storageAdapter: ConversationStorageAdapter;
+    if (dependencies?.storage) {
+      storageAdapter = dependencies.storage as unknown as ConversationStorageAdapter;
+    } else {
+      storageAdapter = ConversationStorageAdapter.getInstance(InMemoryStorage.getInstance());
+    }
     
-    // Create service instances with explicit dependency injection
-    const formatter = ConversationFormatter.getInstance();
+    // Get formatter - either from dependencies or create default
+    let formatter: ConversationFormatter;
+    if (dependencies?.formatter) {
+      formatter = dependencies.formatter as unknown as ConversationFormatter;
+    } else {
+      formatter = ConversationFormatter.getInstance();
+    }
+    
+    // Create remaining services
     const mcpFormatter = ConversationMcpFormatter.getInstance();
     const resourceService = ConversationResourceService.getInstance();
     const toolService = ConversationToolService.getInstance();
     const queryService = ConversationQueryService.getInstance(storageAdapter);
     const memoryService = ConversationMemoryService.getInstance(
       storageAdapter,
-      fullConfig.tieredMemoryConfig,
+      contextConfig.tieredMemoryConfig,
     );
     
-    // Create context with dependencies object
+    // Create context with explicit dependencies
     return new ConversationContext(
-      fullConfig,
+      contextConfig,
       {
         storageAdapter,
         formatter,
@@ -280,7 +318,7 @@ export class ConversationContext extends BaseContext {
         toolService,
         queryService,
         memoryService,
-      }
+      },
     );
   }
   
@@ -356,17 +394,19 @@ export class ConversationContext extends BaseContext {
 
   /**
    * Get the storage adapter
+   * Implements StorageAccess interface
    * @returns The storage adapter
    */
-  getStorage(): ConversationStorageAdapter {
+  override getStorage(): ConversationStorageAdapter {
     return this.storageAdapter;
   }
 
   /**
    * Get the conversation formatter
+   * Implements FormatterAccess interface
    * @returns The conversation formatter
    */
-  getFormatter(): ConversationFormatter {
+  override getFormatter(): ConversationFormatter {
     return this.formatter;
   }
 
@@ -435,7 +475,7 @@ export class ConversationContext extends BaseContext {
     const queryService = ConversationQueryService.getInstance(storage);
     const memoryService = ConversationMemoryService.getInstance(
       storage,
-      this.contextConfig.tieredMemoryConfig
+      this.contextConfig.tieredMemoryConfig,
     );
     
     // Use assignment with type assertion to modify the readonly properties for internal use
@@ -761,5 +801,48 @@ export class ConversationContext extends BaseContext {
     }
 
     this.logger.info(`Completed migration of ${conversations.length} conversations to new storage`, { context: 'ConversationContext' });
+  }
+  
+  /**
+   * Instance method that delegates to static getInstance
+   * (Required for interface compatibility)
+   * @returns The singleton instance
+   */
+  getInstance(): ConversationContext {
+    return ConversationContext.getInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static resetInstance
+   * (Required for interface compatibility)
+   */
+  resetInstance(): void {
+    ConversationContext.resetInstance();
+  }
+  
+  /**
+   * Instance method that delegates to static createFresh
+   * (Required for interface compatibility)
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): ConversationContext {
+    return ConversationContext.createFresh(options);
+  }
+  
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * (Required for interface compatibility)
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown>,
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ): ConversationContext {
+    return ConversationContext.createWithDependencies(config, dependencies);
   }
 }

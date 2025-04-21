@@ -8,17 +8,33 @@
  * - getInstance(): Returns the singleton instance 
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
+ * 
+ * Implements standardized interfaces:
+ * - CoreContextInterface: Core context functionality
+ * - StorageAccess: Standardized storage access
+ * - FormatterAccess: Standardized formatter access
+ * - ServiceAccess: Standardized service resolution
+ * - ExtendedContextInterface: Dependency injection support
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { Logger } from '@/utils/logger';
+import type { Registry } from '@/utils/registry';
 
 import type { 
+  ContextDependencies, 
   ContextStatus, 
-  McpContextInterface, 
-  ResourceDefinition, 
+  FormatterAccess,
+  McpContextInterface,
+  ResourceDefinition,
+  ServiceAccess,
+  StorageAccess,
 } from './contextInterface';
+import type { FormattingOptions } from './formatterInterface';
+import type { FormatterInterface } from './formatterInterface';
+import type { StorageInterface } from './storageInterface';
 
 /**
  * Configuration options for BaseContext
@@ -28,10 +44,26 @@ export interface BaseContextConfig {
 }
 
 /**
- * Abstract base class that implements McpContextInterface
+ * Abstract base class that implements the standardized context interfaces
  * All specific contexts should extend this class
+ * 
+ * Generic type parameters:
+ * @template TStorage - The specific StorageInterface implementation
+ * @template TFormatter - The specific FormatterInterface implementation
+ * @template TInputData - The input data type for formatting
+ * @template TOutputData - The output data type for formatting
  */
-export abstract class BaseContext implements McpContextInterface {
+export abstract class BaseContext<
+  TStorage extends StorageInterface<unknown, unknown> = StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown> = FormatterInterface<unknown, unknown>,
+  TInputData = unknown,
+  TOutputData = unknown
+> implements 
+  McpContextInterface, 
+  StorageAccess<TStorage>,
+  FormatterAccess<TFormatter>,
+  ServiceAccess
+{
   // Note: Each derived class should implement their own instance property
   // Using private in the derived class: private static instance: DerivedClass | null = null;
   
@@ -48,11 +80,21 @@ export abstract class BaseContext implements McpContextInterface {
   /** Ready state flag */
   protected readyState: boolean = false;
   
+  /** Registry for service resolution */
+  protected registry: Registry | null;
+  
   /**
    * Private constructor to enforce the use of getInstance() or createFresh()
    * @param config Configuration object for the context
+   * @param dependencies Explicit dependencies for the context
    */
-  protected constructor(protected config: Record<string, unknown> = {}) {
+  protected constructor(
+    protected config: Record<string, unknown> = {},
+    protected dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ) {
+    // Initialize registry from dependencies or use ServiceRegistry
+    this.registry = dependencies?.registry || null; // Don't try to instantiate Registry directly
+    
     // Create MCP server with context info
     this.mcpServer = {
       name: this.getContextName(),
@@ -80,6 +122,40 @@ export abstract class BaseContext implements McpContextInterface {
   abstract getContextName(): string;
   abstract getContextVersion(): string;
   protected abstract initializeMcpComponents(): void;
+  
+  /**
+   * Abstract methods for standardized storage access
+   */
+  abstract getStorage(): TStorage;
+  
+  /**
+   * Abstract methods for standardized formatter access
+   */
+  abstract getFormatter(): TFormatter;
+  
+  /**
+   * Format data using the context's formatter
+   * @param data Data to format
+   * @param options Optional formatting options
+   * @returns Formatted data
+   */
+  format(data: TInputData, options?: FormattingOptions): TOutputData {
+    return this.getFormatter().format(data, options) as TOutputData;
+  }
+  
+  /**
+   * Get a service by type from the registry
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   * @throws Error if no registry is available
+   */
+  getService<T>(serviceType: new () => T): T {
+    if (!this.registry) {
+      throw new Error(`Cannot resolve service ${serviceType.name}: No registry available`);
+    }
+    // Use the service constructor name as the registry key
+    return this.registry.resolve<T>(serviceType.name);
+  }
   
   /**
    * Get the singleton instance
@@ -113,6 +189,21 @@ export abstract class BaseContext implements McpContextInterface {
    */
   static createFresh(_options?: Record<string, unknown>): BaseContext {
     throw new Error('createFresh must be implemented by derived classes');
+  }
+  
+  /**
+   * Create a new instance with explicit dependencies
+   * This is an abstract method that derived classes must implement
+   * 
+   * @param _config Configuration options
+   * @param _dependencies Optional dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  static createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(_config: Record<string, unknown>, _dependencies?: ContextDependencies<TStorage, TFormatter>): BaseContext {
+    throw new Error('createWithDependencies must be implemented by derived classes');
   }
   
   /**

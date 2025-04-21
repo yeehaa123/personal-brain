@@ -2,34 +2,36 @@
  * NoteContext mock implementation
  * 
  * Provides a standardized mock for the NoteContext class.
+ * Implements the full FullContextInterface through BaseContext.
  */
 
 import { mock } from 'bun:test';
 
+import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { Note, NoteSearchParams } from '@/models/note';
 
 import { MockBaseContext } from './baseContext';
-import type { MockNoteStorageAdapter } from './noteStorageAdapter';
+import { MockNoteFormatter } from './notes';
+import { MockNoteStorageAdapter } from './noteStorageAdapter';
 
 
 /**
  * Mock implementation for the NoteContext
+ * Implements FullContextInterface through BaseContext
  */
-export class MockNoteContext extends MockBaseContext {
+export class MockNoteContext extends MockBaseContext<
+  MockNoteStorageAdapter,
+  MockNoteFormatter,
+  Note,
+  string
+> {
   private static instance: MockNoteContext | null = null;
   
-  // Mock services and dependencies
-  protected storageAdapter: {
-    read: (id: string) => Promise<Note | null>;
-    search: (criteria: Record<string, unknown>) => Promise<Note[]>;
-    create: (note: Partial<Note>) => Promise<string>;
-    update: (id: string, note: Partial<Note>) => Promise<boolean>;
-    delete: (id: string) => Promise<boolean>;
-    list: (options?: Record<string, unknown>) => Promise<Note[]>;
-    count: (criteria?: Record<string, unknown>) => Promise<number>;
-    findBySource: (sourceId: string) => Promise<Note[]>;
-    getRelated: (id: string, limit?: number) => Promise<Note[]>;
-  };
+  // Mock storage implementation - override protected property from base class
+  protected override storage: MockNoteStorageAdapter;
+  
+  // Mock formatter implementation - override protected property from base class
+  protected override formatter: MockNoteFormatter;
   
   /**
    * Get singleton instance of MockNoteContext
@@ -64,18 +66,11 @@ export class MockNoteContext extends MockBaseContext {
       version: config['version'] || '1.0.0',
     });
     
-    // Initialize mock storage adapter
-    this.storageAdapter = {
-      read: mock(() => Promise.resolve(null)),
-      search: mock(() => Promise.resolve([])),
-      create: mock(() => Promise.resolve('note-123')),
-      update: mock(() => Promise.resolve(true)),
-      delete: mock(() => Promise.resolve(true)),
-      list: mock(() => Promise.resolve([])),
-      count: mock(() => Promise.resolve(0)),
-      findBySource: mock(() => Promise.resolve([])),
-      getRelated: mock(() => Promise.resolve([])),
-    };
+    // Initialize storage adapter
+    this.storage = MockNoteStorageAdapter.createFresh();
+    
+    // Initialize formatter
+    this.formatter = MockNoteFormatter.createFresh();
     
     // Initialize mock resources
     this.resources = [
@@ -116,78 +111,98 @@ export class MockNoteContext extends MockBaseContext {
   
   /**
    * Get the storage adapter
+   * Overrides the base class implementation
    */
-  getStorage(): MockNoteStorageAdapter {
-    return this.storageAdapter as unknown as MockNoteStorageAdapter;
+  override getStorage(): MockNoteStorageAdapter {
+    return this.storage;
+  }
+  
+  /**
+   * Get the formatter implementation
+   * Overrides the base class implementation
+   */
+  override getFormatter(): MockNoteFormatter {
+    return this.formatter;
+  }
+  
+  /**
+   * Format data using the context's formatter
+   * Overrides the base class implementation
+   */
+  override format(data: Note, options?: FormattingOptions): string {
+    return this.formatter.format(data, options);
   }
   
   /**
    * Set a new storage adapter
    */
   setStorage(storage: MockNoteStorageAdapter): void {
-    this.storageAdapter = storage as unknown as typeof this.storageAdapter;
+    this.storage = storage;
   }
   
   /**
    * Get a note by ID
    */
   async getNoteById(id: string): Promise<Note | null> {
-    return this.storageAdapter.read(id);
+    return this.storage.read(id);
   }
   
   /**
    * Search notes by criteria
    */
   async searchNotes(params: NoteSearchParams): Promise<Note[]> {
-    return this.storageAdapter.search(params);
+    return this.storage.search(params);
   }
   
   /**
    * Get recent notes
    */
   async getRecentNotes(limit = 10): Promise<Note[]> {
-    return this.storageAdapter.list({ limit });
+    return this.storage.list({ limit });
   }
   
   /**
    * Create a new note
    */
   async createNote(note: Partial<Note>): Promise<string> {
-    return this.storageAdapter.create(note);
+    return this.storage.create(note);
   }
   
   /**
    * Update a note
    */
   async updateNote(id: string, updates: Partial<Note>): Promise<boolean> {
-    return this.storageAdapter.update(id, updates);
+    return this.storage.update(id, updates);
   }
   
   /**
    * Delete a note
    */
   async deleteNote(id: string): Promise<boolean> {
-    return this.storageAdapter.delete(id);
+    return this.storage.delete(id);
   }
   
   /**
    * Count notes
    */
   async getNoteCount(): Promise<number> {
-    return this.storageAdapter.count();
+    return this.storage.count();
   }
   
   /**
    * Find notes by source
    */
   async findNotesBySource(sourceId: string): Promise<Note[]> {
-    return this.storageAdapter.findBySource(sourceId);
+    return this.storage.findBySource(sourceId);
   }
   
   /**
    * Get related notes for a given note ID
    */
-  async getRelatedNotes(id: string, limit = 5): Promise<Note[]> {
-    return this.storageAdapter.getRelated(id, limit);
+  async getRelatedNotes(_id: string, _limit = 5): Promise<Note[]> {
+    // MockNoteStorageAdapter doesn't have a getRelated method
+    // In a real implementation, this would delegate to the storage adapter's getRelated method
+    // For mock purposes, we'll just return an empty array
+    return [];
   }
 }

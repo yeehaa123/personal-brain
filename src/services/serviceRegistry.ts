@@ -97,7 +97,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    * @param options Configuration options
    * @returns The shared instance
    */
-  public static getInstance(options?: ServiceRegistryOptions): ServiceRegistry {
+  public static override getInstance(options?: ServiceRegistryOptions): ServiceRegistry {
     if (!ServiceRegistry.instance) {
       ServiceRegistry.instance = new ServiceRegistry(options || {});
       ServiceRegistry.instance.logger.debug('ServiceRegistry singleton instance created');
@@ -115,7 +115,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    * Reset the singleton instance (primarily for testing)
    * This clears the instance and any resources it holds
    */
-  public static resetInstance(): void {
+  public static override resetInstance(): void {
     if (ServiceRegistry.instance) {
       ServiceRegistry.instance.clear();
       ServiceRegistry.instance = null;
@@ -129,7 +129,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    * @param options Configuration options
    * @returns A new instance
    */
-  public static createFresh(options?: ServiceRegistryOptions): ServiceRegistry {
+  public static override createFresh(options?: ServiceRegistryOptions): ServiceRegistry {
     const registry = new ServiceRegistry(options || {});
     registry.initialize();
     return registry;

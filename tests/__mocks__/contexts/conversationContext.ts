@@ -11,6 +11,7 @@ import type { McpFormattedConversation } from '@/contexts/conversations/formatte
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
 import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
@@ -30,7 +31,7 @@ export class MockConversationContext extends MockBaseContext {
   
   // Mock services
   public storageAdapter: MockConversationStorageAdapter;
-  public formatter: MockConversationFormatter;
+  public override formatter: MockConversationFormatter;
   public mcpFormatter: MockConversationMcpFormatter;
   public resourceService: MockConversationResourceService;
   public toolService: MockConversationToolService;
@@ -133,18 +134,26 @@ export class MockConversationContext extends MockBaseContext {
   override getContextVersion(): string {
     return this.contextVersion;
   }
+
+  /**
+   * Override base format method from MockBaseContext
+   * This handles the standard format method required by the interface
+   */
+  override format(data: ConversationTurn[], options?: FormattingOptions): string {
+    return this.formatter.format(data, options);
+  }
   
   /**
    * Get the storage adapter
    */
-  getStorage(): MockConversationStorageAdapter {
+  override getStorage(): MockConversationStorageAdapter {
     return this.storageAdapter;
   }
   
   /**
    * Get the formatter
    */
-  getFormatter(): MockConversationFormatter {
+  override getFormatter(): MockConversationFormatter {
     return this.formatter;
   }
   

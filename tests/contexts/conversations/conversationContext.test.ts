@@ -132,7 +132,7 @@ describe('ConversationContext', () => {
     const config = {
       name: 'ConversationBrain',
       version: '1.0.0',
-      storage: storage,  // Use the MockConversationStorage which implements ConversationStorage
+      storage: adapter,  // Use ConversationStorageAdapter instead of MockConversationStorage directly
       tieredMemoryConfig: {},
       display: {
         anchorName: 'TestHost',
@@ -154,7 +154,7 @@ describe('ConversationContext', () => {
         toolService: toolService as unknown as ConversationToolService,
         queryService: queryService as unknown as ConversationQueryService,
         memoryService: memoryService as unknown as ConversationMemoryService,
-      }
+      },
     );
   });
 

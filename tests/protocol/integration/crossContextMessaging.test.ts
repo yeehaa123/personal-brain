@@ -41,10 +41,8 @@ describe('Cross-Context Messaging Integration', () => {
     const websiteContext = MockWebsiteContext.getInstance() as unknown as WebsiteContext;
     const contextMediator = MockContextMediator.getInstance() as unknown as ContextMediator;
     
-    // Get mock storage to set initial response values
-    const noteStorage = noteContext.getStorage();
-    (noteStorage.create as unknown as { mockImplementation: (fn: () => Promise<string>) => void })
-      .mockImplementation(() => Promise.resolve('note-123'));
+    // The mock storage's create method is already mocked in the MockNoteStorageAdapter class
+    // No need to manually mock it here with mockImplementation
     
     // Configure and return all required mocks
     return {

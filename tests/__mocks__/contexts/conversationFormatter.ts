@@ -2,23 +2,26 @@
  * MockConversationFormatter
  * 
  * Mock implementation of ConversationFormatter for testing
+ * Implements FormatterInterface for compatibility with the interface standardization
  */
 
-import type { FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
+import type { FormattingOptions as ContextFormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 
 // Re-export the FormattingOptions type
-export type { FormattingOptions };
+export type { ContextFormattingOptions };
 
 /**
  * Mock implementation of ConversationFormatter
  * 
  * We're providing a simple mock implementation that matches the public API
  * but doesn't try to match internal implementation details.
+ * Implements FormatterInterface for compatibility with the interface standardization.
  */
-export class MockConversationFormatter {
+export class MockConversationFormatter implements FormatterInterface<ConversationTurn[], string> {
   // Singleton pattern implementation
   private static instance: MockConversationFormatter | null = null;
   
@@ -54,18 +57,25 @@ export class MockConversationFormatter {
   }
   
   // Public methods matching the ConversationFormatter interface
-  formatTurns(_turns: ConversationTurn[], _options: FormattingOptions = {}): string {
+  /**
+   * Format method implementation for FormatterInterface
+   */
+  format(data: ConversationTurn[], options?: FormattingOptions): string {
+    return this.formatTurns(data, options as ContextFormattingOptions);
+  }
+
+  formatTurns(_turns: ConversationTurn[], _options: ContextFormattingOptions = {}): string {
     return 'Formatted turns';
   }
   
-  formatSummaries(_summaries: ConversationSummary[], _options: FormattingOptions = {}): string {
+  formatSummaries(_summaries: ConversationSummary[], _options: ContextFormattingOptions = {}): string {
     return 'Formatted summaries';
   }
   
   formatConversation(
     _turns: ConversationTurn[], 
     _summaries: ConversationSummary[], 
-    options: FormattingOptions = {},
+    options: ContextFormattingOptions = {},
   ): string {
     const format = options.format || 'text';
     
@@ -88,7 +98,7 @@ export class MockConversationFormatter {
   formatHistoryForPrompt(
     _turns: ConversationTurn[], 
     _summaries: ConversationSummary[],
-    _options: FormattingOptions = {},
+    _options: ContextFormattingOptions = {},
   ): string {
     return 'Formatted history for prompt';
   }

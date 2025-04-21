@@ -91,7 +91,7 @@ describe('ProfileContext', () => {
         embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
         tagService: mockProfileTagService as unknown as ProfileTagService,
         searchService: mockProfileSearchService as unknown as ProfileSearchService,
-      }
+      },
     );
   });
   
@@ -106,7 +106,7 @@ describe('ProfileContext', () => {
           embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
           tagService: mockProfileTagService as unknown as ProfileTagService,
           searchService: mockProfileSearchService as unknown as ProfileSearchService,
-        }
+        },
       );
     });
     
@@ -136,7 +136,7 @@ describe('ProfileContext', () => {
           embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
           tagService: mockProfileTagService as unknown as ProfileTagService,
           searchService: mockProfileSearchService as unknown as ProfileSearchService,
-        }
+        },
       );
     });
     
@@ -162,7 +162,7 @@ describe('ProfileContext', () => {
           embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
           tagService: mockProfileTagService as unknown as ProfileTagService,
           searchService: mockProfileSearchService as unknown as ProfileSearchService,
-        }
+        },
       );
     });
     
@@ -195,7 +195,7 @@ describe('ProfileContext', () => {
         embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
         tagService: mockProfileTagService as unknown as ProfileTagService,
         searchService: mockProfileSearchService as unknown as ProfileSearchService,
-      }
+      },
     );
     
     expect(namedContext.getContextName()).toBe('CustomProfile');
@@ -213,7 +213,7 @@ describe('ProfileContext', () => {
         embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
         tagService: mockProfileTagService as unknown as ProfileTagService,
         searchService: mockProfileSearchService as unknown as ProfileSearchService,
-      }
+      },
     );
     
     expect(versionedContext.getContextVersion()).toBe('2.0.0');

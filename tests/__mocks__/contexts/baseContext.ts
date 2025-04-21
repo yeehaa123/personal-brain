@@ -7,12 +7,28 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { ContextStatus, McpContextInterface, ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { 
+  ContextStatus, 
+  FullMcpContextInterface, 
+  ResourceDefinition, 
+} from '@/contexts/core/contextInterface';
+import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
+import type { StorageInterface } from '@/contexts/core/storageInterface';
+import { Registry } from '@/utils/registry';
 
 /**
  * Mock implementation of BaseContext
+ * 
+ * Implements FullMcpContextInterface for compatibility with interface standardization.
+ * The generic type parameters are set to any to allow flexibility in extending classes.
  */
-export class MockBaseContext implements McpContextInterface {
+export class MockBaseContext<
+  TStorage extends StorageInterface<unknown, unknown> = StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown> = FormatterInterface<unknown, unknown>,
+  TInputData = unknown, 
+  TOutputData = unknown
+> implements FullMcpContextInterface<TStorage, TFormatter, TInputData, TOutputData> {
   private static instances: Map<string, MockBaseContext> = new Map();
   
   protected mcpServer: McpServer;
@@ -21,6 +37,16 @@ export class MockBaseContext implements McpContextInterface {
   protected readyState: boolean = false;
   protected name: string;
   protected version: string;
+  
+  /**
+   * Storage implementation - initialized in constructor
+   */
+  protected storage!: TStorage;
+  
+  /**
+   * Formatter implementation - initialized in constructor
+   */
+  protected formatter!: TFormatter;
   
   /**
    * Get singleton instance
@@ -270,5 +296,63 @@ export class MockBaseContext implements McpContextInterface {
     this.readyState = false;
     this.resources = [];
     this.tools = [];
+  }
+  
+  /**
+   * Get the storage implementation
+   * @returns Storage implementation
+   */
+  getStorage(): TStorage {
+    return this.storage;
+  }
+  
+  /**
+   * Get the formatter implementation
+   * @returns Formatter implementation
+   */
+  getFormatter(): TFormatter {
+    return this.formatter;
+  }
+  
+  /**
+   * Format data using the context's formatter
+   * @param data Data to format
+   * @param options Optional formatting options
+   * @returns Formatted data
+   */
+  format(data: TInputData, options?: FormattingOptions): TOutputData {
+    return this.formatter.format(data, options) as TOutputData;
+  }
+  
+  /**
+   * Get a service by type
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  getService<T>(serviceType: new () => T): T {
+    // Use registry for service resolution
+    return Registry.getInstance().resolve<T>(serviceType.name);
+  }
+  
+  /**
+   * Create a new instance with explicit dependencies
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  createWithDependencies(dependencies: Record<string, unknown>): unknown {
+    return (this.constructor as typeof MockBaseContext).createFresh(dependencies);
+  }
+
+  // Implementation of FullMcpContextInterface methods
+  getInstance(): MockBaseContext<TStorage, TFormatter, TInputData, TOutputData> {
+    return (this.constructor as typeof MockBaseContext).getInstance() as MockBaseContext<TStorage, TFormatter, TInputData, TOutputData>;
+  }
+
+  resetInstance(): void {
+    (this.constructor as typeof MockBaseContext).resetInstance();
+  }
+
+  createFresh(options?: Record<string, unknown>): MockBaseContext<TStorage, TFormatter, TInputData, TOutputData> {
+    return (this.constructor as typeof MockBaseContext).createFresh(options) as MockBaseContext<TStorage, TFormatter, TInputData, TOutputData>;
   }
 }

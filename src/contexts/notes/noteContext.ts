@@ -12,6 +12,11 @@
 
 import { textConfig } from '@/config';
 import { BaseContext } from '@/contexts/core/baseContext';
+import type { 
+  ContextDependencies,
+  FullContextInterface,
+} from '@/contexts/core/contextInterface';
+import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { Note } from '@/models/note';
 import type {
@@ -24,12 +29,13 @@ import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
+import { NoteFormatter } from './formatters';
 import { NoteStorageAdapter } from './noteStorageAdapter';
 
 /**
  * Configuration for the NoteContext
  */
-export interface NoteContextConfig {
+export interface NoteContextConfig extends Record<string, unknown> {
   /**
    * API key for embedding service
    */
@@ -51,13 +57,29 @@ export interface NoteContextConfig {
  * 
  * Acts as a facade for note-related operations, coordinating between
  * services, repositories, and MCP components.
+ * 
+ * Implements the standardized interfaces:
+ * - StorageAccess: For accessing note storage operations
+ * - FormatterAccess: For formatting note data
+ * - ServiceAccess: For accessing note-related services
  */
-export class NoteContext extends BaseContext {
+export class NoteContext extends BaseContext<
+  NoteStorageAdapter,
+  NoteFormatter,
+  Note,
+  string
+> implements FullContextInterface<
+  NoteStorageAdapter,
+  NoteFormatter,
+  Note,
+  string
+> {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
-  // Storage adapter
-  private storage: StorageInterface<Note>;
+  // Storage adapter and formatter
+  private storage: NoteStorageAdapter;
+  private formatter: NoteFormatter;
   
   // Singleton instance
   private static instance: NoteContext | null = null;
@@ -68,16 +90,12 @@ export class NoteContext extends BaseContext {
    * @param options Configuration options (only used when creating a new instance)
    * @returns The singleton instance
    */
-  static override getInstance(options?: NoteContextConfig | string): NoteContext {
+  static override getInstance(options?: NoteContextConfig): NoteContext {
     if (!NoteContext.instance) {
-      // Convert string config to object if needed
-      let config: NoteContextConfig = {};
-      if (typeof options === 'string') {
-        config = { apiKey: options };
-      } else if (options) {
-        config = options;
-      }
+      // Prepare config with defaults
+      const config = options || {};
       
+      // Use the config directly - NoteContextConfig extends Record<string, unknown>
       NoteContext.instance = NoteContext.createWithDependencies(config);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
@@ -112,34 +130,64 @@ export class NoteContext extends BaseContext {
    * @param options Configuration options
    * @returns A new NoteContext instance
    */
-  static override createFresh(options?: NoteContextConfig | string): NoteContext {
+  static override createFresh(options?: NoteContextConfig): NoteContext {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh NoteContext instance');
     
-    // Convert string config to object if needed
-    let config: NoteContextConfig = {};
-    if (typeof options === 'string') {
-      config = { apiKey: options };
-    } else if (options) {
-      config = options;
-    }
+    // Prepare config with defaults
+    const config = options || {};
     
+    // Use the config directly - NoteContextConfig extends Record<string, unknown>
     return NoteContext.createWithDependencies(config);
   }
   
   /**
-   * Factory method for creating an instance with dependencies from ServiceRegistry
+   * Factory method for creating an instance with explicit dependencies
+   * This implementation matches the BaseContext abstract method signature
    * 
-   * @param config Configuration options
-   * @returns A new NoteContext instance with resolved dependencies
+   * @param config Configuration options object
+   * @param dependencies Optional dependencies for the context
+   * @returns A new NoteContext instance with the provided dependencies
    */
-  public static createWithDependencies(config: NoteContextConfig = {}): NoteContext {
+  public static override createWithDependencies<
+    TStorage extends StorageInterface<unknown, unknown>,
+    TFormatter extends FormatterInterface<unknown, unknown>
+  >(
+    config: Record<string, unknown> = {}, 
+    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  ): NoteContext {
+    // Convert the generic config to our specific config type
+    const noteConfig: NoteContextConfig = {
+      apiKey: config['apiKey'] as string,
+    };
+    
+    // If dependencies are provided, use them with proper casting
+    if (dependencies) {
+      // Use registry from dependencies or create a service registry
+      const serviceRegistry = (dependencies.registry || ServiceRegistry.getInstance()) as ServiceRegistry;
+      
+      // Extract needed services from registry with correct type assertions
+      const repository = serviceRegistry.getNoteRepository() as unknown as NoteRepository;
+      const embeddingService = serviceRegistry.getNoteEmbeddingService() as unknown as NoteEmbeddingService;
+      const searchService = serviceRegistry.getNoteSearchService() as unknown as NoteSearchService;
+      
+      // Create context with explicitly provided dependencies, cast storage to correct type
+      return new NoteContext(
+        noteConfig,
+        repository,
+        embeddingService,
+        searchService,
+        dependencies.storage as unknown as NoteStorageAdapter,
+      );
+    }
+    
+    // Otherwise use services from registry
     const serviceRegistry = ServiceRegistry.getInstance({
-      apiKey: config.apiKey,
+      apiKey: noteConfig.apiKey,
     });
     
     return new NoteContext(
-      config,
+      noteConfig,
       serviceRegistry.getNoteRepository() as NoteRepository,
       serviceRegistry.getNoteEmbeddingService() as NoteEmbeddingService,
       serviceRegistry.getNoteSearchService() as NoteSearchService,
@@ -160,12 +208,15 @@ export class NoteContext extends BaseContext {
     private readonly repository: NoteRepository,
     private readonly embeddingService: NoteEmbeddingService,
     private readonly searchService: NoteSearchService,
-    storageAdapter?: StorageInterface<Note>,
+    storageAdapter?: NoteStorageAdapter,
   ) {
     super(config as Record<string, unknown>);
     
     // Initialize storage adapter - explicitly use the provided adapter or create one
     this.storage = storageAdapter || new NoteStorageAdapter(this.repository);
+    
+    // Initialize formatter
+    this.formatter = NoteFormatter.getInstance();
     
     this.logger.debug('NoteContext initialized with dependency injection', { context: 'NoteContext' });
   }
@@ -520,9 +571,104 @@ export class NoteContext extends BaseContext {
   
   /**
    * Get the storage adapter
+   * Implements StorageAccess interface
    * @returns The storage interface for notes
    */
-  getStorage(): StorageInterface<Note> {
+  override getStorage(): NoteStorageAdapter {
     return this.storage;
+  }
+  
+  /**
+   * Get the formatter
+   * Implements FormatterAccess interface
+   * @returns The formatter
+   */
+  override getFormatter(): NoteFormatter {
+    return this.formatter;
+  }
+  
+  /**
+   * Get a service by type from the registry
+   * Implements ServiceAccess interface
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  override getService<T>(serviceType: new () => T): T {
+    // Simple implementation that handles the common cases for NoteContext services
+    
+    if (serviceType.name === 'NoteEmbeddingService') {
+      return this.embeddingService as unknown as T;
+    }
+    
+    if (serviceType.name === 'NoteSearchService') {
+      return this.searchService as unknown as T;
+    }
+    
+    if (serviceType.name === 'NoteRepository') {
+      return this.repository as unknown as T;
+    }
+    
+    throw new Error(`Service not found: ${serviceType.name}`);
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   * @returns The singleton instance
+   */
+  getInstance(): NoteContext {
+    return NoteContext.getInstance();
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   */
+  resetInstance(): void {
+    NoteContext.resetInstance();
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by FullContextInterface
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): NoteContext {
+    return NoteContext.createFresh(options as NoteContextConfig);
+  }
+  
+  /**
+   * Instance method that delegates to the static method
+   * Required by ExtendedContextInterface
+   * @param dependencies The dependencies for the context
+   * @returns A new instance with the provided dependencies
+   */
+  createWithDependencies(dependencies: ContextDependencies<NoteStorageAdapter, NoteFormatter>): NoteContext {
+    // This is a bit more complex since our static method has a different signature
+    // We need to translate between interfaces
+    
+    // If we have storage, we should use it
+    if (dependencies.storage) {
+      // Get the repository from the storage adapter
+      const repository = dependencies.storage.getRepository();
+      
+      // Get services from the service registry
+      const serviceRegistry = ServiceRegistry.getInstance();
+      const embeddingService = serviceRegistry.getNoteEmbeddingService() as NoteEmbeddingService;
+      const searchService = serviceRegistry.getNoteSearchService() as NoteSearchService;
+      
+      // Create a new context with the explicit dependencies
+      return new NoteContext(
+        { name: 'NoteBrain', version: '1.0.0' },
+        repository,
+        embeddingService,
+        searchService,
+        dependencies.storage,
+      );
+    }
+    
+    // Otherwise, fall back to the default behavior
+    return NoteContext.createWithDependencies();
   }
 }

@@ -52,7 +52,7 @@ async function generateNoteEmbeddings(forceRegenerate: boolean) {
   }
 
   try {
-    const context = NoteContext.createWithDependencies();
+    const context = NoteContext.createWithDependencies({});
     const result = await context.generateEmbeddingsForAllNotes();
 
     logger.info(`Notes updated: ${result.updated}`);
@@ -78,7 +78,7 @@ async function generateProfileEmbeddings(forceRegenerate: boolean) {
   }
 
   try {
-    const context = ProfileContext.createWithDependencies();
+    const context = ProfileContext.createWithDependencies({});
     const result = await context.generateEmbeddingForProfile();
 
     logger.info(`Profile updated: ${result.updated ? 'Yes' : 'No'}`);

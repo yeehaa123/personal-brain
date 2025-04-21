@@ -3,9 +3,91 @@
  * 
  * This module defines the streamlined interface hierarchy for all context components,
  * with a clear separation between core functionality and MCP-specific concerns.
+ * 
+ * Interface simplification as part of Phase 6:
+ * - Adds standardized ContextDependencies interface
+ * - Adds StorageAccess interface for consistent storage operations
+ * - Adds FormatterAccess interface for consistent formatting operations
+ * - Adds ServiceAccess interface for consistent service operations
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
+import type { Registry } from '@/utils/registry';
+
+import type { FormatterInterface, FormattingOptions } from './formatterInterface';
+import type { StorageInterface } from './storageInterface';
+
+/**
+ * Standard context dependencies interface
+ * Provides a consistent pattern for dependency injection across all contexts
+ */
+export interface ContextDependencies<
+  TStorage extends StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown>
+> {
+  /** Storage implementation */
+  storage?: TStorage;
+  /** Formatter implementation */
+  formatter?: TFormatter;
+  /** Registry for service resolution */
+  registry?: Registry;
+  /** Additional dependencies */
+  [key: string]: unknown;
+}
+
+/**
+ * Storage access interface
+ * Provides consistent storage operations across contexts
+ */
+export interface StorageAccess<T extends StorageInterface<unknown, unknown>> {
+  /**
+   * Get the storage implementation
+   * @returns Storage implementation
+   */
+  getStorage(): T;
+}
+
+/**
+ * Formatter access interface
+ * Provides consistent formatter operations across contexts
+ * 
+ * @template T - The formatter interface type
+ * @template TInputData - The input data type for formatting
+ * @template TOutputData - The output data type for formatting
+ */
+export interface FormatterAccess<
+  T extends FormatterInterface<unknown, unknown>,
+  TInputData = unknown,
+  TOutputData = unknown
+> {
+  /**
+   * Get the formatter implementation
+   * @returns Formatter implementation
+   */
+  getFormatter(): T;
+  
+  /**
+   * Format data using the context's formatter
+   * @param data Data to format
+   * @param options Optional formatting options
+   * @returns Formatted data
+   */
+  format(data: TInputData, options?: FormattingOptions): TOutputData;
+}
+
+/**
+ * Service access interface
+ * Provides consistent service resolution across contexts
+ */
+export interface ServiceAccess {
+  /**
+   * Get a service by type
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  getService<T>(serviceType: new () => T): T;
+}
 
 /**
  * Status object for context components
@@ -49,6 +131,21 @@ export interface ContextCapabilities {
   tools: ResourceDefinition[];
   /** Supported feature identifiers */
   features: string[];
+}
+
+/**
+ * Extended context interface with dependency management
+ */
+export interface ExtendedContextInterface<
+  TStorage extends StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown>
+> {
+  /**
+   * Create a new instance with explicit dependencies
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  createWithDependencies(dependencies: ContextDependencies<TStorage, TFormatter>): unknown;
 }
 
 /**
@@ -103,3 +200,62 @@ export interface McpContextInterface extends CoreContextInterface {
    */
   getCapabilities(): ContextCapabilities;
 }
+
+/**
+ * Complete context interface combining all standardized interfaces
+ * This provides a comprehensive standard for context implementation
+ * 
+ * @template TStorage - The specific StorageInterface implementation
+ * @template TFormatter - The specific FormatterInterface implementation
+ * @template TInputData - The input data type for formatting
+ * @template TOutputData - The output data type for formatting
+ */
+export interface FullContextInterface<
+  TStorage extends StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown>,
+  TInputData = unknown,
+  TOutputData = unknown
+> extends 
+  CoreContextInterface, 
+  StorageAccess<TStorage>,
+  FormatterAccess<TFormatter, TInputData, TOutputData>,
+  ServiceAccess,
+  ExtendedContextInterface<TStorage, TFormatter> 
+{
+  /**
+   * Factory method to get the singleton instance
+   * @returns The singleton instance
+   */
+  getInstance(): unknown;
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  resetInstance(): void;
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): unknown;
+}
+
+/**
+ * Complete MCP context interface combining all standardized interfaces
+ * This provides a comprehensive standard for MCP-enabled context implementation
+ * 
+ * @template TStorage - The specific StorageInterface implementation
+ * @template TFormatter - The specific FormatterInterface implementation
+ * @template TInputData - The input data type for formatting
+ * @template TOutputData - The output data type for formatting
+ */
+export interface FullMcpContextInterface<
+  TStorage extends StorageInterface<unknown, unknown>,
+  TFormatter extends FormatterInterface<unknown, unknown>,
+  TInputData = unknown,
+  TOutputData = unknown
+> extends 
+  FullContextInterface<TStorage, TFormatter, TInputData, TOutputData>,
+  McpContextInterface 
+{}

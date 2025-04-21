@@ -68,7 +68,7 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
   constructor() {
     this.mockRepository = {
       getNoteById: mock((id: string) => Promise.resolve(this.notes.find(n => n.id === id))),
-      insertNote: mock((note: Partial<Note>) => Promise.resolve(note.id || `note-${Date.now()}`)),
+      insertNote: mock((note: Partial<Note>) => Promise.resolve(note.id || 'note-123')), // Fixed ID for testing
       deleteById: mock((id: string) => {
         const initialLength = this.notes.length;
         this.notes = this.notes.filter(n => n.id !== id);

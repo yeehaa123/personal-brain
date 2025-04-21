@@ -38,7 +38,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
    * Creates a new ProfileStorageAdapter
    * @param repository The underlying ProfileRepository to adapt
    */
-  constructor(private repository: ProfileRepository) {}
+  constructor(public readonly repository: ProfileRepository) {}
   
   /**
    * Factory method for creating an instance with explicit dependencies

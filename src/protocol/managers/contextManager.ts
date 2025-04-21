@@ -124,7 +124,7 @@ export class ContextManager implements IContextManager {
     // Initialize the contexts with singletons
     // This ensures we're using the same context instances throughout the application
     try {
-      this.noteContext = NoteContext.getInstance(apiKey);
+      this.noteContext = NoteContext.getInstance({ apiKey });
       this.profileContext = ProfileContext.getInstance({ apiKey });
       this.externalSourceContext = ExternalSourceContext.getInstance({ 
         apiKey, 

@@ -15,14 +15,20 @@
 import { z } from 'zod';
 
 import { BaseContext } from '@/contexts/core/baseContext';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+import type { 
+  FullContextInterface,
+} from '@/contexts/core/contextInterface';
+import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+// Importing from core interfaces
 import { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
+import { Registry } from '@/utils/registry';
 
 import { 
   ExternalSourceStorageAdapter, 
   type ExternalSourceStorageConfig, 
 } from './externalSourceStorageAdapter';
+import { ExternalSourceFormatter } from './formatters';
 import type { 
   ExternalSearchOptions, 
   ExternalSourceInterface,
@@ -49,8 +55,21 @@ export interface ExternalSourceContextConfig extends ExternalSourceStorageConfig
  * 
  * Acts as a facade for external source operations, coordinating between
  * sources, embedding service, and MCP components.
+ * 
+ * Implements FullContextInterface to provide standardized access methods
+ * for storage, formatting, and service dependencies.
  */
-export class ExternalSourceContext extends BaseContext {
+export class ExternalSourceContext extends BaseContext<
+  ExternalSourceStorageAdapter,
+  ExternalSourceFormatter,
+  ExternalSourceResult[],
+  string
+> implements FullContextInterface<
+  ExternalSourceStorageAdapter,
+  ExternalSourceFormatter,
+  ExternalSourceResult[],
+  string
+> {
   /** Logger instance - overrides the protected one from BaseContext */
   protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
@@ -112,7 +131,33 @@ export class ExternalSourceContext extends BaseContext {
    * @param config Configuration options
    * @returns A new ExternalSourceContext instance with resolved dependencies
    */
-  public static createWithDependencies(config: ExternalSourceContextConfig = {}): ExternalSourceContext {
+  public static override createWithDependencies(configOrDependencies: ExternalSourceContextConfig | Record<string, unknown> = {}): ExternalSourceContext {
+    // Handle the case where this is called with a ContextDependencies object
+    if ('storage' in configOrDependencies || 'formatter' in configOrDependencies) {
+      const dependencies = configOrDependencies as {
+        storage?: ExternalSourceStorageAdapter;
+        formatter?: ExternalSourceFormatter;
+        embeddingService?: EmbeddingService;
+        [key: string]: unknown;
+      };
+
+      const config = { ...dependencies };
+      delete config.storage;
+      delete config.formatter;
+      delete config.embeddingService;
+      delete config['registry'];
+
+      return new ExternalSourceContext(
+        config as ExternalSourceContextConfig,
+        dependencies.storage || ExternalSourceStorageAdapter.getInstance(),
+        dependencies.embeddingService || EmbeddingService.getInstance(),
+        dependencies.formatter || ExternalSourceFormatter.getInstance(),
+      );
+    }
+    
+    // Handle the case where this is called with a config object
+    const config = configOrDependencies as ExternalSourceContextConfig;
+    
     // Create instances of required dependencies with explicit dependency injection
     const embeddingService = EmbeddingService.getInstance({ 
       apiKey: config.apiKey, 
@@ -127,11 +172,15 @@ export class ExternalSourceContext extends BaseContext {
       cacheTtl: config.cacheTtl,
     });
     
+    // Create formatter
+    const formatter = ExternalSourceFormatter.getInstance();
+    
     // Create and return context with explicit dependencies
     return new ExternalSourceContext(
       config,
       storageAdapter,
       embeddingService,
+      formatter,
     );
   }
 
@@ -143,12 +192,28 @@ export class ExternalSourceContext extends BaseContext {
    * @param storage External source storage adapter
    * @param embeddingService Service for generating and comparing embeddings
    */
+  /**
+   * Private reference to formatter instance
+   */
+  private formatter: ExternalSourceFormatter;
+
+  /**
+   * Constructor for ExternalSourceContext
+   * 
+   * Note: When not testing, prefer using getInstance() or createFresh() factory methods
+   * @param config Configuration for the context
+   * @param storage External source storage adapter
+   * @param embeddingService Service for generating and comparing embeddings
+   * @param formatter Formatter for external source results
+   */
   constructor(
     config: ExternalSourceContextConfig = {}, 
     private readonly storage: ExternalSourceStorageAdapter,
     private readonly embeddingService: EmbeddingService,
+    formatter?: ExternalSourceFormatter,
   ) {
     super(config as Record<string, unknown>);
+    this.formatter = formatter || ExternalSourceFormatter.getInstance();
     this.logger.debug('ExternalSourceContext initialized with BaseContext architecture', { context: 'ExternalSourceContext' });
   }
 
@@ -450,8 +515,78 @@ export class ExternalSourceContext extends BaseContext {
    * Get the storage adapter
    * @returns The storage interface for external sources
    */
-  getStorage(): StorageInterface<ExternalSourceResult> {
+  override getStorage(): ExternalSourceStorageAdapter {
     return this.storage;
+  }
+
+  /**
+   * Get the formatter implementation
+   * @returns The formatter for external source results
+   */
+  override getFormatter(): ExternalSourceFormatter {
+    return this.formatter;
+  }
+
+  /**
+   * Format external source results using the formatter
+   * @param data The external source results to format
+   * @param options Optional formatting options
+   * @returns Formatted string representation
+   */
+  override format(data: ExternalSourceResult[], options?: FormattingOptions): string {
+    return this.formatter.format(data, options);
+  }
+
+  /**
+   * Get a service by type
+   * @param serviceType Type of service to retrieve
+   * @returns Service instance
+   */
+  override getService<T>(serviceType: new () => T): T {
+    if (serviceType === EmbeddingService as unknown as new () => T) {
+      return this.embeddingService as unknown as T;
+    }
+
+    // Use registry for other service types
+    const registry = Registry.getInstance();
+    return registry.resolve<T>(serviceType.name);
+  }
+
+  /**
+   * Instance method that delegates to static getInstance
+   * (Required for interface compatibility)
+   * @returns The singleton instance
+   */
+  getInstance(): ExternalSourceContext {
+    return ExternalSourceContext.getInstance();
+  }
+
+  /**
+   * Instance method that delegates to static resetInstance
+   * (Required for interface compatibility)
+   */
+  resetInstance(): void {
+    ExternalSourceContext.resetInstance();
+  }
+
+  /**
+   * Instance method that delegates to static createFresh
+   * (Required for interface compatibility)
+   * @param options Optional configuration
+   * @returns A new instance
+   */
+  createFresh(options?: Record<string, unknown>): ExternalSourceContext {
+    return ExternalSourceContext.createFresh(options);
+  }
+
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * (Required for interface compatibility)
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with the specified dependencies
+   */
+  createWithDependencies(dependencies: Record<string, unknown>): ExternalSourceContext {
+    return ExternalSourceContext.createWithDependencies(dependencies);
   }
   
   /**

@@ -57,7 +57,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * @param options Configuration options
    * @returns The shared instance
    */
-  public static getInstance(options?: ResourceRegistryOptions): ResourceRegistry {
+  public static override getInstance(options?: ResourceRegistryOptions): ResourceRegistry {
     if (!ResourceRegistry.instance) {
       ResourceRegistry.instance = new ResourceRegistry(options || {});
       ResourceRegistry.instance.logger.debug('ResourceRegistry singleton instance created');
@@ -75,7 +75,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * Reset the singleton instance (primarily for testing)
    * This clears the instance and any resources it holds
    */
-  public static resetInstance(): void {
+  public static override resetInstance(): void {
     if (ResourceRegistry.instance) {
       ResourceRegistry.instance.clear();
       ResourceRegistry.instance = null;
@@ -89,7 +89,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * @param options Configuration options
    * @returns A new instance
    */
-  public static createFresh(options?: ResourceRegistryOptions): ResourceRegistry {
+  public static override createFresh(options?: ResourceRegistryOptions): ResourceRegistry {
     const registry = new ResourceRegistry(options || {});
     registry.initialize();
     return registry;

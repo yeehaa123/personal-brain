@@ -163,11 +163,41 @@ export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 export abstract class Registry<TOptions extends RegistryOptions = RegistryOptions> implements IRegistry<TOptions> {
+  // No static _instance - each derived class should have its own
+  
   /**
-   * Internal singleton instance storage
-   * Implemented by derived classes
+   * Get the singleton instance
+   * This implementation should be overridden by derived classes but provides a default
+   * 
+   * @param _options Optional configuration options
+   * @returns The singleton instance
    */
-  protected static _instance: Registry | null = null;
+  public static getInstance(_options?: RegistryOptions): Registry {
+    // This is abstract and should be implemented by subclasses
+    // We provide a default implementation that throws an error if not properly implemented
+    throw new Error('getInstance must be implemented by derived classes');
+  }
+  
+  /**
+   * Reset the singleton instance
+   * This is primarily for testing purposes
+   */
+  public static resetInstance(): void {
+    // Each derived class should implement this to reset its own singleton instance
+    // We don't reset _instance here as each class maintains its own static instance
+  }
+  
+  /**
+   * Create a fresh instance without affecting the singleton
+   * This is primarily for testing purposes
+   * 
+   * @param _options Optional configuration options
+   * @returns A new registry instance
+   */
+  public static createFresh(_options?: RegistryOptions): Registry {
+    // This is abstract and should be implemented by subclasses
+    throw new Error('createFresh must be implemented by derived classes');
+  }
   
   /**
    * Registry name for logging purposes

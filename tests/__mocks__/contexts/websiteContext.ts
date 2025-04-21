@@ -22,7 +22,15 @@ export class MockWebsiteContext extends WebsiteContext {
   override getLandingPageData = mock(() => this.getStorage().getLandingPageData());
   override saveLandingPageData = mock((data: LandingPageData) => this.getStorage().saveLandingPageData(data));
   override getStorage = mock(() => super.getStorage());
-  override setStorage = mock((storage: WebsiteStorageAdapter) => { super.setStorage(storage); });
+  // For testing - allows changing the storage adapter
+  override setStorage = mock((storage: WebsiteStorageAdapter) => { 
+    // Recreate the context with the new storage
+    const options = {
+      storage: storage,
+    };
+    // Apply properties from this instance to the new instance
+    Object.assign(this, new MockWebsiteContext(options));
+  });
   override getDeploymentManager = mock(() => Promise.resolve(super.getDeploymentManager()));
   override getAstroContentService = mock(() => Promise.resolve(super.getAstroContentService()));
   override getProfileContext = mock(() => super.getProfileContext());

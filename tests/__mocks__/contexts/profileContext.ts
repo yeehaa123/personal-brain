@@ -103,7 +103,7 @@ export class MockProfileContext extends MockBaseContext {
   /**
    * Get the storage adapter
    */
-  getStorage(): ProfileStorageAdapter {
+  override getStorage(): ProfileStorageAdapter {
     return this.storageAdapter as unknown as ProfileStorageAdapter;
   }
   
