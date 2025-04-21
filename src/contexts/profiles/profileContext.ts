@@ -13,7 +13,7 @@
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { 
   ContextDependencies,
-  FullContextInterface,
+  ContextInterface,
 } from '@/contexts/core/contextInterface';
 import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { StorageInterface } from '@/contexts/core/storageInterface';
@@ -86,7 +86,7 @@ export class ProfileContext extends BaseContext<
   ProfileFormatter,
   Profile,
   string
-> implements FullContextInterface<
+> implements ContextInterface<
   ProfileStorageAdapter,
   ProfileFormatter,
   Profile,

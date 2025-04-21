@@ -63,6 +63,41 @@ export class MockProfileContext extends MockBaseContext {
   }
   
   /**
+   * Factory method that creates a new instance with dependencies
+   * @param config Configuration options or dependencies
+   * @returns A new MockProfileContext instance
+   */
+  public static createWithDependencies(config: Record<string, unknown> = {}): MockProfileContext {
+    // Handle the case where storage or services are provided as dependencies
+    const storage = config['storage'] as MockProfileStorageAdapter;
+    const embeddingService = config['embeddingService'] as MockProfileEmbeddingService;
+    const tagService = config['tagService'] as MockProfileTagService;
+    const searchService = config['searchService'] as MockProfileSearchService;
+    
+    // Create a new instance with the base config
+    const instance = new MockProfileContext(config);
+    
+    // Set provided dependencies if available
+    if (storage) {
+      instance.storageAdapter = storage;
+    }
+    
+    if (embeddingService) {
+      instance.embeddingService = embeddingService;
+    }
+    
+    if (tagService) {
+      instance.tagService = tagService;
+    }
+    
+    if (searchService) {
+      instance.searchService = searchService;
+    }
+    
+    return instance;
+  }
+  
+  /**
    * Constructor
    */
   constructor(config: Record<string, unknown> = {}) {
@@ -230,5 +265,15 @@ export class MockProfileContext extends MockBaseContext {
    */
   async updateProfileTags(forceRegenerate = false): Promise<string[] | null> {
     return this.tagService.updateProfileTags(forceRegenerate);
+  }
+  
+  /**
+   * Instance method that delegates to static createWithDependencies
+   * Required for FullContextInterface compatibility
+   * @param dependencies Dependencies for the context
+   * @returns A new instance with provided dependencies
+   */
+  override createWithDependencies(dependencies: Record<string, unknown>): MockProfileContext {
+    return MockProfileContext.createWithDependencies(dependencies);
   }
 }

@@ -34,7 +34,7 @@ import { ConversationToolService } from '@/contexts/conversations/tools';
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { 
   ContextDependencies,
-  FullContextInterface,
+  ContextInterface,
   ResourceDefinition,
 } from '@/contexts/core/contextInterface';
 import type { FormatterInterface } from '@/contexts/core/formatterInterface';
@@ -150,7 +150,7 @@ export class ConversationContext extends BaseContext<
   ConversationFormatter,
   ConversationTurn[],
   string
-> implements FullContextInterface<
+> implements ContextInterface<
   ConversationStorageAdapter,
   ConversationFormatter,
   ConversationTurn[],

@@ -26,6 +26,7 @@ import type { Registry } from '@/utils/registry';
 import type { 
   ContextDependencies, 
   ContextStatus, 
+  CoreContextInterface,
   FormatterAccess,
   McpContextInterface,
   ResourceDefinition,
@@ -59,7 +60,8 @@ export abstract class BaseContext<
   TInputData = unknown,
   TOutputData = unknown
 > implements 
-  McpContextInterface, 
+  CoreContextInterface,
+  McpContextInterface,
   StorageAccess<TStorage>,
   FormatterAccess<TFormatter>,
   ServiceAccess

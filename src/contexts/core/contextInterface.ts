@@ -178,7 +178,7 @@ export interface CoreContextInterface {
 }
 
 /**
- * MCP-specific context interface - extends core with MCP functionality
+ * MCP-specific interface - extends core with MCP functionality
  */
 export interface McpContextInterface extends CoreContextInterface {
   /**
@@ -210,7 +210,7 @@ export interface McpContextInterface extends CoreContextInterface {
  * @template TInputData - The input data type for formatting
  * @template TOutputData - The output data type for formatting
  */
-export interface FullContextInterface<
+export interface ContextInterface<
   TStorage extends StorageInterface<unknown, unknown>,
   TFormatter extends FormatterInterface<unknown, unknown>,
   TInputData = unknown,
@@ -241,21 +241,8 @@ export interface FullContextInterface<
   createFresh(options?: Record<string, unknown>): unknown;
 }
 
-/**
- * Complete MCP context interface combining all standardized interfaces
- * This provides a comprehensive standard for MCP-enabled context implementation
- * 
- * @template TStorage - The specific StorageInterface implementation
- * @template TFormatter - The specific FormatterInterface implementation
- * @template TInputData - The input data type for formatting
- * @template TOutputData - The output data type for formatting
- */
-export interface FullMcpContextInterface<
-  TStorage extends StorageInterface<unknown, unknown>,
-  TFormatter extends FormatterInterface<unknown, unknown>,
-  TInputData = unknown,
-  TOutputData = unknown
-> extends 
-  FullContextInterface<TStorage, TFormatter, TInputData, TOutputData>,
-  McpContextInterface 
-{}
+// We've simplified the interface hierarchy by removing the redundant McpContextInterface<T,F,I,O>
+// Now the hierarchy is:
+// - CoreContextInterface: Basic context functionality
+// - McpContextInterface: MCP-specific extensions to CoreContextInterface
+// - ContextInterface<T,F,I,O>: Complete interface with all functionality

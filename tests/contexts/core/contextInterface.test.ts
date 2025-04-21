@@ -16,8 +16,8 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { 
   ContextCapabilities,
   ContextDependencies,
+  ContextInterface,
   ContextStatus,
-  FullContextInterface,
   ResourceDefinition,
 } from '@/contexts/core/contextInterface';
 import type { FormattingOptions } from '@/contexts/core/formatterInterface';
@@ -41,8 +41,8 @@ class MockService {
   }
 }
 
-// Mock implementation of FullContextInterface for testing
-class MockContext implements FullContextInterface<
+// Mock implementation of ContextInterface for testing
+class MockContext implements ContextInterface<
   MockStorageInterface<MockData>,
   MockConversationFormatter,
   ConversationTurn[],
@@ -220,7 +220,7 @@ class MockContext implements FullContextInterface<
     return MockContext.createWithDependencies(dependencies);
   }
   
-  // Methods required by FullContextInterface
+  // Methods required by ContextInterface
   getInstance(): MockContext {
     return MockContext.getInstance();
   }

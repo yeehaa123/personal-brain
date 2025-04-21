@@ -7,6 +7,7 @@
 
 export type {
   CoreContextInterface,
+  ContextInterface,
   McpContextInterface,
   ContextStatus,
   ResourceDefinition,

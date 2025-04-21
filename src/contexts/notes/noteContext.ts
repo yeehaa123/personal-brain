@@ -14,7 +14,7 @@ import { textConfig } from '@/config';
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { 
   ContextDependencies,
-  FullContextInterface,
+  ContextInterface,
 } from '@/contexts/core/contextInterface';
 import type { FormatterInterface } from '@/contexts/core/formatterInterface';
 import type { StorageInterface } from '@/contexts/core/storageInterface';
@@ -68,7 +68,7 @@ export class NoteContext extends BaseContext<
   NoteFormatter,
   Note,
   string
-> implements FullContextInterface<
+> implements ContextInterface<
   NoteStorageAdapter,
   NoteFormatter,
   Note,

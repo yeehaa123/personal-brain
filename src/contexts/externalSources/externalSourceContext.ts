@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { 
-  FullContextInterface,
+  ContextInterface,
 } from '@/contexts/core/contextInterface';
 import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 // Importing from core interfaces
@@ -64,7 +64,7 @@ export class ExternalSourceContext extends BaseContext<
   ExternalSourceFormatter,
   ExternalSourceResult[],
   string
-> implements FullContextInterface<
+> implements ContextInterface<
   ExternalSourceStorageAdapter,
   ExternalSourceFormatter,
   ExternalSourceResult[],

@@ -1,5 +1,5 @@
 import { BaseContext } from '@/contexts/core/baseContext';
-import type { ContextDependencies, FullContextInterface } from '@/contexts/core/contextInterface';
+import type { ContextDependencies, ContextInterface } from '@/contexts/core/contextInterface';
 import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { StorageInterface } from '@/contexts/core/storageInterface';
 import { ProfileContext } from '@/contexts/profiles';
@@ -40,7 +40,7 @@ export class WebsiteContext extends BaseContext<
   WebsiteFormatter,
   WebsiteData,
   string
-> implements FullContextInterface<
+> implements ContextInterface<
   WebsiteStorageAdapter,
   WebsiteFormatter,
   WebsiteData,

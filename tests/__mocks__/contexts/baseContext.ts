@@ -8,8 +8,10 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import type { 
+  ContextInterface,
   ContextStatus, 
-  FullMcpContextInterface, 
+  CoreContextInterface,
+  McpContextInterface,
   ResourceDefinition, 
 } from '@/contexts/core/contextInterface';
 import type { FormattingOptions } from '@/contexts/core/formatterInterface';
@@ -20,15 +22,19 @@ import { Registry } from '@/utils/registry';
 /**
  * Mock implementation of BaseContext
  * 
- * Implements FullMcpContextInterface for compatibility with interface standardization.
- * The generic type parameters are set to any to allow flexibility in extending classes.
+ * Implements ContextInterface, CoreContextInterface, and McpContextInterface
+ * for compatibility with interface standardization.
+ * The generic type parameters are set to allow flexibility in extending classes.
  */
 export class MockBaseContext<
   TStorage extends StorageInterface<unknown, unknown> = StorageInterface<unknown, unknown>,
   TFormatter extends FormatterInterface<unknown, unknown> = FormatterInterface<unknown, unknown>,
   TInputData = unknown, 
   TOutputData = unknown
-> implements FullMcpContextInterface<TStorage, TFormatter, TInputData, TOutputData> {
+> implements 
+  CoreContextInterface,
+  McpContextInterface,
+  ContextInterface<TStorage, TFormatter, TInputData, TOutputData> {
   private static instances: Map<string, MockBaseContext> = new Map();
   
   protected mcpServer: McpServer;
