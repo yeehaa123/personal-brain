@@ -1,8 +1,8 @@
 /**
  * Tests for the refactored ProfileContext using BaseContext
  */
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+
 
 import { ProfileContext } from '@/contexts';
 import type { Profile } from '@/models/profile';
@@ -11,6 +11,7 @@ import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
 import { silenceLogger } from '@test/__mocks__';
+import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 import logger from '@utils/logger';
 
 // Mock profile for testing
@@ -269,18 +270,29 @@ describe('ProfileContext', () => {
   });
   
   test('registerOnServer should register resources and tools', () => {
-    // Create a mock server
-    const mockServer = {
-      resource: mock(() => {}),
-      tool: mock(() => {}),
-    } as unknown as McpServer;
+    // Create a standardized mock server with the new API style
+    const mockServer = createMockMcpServer('ProfileBrainTest', '1.0.0');
     
     // Register on the server
     const result = profileContext.registerOnServer(mockServer);
     
     // Check the result
     expect(result).toBe(true);
-    expect(mockServer.resource).toHaveBeenCalled();
-    expect(mockServer.tool).toHaveBeenCalled();
+    
+    // Verify resources and tools were registered using the new API
+    const registeredResources = mockServer.getRegisteredResources();
+    const registeredTools = mockServer.getRegisteredTools();
+    
+    // Profile context should register 1 resource and 3 tools
+    expect(registeredResources.length).toBe(1);
+    expect(registeredTools.length).toBe(3);
+    
+    // Verify specific resource path
+    expect(registeredResources[0].path).toBe('get');
+    
+    // Verify tool names (the mock stores names as path property)
+    expect(registeredTools.some(tool => tool.path === 'Update Profile')).toBe(true);
+    expect(registeredTools.some(tool => tool.path === 'Get Profile Tags')).toBe(true);
+    expect(registeredTools.some(tool => tool.path === 'Update Profile Tags')).toBe(true);
   });
 });

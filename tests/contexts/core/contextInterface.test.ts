@@ -8,13 +8,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { describe, expect, test } from 'bun:test';
 
 import type { 
-  ContextInterface,
+  ContextCapabilities,
   ContextStatus,
+  McpContextInterface,
   ResourceDefinition,
 } from '@/contexts/core/contextInterface';
 
-// Mock implementation of ContextInterface for testing
-class MockContext implements ContextInterface {
+// Mock implementation of McpContextInterface for testing
+class MockContext implements McpContextInterface {
   private readyState = false;
   private mockServer: McpServer;
   private mockResources: ResourceDefinition[] = [];
@@ -87,12 +88,19 @@ class MockContext implements ContextInterface {
     return this.mockServer;
   }
 
-  getResources(): ResourceDefinition[] {
-    return [...this.mockResources];
+  getCapabilities(): ContextCapabilities {
+    return {
+      resources: [...this.mockResources],
+      tools: [...this.mockTools],
+      features: [],
+    };
   }
-
-  getTools(): ResourceDefinition[] {
-    return [...this.mockTools];
+  
+  async cleanup(): Promise<void> {
+    // Simulate cleanup in the mock
+    this.readyState = false;
+    this.mockResources = [];
+    this.mockTools = [];
   }
 }
 
@@ -126,23 +134,26 @@ describe('ContextInterface', () => {
     expect(serverInstance).toBeDefined();
   });
 
-  test('getResources should return an array of resource definitions', () => {
-    const resources = context.getResources();
-    expect(Array.isArray(resources)).toBe(true);
-    expect(resources.length).toBe(1);
-    expect(resources[0]).toHaveProperty('protocol', 'test');
-    expect(resources[0]).toHaveProperty('path', 'resource');
-    expect(resources[0]).toHaveProperty('handler');
-    expect(resources[0]).toHaveProperty('name', 'Test Resource');
-  });
-
-  test('getTools should return an array of tool definitions', () => {
-    const tools = context.getTools();
-    expect(Array.isArray(tools)).toBe(true);
-    expect(tools.length).toBe(1);
-    expect(tools[0]).toHaveProperty('protocol', 'test');
-    expect(tools[0]).toHaveProperty('path', 'tool');
-    expect(tools[0]).toHaveProperty('handler');
-    expect(tools[0]).toHaveProperty('name', 'Test Tool');
+  test('getCapabilities should return resources, tools, and features', () => {
+    const capabilities = context.getCapabilities();
+    
+    // Check resources
+    expect(Array.isArray(capabilities.resources)).toBe(true);
+    expect(capabilities.resources.length).toBe(1);
+    expect(capabilities.resources[0]).toHaveProperty('protocol', 'test');
+    expect(capabilities.resources[0]).toHaveProperty('path', 'resource');
+    expect(capabilities.resources[0]).toHaveProperty('handler');
+    expect(capabilities.resources[0]).toHaveProperty('name', 'Test Resource');
+    
+    // Check tools
+    expect(Array.isArray(capabilities.tools)).toBe(true);
+    expect(capabilities.tools.length).toBe(1);
+    expect(capabilities.tools[0]).toHaveProperty('protocol', 'test');
+    expect(capabilities.tools[0]).toHaveProperty('path', 'tool');
+    expect(capabilities.tools[0]).toHaveProperty('handler');
+    expect(capabilities.tools[0]).toHaveProperty('name', 'Test Tool');
+    
+    // Check features
+    expect(Array.isArray(capabilities.features)).toBe(true);
   });
 });

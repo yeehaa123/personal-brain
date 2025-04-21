@@ -20,29 +20,26 @@ Phase 6 focuses on aggressive cleanup and simplification of the architecture. No
 - ⏳ Remove legacy code and backward compatibility layers
 - ⏳ Eliminate transitional adapters and intermediary layers
 - ⏳ Remove deprecated code paths
-- 🔄 Flatten remaining nested directories (in progress)
+- ✅ Flatten nested directories
   - ✅ Conversations context
   - ✅ Profiles context
   - ✅ ExternalSources context
   - ✅ Website context
-  - ⏳ Remaining contexts
 - ⏳ Simplify interfaces
 - ⏳ Consolidate similar functionality
 - ⏳ Complete dependency injection for all contexts
-- ⏳ Standardize ResourceRegistry and ServiceRegistry
+- ✅ Standardize ResourceRegistry and ServiceRegistry implementations
 
 ## Implementation Approach
 
-### 1. Registry Standardization (Priority: High)
+### 1. ✅ Registry Standardization (Priority: High) - COMPLETED
 
-Standardize ResourceRegistry and ServiceRegistry implementations:
-- Implement consistent Component Interface Standardization pattern
-- Ensure clear separation between resource types and services
-- Establish consistent dependency flow
-
-Files to modify:
-- `/src/resources/resourceRegistry.ts`
-- `/src/services/serviceRegistry.ts`
+Registry standardization has been completed:
+- ResourceRegistry and ServiceRegistry both follow the Component Interface Standardization pattern
+- BaseContext implementation has been fixed to properly register resources and tools with MCP server
+- Created proper adapter functions for handling resource and tool registrations
+- Fixed all type checking and testing issues
+- Registry implementations now have a clear separation of concerns and consistent API
 
 ### 2. Dependency Injection Completion (Priority: High)
 
@@ -60,14 +57,14 @@ Simplify interfaces by removing redundant methods:
 - Ensure interfaces follow the Interface Segregation Principle
 - Update tests to reflect changes
 
-### 4. Directory Flattening (Priority: Medium)
+### 4. ✅ Directory Flattening (Priority: Medium) - COMPLETED
 
-Flatten overly nested directories while preserving logical structure:
-- Remove unnecessary nesting layers (especially for single files in subdirectories)
-- Move primary context files to root level while keeping logical groupings in subdirectories
-- Maintain specialized subdirectories (messaging, formatters, etc.) where they add value
-- Ensure imports use clean paths
-- Follow the balanced approach demonstrated in conversations and notes contexts
+The directory structure has been successfully flattened and balanced:
+- All major contexts have been restructured (Conversations, Profiles, ExternalSources, Website)
+- Unnecessary nesting layers have been removed
+- Primary context files moved to appropriate levels
+- Specialized subdirectories maintained where valuable
+- Achieved the right balance between flat and organized structure
 
 ### 5. Code Cleanup (Priority: High)
 
@@ -86,10 +83,11 @@ Remove legacy code and transitional adapters:
 
 ## Progress Milestones
 
-### Milestone 1: Registry Standardization
-- Standardize ResourceRegistry
-- Standardize ServiceRegistry
-- Update references to use standardized registries
+### Milestone 1: Registry Standardization ✅ COMPLETED
+- ✅ BaseContext properly integrates with MCP server
+- ✅ ResourceRegistry and ServiceRegistry follow consistent patterns
+- ✅ Fixed context registration with MCP server
+- ✅ All tests pass with the updated implementations
 
 ### Milestone 2: Dependency Injection
 - Complete dependency injection for all contexts
@@ -100,10 +98,11 @@ Remove legacy code and transitional adapters:
 - Consolidate similar functionality
 - Update references to use simplified interfaces
 
-### Milestone 4: Directory Restructuring
-- Flatten nested directories while preserving logical structure
-- Move core context files to root level while maintaining specialized subdirectories
-- Update imports and references
+### Milestone 4: Directory Restructuring ✅ COMPLETED
+- ✅ Flatten nested directories while preserving logical structure
+- ✅ Move core context files to root level while maintaining specialized subdirectories
+- ✅ Update imports and references
+- ✅ Achieved optimal balance in directory structure
 
 ### Milestone 5: Final Cleanup
 - Remove any remaining legacy code
@@ -111,15 +110,19 @@ Remove legacy code and transitional adapters:
 
 ## Next Steps
 
-1. Continue with the Directory Restructuring that's already in progress:
-   - Complete flattening of remaining contexts using the balanced approach
-   - Follow patterns established in conversations, profiles, externalSources, and website contexts
-   - Maintain logical groupings while removing unnecessary nesting
+1. **Begin Dependency Injection Completion** (High Priority):
+   - Review all contexts and identify which ones don't yet use explicit dependency injection
+   - Update constructors to require dependencies as parameters
+   - Create factory methods for dependency resolution
+   - Ensure no direct instance creation in code
 
-2. Begin Registry Standardization and Dependency Injection as high-priority items:
-   - Focus on ResourceRegistry and ServiceRegistry standardization
-   - Identify contexts without proper dependency injection and address them
-   
-3. Begin Interface Simplification work:
+2. **Start Interface Simplification** (Medium Priority):
    - Review interfaces for redundancy and consolidation opportunities
    - Prioritize high-use interfaces for simplification
+   - Remove duplicate methods and consolidate related functionality
+
+3. **Begin Code Cleanup** (High Priority):
+   - Identify and remove any remaining backward compatibility layers
+   - Remove transitional adapters and intermediary layers
+   - Remove deprecated code paths
+   - Update imports and references to use the new simplified structure

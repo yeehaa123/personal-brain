@@ -13,37 +13,29 @@ import type { ConversationMemoryService } from '@/contexts/conversations/service
 import type { ConversationQueryService } from '@/contexts/conversations/services/conversationQueryService';
 import type { ConversationToolService } from '@/contexts/conversations/tools/conversationTools';
 import { BaseContext } from '@/contexts/core/baseContext';
+import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';
+import { MockConversationMcpFormatter } from '@test/__mocks__/contexts/conversationMcpFormatter';
+import { MockConversationMemoryService } from '@test/__mocks__/contexts/conversationMemoryService';
+import { MockConversationQueryService } from '@test/__mocks__/contexts/conversationQueryService';
+import { MockConversationResourceService } from '@test/__mocks__/contexts/conversationResourceService';
+import { MockConversationToolService } from '@test/__mocks__/contexts/conversationToolService';
+import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 import { MockConversationStorage } from '@test/__mocks__/storage';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
-// Create mock server with resource and tool tracking
-const mockResources: unknown[] = [];
-const mockTools: unknown[] = [];
-
-// Create a simple mock MCP server for testing
-const mockMcpServer = {
-  name: 'TestServer',
-  version: '1.0',
-  resource: (r: unknown) => {
-    mockResources.push(r);
-    return mockMcpServer;
-  },
-  tool: (t: unknown) => {
-    mockTools.push(t);
-    return mockMcpServer;
-  },
-} as unknown as McpServer;
+// Create a standardized mock server for testing
+const mockMcpServer = createMockMcpServer('TestServer', '1.0');
 
 describe('ConversationContext', () => {
   let conversationContext: ConversationContext;
   let storage: MockConversationStorage;
   let adapter: ConversationStorageAdapter;
-  let formatter: ConversationFormatter;
-  let mcpFormatter: ConversationMcpFormatter;
-  let resourceService: ConversationResourceService;
-  let toolService: ConversationToolService;
-  let queryService: ConversationQueryService;
-  let memoryService: ConversationMemoryService;
+  let formatter: MockConversationFormatter;
+  let mcpFormatter: MockConversationMcpFormatter;
+  let resourceService: MockConversationResourceService;
+  let toolService: MockConversationToolService;
+  let queryService: MockConversationQueryService;
+  let memoryService: MockConversationMemoryService;
 
   beforeAll(() => {
     setMockEnv();
@@ -54,97 +46,86 @@ describe('ConversationContext', () => {
   });
 
   beforeEach(() => {
+    // Reset all mock instances
+    MockConversationFormatter.resetInstance();
+    MockConversationMcpFormatter.resetInstance();
+    MockConversationResourceService.resetInstance();
+    MockConversationToolService.resetInstance();
+    MockConversationQueryService.resetInstance();
+    MockConversationMemoryService.resetInstance();
+    
     // Create fresh storage and adapter instance for each test
     storage = MockConversationStorage.createFresh();
     adapter = new ConversationStorageAdapter(storage);
     
-    // Create service mocks with direct implementation
-    formatter = {
-      formatConversation: mock(() => 'Formatted conversation'),
-    } as unknown as ConversationFormatter;
+    // Create standardized service mocks using the Component Interface Standardization pattern
+    formatter = MockConversationFormatter.createFresh();
+    mcpFormatter = MockConversationMcpFormatter.createFresh();
+    resourceService = MockConversationResourceService.createFresh();
+    toolService = MockConversationToolService.createFresh();
+    queryService = MockConversationQueryService.createFresh();
+    memoryService = MockConversationMemoryService.createFresh();
     
-    mcpFormatter = {
-      formatConversationForMcp: mock(() => ({
+    // Set up mock responses for specific methods
+    formatter.formatConversation = mock(() => 'Formatted conversation');
+    
+    mcpFormatter.formatConversationForMcp = mock(
+      async (_conversation, _turns, _summaries, _options) => ({
         id: 'test-id',
         roomId: 'test-room',
-        interfaceType: 'cli',
+        interfaceType: 'cli' as const,
+        createdAt: new Date(),
+        updatedAt: new Date(),
         turns: [],
         turnCount: 0,
         summaryCount: 0,
-      })),
-    } as unknown as ConversationMcpFormatter;
+        statistics: {},
+      }),
+    );
     
-    resourceService = {
-      getResources: mock(() => [
-        { protocol: 'conversations', path: 'list', handler: mock(() => Promise.resolve({})) },
-        { protocol: 'conversations', path: 'search', handler: mock(() => Promise.resolve({})) },
-        { protocol: 'conversations', path: 'get/:id', handler: mock(() => Promise.resolve({})) },
-      ]),
-    } as unknown as ConversationResourceService;
+    // Set up query service mocks
+    queryService.createConversation = mock(() => Promise.resolve('test-id'));
+    queryService.getConversation = mock(() => Promise.resolve({
+      id: 'test-id',
+      interfaceType: 'cli',
+      roomId: 'test-room',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      metadata: {},
+      activeTurns: [],
+      summaries: [],
+      archivedTurns: [],
+    }));
+    queryService.getConversationIdByRoom = mock(() => Promise.resolve('test-id'));
+    queryService.getOrCreateConversationForRoom = mock(() => Promise.resolve('test-id'));
+    queryService.findConversations = mock(() => Promise.resolve([]));
+    queryService.getConversationsByRoom = mock(() => Promise.resolve([]));
+    queryService.getRecentConversations = mock(() => Promise.resolve([]));
     
-    toolService = {
-      getTools: mock(() => [
-        { protocol: 'conversations', path: 'create_conversation', name: 'create_conversation', handler: mock(() => Promise.resolve({})) },
-        { protocol: 'conversations', path: 'add_turn', name: 'add_turn', handler: mock(() => Promise.resolve({})) },
-        { protocol: 'conversations', path: 'get_conversation_history', name: 'get_conversation_history', handler: mock(() => Promise.resolve({})) },
-      ]),
-      getToolSchema: mock(() => ({})),
-    } as unknown as ConversationToolService;
-    
-    queryService = {
-      createConversation: mock(() => Promise.resolve('test-id')),
-      getConversation: mock(() => Promise.resolve({
-        id: 'test-id',
-        interfaceType: 'cli',
-        roomId: 'test-room',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        metadata: {},
-        activeTurns: [],
-        summaries: [],
-        archivedTurns: [],
-      })),
-      getConversationIdByRoom: mock(() => Promise.resolve('test-id')),
-      getOrCreateConversationForRoom: mock(() => Promise.resolve('test-id')),
-      findConversations: mock(() => Promise.resolve([])),
-      getConversationsByRoom: mock(() => Promise.resolve([])),
-      getRecentConversations: mock(() => Promise.resolve([])),
-      updateMetadata: mock(() => Promise.resolve(true)),
-      deleteConversation: mock(() => Promise.resolve(true)),
-    } as unknown as ConversationQueryService;
-    
-    memoryService = {
-      addTurn: mock(() => Promise.resolve('turn-id')),
-      getTurns: mock(() => Promise.resolve([
-        {
-          id: 'turn-1',
-          timestamp: new Date(),
-          query: 'Hello',
-          response: 'Hi there!',
-          userId: 'user-1',
-          userName: 'TestUser',
-        },
-        {
-          id: 'turn-2',
-          timestamp: new Date(),
-          query: 'How are you?',
-          response: 'I am fine, thanks!',
-          userId: 'user-1',
-          userName: 'TestUser',
-        },
-      ])),
-      getSummaries: mock(() => Promise.resolve([])),
-      forceSummarize: mock(() => Promise.resolve(true)),
-      getTieredHistory: mock(() => Promise.resolve({
-        summaries: [],
-        turns: [],
-      })),
-      formatHistoryForPrompt: mock(() => Promise.resolve(
-        'User: What is quantum computing?\nAssistant: Quantum computing is a type of computation that uses quantum bits or qubits to perform operations.\n\n' +
-        'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n',
-      )),
-      updateConfig: mock(() => {}),
-    } as unknown as ConversationMemoryService;
+    // Set up memory service mocks
+    memoryService.addTurn = mock(() => Promise.resolve('turn-id'));
+    memoryService.getTurns = mock(() => Promise.resolve([
+      {
+        id: 'turn-1',
+        timestamp: new Date(),
+        query: 'Hello',
+        response: 'Hi there!',
+        userId: 'user-1',
+        userName: 'TestUser',
+      },
+      {
+        id: 'turn-2',
+        timestamp: new Date(),
+        query: 'How are you?',
+        response: 'I am fine, thanks!',
+        userId: 'user-1',
+        userName: 'TestUser',
+      },
+    ]));
+    memoryService.formatHistoryForPrompt = mock(() => Promise.resolve(
+      'User: What is quantum computing?\nAssistant: Quantum computing is a type of computation that uses quantum bits or qubits to perform operations.\n\n' +
+      'User: How is that different from classical computing?\nAssistant: Classical computing uses classical bits that can be either 0 or 1, while quantum bits can exist in superposition, representing both 0 and 1 simultaneously.\n\n',
+    ));
 
     // Create a context with direct dependency injection
     // We'll use a standard config for all tests
@@ -162,15 +143,16 @@ describe('ConversationContext', () => {
     };
 
     // Create the context with explicit dependencies
+    // Use type assertion to ConversationFormatter for the mock formatter
     conversationContext = new ConversationContext(
       config,
       adapter,
-      formatter,
-      mcpFormatter,
-      resourceService,
-      toolService,
-      queryService,
-      memoryService,
+      formatter as unknown as ConversationFormatter,
+      mcpFormatter as unknown as ConversationMcpFormatter,
+      resourceService as unknown as ConversationResourceService,
+      toolService as unknown as ConversationToolService,
+      queryService as unknown as ConversationQueryService,
+      memoryService as unknown as ConversationMemoryService,
     );
   });
 
@@ -195,22 +177,21 @@ describe('ConversationContext', () => {
     });
 
     test('initializes MCP components correctly', () => {
-      const resources = conversationContext.getResources();
-      const tools = conversationContext.getTools();
-
-      expect(resources).toBeDefined();
-      expect(tools).toBeDefined();
+      const capabilities = conversationContext.getCapabilities();
+      
+      expect(capabilities.resources).toBeDefined();
+      expect(capabilities.tools).toBeDefined();
+      expect(capabilities.features).toBeDefined();
     });
 
     test('registers on an MCP server successfully', () => {
       // Clear collections before testing
-      mockResources.length = 0;
-      mockTools.length = 0;
+      mockMcpServer.clearRegistrations();
 
       const result = conversationContext.registerOnServer(mockMcpServer);
       expect(result).toBe(true);
-      expect(mockResources.length).toBeGreaterThan(0);
-      expect(mockTools.length).toBeGreaterThan(0);
+      expect(mockMcpServer.getRegisteredResources().length).toBeGreaterThan(0);
+      expect(mockMcpServer.getRegisteredTools().length).toBeGreaterThan(0);
     });
   });
 
@@ -349,14 +330,13 @@ describe('ConversationContext', () => {
       const mcpServer = conversationContext.getMcpServer();
       expect(mcpServer).toBeDefined();
 
-      // Check that resources and tools are available
-      const resources = conversationContext.getResources();
-      const tools = conversationContext.getTools();
+      // Check that capabilities are available
+      const capabilities = conversationContext.getCapabilities();
 
-      expect(resources).toBeDefined();
-      expect(resources.length).toBeGreaterThan(0);
-      expect(tools).toBeDefined();
-      expect(tools.length).toBeGreaterThan(0);
+      expect(capabilities.resources).toBeDefined();
+      expect(capabilities.resources.length).toBeGreaterThan(0);
+      expect(capabilities.tools).toBeDefined();
+      expect(capabilities.tools.length).toBeGreaterThan(0);
     });
 
     test('registerOnServer returns false with undefined server', () => {

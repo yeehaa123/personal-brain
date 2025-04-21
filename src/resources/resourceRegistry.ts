@@ -133,7 +133,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
       () => {
         this.validateApiKey('anthropic'); // Validate API key exists
         return ClaudeModel.getInstance();
-      }
+      },
     );
     
     // Register embedding service with validation
@@ -142,7 +142,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
       () => {
         this.validateApiKey('openai'); // Validate API key exists
         return EmbeddingService.getInstance();
-      }
+      },
     );
     
     this.resourcesRegistered = true;
@@ -159,7 +159,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   private registerResource<T>(
     id: string,
     factory: () => T,
-    dependencies: string[] = []
+    dependencies: string[] = [],
   ): void {
     // Validate dependencies before registration
     for (const dependencyId of dependencies) {

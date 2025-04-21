@@ -6,9 +6,11 @@
  */
 
 export type {
-  ContextInterface,
+  CoreContextInterface,
+  McpContextInterface,
   ContextStatus,
   ResourceDefinition,
+  ContextCapabilities,
 } from './contextInterface';
 
 export type {

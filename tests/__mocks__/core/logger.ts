@@ -5,14 +5,8 @@
  * for use in tests across the codebase.
  */
 
-// Logger interface
-interface Logger {
-  info: (message: string, ...args: unknown[]) => void;
-  debug: (message: string, ...args: unknown[]) => void;
-  warn: (message: string, ...args: unknown[]) => void;
-  error: (message: string, ...args: unknown[]) => void;
-  child?: (options: Record<string, unknown>) => Logger;
-}
+// Import the real Logger type for proper interface matching
+import type { Logger as RealLogger } from '@/utils/logger';
 
 /**
  * Configuration options for MockLogger to match real Logger
@@ -25,7 +19,7 @@ interface MockLoggerConfig {
 /**
  * Mock Logger class with singleton pattern
  */
-export class MockLogger implements Logger {
+export class MockLogger {
   static instance: MockLogger | null = null;
   
   // Configuration options
@@ -37,6 +31,8 @@ export class MockLogger implements Logger {
     debug: string[];
     warn: string[];
     error: string[];
+    verbose: string[];
+    silly: string[];
   };
   
   constructor(config: MockLoggerConfig = {}) {
@@ -52,6 +48,8 @@ export class MockLogger implements Logger {
       debug: [],
       warn: [],
       error: [],
+      verbose: [],
+      silly: [],
     };
   }
   
@@ -122,10 +120,22 @@ export class MockLogger implements Logger {
     }
   }
   
+  verbose(message: string, ..._args: unknown[]): void {
+    if (!this.config.silent) {
+      this.messages.verbose.push(message);
+    }
+  }
+  
+  silly(message: string, ..._args: unknown[]): void {
+    if (!this.config.silent) {
+      this.messages.silly.push(message);
+    }
+  }
+  
   /**
    * Support for child loggers
    */
-  child(_options: Record<string, unknown>): Logger {
+  child(_options: Record<string, unknown>): MockLogger {
     return this;
   }
   
@@ -137,6 +147,8 @@ export class MockLogger implements Logger {
     this.messages.debug = [];
     this.messages.warn = [];
     this.messages.error = [];
+    this.messages.verbose = [];
+    this.messages.silly = [];
   }
 }
 
@@ -173,18 +185,22 @@ export function setupLoggerMocks(mockFn: { module: (name: string, factory: () =>
  * Temporarily silence an existing logger instance
  * @returns Original logger methods for restoration
  */
-export function silenceLogger(logger: Logger): Record<string, unknown> {
+export function silenceLogger(logger: RealLogger): Record<string, unknown> {
   const original = {
     info: logger.info,
     debug: logger.debug,
     warn: logger.warn,
     error: logger.error,
+    verbose: logger.verbose,
+    silly: logger.silly,
   };
   
   logger.info = () => {};
   logger.debug = () => {};
   logger.warn = () => {};
   logger.error = () => {};
+  logger.verbose = () => {};
+  logger.silly = () => {};
   
   return original;
 }
@@ -192,9 +208,11 @@ export function silenceLogger(logger: Logger): Record<string, unknown> {
 /**
  * Restore original logger methods
  */
-export function restoreLogger(logger: Logger, original: Record<string, unknown>): void {
+export function restoreLogger(logger: RealLogger, original: Record<string, unknown>): void {
   logger.info = original['info'] as typeof logger.info;
   logger.debug = original['debug'] as typeof logger.debug;
   logger.warn = original['warn'] as typeof logger.warn;
   logger.error = original['error'] as typeof logger.error;
+  logger.verbose = original['verbose'] as typeof logger.verbose;
+  logger.silly = original['silly'] as typeof logger.silly;
 }

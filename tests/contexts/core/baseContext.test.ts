@@ -7,11 +7,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { describe, expect, test } from 'bun:test';
 
-// No need to import ResourceDefinition as it's not used directly in tests
-
-// We need to create a concrete implementation of BaseContext for testing
-// This will be defined after we create the actual BaseContext class
 import { BaseContext } from '@/contexts/core/baseContext';
+import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 
 class TestContext extends BaseContext {
   private static instance: TestContext | null = null;
@@ -40,13 +37,14 @@ class TestContext extends BaseContext {
   protected override initializeMcpComponents(): void {
     this.initializeComponentsCalled = true;
 
-    // Add test resources and tools
+    // Add test resources and tools with required name and description fields
     this.resources = [
       {
         protocol: 'test',
         path: 'resource',
         handler: async () => ({ success: true }),
         name: 'Test Resource',
+        description: 'A test resource for unit testing',
       },
     ];
 
@@ -56,8 +54,27 @@ class TestContext extends BaseContext {
         path: 'tool',
         handler: async () => ({ success: true }),
         name: 'Test Tool',
+        description: 'A test tool for unit testing',
       },
     ];
+  }
+  
+  // Add getResources and getTools methods
+  override getResources(): ResourceDefinition[] {
+    return [...this.resources];
+  }
+  
+  override getTools(): ResourceDefinition[] {
+    return [...this.tools];
+  }
+  
+  // Add getCapabilities method
+  override getCapabilities(): { resources: ResourceDefinition[]; tools: ResourceDefinition[]; features: string[] } {
+    return {
+      resources: [...this.resources],
+      tools: [...this.tools],
+      features: [],
+    };
   }
 
   // Override initialize for testing
@@ -113,6 +130,24 @@ describe('BaseContext', () => {
         // Set resources and tools
         this.resources = [];
         this.tools = [];
+      }
+      
+      // Add getResources and getTools methods
+      override getResources(): ResourceDefinition[] {
+        return [...this.resources];
+      }
+      
+      override getTools(): ResourceDefinition[] {
+        return [...this.tools];
+      }
+      
+      // Add getCapabilities method
+      override getCapabilities(): { resources: ResourceDefinition[]; tools: ResourceDefinition[]; features: string[] } {
+        return {
+          resources: [...this.resources],
+          tools: [...this.tools],
+          features: [],
+        };
       }
 
       static override getInstance(): SpecialTestContext {
@@ -172,35 +207,41 @@ describe('BaseContext', () => {
     });
   });
 
-  test('registerOnServer should call resource and tool registration methods', () => {
+  test('registerOnServer should register resources and tools on the server', () => {
     // Reset for this test
     TestContext.resetInstance();
     const context = TestContext.createFresh();
 
-    // Create a mock server
+    // Create a mock server with tracking capabilities
+    type ResourceHandler = (uri: URL, extra: Record<string, unknown>) => Promise<unknown>;
+    type ToolHandler = (params: Record<string, unknown>) => Promise<unknown>;
+    
+    interface RegisteredResource {
+      name: string;
+      path: string;
+      metadata: Record<string, unknown>;
+      handler: ResourceHandler;
+    }
+    
+    interface RegisteredTool {
+      name: string;
+      description: string;
+      handler: ToolHandler;
+    }
+    
+    const registeredResources: RegisteredResource[] = [];
+    const registeredTools: RegisteredTool[] = [];
+    
     const mockServer = {
-      resource: () => { },
-      tool: () => { },
+      resource: (name: string, path: string, metadata: Record<string, unknown>, handler: ResourceHandler) => {
+        registeredResources.push({ name, path, metadata, handler });
+        return mockServer;
+      },
+      tool: (name: string, description: string, handler: ToolHandler) => {
+        registeredTools.push({ name, description, handler });
+        return mockServer;
+      },
     } as unknown as McpServer;
-
-    // Create simple mocks to track method calls
-    let registerResourcesCalled = false;
-    let registerToolsCalled = false;
-
-    // Save original methods
-    const originalRegisterResources = context['registerMcpResources'];
-    const originalRegisterTools = context['registerMcpTools'];
-
-    // Replace with mocks
-    context['registerMcpResources'] = function(server: McpServer) {
-      registerResourcesCalled = true;
-      originalRegisterResources.call(this, server);
-    };
-
-    context['registerMcpTools'] = function(server: McpServer) {
-      registerToolsCalled = true;
-      originalRegisterTools.call(this, server);
-    };
 
     // Register on the server
     const result = context.registerOnServer(mockServer);
@@ -208,9 +249,15 @@ describe('BaseContext', () => {
     // Check the result
     expect(result).toBe(true);
 
-    // Check that the protected methods were called
-    expect(registerResourcesCalled).toBe(true);
-    expect(registerToolsCalled).toBe(true);
+    // Check that resources and tools were registered
+    expect(registeredResources.length).toBe(1);
+    expect(registeredTools.length).toBe(1);
+    
+    // Verify the registered resources match what's in the context
+    const capabilities = context.getCapabilities();
+    expect(registeredResources[0].name).toBe('Test Resource');
+    expect(registeredResources[0].path).toBe(capabilities.resources[0].path);
+    expect(registeredTools[0].name).toBe('Test Tool');
   });
 
   test('getMcpServer should return the MCP server', () => {
@@ -221,30 +268,22 @@ describe('BaseContext', () => {
     expect(server).toBe(context['mcpServer']);
   });
 
-  test('getResources should return a copy of resources', () => {
+  test('getCapabilities should return copies of resources and tools', () => {
     // Reset for this test
     TestContext.resetInstance();
     const context = TestContext.createFresh();
-    const resources = context.getResources();
+    const capabilities = context.getCapabilities();
 
     // Check the resources
-    expect(resources).toEqual(context['resources']);
+    expect(capabilities.resources).toEqual(context['resources']);
+    expect(capabilities.tools).toEqual(context['tools']);
 
-    // Check that it's a copy, not the original array
-    expect(resources).not.toBe(context['resources']);
-  });
-
-  test('getTools should return a copy of tools', () => {
-    // Reset for this test
-    TestContext.resetInstance();
-    const context = TestContext.createFresh();
-    const tools = context.getTools();
-
-    // Check the tools
-    expect(tools).toEqual(context['tools']);
-
-    // Check that it's a copy, not the original array
-    expect(tools).not.toBe(context['tools']);
+    // Check that they're copies, not the original arrays
+    expect(capabilities.resources).not.toBe(context['resources']);
+    expect(capabilities.tools).not.toBe(context['tools']);
+    
+    // Should also include features
+    expect(capabilities).toHaveProperty('features');
   });
 
   test('singleton pattern should work correctly', () => {

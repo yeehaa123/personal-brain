@@ -7,12 +7,12 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import type { ContextInterface, ContextStatus, ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ContextStatus, McpContextInterface, ResourceDefinition } from '@/contexts/core/contextInterface';
 
 /**
  * Mock implementation of BaseContext
  */
-export class MockBaseContext implements ContextInterface {
+export class MockBaseContext implements McpContextInterface {
   private static instances: Map<string, MockBaseContext> = new Map();
   
   protected mcpServer: McpServer;
@@ -74,6 +74,7 @@ export class MockBaseContext implements ContextInterface {
         path: 'resource',
         handler: async () => ({ success: true }),
         name: 'Test Resource',
+        description: 'A test resource for mock implementation',
       },
     ];
     
@@ -83,6 +84,7 @@ export class MockBaseContext implements ContextInterface {
         path: 'tool',
         handler: async () => ({ success: true }),
         name: 'Test Tool',
+        description: 'A test tool for mock implementation',
       },
     ];
   }
@@ -140,23 +142,65 @@ export class MockBaseContext implements ContextInterface {
    * @returns True if registration was successful
    */
   registerOnServer(server: McpServer): boolean {
-    // Cast the server to a simpler interface for mocking
-    const mockedServer = server as unknown as {
-      resource: (r: ResourceDefinition) => void;
-      tool: (t: ResourceDefinition) => void;
-    };
-    
-    // Register resources
-    for (const resource of this.resources) {
-      mockedServer.resource(resource);
+    try {
+      const capabilities = this.getCapabilities();
+      
+      // Register resources using the MCP SDK API
+      for (const resource of capabilities.resources) {
+        // Create a wrapper function to adapt our handler to the expected URL format
+        const handlerWrapper = (uri: URL, _extra: Record<string, unknown>) => {
+          // Call our handler with a compatible format
+          return resource.handler({}, {}).then(result => {
+            // Format the result as a ReadResourceResult
+            return {
+              contents: [
+                {
+                  text: JSON.stringify(result),
+                  uri: uri.toString(),
+                },
+              ],
+            };
+          });
+        };
+
+        server.resource(
+          resource.name || `${this.name}_${resource.path}`,
+          resource.path,
+          { description: resource.description || `Resource for ${resource.path}` },
+          handlerWrapper,
+        );
+      }
+      
+      // Register tools using the MCP SDK API
+      for (const tool of capabilities.tools) {
+        // Create a wrapper function to adapt our handler to the expected format
+        const handlerWrapper = (_extra: Record<string, unknown>) => {
+          // Call our handler with a compatible format
+          return tool.handler({}, {}).then(result => {
+            // Format the result as a CallToolResult
+            return {
+              content: [
+                {
+                  type: 'text' as const,
+                  text: typeof result === 'string' ? result : JSON.stringify(result),
+                },
+              ],
+            };
+          });
+        };
+
+        server.tool(
+          tool.name || `${this.name}_${tool.path}`,
+          tool.description || `Tool for ${tool.path}`,
+          handlerWrapper,
+        );
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error registering context on server:', error);
+      return false;
     }
-    
-    // Register tools
-    for (const tool of this.tools) {
-      mockedServer.tool(tool);
-    }
-    
-    return true;
   }
   
   /**
@@ -168,19 +212,15 @@ export class MockBaseContext implements ContextInterface {
   }
   
   /**
-   * Get all resources
-   * @returns Array of resource definitions
+   * Get all capabilities
+   * @returns Object with resources, tools, and features
    */
-  getResources(): ResourceDefinition[] {
-    return [...this.resources];
-  }
-  
-  /**
-   * Get all tools
-   * @returns Array of tool definitions
-   */
-  getTools(): ResourceDefinition[] {
-    return [...this.tools];
+  getCapabilities(): { resources: ResourceDefinition[]; tools: ResourceDefinition[]; features: string[] } {
+    return {
+      resources: [...this.resources],
+      tools: [...this.tools],
+      features: [],
+    };
   }
   
   /**
@@ -219,5 +259,16 @@ export class MockBaseContext implements ContextInterface {
    */
   setReadyState(state: boolean): void {
     this.readyState = state;
+  }
+  
+  /**
+   * Clean up resources
+   * @returns Promise that resolves when cleanup is complete
+   */
+  async cleanup(): Promise<void> {
+    // Base implementation cleans up internal state
+    this.readyState = false;
+    this.resources = [];
+    this.tools = [];
   }
 }

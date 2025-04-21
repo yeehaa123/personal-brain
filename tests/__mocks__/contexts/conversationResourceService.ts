@@ -44,21 +44,29 @@ export class MockConversationResourceService {
       {
         protocol: 'conversations',
         path: 'list',
+        name: 'List Conversations',
+        description: 'Get a list of all conversations with optional filtering',
         handler: mock(() => Promise.resolve([])),
       },
       {
         protocol: 'conversations',
         path: 'get/:id',
+        name: 'Get Conversation',
+        description: 'Get a conversation by ID with its turns and summaries',
         handler: mock(() => Promise.resolve({})),
       },
       {
         protocol: 'conversations',
         path: 'search',
+        name: 'Search Conversations',
+        description: 'Search for conversations based on various criteria',
         handler: mock(() => Promise.resolve({ results: [] })),
       },
       {
         protocol: 'conversations',
         path: 'recent',
+        name: 'Recent Conversations',
+        description: 'Get a list of recent conversations',
         handler: mock(() => Promise.resolve([])),
       },
     ] as ResourceDefinition[];

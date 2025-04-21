@@ -1,28 +1,33 @@
 /**
  * MockConversationFormatter
  * 
- * Standard mock for ConversationFormatter that follows the Component Interface Standardization pattern
+ * Mock implementation of ConversationFormatter for testing
  */
 
-import { mock } from 'bun:test';
-
+import type { FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
-export interface FormattingOptions {
-  format?: 'text' | 'markdown' | 'json' | 'html';
-  includeTimestamps?: boolean;
-  includeMetadata?: boolean;
-  anchorName?: string;
-  anchorId?: string;
-  highlightAnchor?: boolean;
-}
+
+// Re-export the FormattingOptions type
+export type { FormattingOptions };
 
 /**
  * Mock implementation of ConversationFormatter
+ * 
+ * We're providing a simple mock implementation that matches the public API
+ * but doesn't try to match internal implementation details.
  */
 export class MockConversationFormatter {
+  // Singleton pattern implementation
   private static instance: MockConversationFormatter | null = null;
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() {
+    // No initialization needed for the mock
+  }
   
   /**
    * Get singleton instance
@@ -48,16 +53,24 @@ export class MockConversationFormatter {
     return new MockConversationFormatter();
   }
   
-  // Mock methods with default implementations
-  public formatConversation = mock((
-    turns: ConversationTurn[],
-    summaries: ConversationSummary[],
-    options: FormattingOptions,
-  ) => {
+  // Public methods matching the ConversationFormatter interface
+  formatTurns(_turns: ConversationTurn[], _options: FormattingOptions = {}): string {
+    return 'Formatted turns';
+  }
+  
+  formatSummaries(_summaries: ConversationSummary[], _options: FormattingOptions = {}): string {
+    return 'Formatted summaries';
+  }
+  
+  formatConversation(
+    _turns: ConversationTurn[], 
+    _summaries: ConversationSummary[], 
+    options: FormattingOptions = {},
+  ): string {
     const format = options.format || 'text';
     
     if (format === 'json') {
-      return JSON.stringify({ turns, summaries });
+      return '{"turns":[],"summaries":[]}';
     }
     
     if (format === 'html') {
@@ -70,5 +83,14 @@ export class MockConversationFormatter {
     
     // Default text format
     return 'User: Test query\nAssistant: Test response\n\n';
-  });
+  }
+  
+  formatHistoryForPrompt(
+    _turns: ConversationTurn[], 
+    _summaries: ConversationSummary[],
+    _options: FormattingOptions = {},
+  ): string {
+    return 'Formatted history for prompt';
+  }
 }
+

@@ -1,8 +1,8 @@
 /**
- * Base interface for all context components in the MCP architecture
+ * Core Context Interfaces
  * 
- * This interface defines the standard contract that all contexts must implement
- * to ensure consistent behavior across the system.
+ * This module defines the streamlined interface hierarchy for all context components,
+ * with a clear separation between core functionality and MCP-specific concerns.
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -11,30 +11,50 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
  * Status object for context components
  */
 export interface ContextStatus {
+  /** Context identifier/name */
   name: string;
+  /** Version information */
   version: string;
+  /** Whether the context is ready for use */
   ready: boolean;
-  resourceCount: number;
-  toolCount: number;
+  /** Additional status fields */
   [key: string]: unknown;
 }
 
 /**
- * Resource definition for MCP resources
+ * Resource definition for MCP resources and tools
  */
 export interface ResourceDefinition {
+  /** Resource protocol */
   protocol: string;
+  /** Resource path */
   path: string;
+  /** Resource handler function */
   handler: (params: Record<string, unknown>, query?: Record<string, unknown>) => Promise<unknown>;
+  /** Resource name */
   name?: string;
+  /** Resource description */
   description?: string;
+  /** Additional resource properties */
   [key: string]: unknown;
 }
 
 /**
- * Base interface for all context components
+ * Capabilities provided by a context
  */
-export interface ContextInterface {
+export interface ContextCapabilities {
+  /** Available API resources */
+  resources: ResourceDefinition[];
+  /** Available tools */
+  tools: ResourceDefinition[];
+  /** Supported feature identifiers */
+  features: string[];
+}
+
+/**
+ * Core context interface - fundamental functionality for all contexts
+ */
+export interface CoreContextInterface {
   /**
    * Initialize the context with any required setup
    * @returns Promise that resolves to true if initialization was successful
@@ -54,6 +74,17 @@ export interface ContextInterface {
   getStatus(): ContextStatus;
   
   /**
+   * Clean up resources when context is no longer needed
+   * @returns Promise that resolves when cleanup is complete
+   */
+  cleanup(): Promise<void>;
+}
+
+/**
+ * MCP-specific context interface - extends core with MCP functionality
+ */
+export interface McpContextInterface extends CoreContextInterface {
+  /**
    * Register context resources and tools on an MCP server
    * @param server MCP server instance to register on
    * @returns Boolean indicating success of registration
@@ -67,14 +98,8 @@ export interface ContextInterface {
   getMcpServer(): McpServer;
   
   /**
-   * Get all registered MCP resources
-   * @returns Array of resource definitions
+   * Get all capabilities provided by this context
+   * @returns Context capabilities object
    */
-  getResources(): ResourceDefinition[];
-  
-  /**
-   * Get all registered MCP tools
-   * @returns Array of tool definitions
-   */
-  getTools(): ResourceDefinition[];
+  getCapabilities(): ContextCapabilities;
 }

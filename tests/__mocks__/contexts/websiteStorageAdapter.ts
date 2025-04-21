@@ -1,12 +1,12 @@
 import { mock } from 'bun:test';
 
+import type { 
+  WebsiteStorageAdapter as IWebsiteStorageAdapter,
+} from '@/contexts/website/adapters/websiteStorageAdapter';
 import type {
   LandingPageData,
   WebsiteConfig,
 } from '@/contexts/website/websiteStorage';
-import type { 
-  WebsiteStorageAdapter as IWebsiteStorageAdapter,
-} from '@/contexts/website/adapters/websiteStorageAdapter';
 
 /**
  * Mock implementation of WebsiteStorageAdapter for testing

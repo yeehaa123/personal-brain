@@ -15,8 +15,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Logger } from '@/utils/logger';
 
 import type { 
-  ContextInterface, 
   ContextStatus, 
+  McpContextInterface, 
   ResourceDefinition, 
 } from './contextInterface';
 
@@ -28,10 +28,10 @@ export interface BaseContextConfig {
 }
 
 /**
- * Abstract base class that implements ContextInterface
+ * Abstract base class that implements McpContextInterface
  * All specific contexts should extend this class
  */
-export abstract class BaseContext implements ContextInterface {
+export abstract class BaseContext implements McpContextInterface {
   // Note: Each derived class should implement their own instance property
   // Using private in the derived class: private static instance: DerivedClass | null = null;
   
@@ -179,23 +179,52 @@ export abstract class BaseContext implements ContextInterface {
       return;
     }
     
-    // Skip registration in test environment if server doesn't have resource method
-    if (process.env.NODE_ENV === 'test' && typeof server.resource !== 'function') {
-      this.logger.debug(`Skipping resource registration for ${this.getContextName()} in test environment`);
+    // Check if the server has the resource method (MCP SDK uses 'resource' not 'registerResource')
+    if (typeof server.resource !== 'function') {
+      this.logger.warn(`Server does not have resource method for ${this.getContextName()}`);
       return;
     }
     
-    // Use type assertion for the server
-    const mockedServer = server as unknown as {
-      resource: (r: ResourceDefinition) => void
-    };
-    
     for (const resource of this.resources) {
       try {
-        // Use simplified method that accepts our ResourceDefinition directly
-        mockedServer.resource(resource);
+        // Use the actual resource method with name, path, options, and handler
+        const name = resource.name || `${this.getContextName()}_${resource.path}`;
+        const description = resource.description || `Resource for ${resource.path}`;
+        
+        // Create a wrapper function to adapt our handler to the expected URL format
+        const handlerWrapper = (uri: URL, _extra: Record<string, unknown>) => {
+          // Extract query parameters from URL if needed
+          const queryParams: Record<string, unknown> = {};
+          if (uri.search) {
+            uri.searchParams.forEach((value, key) => {
+              queryParams[key] = value;
+            });
+          }
+          
+          // Call our handler with the right format and adapt the response to the expected format
+          return resource.handler({}, queryParams).then(result => {
+            // Format the result as a ReadResourceResult
+            return {
+              contents: [
+                {
+                  text: JSON.stringify(result),
+                  uri: uri.toString(),
+                },
+              ],
+            };
+          });
+        };
+        
+        // Register the resource with proper parameters
+        server.resource(
+          name,
+          resource.path,
+          { description }, // Metadata object with description
+          handlerWrapper,
+        );
       } catch (error) {
-        this.logger.debug(`Error registering resource in ${this.getContextName()}`, { 
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.debug(`Error registering resource ${resource.path} in ${this.getContextName()}: ${errorMessage}`, { 
           error, 
           resource: resource.path,
           context: 'BaseContext', 
@@ -215,25 +244,49 @@ export abstract class BaseContext implements ContextInterface {
       return;
     }
     
-    // Skip registration in test environment if server doesn't have tool method
-    if (process.env.NODE_ENV === 'test' && typeof server.tool !== 'function') {
-      this.logger.debug(`Skipping tool registration for ${this.getContextName()} in test environment`);
+    // Check if the server has the tool method (MCP SDK uses 'tool' not 'registerTool')
+    if (typeof server.tool !== 'function') {
+      this.logger.warn(`Server does not have tool method for ${this.getContextName()}`);
       return;
     }
     
-    // Use type assertion for the server
-    const mockedServer = server as unknown as {
-      tool: (t: ResourceDefinition) => void
-    };
-    
-    for (const tool of this.tools) {
+    for (const toolDef of this.tools) {
       try {
-        // Use simplified method that accepts our ResourceDefinition directly
-        mockedServer.tool(tool);
+        // Use the actual tool method with name, description, and handler
+        const name = toolDef.name || `${this.getContextName()}_${toolDef.path}`;
+        const description = toolDef.description || `Tool for ${toolDef.path}`;
+        
+        // Create a wrapper function to adapt our handler to the expected format
+        const handlerWrapper = (extra: Record<string, unknown>) => {
+          // The extra contains 'params' which are the tool arguments
+          const params = extra['params'] || {};
+          const query = extra['query'] || {};
+          
+          // Call our handler with the right format and adapt the response to the expected format
+          return toolDef.handler(params as Record<string, unknown>, query as Record<string, unknown>)
+            .then(result => {
+              // Format the result as a CallToolResult
+              return {
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: typeof result === 'string' ? result : JSON.stringify(result),
+                  },
+                ],
+              };
+            });
+        };
+        
+        server.tool(
+          name,
+          description,
+          handlerWrapper,
+        );
       } catch (error) {
-        this.logger.debug(`Error registering tool in ${this.getContextName()}`, { 
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.logger.debug(`Error registering tool ${toolDef.path} in ${this.getContextName()}: ${errorMessage}`, { 
           error, 
-          tool: tool.path,
+          tool: toolDef.path,
           context: 'BaseContext', 
         });
         // Continue with other tools even if one fails
@@ -263,5 +316,27 @@ export abstract class BaseContext implements ContextInterface {
    */
   getTools(): ResourceDefinition[] {
     return [...this.tools];
+  }
+  
+  /**
+   * Get all capabilities provided by this context
+   * @returns Context capabilities object
+   */
+  getCapabilities(): { resources: ResourceDefinition[]; tools: ResourceDefinition[]; features: string[] } {
+    return {
+      resources: this.getResources(),
+      tools: this.getTools(),
+      features: [],
+    };
+  }
+  
+  /**
+   * Clean up resources when context is no longer needed
+   * @returns Promise that resolves when cleanup is complete
+   */
+  async cleanup(): Promise<void> {
+    // Base implementation does nothing
+    // Derived classes should override this method if they need specific cleanup
+    this.logger.debug(`Cleaning up ${this.getContextName()} context`, { context: 'BaseContext' });
   }
 }

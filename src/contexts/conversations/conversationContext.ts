@@ -32,6 +32,7 @@ import type {
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import { BaseContext } from '@/contexts/core/baseContext';
+import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 // No need to import ServiceRegistry anymore
 import { Logger } from '@/utils/logger';
@@ -313,6 +314,18 @@ export class ConversationContext extends BaseContext {
    */
   override getContextVersion(): string {
     return this.contextConfig?.version || '1.0.0';
+  }
+
+  /**
+   * Get capabilities of this context
+   * @returns Object containing resources, tools, and features
+   */
+  override getCapabilities(): { resources: ResourceDefinition[]; tools: ResourceDefinition[]; features: string[] } {
+    return {
+      resources: this.getResources(),
+      tools: this.getTools(),
+      features: [],
+    };
   }
 
   /**

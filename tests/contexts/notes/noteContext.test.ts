@@ -4,14 +4,15 @@
  * These tests only validate the interface and API of the NoteContext,
  * not the actual storage functionality.
  */
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+
 
 import { NoteContext } from '@/contexts';
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import type { NoteSearchService } from '@/services/notes/noteSearchService';
+import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 
 // Create mock dependencies
 const mockNoteRepository = {
@@ -167,22 +168,35 @@ describe('NoteContext', () => {
     expect(status.name).toBe('TestNoteBrain');
     expect(status.version).toBe('1.0.0-test');
     expect(status.ready).toBeDefined();
-    expect(status.resourceCount).toBeGreaterThan(0);
-    expect(status.toolCount).toBeGreaterThan(0);
+    expect(status['resourceCount']).toBeGreaterThan(0);
+    expect(status['toolCount']).toBeGreaterThan(0);
   });
   
   test('registerOnServer registers resources and tools', () => {
-    // Create a simple mock server
-    const mockServer = {
-      resource: mock(() => {}),
-      tool: mock(() => {}),
-    } as unknown as McpServer;
+    // Create a standardized mock server
+    const mockServer = createMockMcpServer('NoteBrainTest', '1.0.0');
     
     const result = noteContext.registerOnServer(mockServer);
     
     expect(result).toBe(true);
-    expect(mockServer.resource).toHaveBeenCalled();
-    expect(mockServer.tool).toHaveBeenCalled();
+    
+    // Verify resources and tools were registered
+    const registeredResources = mockServer.getRegisteredResources();
+    const registeredTools = mockServer.getRegisteredTools();
+    
+    // NoteContext should register 4 resources and 3 tools
+    expect(registeredResources.length).toBe(4);
+    expect(registeredTools.length).toBe(3);
+    
+    // Check that specific resource and tool paths are registered
+    expect(registeredResources.some(r => r.path === ':id')).toBe(true);
+    expect(registeredResources.some(r => r.path === 'search')).toBe(true);
+    expect(registeredResources.some(r => r.path === 'recent')).toBe(true);
+    expect(registeredResources.some(r => r.path === 'related/:id')).toBe(true);
+    
+    expect(registeredTools.some(t => t.path === 'create_note')).toBe(true);
+    expect(registeredTools.some(t => t.path === 'generate_embeddings')).toBe(true);
+    expect(registeredTools.some(t => t.path === 'search_with_embedding')).toBe(true);
   });
   
   test('getStorage should return storage adapter', () => {

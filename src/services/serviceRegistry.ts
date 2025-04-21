@@ -154,10 +154,10 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
     
     // Ensure ResourceRegistry is initialized
     if (!this.resourceRegistry.isInitialized()) {
-      this.logger.info(`Initializing ResourceRegistry dependency`);
+      this.logger.info('Initializing ResourceRegistry dependency');
       const success = this.resourceRegistry.initialize();
       if (!success) {
-        this.logger.warn(`ResourceRegistry initialization failed, some services may not work`);
+        this.logger.warn('ResourceRegistry initialization failed, some services may not work');
       }
     }
   }
@@ -229,7 +229,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         // Create service with injected dependencies
         return NoteSearchService.getInstance(repository, embeddingService);
       },
-      [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService]
+      [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService],
     );
     
     this.registerService<ISearchService<Profile>>(
@@ -246,8 +246,8 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       [
         ServiceIdentifiers.ProfileRepository, 
         ServiceIdentifiers.ProfileEmbeddingService,
-        ServiceIdentifiers.ProfileTagService
-      ]
+        ServiceIdentifiers.ProfileTagService,
+      ],
     );
     
     // Register conversation services
@@ -419,7 +419,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   private registerService<T>(
     id: string,
     factory: (container: SimpleContainer) => T,
-    dependencies: string[] = []
+    dependencies: string[] = [],
   ): void {
     // Validate dependencies before registration
     let dependenciesValid = true;

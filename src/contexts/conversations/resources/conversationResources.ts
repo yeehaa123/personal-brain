@@ -104,6 +104,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'list',
+      name: 'List Conversations',
+      description: 'Get a list of all conversations with optional filtering',
       handler: async (_params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const limit = query['limit'] !== undefined ? String(query['limit']) : undefined;
         const offset = query['offset'] !== undefined ? String(query['offset']) : undefined;
@@ -128,6 +130,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'get/:id',
+      name: 'Get Conversation',
+      description: 'Get a conversation by ID with its turns and summaries',
       handler: async (params: Record<string, unknown>) => {
         const conversationId = params['id'] ? String(params['id']) : '';
         if (!conversationId) {
@@ -163,6 +167,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'search',
+      name: 'Search Conversations',
+      description: 'Search for conversations based on various criteria',
       handler: async (_params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const q = query['q'] !== undefined ? String(query['q']) : undefined;
         const interfaceType = query['interfaceType'] !== undefined ? String(query['interfaceType']) : undefined;
@@ -206,6 +212,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'room/:roomId',
+      name: 'Room Conversations',
+      description: 'Get all conversations for a specific room',
       handler: async (params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const roomId = params['roomId'] ? String(params['roomId']) : '';
         const interfaceType = query['interfaceType'] !== undefined ? String(query['interfaceType']) : undefined;
@@ -226,6 +234,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'recent',
+      name: 'Recent Conversations',
+      description: 'Get a list of recent conversations',
       handler: async (_params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const limit = query['limit'] !== undefined ? String(query['limit']) : undefined;
         const interfaceType = query['interfaceType'] !== undefined ? String(query['interfaceType']) : undefined;
@@ -248,6 +258,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'turns/:id',
+      name: 'Conversation Turns',
+      description: 'Get all turns for a specific conversation',
       handler: async (params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const conversationId = params['id'] ? String(params['id']) : '';
         const limit = query['limit'] !== undefined ? String(query['limit']) : undefined;
@@ -284,6 +296,8 @@ export class ConversationResourceService {
     return {
       protocol: 'conversations',
       path: 'summaries/:id',
+      name: 'Conversation Summaries',
+      description: 'Get all summaries for a specific conversation',
       handler: async (params: Record<string, unknown>, query: Record<string, unknown> = {}) => {
         const conversationId = params['id'] ? String(params['id']) : '';
         const includeMetadata = query['metadata'] === 'true';
