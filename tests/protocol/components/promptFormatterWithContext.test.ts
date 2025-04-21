@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 
-import { PromptFormatter } from '@/protocol/components';
+import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import type { Note } from '@models/note';
 import { createMockNote } from '@test/__mocks__/models/note';
 

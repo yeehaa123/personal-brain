@@ -3,19 +3,34 @@
  * 
  * This module provides components for standardized communication
  * between contexts in the system.
+ * 
+ * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-// Export message types
-export * from './messageTypes';
+// Export public message types needed by context implementations
+export type { ContextMessage, ContextCommunicationMessage } from './messageTypes';
+export type { 
+  DataRequestMessage, 
+  DataResponseMessage, 
+  NotificationMessage,
+  AcknowledgmentMessage
+} from './messageTypes';
+export { DataRequestType, NotificationType } from './messageTypes';
 
-// Export message factory
-export * from './messageFactory';
+// Export public factory for creating messages
+export { MessageFactory } from './messageFactory';
 
-// Export context mediator
-export * from './contextMediator';
+// Export mediator interface (needed for contexts to communicate)
+export { ContextMediator } from './contextMediator';
+export type { MessageHandler } from './contextMediator';
 
-// Export context integration helpers
-export * from './contextIntegration';
-
-// Export context integrator
-export * from './contextIntegrator';
+// Export context integration helpers needed by context implementations
+export { 
+  requestContextData,
+  requestNotes,
+  requestNoteById,
+  requestProfile,
+  requestConversationHistory,
+  requestExternalSources,
+  requestWebsiteStatus
+} from './contextIntegration';

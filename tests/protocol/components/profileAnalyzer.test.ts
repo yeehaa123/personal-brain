@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test';
 
-import { ProfileAnalyzer } from '@/protocol/components';
+import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 

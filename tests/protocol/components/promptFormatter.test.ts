@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 
 
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import { PromptFormatter } from '@/protocol/components';
+import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 import { createMockNote } from '@test/__mocks__/models/note';

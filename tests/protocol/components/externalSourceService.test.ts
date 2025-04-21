@@ -2,8 +2,9 @@ import { describe, expect, mock, test } from 'bun:test';
 
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { ExternalSourceContext } from '@/mcpServer';
-import type { ProfileAnalyzer , PromptFormatter } from '@/protocol/components';
-import { ExternalSourceService  } from '@/protocol/components';
+import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
+import type { PromptFormatter } from '@/protocol/components/promptFormatter';
+import { ExternalSourceService } from '@/protocol/components/externalSourceService';
 import type { Note } from '@models/note';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';

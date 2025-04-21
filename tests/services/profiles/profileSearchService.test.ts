@@ -156,7 +156,7 @@ describe('ProfileSearchService', () => {
     searchService = ProfileSearchService.createFresh(
       mockRepository as unknown as ProfileRepository,
       mockEmbeddingService,
-      mockTagService
+      mockTagService,
     );
   });
 
@@ -170,7 +170,7 @@ describe('ProfileSearchService', () => {
     const service = ProfileSearchService.createFresh(
       mockRepository as unknown as ProfileRepository,
       mockEmbeddingService,
-      mockTagService
+      mockTagService,
     );
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileSearchService);

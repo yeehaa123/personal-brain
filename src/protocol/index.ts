@@ -3,39 +3,17 @@
  * 
  * Coordinates interactions between contexts and resources using the brain protocol architecture.
  * This layer contains the main protocol implementation and its supporting components.
+ * 
+ * This barrel file only exports the public API components that should be used by external consumers.
+ * Implementation details should be imported directly from their source files.
  */
 
-// Re-export protocol core implementations
-export * from './core/brainProtocol';
-export * from './brainProtocol';
+// Export only the main protocol implementation
+export { BrainProtocol } from './core/brainProtocol';
+export type { BrainProtocolConfig } from './config/brainProtocolConfig';
 
-// Re-export protocol components
-export * from './components';
+// Export the primary types for public API usage
+export type { IBrainProtocol, QueryResult, QueryOptions } from './types';
 
-// Re-export managers
-export * from './managers';
-
-// Re-export config
-export * from './config/brainProtocolConfig';
-
-// Re-export message formats and schemas
-export * from './formats';
-
-
-// Re-export adapters
-export * from './adapters';
-
-// Re-export router (avoiding naming conflicts) - only include what's needed 
-export type { Route, MessageHandler } from './router/router';
-// Re-export other router components, but avoid exporting everything
-export { TargetResolver } from './router/resolvers/targetResolver';
-export * from './router/rules/queryRules';
-export * from './router/rules/commandRules';
-
-// Re-export messaging system for cross-context communication
-export * from './messaging';
-
-// All schema definitions are now exported from formats/schemas
-
-// Re-export types
-export * from './types';
+// Export public adapter interfaces
+export type { ProtocolAdapter } from './adapters/adapterInterface';

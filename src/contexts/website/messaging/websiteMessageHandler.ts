@@ -9,11 +9,11 @@
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { 
   type DataRequestMessage, 
-  DataRequestType, 
-  MessageFactory, 
+  DataRequestType,
   type NotificationMessage, 
   NotificationType, 
-} from '@/protocol/messaging';
+} from '@/protocol/messaging/messageTypes';
+import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { Logger } from '@/utils/logger';
 
 import type { WebsiteContext } from '../websiteContext';

@@ -3,11 +3,9 @@
  * 
  * This module provides the core components of the protocol layer,
  * including the BrainProtocol, ContextOrchestrator, and supporting classes.
+ * 
+ * Exports only the main public API components.
  */
 
-export * from './brainProtocol';
-export * from './contextOrchestrator';
-export * from './configurationManager';
-export * from './featureCoordinator';
-export * from './statusManager';
-export * from './mcpServerManager';
+// Export only the main protocol class
+export { BrainProtocol } from './brainProtocol';

@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { relevanceConfig } from '@/config';
-import { SystemPromptGenerator } from '@/protocol/components';
+import { SystemPromptGenerator } from '@/protocol/components/systemPromptGenerator';
 
 describe('SystemPromptGenerator', () => {
   const systemPromptGenerator = SystemPromptGenerator.createFresh();
