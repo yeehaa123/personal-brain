@@ -72,12 +72,12 @@ describe('BaseEmbeddingService', () => {
   });
 
   test('should handle error in similarity calculation', () => {
-    // Get the embedding service to mock cosineSimilarity
+    // Get the embedding service to mock calculateSimilarity
     const embeddingService = service.getEmbeddingService();
-    const originalCosineSimilarity = embeddingService.cosineSimilarity;
+    const originalCalculateSimilarity = embeddingService.calculateSimilarity;
 
     // Make it throw an error
-    embeddingService.cosineSimilarity = mock(() => {
+    embeddingService.calculateSimilarity = mock(() => {
       throw new Error('Similarity calculation error');
     });
 
@@ -86,6 +86,6 @@ describe('BaseEmbeddingService', () => {
     expect(similarity).toBe(0);
 
     // Restore original method
-    embeddingService.cosineSimilarity = originalCosineSimilarity;
+    embeddingService.calculateSimilarity = originalCalculateSimilarity;
   });
 });

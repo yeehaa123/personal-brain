@@ -69,7 +69,7 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
    */
   calculateSimilarity(embedding1: number[], embedding2: number[]): number {
     try {
-      return this.embeddingService.cosineSimilarity(embedding1, embedding2);
+      return this.embeddingService.calculateSimilarity(embedding1, embedding2);
     } catch (error) {
       this.logger.error(`Error calculating similarity: ${error instanceof Error ? error.message : String(error)}`);
       return 0;

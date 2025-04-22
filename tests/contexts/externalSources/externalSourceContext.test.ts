@@ -41,7 +41,7 @@ describe('ExternalSourceContext', () => {
     
     // Add spies to the embedding service methods we'll use
     mockEmbeddingService.getEmbedding = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
-    mockEmbeddingService.cosineSimilarity = mock(() => 0.85);
+    mockEmbeddingService.calculateSimilarity = mock(() => 0.85);
   });
   
   // Clean up after each test

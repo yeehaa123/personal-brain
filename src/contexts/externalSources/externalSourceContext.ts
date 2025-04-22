@@ -478,7 +478,7 @@ export class ExternalSourceContext extends BaseContext<
       const scoredResults = resultsWithEmbeddings.map(result => {
         if (!result.embedding) return { ...result, similarityScore: 0 };
         
-        const similarity = this.embeddingService.cosineSimilarity(
+        const similarity = this.embeddingService.calculateSimilarity(
           queryEmbedding,
           result.embedding,
         );

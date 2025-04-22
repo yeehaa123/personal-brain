@@ -119,7 +119,7 @@ export class ProfileAnalyzer {
       const queryEmbedding = await this.embeddingService.getEmbedding(query);
 
       // Calculate similarity score between query and profile
-      const similarity = this.embeddingService.cosineSimilarity(
+      const similarity = this.embeddingService.calculateSimilarity(
         queryEmbedding,
         profile.embedding as number[],
       );

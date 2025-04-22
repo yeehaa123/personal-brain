@@ -17,16 +17,6 @@ import { isDefined } from '@/utils/safeAccessUtils';
 import { chunkText, prepareText } from '@/utils/textUtils';
 
 /**
- * Result of generating an embedding
- */
-export interface EmbeddingResult {
-  /** The vector representation of the text */
-  embedding: number[];
-  /** Whether the input was truncated before embedding */
-  truncated: boolean;
-}
-
-/**
  * Configuration options for the embedding service
  */
 export interface EmbeddingConfig {
@@ -36,16 +26,6 @@ export interface EmbeddingConfig {
   embeddingModel?: string;
   /** Dimension of the embedding vectors */
   embeddingDimension?: number;
-}
-
-/**
- * Options for batch processing embeddings
- */
-export interface BatchProcessingOptions {
-  /** Size of each batch when processing large requests */
-  batchSize?: number;
-  /** Whether to run requests in parallel */
-  parallel?: boolean;
 }
 
 /**
@@ -63,7 +43,6 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   private readonly apiKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
-  private readonly batchSize: number;
 
   /** Logger instance for this class */
   private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
@@ -130,7 +109,6 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
     this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
     this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
-    this.batchSize = aiConfig.openAI.batchSize;
   }
 
   /**
@@ -180,20 +158,6 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     }
   }
 
-  /**
-   * Get the full embedding result with metadata
-   * This method is kept for backward compatibility
-   * 
-   * @param text The text to embed
-   * @returns A promise resolving to the embedding result with metadata
-   */
-  async getEmbeddingWithMetadata(text: string): Promise<EmbeddingResult> {
-    const embedding = await this.getEmbedding(text);
-    return {
-      embedding,
-      truncated: false,
-    };
-  }
 
   /**
    * Generate embeddings for multiple texts in batch
@@ -243,8 +207,11 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
       this.logger.error(`Error using batch embedding API, falling back to individual processing: ${error instanceof Error ? error.message : String(error)}`);
 
       try {
-        const results = await this.processEmbeddingsInSmallBatches(texts);
-        return results.map(result => result.embedding);
+        // Process each text individually as a fallback
+        const embeddings = await Promise.all(
+          texts.map(text => this.getEmbedding(text))
+        );
+        return embeddings;
       } catch (processingError) {
         this.logger.error(`Individual processing also failed: ${processingError instanceof Error ? processingError.message : String(processingError)}`);
 
@@ -254,29 +221,6 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     }
   }
 
-  /**
-   * Get batch embeddings with metadata
-   * This method is kept for backward compatibility
-   * 
-   * @param texts Array of texts to embed
-   * @param options Optional batch processing options
-   * @returns Promise resolving to array of embedding results with metadata
-   */
-  async getBatchEmbeddingsWithMetadata(
-    texts: string[],
-    options?: BatchProcessingOptions,
-  ): Promise<EmbeddingResult[]> {
-    try {
-      const embeddings = await this.getBatchEmbeddings(texts);
-      return embeddings.map(embedding => ({
-        embedding,
-        truncated: false,
-      }));
-    } catch (_error) {
-      // If the new method fails, try the old implementation
-      return this.processEmbeddingsInSmallBatches(texts, options);
-    }
-  }
 
   /**
    * Calculate similarity between two embedding vectors
@@ -302,12 +246,6 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     }
   }
 
-  /**
-   * Backward compatibility method for cosineSimilarity
-   */
-  cosineSimilarity(vec1: number[], vec2: number[]): number {
-    return this.calculateSimilarity(vec1, vec2);
-  }
 
   /**
    * Chunk a long text into smaller pieces for embedding
@@ -325,76 +263,12 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   }
 
   /**
-   * Process a list of embeddings for text chunks and combine them
+   * Get embeddings for text chunks
    * @param textChunks Array of text chunks to embed
-   * @returns Promise resolving to array of embedding results
+   * @returns Promise resolving to array of embedding vectors
    */
-  async getChunkedEmbeddings(textChunks: string[]): Promise<EmbeddingResult[]> {
-    const embeddings = await this.getBatchEmbeddings(textChunks);
-    return embeddings.map(embedding => ({
-      embedding,
-      truncated: false,
-    }));
+  async getChunkedEmbeddings(textChunks: string[]): Promise<number[][]> {
+    return this.getBatchEmbeddings(textChunks);
   }
 
-  /**
-   * Process embeddings in smaller batches when the main batch API fails
-   * @param texts The texts to process
-   * @param options Optional batch processing options
-   * @returns Promise resolving to array of embedding results
-   */
-  private async processEmbeddingsInSmallBatches(
-    texts: string[],
-    options?: BatchProcessingOptions,
-  ): Promise<EmbeddingResult[]> {
-    // Handle empty input
-    if (!isDefined(texts) || texts.length === 0) {
-      return [];
-    }
-
-    // Set batch size with safe defaults
-    const batchSize = isDefined(options?.batchSize) ? options.batchSize : this.batchSize;
-    const safeBatchSize = Math.max(1, batchSize); // Ensure batch size is at least 1
-
-    const results: EmbeddingResult[] = [];
-    const totalBatches = Math.ceil(texts.length / safeBatchSize);
-
-    for (let i = 0; i < texts.length; i += safeBatchSize) {
-      const batchNumber = Math.floor(i / safeBatchSize) + 1;
-      this.logger.debug(`Processing batch ${batchNumber} of ${totalBatches}`);
-
-      // Safely slice the array to get current batch
-      const batch = texts.slice(i, i + safeBatchSize);
-
-      try {
-        // Process each text in the batch in parallel
-        const batchResults = await Promise.all(
-          batch.map(text => this.getEmbeddingWithMetadata(text)),
-        );
-
-        results.push(...batchResults);
-      } catch (error) {
-        // If parallel processing fails, try sequential as a last resort
-        this.logger.warn(`Parallel batch processing failed, falling back to sequential processing: ${error instanceof Error ? error.message : String(error)}`);
-
-        for (const text of batch) {
-          try {
-            const result = await this.getEmbeddingWithMetadata(text);
-            results.push(result);
-          } catch (singleError) {
-            // If even sequential processing fails for this item, log and add a placeholder
-            this.logger.error(`Failed to generate embedding: ${singleError instanceof Error ? singleError.message : String(singleError)}`);
-
-            // Add a placeholder embedding to maintain position in results array
-            results.push({
-              embedding: Array(this.embeddingDimension).fill(0),
-              truncated: false,
-            });
-          }
-        }
-      }
-    }
-
-    return results;
-  }
 }

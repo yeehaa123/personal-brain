@@ -104,63 +104,14 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   }
   
   /**
-   * Calculate cosine similarity between two vectors
+   * Calculate similarity between two vectors
    * @param vec1 First vector
    * @param vec2 Second vector
    * @returns Similarity score (-1 to 1)
    */
-  cosineSimilarity(_vec1: number[], _vec2: number[]): number {
+  calculateSimilarity(_vec1: number[], _vec2: number[]): number {
     // Simple deterministic similarity calculation for tests
     return 0.85;
-  }
-  
-  /**
-   * Get the full embedding result with metadata
-   * @param text The text to embed
-   * @returns A promise resolving to the embedding result with metadata
-   */
-  async getEmbeddingWithMetadata(text: string): Promise<{ embedding: number[], truncated: boolean }> {
-    const embedding = await this.getEmbedding(text);
-    return {
-      embedding,
-      truncated: false,
-    };
-  }
-  
-  /**
-   * Get batch embeddings with metadata
-   * @param texts Array of texts to embed
-   * @returns Array of embedding results with metadata
-   */
-  async getBatchEmbeddingsWithMetadata(texts: string[]): Promise<Array<{ embedding: number[], truncated: boolean }>> {
-    const embeddings = await this.getBatchEmbeddings(texts);
-    return embeddings.map(embedding => ({
-      embedding,
-      truncated: false,
-    }));
-  }
-  
-  /**
-   * Process embeddings in small batches
-   * @param texts Array of texts to process
-   * @param options Batch processing options
-   * @returns Array of embedding results
-   */
-  async processEmbeddingsInSmallBatches(
-    texts: string[],
-    _options?: { batchSize?: number, parallel?: boolean },
-  ): Promise<Array<{ embedding: number[], truncated: boolean }>> {
-    return this.getBatchEmbeddingsWithMetadata(texts);
-  }
-  
-  /**
-   * Calculate similarity between two vectors (alias for ResourceRegistry interface)
-   * @param vec1 First vector
-   * @param vec2 Second vector
-   * @returns Similarity score (-1 to 1)
-   */
-  calculateSimilarity(vec1: number[], vec2: number[]): number {
-    return this.cosineSimilarity(vec1, vec2);
   }
   
   /**
