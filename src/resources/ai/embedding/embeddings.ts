@@ -209,7 +209,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
       try {
         // Process each text individually as a fallback
         const embeddings = await Promise.all(
-          texts.map(text => this.getEmbedding(text))
+          texts.map(text => this.getEmbedding(text)),
         );
         return embeddings;
       } catch (processingError) {

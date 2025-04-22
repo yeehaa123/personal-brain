@@ -162,20 +162,6 @@ export const websiteConfig = {
     
     // Domain settings
     domain: getEnv('WEBSITE_DOMAIN', 'example.com'),
-    
-    // Legacy provider-specific configurations
-    provider: getEnv('WEBSITE_DEPLOYMENT_PROVIDER', 'local-dev'),
-    providers: {
-      // S3 deployment configuration (for Hetzner and similar services)
-      s3: {
-        endpoint: getEnv('S3_ENDPOINT', ''),
-        accessKey: getEnv('S3_ACCESS_KEY', ''),
-        secretKey: getEnv('S3_SECRET_KEY', ''),
-        bucketName: getEnv('S3_BUCKET_NAME', ''),
-        region: getEnv('S3_REGION', ''),
-        buildDir: getEnv('S3_BUILD_DIR', 'dist'),
-      },
-    },
   },
 };
 
