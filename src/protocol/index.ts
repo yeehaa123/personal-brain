@@ -20,7 +20,7 @@ export type {
   QueryResult,
   QueryOptions,
   InterfaceType,
-  BrainProtocolOptions
+  BrainProtocolOptions,
 } from './types';
 
 // Export primary messaging interfaces needed by contexts

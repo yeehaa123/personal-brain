@@ -14,20 +14,20 @@ export type {
   CommandMessage,
   EventMessage,
   ResponseMessage,
-  ProtocolMessage
+  ProtocolMessage,
 } from './messageFormats';
 
 // Export only the converter interfaces used by public API
 export { 
   JsonConverter,
-  TextConverter
+  TextConverter,
 } from './converters';
 
 // Export standardized response schema (public API)
 export type { StandardResponse } from './schemas/standardResponseSchema';
 export { 
   StandardResponseSchema,
-  generateStandardSystemPrompt
+  generateStandardSystemPrompt,
 } from './schemas/standardResponseSchema';
 
 // Export conversation schemas (public API)
@@ -36,14 +36,14 @@ export type {
   ConversationSummary,
   Conversation,
   ConversationOptions,
-  MemoryTier
+  MemoryTier,
 } from './schemas/conversationSchemas';
 export {
   ConversationTurnSchema,
   ConversationSummarySchema,
   ConversationSchema,
   ConversationOptionsSchema,
-  MemoryTierEnum
+  MemoryTierEnum,
 } from './schemas/conversationSchemas';
 
 // Export conversation context configuration (public API)

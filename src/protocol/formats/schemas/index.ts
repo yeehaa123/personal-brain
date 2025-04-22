@@ -17,14 +17,14 @@ export type {
   ConversationSummary,
   Conversation,
   ConversationOptions,
-  MemoryTier
+  MemoryTier,
 } from './conversationSchemas';
 export {
   ConversationTurnSchema,
   ConversationSummarySchema,
   ConversationSchema,
   ConversationOptionsSchema,
-  MemoryTierEnum
+  MemoryTierEnum,
 } from './conversationSchemas';
 
 // Export conversation context configuration

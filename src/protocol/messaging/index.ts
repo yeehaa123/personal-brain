@@ -13,7 +13,7 @@ export type {
   DataRequestMessage, 
   DataResponseMessage, 
   NotificationMessage,
-  AcknowledgmentMessage
+  AcknowledgmentMessage,
 } from './messageTypes';
 export { DataRequestType, NotificationType } from './messageTypes';
 
@@ -32,5 +32,5 @@ export {
   requestProfile,
   requestConversationHistory,
   requestExternalSources,
-  requestWebsiteStatus
+  requestWebsiteStatus,
 } from './contextIntegration';
