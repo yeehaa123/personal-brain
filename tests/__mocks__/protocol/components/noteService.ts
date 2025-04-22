@@ -8,7 +8,7 @@
 import { mock } from 'bun:test';
 
 import type { Note } from '@models/note';
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
  * Create a mock note with specified properties
@@ -143,7 +143,7 @@ export class MockNoteService {
 
   // Embedding capabilities
   createEmbedding = mock<(text: string) => Promise<number[]>>(async (text: string) => {
-    return createMockEmbedding(text);
+    return MockEmbeddingService.createMockEmbedding(text);
   });
 
   findRelatedNotes = mock<(noteId: string, limit?: number) => Promise<Array<Note & { score: number }>>>(async (noteId: string, limit: number = 5) => {

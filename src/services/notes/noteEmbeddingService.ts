@@ -8,6 +8,7 @@
  */
 import { textConfig } from '@/config';
 import type { Note } from '@/models/note';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ApiError, tryExec, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
@@ -39,19 +40,19 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
    * 
    * Part of the Component Interface Standardization pattern.
    * 
-   * @param apiKey Optional API key for the embedding service
+   * @param embeddingService Optional embedding service for dependency injection
    * @returns The shared NoteEmbeddingService instance
    */
-  public static getInstance(apiKey?: string): NoteEmbeddingService {
+  public static getInstance(embeddingService?: EmbeddingService): NoteEmbeddingService {
     if (!NoteEmbeddingService.instance) {
-      NoteEmbeddingService.instance = new NoteEmbeddingService(apiKey);
+      NoteEmbeddingService.instance = new NoteEmbeddingService(embeddingService);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('NoteEmbeddingService singleton instance created');
-    } else if (apiKey) {
-      // Log a warning if trying to get instance with different API key
+    } else if (embeddingService) {
+      // Log a warning if trying to get instance with different embedding service
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with apiKey but instance already exists. API key ignored.');
+      logger.warn('getInstance called with embeddingService but instance already exists. Service ignored.');
     }
     
     return NoteEmbeddingService.instance;
@@ -87,14 +88,18 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
    * Creates a new instance without affecting the singleton instance.
    * Primarily used for testing.
    * 
-   * @param apiKey Optional API key for the embedding service
+   * @param embeddingService Optional embedding service for dependency injection
+   * @param noteRepository Optional note repository for dependency injection
    * @returns A new NoteEmbeddingService instance
    */
-  public static createFresh(apiKey?: string): NoteEmbeddingService {
+  public static createFresh(
+    embeddingService?: EmbeddingService,
+    noteRepository?: NoteRepository,
+  ): NoteEmbeddingService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh NoteEmbeddingService instance');
     
-    return new NoteEmbeddingService(apiKey);
+    return new NoteEmbeddingService(embeddingService, noteRepository);
   }
 
   /**
@@ -103,11 +108,12 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
    * While this constructor is public, it is recommended to use the factory methods
    * getInstance() or createFresh() instead to ensure consistent instance management.
    * 
-   * @param apiKey Optional API key for the embeddings service
+   * @param embeddingService Optional embedding service for dependency injection
+   * @param noteRepository Optional note repository for dependency injection
    */
-  constructor(apiKey?: string) {
-    super(apiKey);
-    this.noteRepository = NoteRepository.getInstance();
+  constructor(embeddingService?: EmbeddingService, noteRepository?: NoteRepository) {
+    super(embeddingService);
+    this.noteRepository = noteRepository || NoteRepository.getInstance();
     this.logger.debug('NoteEmbeddingService instance created');
   }
 

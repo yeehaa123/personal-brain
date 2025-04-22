@@ -7,15 +7,15 @@
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { 
   DataRequestType,
-  NotificationType 
+  NotificationType, 
 } from '@/protocol/messaging';
 import type { 
   DataRequestMessage, 
-  NotificationMessage
+  NotificationMessage,
 } from '@/protocol/messaging';
+import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { Logger } from '@/utils/logger';
 
 import type { WebsiteContext } from '../websiteContext';

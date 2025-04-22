@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
+import type { EmbeddingService } from '@/resources/ai/embedding/embeddings';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
+import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
-import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
-// Set up embedding service mocks
-setupEmbeddingMocks(mock);
+// Mock the EmbeddingService directly
+mock.module('@/resources/ai/embedding', () => ({
+  EmbeddingService: MockEmbeddingService,
+}));
 
 // Create a mock profile for testing - using the standard createMockProfile but customizing it
 const mockProfile: Profile = {
@@ -56,22 +60,26 @@ describe('ProfileEmbeddingService', () => {
   let embeddingService: ProfileEmbeddingService;
 
   beforeEach(() => {
-    // Create the service
-    embeddingService = new ProfileEmbeddingService('mock-api-key');
-
-    // Replace the repository in the service with our mock
-    Object.defineProperty(embeddingService, 'repository', {
-      value: mockRepository,
-      writable: true,
-    });
+    // Reset singleton instances to ensure test isolation
+    ProfileEmbeddingService.resetInstance();
+    MockEmbeddingService.resetInstance();
+    
+    // Create the service using the standardized factory method
+    const mockEmbeddingService = MockEmbeddingService.createFresh();
+    // Use createFresh to create a new instance with our dependencies
+    embeddingService = ProfileEmbeddingService.createFresh(
+      mockEmbeddingService as unknown as EmbeddingService,
+      mockRepository as unknown as ProfileRepository,
+    );
   });
 
   test('should properly initialize', () => {
     expect(embeddingService).toBeDefined();
   });
 
-  test('should create instance with API key', () => {
-    const service = new ProfileEmbeddingService('mock-api-key');
+  test('should create instance with dependency injection', () => {
+    const mockEmbedding = MockEmbeddingService.createFresh();
+    const service = ProfileEmbeddingService.createFresh(mockEmbedding as unknown as EmbeddingService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileEmbeddingService);
   });

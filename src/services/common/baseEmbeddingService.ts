@@ -26,11 +26,11 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
   protected embeddingService: EmbeddingService;
 
   /**
-   * Creates a new embedding service instance
-   * @param apiKey Optional API key for the embeddings service
+   * Creates a new embedding service instance with dependency injection
+   * @param embeddingService The embedding service to use
    */
-  constructor(apiKey?: string) {
-    this.embeddingService = EmbeddingService.getInstance(apiKey ? { apiKey } : undefined);
+  constructor(embeddingService?: EmbeddingService) {
+    this.embeddingService = embeddingService || EmbeddingService.getInstance();
   }
 
   /**

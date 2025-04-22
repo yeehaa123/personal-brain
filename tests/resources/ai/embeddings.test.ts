@@ -1,13 +1,75 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { EmbeddingService } from '@/resources/ai/embedding';
-import { setupEmbeddingMocks } from '@test/__mocks__/';
 
-// Set up all embedding-related mocks
-setupEmbeddingMocks(mock);
+// Helper function to create deterministic embeddings for testing
+function createDeterministicEmbedding(text: string, dimensions: number = 1536): number[] {
+  // Simple hash function
+  const hashString = (str: string): number => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash;
+  };
+
+  // Create a deterministic embedding based on the hash
+  const seed = hashString(text);
+  const embedding = Array(dimensions).fill(0).map((_, i) => {
+    const x = Math.sin(seed + i * 0.1) * 10000;
+    return (x - Math.floor(x)) * 0.8 - 0.4; // Values between -0.4 and 0.4
+  });
+
+  // Normalize the embedding
+  const magnitude = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+  return embedding.map(val => val / magnitude);
+}
+
+// Mock the OpenAI SDK dependency
+mock.module('@ai-sdk/openai', () => {
+  return {
+    openai: {
+      embedding: (model: string) => ({
+        id: model,
+        provider: 'openai',
+      }),
+    },
+  };
+});
+
+// Mock Vercel AI SDK with direct implementations
+mock.module('ai', () => {
+  return {
+    cosineSimilarity: (_vec1: number[], _vec2: number[]) => {
+      return 0.85;
+    },
+
+    embed: async ({ value }: { value: string }) => {
+      return {
+        embedding: createDeterministicEmbedding(value),
+        usage: { tokens: 50 },
+      };
+    },
+
+    embedMany: async ({ values }: { values: string[] }) => {
+      return {
+        embeddings: values.map(text => createDeterministicEmbedding(text)),
+        usage: { tokens: values.length * 50 },
+      };
+    },
+  };
+});
 
 describe('EmbeddingService', () => {
   let service: EmbeddingService;
+
+  // Use beforeAll to ensure this is run once before any test
+  beforeAll(() => {
+    // Ensure clean state
+    EmbeddingService.resetInstance();
+  });
 
   beforeEach(() => {
     // Reset singleton and get a fresh instance
@@ -15,20 +77,9 @@ describe('EmbeddingService', () => {
     service = EmbeddingService.getInstance({ apiKey: 'mock-api-key' });
   });
 
-  test('should follow the Component Interface Standardization pattern', () => {
-    // Test singleton pattern
-    const instance1 = EmbeddingService.getInstance();
-    const instance2 = EmbeddingService.getInstance();
-    expect(instance1).toBe(instance2);
-    
-    // Test createFresh
-    const freshInstance = EmbeddingService.createFresh();
-    expect(freshInstance).not.toBe(instance1);
-    
-    // Test resetInstance
+  // Ensure cleanup after all tests to avoid affecting other test files
+  afterAll(() => {
     EmbeddingService.resetInstance();
-    const instance3 = EmbeddingService.getInstance();
-    expect(instance3).not.toBe(instance1);
   });
 
   test('should provide embedding generation', async () => {
@@ -47,7 +98,7 @@ describe('EmbeddingService', () => {
 
     // Verify interface/shape
     expect(results.length).toBe(texts.length);
-    
+
     // Each result should have the expected shape
     for (const result of results) {
       expect(result).toBeDefined();

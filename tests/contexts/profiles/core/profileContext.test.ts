@@ -10,7 +10,7 @@ import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddi
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
-import { silenceLogger } from '@test/__mocks__';
+import { silenceLogger } from '@test/__mocks__/core/logger';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 import logger from '@utils/logger';
 

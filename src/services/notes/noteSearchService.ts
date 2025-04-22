@@ -225,76 +225,22 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    */
   async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
     try {
-      // Try semantic similarity first
-      const relatedNotes = await this.embeddingService.findRelatedNotes(noteId, maxResults);
+      // Apply safe limits
+      const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
+      
+      // Try semantic similarity
+      const relatedNotes = await this.embeddingService.findRelatedNotes(noteId, safeMaxResults);
 
       if (relatedNotes.length > 0) {
         // Remove score property before returning
         return relatedNotes.map(({ score: _score, ...note }) => note);
       }
 
-      // Fall back to keyword-based related notes if no semantic results
-      return this.getKeywordRelatedNotes(noteId, maxResults);
+      // Fall back to recent notes if no semantic results or an error occurs
+      this.logger.debug('No semantic related notes found, returning recent notes');
+      return this.repository.getRecentNotes(safeMaxResults);
     } catch (error) {
       this.logger.error(`Error finding related notes: ${error instanceof Error ? error.message : String(error)}`);
-      this.logger.debug('Falling back to keyword-based related notes');
-      return this.getKeywordRelatedNotes(noteId, maxResults);
-    }
-  }
-
-  /**
-   * Fall back to keyword-based related notes when embeddings aren't available
-   * @param noteId ID of the note to find related notes for
-   * @param maxResults Maximum number of results to return
-   * @returns Array of related notes
-   */
-  private async getKeywordRelatedNotes(noteId: string, maxResults = 5): Promise<Note[]> {
-    try {
-      // Apply safe limits
-      const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
-
-      // Get the source note
-      const sourceNote = await this.repository.getNoteById(noteId);
-
-      if (!isDefined(sourceNote)) {
-        this.logger.warn(`Source note not found for keyword relation: ${noteId}`);
-        return [];
-      }
-
-      // Make sure the note has content
-      if (!isNonEmptyString(sourceNote.content)) {
-        this.logger.debug(`Source note has no content for keyword extraction: ${noteId}`);
-        return this.repository.getRecentNotes(safeMaxResults);
-      }
-
-      // Extract keywords from the source note
-      const keywords = this.extractKeywords(sourceNote.content);
-
-      if (!Array.isArray(keywords) || keywords.length === 0) {
-        this.logger.debug(`No keywords extracted from note: ${noteId}`);
-        return this.repository.getRecentNotes(safeMaxResults);
-      }
-
-      this.logger.debug(`Extracted ${keywords.length} keywords from note ${noteId}: ${keywords.join(', ')}`);
-
-      // Use each keyword as a search term
-      const keywordPromises = keywords.map(keyword =>
-        this.repository.searchNotesByKeywords(keyword, undefined, Math.ceil(safeMaxResults / 2), 0),
-      );
-
-      const keywordResults = await Promise.all(keywordPromises);
-
-      // Combine and deduplicate results
-      const allResults = keywordResults.flat();
-
-      // Remove duplicates and the source note itself using the base class method
-      return this.deduplicateResults(
-        allResults,
-        note => note.id,
-        noteId,
-      ).slice(0, safeMaxResults);
-    } catch (error) {
-      this.logger.error(`Error finding keyword-related notes: ${error instanceof Error ? error.message : String(error)}`);
       this.logger.debug(`Falling back to recent notes with limit ${maxResults}`);
       return this.repository.getRecentNotes(maxResults);
     }

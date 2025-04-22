@@ -64,6 +64,13 @@ Identify and remove all remaining legacy code, compatibility layers, and transit
    - Remove unnecessary re-exports that leak implementation details
    - Use direct imports for implementation details that aren't part of the public API
    - Focus especially on the main context barrel files (in src/contexts/*/index.ts)
+   - Remove all barrel files in test and mock directories:
+     * Remove tests/__mocks__/*/index.ts files
+     * Update test imports to reference mock implementations directly
+     * Preserve only mocks that are actually used by tests
+     * Replace utility-based mocks with standardized mocks:
+       - Removed embeddingUtils.ts and incorporated functionality into MockEmbeddingService
+       - Updated all test files to use MockEmbeddingService directly
 
 4. Use `bun run lint:fix` with the newly added unused-imports plugin to clean up unused imports:
    - Run periodically during the cleanup process
@@ -174,6 +181,10 @@ Complete comprehensive documentation for the architecture and components:
    - Move to repository implementations
    - Update higher-level components that depend on these
    - Update all tests to use the standardized pattern
+   - Implement the unified ServiceRegistry-based dependency injection approach:
+     * Make ServiceRegistry the central point for all service resolution
+     * Remove direct service instantiation from contexts
+     * Create testing helpers for easy mocking
 
 3. **Refine Error Handling** (Medium Priority):
    - Standardize error types
@@ -216,6 +227,13 @@ Complete comprehensive documentation for the architecture and components:
    - Ensure all protocol components use proper dependency injection
    - Update messaging handlers to use dependency injection
    - Update protocol tests to use standardized mock implementations
+
+4. **Unified ServiceRegistry-based Dependency Injection**:
+   - Refactor all contexts to consistently use ServiceRegistry for service resolution
+   - Remove direct service instantiation from context implementations
+   - Create standardized testing helpers for ServiceRegistry-based mocking
+   - Update all context tests to use the new dependency injection pattern
+   - Simplify barrel file exports by removing implementation classes that are now accessed through ServiceRegistry
 
 ### Documentation Tasks
 

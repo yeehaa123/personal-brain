@@ -3,36 +3,24 @@
  * 
  * This module exports the context components for interacting with different data domains.
  * Each context provides a specialized interface for a specific type of data or service.
+ * 
+ * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-// Export specific components from each domain to avoid name collisions
-import { ConversationContext } from './conversations';
-import { BaseContext } from './core';
-import type { 
-  CoreContextInterface, 
-  FormatterInterface, 
-  McpContextInterface, 
-  StorageInterface, 
-} from './core';
-import { ExternalSourceContext } from './externalSources';
-import { NoteContext } from './notes';
-import { ProfileContext } from './profiles';
-import { WebsiteContext } from './website';
-
-// Export the context classes
-export { BaseContext };
+// Export core interfaces and base context
+export { BaseContext } from './core';
 export type { 
   CoreContextInterface, 
   McpContextInterface, 
   FormatterInterface, 
   StorageInterface, 
-};
+  ContextStatus,
+  ContextCapabilities,
+} from './core';
 
-// Domain contexts
-export {
-  ConversationContext,
-  ExternalSourceContext,
-  NoteContext,
-  ProfileContext,
-  WebsiteContext,
-};
+// Domain contexts - the main public API for each domain
+export { ConversationContext } from './conversations';
+export { ExternalSourceContext } from './externalSources'; 
+export { NoteContext } from './notes';
+export { ProfileContext } from './profiles';
+export { WebsiteContext } from './website';

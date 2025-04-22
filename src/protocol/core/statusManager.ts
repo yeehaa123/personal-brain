@@ -205,18 +205,4 @@ export class StatusManager {
     
     return status;
   }
-  
-  /**
-   * Get a simple key-value representation of system status
-   * Provided for backward compatibility
-   * @returns Simple status object
-   */
-  getStatusLegacy(): Record<string, boolean> {
-    return {
-      contextOrchestrator: this.contextOrchestrator.areContextsReady(),
-      conversationManager: this.conversationManager.hasActiveConversation(),
-      mcpServer: !!this.mcpServer,
-      externalSources: this.externalSourcesEnabled,
-    };
-  }
 }

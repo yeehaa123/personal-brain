@@ -3,10 +3,9 @@
  * 
  * This module serves as the entry point for the resources layer,
  * providing access to external services through a standardized interface.
+ * 
+ * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-// Re-export AI services
-export * from './ai';
-
-// Export ResourceRegistry
-export * from './resourceRegistry';
+// Only export ResourceRegistry as that's the primary component imported directly
+export { ResourceRegistry } from './resourceRegistry';

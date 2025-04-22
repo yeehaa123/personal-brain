@@ -7,7 +7,7 @@
 
 import { mock } from 'bun:test';
 
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 // External source result type
 export interface ExternalSourceResult {
@@ -133,7 +133,7 @@ export class MockWikipediaSource {
     content: 'This is a mock Wikipedia result',
     url: 'https://en.wikipedia.org/wiki/Mock',
     source: 'Wikipedia',
-    embedding: createMockEmbedding('Wikipedia test'),
+    embedding: MockEmbeddingService.createMockEmbedding('Wikipedia test'),
   }]));
   checkAvailability = mock(() => Promise.resolve(true));
   getSourceMetadata = mock(() => Promise.resolve({ name: 'Wikipedia', description: 'Mock Wikipedia Source' }));
@@ -175,7 +175,7 @@ export class MockNewsApiSource {
     content: 'This is a mock news result',
     url: 'https://news.example.com/article/1',
     source: 'NewsAPI',
-    embedding: createMockEmbedding('NewsAPI test'),
+    embedding: MockEmbeddingService.createMockEmbedding('NewsAPI test'),
   }]));
   checkAvailability = mock(() => Promise.resolve(true));
   getSourceMetadata = mock(() => Promise.resolve({ name: 'NewsAPI', description: 'Mock News API Source' }));

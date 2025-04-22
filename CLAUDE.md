@@ -624,3 +624,12 @@ test('component with isolated dependencies', () => {
    - Maintain test purity by avoiding shared state
    - Use helper functions for consistent environment setup
    - Isolate dependencies with setupDependencyContainer()
+
+6. **Mock Anti-Patterns and Best Practices**:
+   - **Avoid Utility-Based Mocks**: Don't create separate utility functions for mock functionality that should be part of the standardized mock implementation.
+   - **Centralize Mock Logic**: Keep related mock functionality within the mock class itself rather than separating it into utility files.
+   - **Avoid Barrel Files in Tests**: Don't use barrel files (index.ts) for test mocks; import mock implementations directly.
+   - **Standardized Mock Structure**: Use the Component Interface Standardization pattern consistently (getInstance/resetInstance/createFresh) for all mocks.
+   - **Direct Dependencies**: When mocking in test files, only mock direct dependencies of the unit under test, not the unit itself.
+   - **Inline Mock Setup**: Define mocks directly in the test files where they're needed, rather than relying on external setup utilities.
+   - **Static vs. Instance Methods**: Prefer static methods for utility functions and instance methods for behavior that simulates the real implementation.

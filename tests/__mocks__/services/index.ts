@@ -5,4 +5,3 @@
  */
 
 export * from './searchService';
-export * from './embeddingService';

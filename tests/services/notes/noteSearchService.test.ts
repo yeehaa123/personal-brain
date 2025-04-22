@@ -6,11 +6,13 @@ import { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 
-// Set up embedding service mocks
-setupEmbeddingMocks(mock);
+// Mock the EmbeddingService directly
+mock.module('@/resources/ai/embedding', () => ({
+  EmbeddingService: MockEmbeddingService,
+}));
 
 // Mock the textUtils functions
 mock.module('@/utils/textUtils', () => ({
@@ -35,7 +37,7 @@ const mockNotes = [
     title: 'Test Note 1',
     content: 'This is a test note about artificial intelligence and machine learning',
     tags: ['ai', 'ml', 'technology'],
-    embedding: createMockEmbedding('AI note'),
+    embedding: MockEmbeddingService.createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
     source: 'import',
@@ -45,7 +47,7 @@ const mockNotes = [
     title: 'Test Note 2',
     content: 'This note is about programming languages like JavaScript and TypeScript',
     tags: ['programming', 'javascript', 'typescript'],
-    embedding: createMockEmbedding('programming note'),
+    embedding: MockEmbeddingService.createMockEmbedding('programming note'),
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
     source: 'import',
@@ -55,7 +57,7 @@ const mockNotes = [
     title: 'Test Note 3',
     content: 'Notes about web development with frameworks like React and Vue',
     tags: ['web', 'frontend', 'javascript'],
-    embedding: createMockEmbedding('web dev note'),
+    embedding: MockEmbeddingService.createMockEmbedding('web dev note'),
     createdAt: new Date('2023-03-01'),
     updatedAt: new Date('2023-03-02'),
     source: 'import',
@@ -68,7 +70,7 @@ const mockRepository = MockNoteRepository.createFresh(mockNotes);
 // Create a mock embedding service
 class MockNoteEmbeddingService {
   async generateEmbedding(text: string): Promise<number[]> {
-    return createMockEmbedding(text);
+    return MockEmbeddingService.createMockEmbedding(text);
   }
 
   async searchSimilarNotes(_embedding: number[], limit: number = 5): Promise<Note[]> {
@@ -96,6 +98,8 @@ class MockNoteEmbeddingService {
     // Check if the note exists first
     const noteExists = mockNotes.some(note => note.id === noteId);
     if (!noteExists) {
+      // Since we changed the implementation to fall back to recent notes,
+      // we need to match that behavior in the mock
       return [];
     }
 
@@ -158,11 +162,12 @@ describe('NoteSearchService', () => {
       expect(results.every(note => note.id !== 'note-1')).toBe(true);
     });
 
-    test('should handle non-existent note ID', async () => {
+    test('should fall back to recent notes for non-existent note ID', async () => {
       const results = await searchService.findRelated('non-existent-id');
 
       expect(results).toBeDefined();
-      expect(results.length).toBe(0);
+      // With the updated implementation, it falls back to recent notes instead of returning empty array
+      expect(results.length).toBeGreaterThan(0);
     });
   });
 });

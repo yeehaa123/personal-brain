@@ -51,7 +51,8 @@ describe('ServiceRegistry Class', () => {
     };
     
     // Mock the ResourceRegistry to avoid actual API calls
-    spyOn(EmbeddingService, 'getInstance').mockImplementation(() => new MockEmbeddingService() as unknown as EmbeddingService);
+    // Always use the proper factory method pattern
+    spyOn(EmbeddingService, 'getInstance').mockImplementation(() => MockEmbeddingService.createFresh() as unknown as EmbeddingService);
   });
   
   afterEach(() => {

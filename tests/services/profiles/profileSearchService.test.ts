@@ -8,7 +8,7 @@ import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 // Define interface for NoteContext
 interface NoteContext {
@@ -16,8 +16,10 @@ interface NoteContext {
   searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<(Note & { similarity: number })[]>;
 }
 
-// Set up embedding service mocks
-setupEmbeddingMocks(mock);
+// Mock the EmbeddingService directly
+mock.module('@/resources/ai/embedding', () => ({
+  EmbeddingService: MockEmbeddingService,
+}));
 
 // Create a mock profile for testing
 const mockProfile: Profile = {
@@ -70,7 +72,7 @@ const mockProfile: Profile = {
   accomplishmentHonorsAwards: null,
   accomplishmentProjects: null,
   volunteerWork: null,
-  embedding: createMockEmbedding('John Doe profile'),
+  embedding: MockEmbeddingService.createMockEmbedding('John Doe profile'),
   tags: ['software-engineering', 'typescript', 'react'],
   createdAt: new Date('2023-01-01'),
   updatedAt: new Date('2023-01-02'),
@@ -83,7 +85,7 @@ const mockNotes: Note[] = [
     title: 'TypeScript Best Practices',
     content: 'Guide to TypeScript development and best practices.',
     tags: ['typescript', 'software-engineering', 'programming'],
-    embedding: createMockEmbedding('typescript note'),
+    embedding: MockEmbeddingService.createMockEmbedding('typescript note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
     source: 'import',
@@ -93,7 +95,7 @@ const mockNotes: Note[] = [
     title: 'React Component Design',
     content: 'How to design effective React components.',
     tags: ['react', 'frontend', 'ui-design'],
-    embedding: createMockEmbedding('react note'),
+    embedding: MockEmbeddingService.createMockEmbedding('react note'),
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
     source: 'import',
@@ -103,7 +105,7 @@ const mockNotes: Note[] = [
     title: 'Machine Learning Introduction',
     content: 'Introduction to ML concepts and applications.',
     tags: ['machine-learning', 'ai', 'data-science'],
-    embedding: createMockEmbedding('ml note'),
+    embedding: MockEmbeddingService.createMockEmbedding('ml note'),
     createdAt: new Date('2023-03-01'),
     updatedAt: new Date('2023-03-02'),
     source: 'import',

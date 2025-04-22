@@ -1,5 +1,7 @@
 /**
  * Transport modules for MCP communication
+ * 
+ * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-export * from './heartbeatSseTransport';
+export { HeartbeatSSETransport } from './heartbeatSseTransport';

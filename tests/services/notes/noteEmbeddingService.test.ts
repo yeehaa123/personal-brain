@@ -1,13 +1,10 @@
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Note } from '@/models/note';
+import type { EmbeddingService } from '@/resources/ai/embedding/embeddings';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import { createTestNote } from '@test/__mocks__/models/note';
-import { createMockEmbedding, setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
-
-
-// Set up all necessary mocks for embedding services
-setupEmbeddingMocks(mock);
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 // Create mock notes for testing
 const mockNotes: Note[] = [
@@ -16,7 +13,7 @@ const mockNotes: Note[] = [
     title: 'Test Note 1', 
     content: 'This is a test note about artificial intelligence.',
     tags: ['ai', 'ml', 'technology'],
-    embedding: createMockEmbedding('AI note'),
+    embedding: MockEmbeddingService.createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
     source: 'import',
@@ -58,20 +55,44 @@ const mockRepositoryMethods = {
     Promise.resolve(`chunk-${chunk.noteId}-${Math.floor(Math.random() * 1000)}`),
 };
 
-// Define a class to override the constructor
+// Define a class to override the factory methods with mocks
 class TestNoteEmbeddingService extends NoteEmbeddingService {
-  constructor(apiKey?: string) {
-    super(apiKey);
-    // Override the repository with our mock
-    Object.defineProperty(this, 'noteRepository', {
-      value: mockRepositoryMethods,
-      writable: true,
-    });
+  private static testInstance: TestNoteEmbeddingService | null = null;
+  
+  // Override the getInstance method to return our test instance
+  public static override getInstance(): TestNoteEmbeddingService {
+    if (!TestNoteEmbeddingService.testInstance) {
+      const mockEmbedding = MockEmbeddingService.createFresh();
+      TestNoteEmbeddingService.testInstance = new TestNoteEmbeddingService(
+        mockEmbedding as unknown as EmbeddingService,
+        mockRepositoryMethods as unknown as NoteEmbeddingService['noteRepository'],
+      );
+    }
+    return TestNoteEmbeddingService.testInstance;
   }
   
-  // Override the factory methods to use our test class
-  public static override createFresh(apiKey?: string): TestNoteEmbeddingService {
-    return new TestNoteEmbeddingService(apiKey);
+  // Override resetInstance to reset our test instance
+  public static override resetInstance(): void {
+    TestNoteEmbeddingService.testInstance = null;
+    // Also call the parent class's resetInstance method
+    NoteEmbeddingService.resetInstance();
+  }
+  
+  // Override createFresh to create a fresh test instance with all mocks injected
+  public static override createFresh(): TestNoteEmbeddingService {
+    const mockEmbedding = MockEmbeddingService.createFresh();
+    return new TestNoteEmbeddingService(
+      mockEmbedding as unknown as EmbeddingService,
+      mockRepositoryMethods as unknown as NoteEmbeddingService['noteRepository'],
+    );
+  }
+  
+  // Private constructor that lets us pass all dependencies
+  private constructor(
+    embeddingService: EmbeddingService,
+    repository: NoteEmbeddingService['noteRepository'],
+  ) {
+    super(embeddingService, repository);
   }
 }
 
@@ -83,7 +104,7 @@ describe('NoteEmbeddingService', () => {
     NoteEmbeddingService.resetInstance();
     
     // Create a fresh service instance for testing
-    embeddingService = TestNoteEmbeddingService.createFresh('mock-api-key');
+    embeddingService = TestNoteEmbeddingService.createFresh();
   });
   
   test('should properly initialize', () => {
@@ -133,7 +154,7 @@ describe('NoteEmbeddingService', () => {
       },
       // Make sure getBatchEmbeddings returns the correct number of mock embeddings
       getBatchEmbeddings: async (texts: string[]) => {
-        return texts.map(text => createMockEmbedding(text));
+        return texts.map(text => MockEmbeddingService.createMockEmbedding(text));
       },
     };
     
@@ -166,7 +187,7 @@ describe('NoteEmbeddingService', () => {
   });
   
   test('should search similar notes', async () => {
-    const embedding = createMockEmbedding('search embedding');
+    const embedding = MockEmbeddingService.createMockEmbedding('search embedding');
     const results = await embeddingService.searchSimilarNotes(embedding, 5);
     
     expect(results).toBeDefined();

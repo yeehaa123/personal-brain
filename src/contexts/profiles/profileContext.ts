@@ -215,7 +215,7 @@ export class ProfileContext extends BaseContext<
     } else {
       // No dependencies provided, create from config
       // Create embedding service first, it will be needed by other components
-      const embeddingService = ProfileEmbeddingService.getInstance(profileConfig.apiKey);
+      const embeddingService = ProfileEmbeddingService.getInstance();
       
       // Create repository
       const repository = ProfileRepository.getInstance();

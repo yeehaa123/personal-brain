@@ -11,7 +11,7 @@ import type {
   ProfileEducation,
   ProfileExperience,
 } from '@models/profile';
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
  * Create a date info object for profile dates
@@ -104,7 +104,7 @@ export class MockProfile {
       accomplishmentHonorsAwards: null,
       accomplishmentProjects: null,
       volunteerWork: null,
-      embedding: createMockEmbedding('John Doe profile'),
+      embedding: EmbeddingService.createMockEmbedding('John Doe profile'),
       tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
       createdAt: new Date(),
       updatedAt: new Date(),

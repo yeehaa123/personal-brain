@@ -3,21 +3,48 @@
  */
 import { describe, expect, mock, test } from 'bun:test';
 
+import type { EmbeddingService } from '@/resources/ai/embedding/embeddings';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { ValidationError } from '@/utils/errorUtils';
-import { setupEmbeddingMocks } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
-// Set up embedding service mocks
-setupEmbeddingMocks(mock);
 
 // Concrete implementation of BaseEmbeddingService for testing
 class TestEmbeddingService extends BaseEmbeddingService {
-  // No need to add methods, we just want to test the base class
+  private static instance: TestEmbeddingService | null = null;
+  
+  // Implement the Component Interface Standardization pattern
+  public static getInstance(): TestEmbeddingService {
+    if (!TestEmbeddingService.instance) {
+      TestEmbeddingService.instance = new TestEmbeddingService();
+    }
+    return TestEmbeddingService.instance;
+  }
+  
+  public static resetInstance(): void {
+    TestEmbeddingService.instance = null;
+  }
+  
+  public static createFresh(): TestEmbeddingService {
+    return new TestEmbeddingService();
+  }
+  
+  // Private constructor to enforce getInstance() usage
+  private constructor() {
+    // Inject our mock embedding service using dependency injection
+    // Create a fresh instance to avoid singleton issues
+    // Use type assertion to match the expected EmbeddingService type
+    super(MockEmbeddingService.createFresh() as unknown as EmbeddingService);
+  }
 }
 
 describe('BaseEmbeddingService', () => {
-
-  const service = new TestEmbeddingService();
+  // Reset the singleton instances before tests
+  TestEmbeddingService.resetInstance();
+  MockEmbeddingService.resetInstance();
+  
+  // Get a fresh instance for testing, following the Component Interface Standardization pattern
+  const service = TestEmbeddingService.createFresh();
 
   test('should generate embeddings for valid text', async () => {
     const embedding = await service.generateEmbedding('test text');

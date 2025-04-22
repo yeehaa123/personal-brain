@@ -30,9 +30,9 @@ describe('ResourceRegistry', () => {
       OPENAI_API_KEY: 'mock-openai-key',
     };
     
-    // Mock the AI classes
-    spyOn(ClaudeModel, 'getInstance').mockImplementation(() => new MockClaudeModel() as unknown as ClaudeModel);
-    spyOn(EmbeddingService, 'getInstance').mockImplementation(() => new MockEmbeddingService() as unknown as EmbeddingService);
+    // Mock the AI classes using the proper factory methods
+    spyOn(ClaudeModel, 'getInstance').mockImplementation(() => MockClaudeModel.createFresh() as unknown as ClaudeModel);
+    spyOn(EmbeddingService, 'getInstance').mockImplementation(() => MockEmbeddingService.createFresh() as unknown as EmbeddingService);
   });
   
   afterEach(() => {

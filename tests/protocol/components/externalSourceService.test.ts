@@ -7,7 +7,7 @@ import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { PromptFormatter } from '@/protocol/components/promptFormatter';
 import type { Note } from '@models/note';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 
 
@@ -43,7 +43,7 @@ describe('ExternalSourceService', () => {
     createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing']),
   ];
   // Update the first note to have custom embedding
-  sampleNotes[0].embedding = createMockEmbedding('Quantum computing basics');
+  sampleNotes[0].embedding = MockEmbeddingService.createMockEmbedding('Quantum computing basics');
   sampleNotes[0].content = 'Quantum computing uses qubits instead of classical bits.';
 
   // Mock the dependencies

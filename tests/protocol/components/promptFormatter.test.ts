@@ -6,7 +6,7 @@ import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import type { Note } from '@models/note';
 import type { Profile } from '@models/profile';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 
 
@@ -22,12 +22,12 @@ describe('PromptFormatter', () => {
   
   // Customize the notes with specific contents and embeddings
   sampleNotes[0].content = 'Quantum computing uses quantum bits or qubits which can exist in multiple states simultaneously.';
-  sampleNotes[0].embedding = createMockEmbedding('Quantum computing basics');
+  sampleNotes[0].embedding = MockEmbeddingService.createMockEmbedding('Quantum computing basics');
   sampleNotes[0].createdAt = new Date('2025-01-01');
   sampleNotes[0].updatedAt = new Date('2025-01-02');
   
   sampleNotes[1].content = 'Quantum entanglement is a physical phenomenon that occurs when a pair of particles interact in such a way that the quantum state of each particle cannot be described independently of the others.';
-  sampleNotes[1].embedding = createMockEmbedding('Quantum entanglement');
+  sampleNotes[1].embedding = MockEmbeddingService.createMockEmbedding('Quantum entanglement');
   sampleNotes[1].createdAt = new Date('2025-01-03');
   sampleNotes[1].updatedAt = new Date('2025-01-04');
 
@@ -67,7 +67,7 @@ describe('PromptFormatter', () => {
     accomplishmentHonorsAwards: null,
     accomplishmentProjects: null,
     volunteerWork: null,
-    embedding: createMockEmbedding('Quantum researcher profile'),
+    embedding: MockEmbeddingService.createMockEmbedding('Quantum researcher profile'),
     tags: ['quantum', 'research', 'AI'],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -173,7 +173,7 @@ describe('PromptFormatter', () => {
     // Create a note with specific content for testing coverage
     const testNote = createMockNote('test-note', 'Quantum Entanglement Explained', ['quantum', 'physics']);
     testNote.content = 'Quantum entanglement occurs when particles become correlated in ways that cannot be explained by classical physics. Quantum states of entangled particles are dependent on each other regardless of distance. Einstein called this "spooky action at a distance".';
-    testNote.embedding = createMockEmbedding('Quantum entanglement test');
+    testNote.embedding = MockEmbeddingService.createMockEmbedding('Quantum entanglement test');
     testNote.createdAt = new Date('2025-01-03');
     testNote.updatedAt = new Date('2025-01-04');
     

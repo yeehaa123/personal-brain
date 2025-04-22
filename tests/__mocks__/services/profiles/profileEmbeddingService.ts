@@ -9,7 +9,7 @@ import { mock } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
 import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
-import { createMockEmbedding } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
  * MockProfileEmbeddingService class with standardized interface
@@ -52,7 +52,7 @@ export class MockProfileEmbeddingService implements Partial<ProfileEmbeddingServ
   });
   
   generateEmbedding = mock((_text: string): Promise<number[]> => {
-    return Promise.resolve(createMockEmbedding(_text));
+    return Promise.resolve(MockEmbeddingService.createMockEmbedding(_text));
   });
   
   generateEmbeddingForProfile = mock((): Promise<{ updated: boolean }> => {

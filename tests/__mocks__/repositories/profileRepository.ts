@@ -8,6 +8,7 @@
 import { profiles } from '@/db/schema';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { createMockProfile, createMockProfiles } from '@test/__mocks__/models/profile';
 
 /**
@@ -23,6 +24,8 @@ import { createMockProfile, createMockProfiles } from '@test/__mocks__/models/pr
 export class MockProfileRepository implements Partial<ProfileRepository> {
   private static instance: MockProfileRepository | null = null;
   profiles: Profile[] = [];
+  // Add logger to match the BaseRepository implementation
+  protected logger = MockLogger.getInstance();
   
   /**
    * Private constructor to enforce singleton pattern

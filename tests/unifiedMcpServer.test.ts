@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
 import { createUnifiedMcpServer, type McpServerConfig } from '@/mcpServer';
-import { createMockEmbedding } from '@test/__mocks__/';
+import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
@@ -30,42 +30,7 @@ mock.module('@anthropic-ai/sdk', () => {
 // Override EmbeddingService methods for testing
 mock.module('@/resources/ai/embedding', () => {
   return {
-    EmbeddingService: class MockEmbeddingService {
-      private static _instance: MockEmbeddingService | null = null;
-
-      static getInstance() {
-        if (!MockEmbeddingService._instance) {
-          MockEmbeddingService._instance = new MockEmbeddingService();
-        }
-        return MockEmbeddingService._instance;
-      }
-
-      static resetInstance(): void {
-        MockEmbeddingService._instance = null;
-      }
-
-      static createFresh(): MockEmbeddingService {
-        return new MockEmbeddingService();
-      }
-
-      constructor() { }
-
-      getEmbedding() {
-        return Promise.resolve({
-          embedding: createMockEmbedding('test embedding'),
-          truncated: false,
-        });
-      }
-
-      cosineSimilarity(_vec1: number[], _vec2: number[]) {
-        // Simple mock - return 0.8 for simplicity
-        return 0.8;
-      }
-
-      chunkText(text: string) {
-        return [text];
-      }
-    },
+    EmbeddingService: MockEmbeddingService,
   };
 });
 
@@ -96,7 +61,7 @@ describe('Unified MCP Server', () => {
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-news-api-key',
       name: 'CustomBrain',
-      version: '2.0.0',
+      version: '0.0.1-test',
       enableExternalSources: true,
     };
 
@@ -147,13 +112,11 @@ describe('Unified MCP Server', () => {
       apiKey: 'mock-api-key',
       newsApiKey: 'mock-news-api-key',
       name: 'TestBrain',
-      version: '1.0.0',
+      version: '0.0.1-test',
       enableExternalSources: true,
     });
 
-    // Check that a server was created
+    // Check that the server was created
     expect(unifiedServer).toBeDefined();
-
-    // In a real implementation, we would test specific functionality
   });
 });

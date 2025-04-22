@@ -6,7 +6,7 @@
  */
 
 import type { NewNote, Note, NoteSearchParams } from '@models/note';
-import { createMockEmbedding, hashString } from '@test/__mocks__/utils/embeddingUtils';
+import { EmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
  * MockNote class with factory methods for creating notes
@@ -30,7 +30,7 @@ export class MockNote {
 
   static createWithEmbedding(id: string, title: string, tags: string[] = []): Note {
     const note = this.createWithDefaults(id, title, tags);
-    note.embedding = createMockEmbedding(`${id}-${title}`);
+    note.embedding = EmbeddingService.createMockEmbedding(`${id}-${title}`);
     return note;
   }
 
@@ -136,8 +136,7 @@ export function createMockSearchParams(params: Partial<NoteSearchParams> = {}): 
  * Utility functions for note mock operations
  */
 export const NoteMockUtils = {
-  createEmbedding: createMockEmbedding,
-  hashString,
+  createEmbedding: EmbeddingService.createMockEmbedding,
   createNote: createMockNote,
   createNotes: createMockNotes,
   createTestNote,

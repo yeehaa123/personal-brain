@@ -13,6 +13,7 @@ import type {
   ProfilePublication,
 } from '@/models/profile';
 import type { Profile } from '@/models/profile';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { Logger } from '@/utils/logger';
 
@@ -43,19 +44,19 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
    * 
    * Part of the Component Interface Standardization pattern.
    * 
-   * @param apiKey Optional API key for the embedding service
+   * @param embeddingService Optional embedding service for dependency injection
    * @returns The shared ProfileEmbeddingService instance
    */
-  public static getInstance(apiKey?: string): ProfileEmbeddingService {
+  public static getInstance(embeddingService?: EmbeddingService): ProfileEmbeddingService {
     if (!ProfileEmbeddingService.instance) {
-      ProfileEmbeddingService.instance = new ProfileEmbeddingService(apiKey);
+      ProfileEmbeddingService.instance = new ProfileEmbeddingService(embeddingService);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileEmbeddingService singleton instance created');
-    } else if (apiKey) {
-      // Log a warning if trying to get instance with different API key
+    } else if (embeddingService) {
+      // Log a warning if trying to get instance with different embedding service
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with apiKey but instance already exists. API key ignored.');
+      logger.warn('getInstance called with embeddingService but instance already exists. Service ignored.');
     }
     
     return ProfileEmbeddingService.instance;
@@ -91,14 +92,18 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
    * Creates a new instance without affecting the singleton instance.
    * Primarily used for testing.
    * 
-   * @param apiKey Optional API key for the embedding service
+   * @param embeddingService Optional embedding service for dependency injection
+   * @param repository Optional profile repository for dependency injection
    * @returns A new ProfileEmbeddingService instance
    */
-  public static createFresh(apiKey?: string): ProfileEmbeddingService {
+  public static createFresh(
+    embeddingService?: EmbeddingService,
+    repository?: ProfileRepository,
+  ): ProfileEmbeddingService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileEmbeddingService instance');
     
-    return new ProfileEmbeddingService(apiKey);
+    return new ProfileEmbeddingService(embeddingService, repository);
   }
 
   /**
@@ -107,11 +112,12 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
    * While this constructor is public, it is recommended to use the factory methods
    * getInstance() or createFresh() instead to ensure consistent instance management.
    * 
-   * @param apiKey Optional API key for the embeddings service
+   * @param embeddingService Optional embedding service for dependency injection
+   * @param repository Optional profile repository for dependency injection
    */
-  constructor(apiKey?: string) {
-    super(apiKey);
-    this.repository = ProfileRepository.getInstance();
+  constructor(embeddingService?: EmbeddingService, repository?: ProfileRepository) {
+    super(embeddingService);
+    this.repository = repository || ProfileRepository.getInstance();
     this.logger.debug('ProfileEmbeddingService instance created');
   }
 
