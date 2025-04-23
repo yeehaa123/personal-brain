@@ -7,13 +7,17 @@
  * This is a mock of BrainProtocol, which has replaced BrainProtocol.
  */
 
+import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+
 import type { BrainProtocolOptions, IContextManager, IConversationManager, QueryOptions, QueryResult } from '@/protocol/types';
 import { Logger } from '@/utils/logger';
+import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 
 import type { MockConfigurationManager } from './core/configurationManager';
 import { MockConfigurationManager as ConfigManager } from './core/configurationManager';
 import type { MockFeatureCoordinator } from './core/featureCoordinator';
 import { MockFeatureCoordinator as FeatureCoord } from './core/featureCoordinator';
+import { MockMcpServerManager } from './core/mcpServerManager';
 import { MockContextManager } from './managers/contextManager';
 import { MockConversationManager } from './managers/conversationManager';
 
@@ -42,6 +46,8 @@ export class MockBrainProtocol {
   private conversationManager: IConversationManager;
   private featureCoordinator: MockFeatureCoordinator;
   private configManager: MockConfigurationManager;
+  private mcpServerManager: MockMcpServerManager;
+  private mcpServer: McpServer;
   private options: MockBrainProtocolOptions = {};
   private logger = Logger.getInstance();
 
@@ -92,6 +98,10 @@ export class MockBrainProtocol {
     this.conversationManager = MockConversationManager.createFresh() as unknown as IConversationManager;
     this.featureCoordinator = FeatureCoord.createFresh();
     this.configManager = ConfigManager.createFresh();
+    this.mcpServerManager = MockMcpServerManager.createFresh();
+    
+    // Create MCP server using our standardized mock
+    this.mcpServer = createMockMcpServer('TestMcpServer', '1.0.0');
     
     // Store options
     if (options) {
@@ -133,6 +143,29 @@ export class MockBrainProtocol {
    */
   getConfigManager(): MockConfigurationManager {
     return this.configManager;
+  }
+  
+  /**
+   * Get the MCP server
+   * Returns our standardized mock MCP server
+   */
+  getMcpServer(): McpServer {
+    return this.mcpServer;
+  }
+
+  /**
+   * Get the MCP server manager
+   * Returns our mock MCP server manager
+   */
+  getMcpServerManager(): MockMcpServerManager {
+    return this.mcpServerManager;
+  }
+
+  /**
+   * Check if MCP server is available
+   */
+  hasMcpServer(): boolean {
+    return true;
   }
 
   /**
