@@ -5,9 +5,9 @@
  * for use in tests across the codebase.
  */
 
-import type { 
-  Profile, 
-  ProfileDateInfo, 
+import type {
+  Profile,
+  ProfileDateInfo,
   ProfileEducation,
   ProfileExperience,
 } from '@models/profile';
@@ -195,21 +195,14 @@ export function createMockProfile(id: string = 'mock-profile-id'): Profile {
 }
 
 /**
- * Create a custom profile with specific properties
- */
-export function createTestProfile(options: Partial<Profile> = {}): Profile {
-  return MockProfile.createWithCustomData('test-profile-id', options);
-}
-
-/**
  * Create multiple mock profiles for testing
  */
 export function createMockProfiles(count: number = 3): Profile[] {
   const profiles: Profile[] = [];
-  
+
   profiles.push(MockProfile.createDefault('profile-1'));
   profiles.push(MockProfile.createDeveloperProfile('profile-2'));
-  
+
   // Add additional profiles if needed
   for (let i = 3; i <= count; i++) {
     profiles.push(
@@ -221,6 +214,6 @@ export function createMockProfiles(count: number = 3): Profile[] {
       }),
     );
   }
-  
+
   return profiles;
 }

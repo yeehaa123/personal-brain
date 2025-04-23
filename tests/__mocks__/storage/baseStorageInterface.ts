@@ -13,7 +13,7 @@ import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/c
 export class MockStorageInterface<T, ID = string> implements StorageInterface<T, ID> {
   private static instances: Map<string, MockStorageInterface<unknown, unknown>> = new Map();
   private items: Map<string, T> = new Map();
-  
+
   /**
    * Private constructor to enforce singleton pattern
    */
@@ -60,7 +60,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
     this.items.set(String(id), item as T);
     return id as unknown as ID;
   }
-  
+
   /**
    * Read an entity by ID
    * @param id The ID of the entity to read
@@ -70,7 +70,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
     const item = this.items.get(String(id));
     return item ? { ...item } : null;
   }
-  
+
   /**
    * Update an existing entity
    * @param id The ID of the entity to update
@@ -82,11 +82,11 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
     if (!item) {
       return false;
     }
-    
+
     this.items.set(String(id), { ...item, ...updates });
     return true;
   }
-  
+
   /**
    * Delete an entity by ID
    * @param id The ID of the entity to delete
@@ -95,7 +95,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
   async delete(id: ID): Promise<boolean> {
     return this.items.delete(String(id));
   }
-  
+
   /**
    * Search for entities matching criteria
    * @param criteria The search criteria to use
@@ -106,7 +106,7 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
     // In a real implementation, this would filter by criteria
     return [...this.items.values()];
   }
-  
+
   /**
    * List entities with pagination
    * @param options Options for listing entities
@@ -114,16 +114,16 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
    */
   async list(options?: ListOptions): Promise<T[]> {
     const values = [...this.items.values()];
-    
+
     if (options?.offset || options?.limit) {
       const start = options?.offset || 0;
       const end = options?.limit ? start + options.limit : undefined;
       return values.slice(start, end);
     }
-    
+
     return values;
   }
-  
+
   /**
    * Count entities matching criteria
    * @param criteria Optional search criteria to count matching entities
@@ -139,11 +139,4 @@ export class MockStorageInterface<T, ID = string> implements StorageInterface<T,
   clear(): void {
     this.items.clear();
   }
-}
-
-// Export a factory function for creating instances
-export function createMockStorageInterface<T, ID = string>(
-  initialItems: Record<string, T> = {},
-): MockStorageInterface<T, ID> {
-  return MockStorageInterface.createFresh<T, ID>(initialItems);
 }

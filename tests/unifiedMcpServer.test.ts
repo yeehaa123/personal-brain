@@ -39,7 +39,7 @@ describe('Unified MCP Server', () => {
     // Create the unified MCP server with explicit config instead of environment variables
     const unifiedServer = createUnifiedMcpServer({
       apiKey: 'mock-api-key',
-      newsApiKey: 'mock-news-api-key'
+      newsApiKey: 'mock-news-api-key',
     });
 
     // Check that the server was created

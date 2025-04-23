@@ -23,14 +23,14 @@ import { createMockNote, createMockNotes } from '@test/__mocks__/models/note';
 export class MockNoteRepository implements Partial<NoteRepository> {
   private static instance: MockNoteRepository | null = null;
   notes: Note[] = [];
-  
+
   /**
    * Private constructor to enforce singleton pattern
    */
   constructor(initialNotes: Note[] = createMockNotes()) {
     this.notes = [...initialNotes];
   }
-  
+
   /**
    * Get singleton instance
    */
@@ -40,28 +40,28 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     }
     return MockNoteRepository.instance;
   }
-  
+
   /**
    * Reset singleton instance
    */
   public static resetInstance(): void {
     MockNoteRepository.instance = null;
   }
-  
+
   /**
    * Create fresh instance for isolated testing
    */
   public static createFresh(initialNotes: Note[] = createMockNotes()): MockNoteRepository {
     return new MockNoteRepository(initialNotes);
   }
-  
+
   /**
    * Get a note by ID - BaseRepository method
    */
   getById = async (id: string): Promise<Note | undefined> => {
     return this.notes.find(note => note.id === id);
   };
-  
+
   /**
    * Insert note - BaseRepository method
    */
@@ -74,7 +74,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     this.notes.push(note);
     return note;
   };
-  
+
   /**
    * Delete note by ID - BaseRepository method
    */
@@ -83,7 +83,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     this.notes = this.notes.filter(note => note.id !== id);
     return this.notes.length < initialLength;
   };
-  
+
   /**
    * Get a note by ID - matches the real implementation
    */
@@ -91,14 +91,14 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     const note = this.notes.find(note => note.id === id);
     return note ? note : undefined;
   };
-  
+
   /**
    * Get all notes
    */
   getAll = async (): Promise<Note[]> => {
     return [...this.notes];
   };
-  
+
   /**
    * Create a new note
    */
@@ -107,7 +107,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     this.notes.push(newNote);
     return newNote;
   };
-  
+
   /**
    * Insert a new note - matches the real implementation
    */
@@ -124,7 +124,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     const id = noteData.id || `note-${Date.now()}`;
     const createdAt = noteData.createdAt || now;
     const updatedAt = noteData.updatedAt || now;
-    
+
     const newNote: Note = {
       id,
       title: noteData.title || 'Untitled Note',
@@ -138,22 +138,22 @@ export class MockNoteRepository implements Partial<NoteRepository> {
       conversationMetadata: null,
       verified: null,
     };
-    
+
     this.notes.push(newNote);
     return id;
   };
-  
+
   /**
    * Update an existing note
    */
   update = async (id: string, update: Partial<Note>): Promise<Note | null> => {
     const index = this.notes.findIndex(note => note.id === id);
     if (index === -1) return null;
-    
+
     this.notes[index] = { ...this.notes[index], ...update };
     return this.notes[index];
   };
-  
+
   /**
    * Update a note's embedding - matches the real implementation
    */
@@ -163,7 +163,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
       this.notes[index] = { ...this.notes[index], embedding };
     }
   };
-  
+
   /**
    * Delete a note by ID
    */
@@ -172,56 +172,56 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     this.notes = this.notes.filter(note => note.id !== id);
     return this.notes.length < initialLength;
   };
-  
+
   /**
    * Search notes by keywords - matches the real implementation
    */
   searchNotesByKeywords = async (
-    query?: string, 
-    tags?: string[], 
-    limit: number = 10, 
+    query?: string,
+    tags?: string[],
+    limit: number = 10,
     offset: number = 0,
   ): Promise<Note[]> => {
     let results = [...this.notes];
-    
+
     // Filter by query if provided
     if (query) {
       const lowerQuery = query.toLowerCase();
-      results = results.filter(note => 
-        note.title.toLowerCase().includes(lowerQuery) || 
+      results = results.filter(note =>
+        note.title.toLowerCase().includes(lowerQuery) ||
         note.content.toLowerCase().includes(lowerQuery),
       );
     }
-    
+
     // Filter by tags if provided
     if (tags && tags.length > 0) {
-      results = results.filter(note => 
+      results = results.filter(note =>
         note.tags?.some(tag => tags.includes(tag)),
       );
     }
-    
+
     // Sort by updatedAt in descending order
     results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-    
+
     // Apply pagination
     const safeLimit = Math.max(1, Math.min(limit, 100));
     const safeOffset = Math.max(0, offset);
     return results.slice(safeOffset, safeOffset + safeLimit);
   };
-  
+
   /**
    * Get recent notes with optional limit - matches the real implementation
    */
   getRecentNotes = async (limit: number = 5): Promise<Note[]> => {
     // Sort by updatedAt in descending order
-    const sorted = [...this.notes].sort((a, b) => 
+    const sorted = [...this.notes].sort((a, b) =>
       b.updatedAt.getTime() - a.updatedAt.getTime(),
     );
     // Apply safe limits
     const safeLimit = Math.max(1, Math.min(limit, 100));
     return sorted.slice(0, safeLimit);
   };
-  
+
   /**
    * Find notes by source - matches the real implementation
    */
@@ -230,21 +230,21 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     const sorted = results.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     return sorted.slice(offset, offset + limit);
   };
-  
+
   /**
    * Get notes without embeddings - matches the real implementation
    */
   getNotesWithoutEmbeddings = async (): Promise<Note[]> => {
     return this.notes.filter(note => note.embedding === null);
   };
-  
+
   /**
    * Get notes with embeddings - matches the real implementation
    */
   getNotesWithEmbeddings = async (): Promise<Note[]> => {
     return this.notes.filter(note => note.embedding !== null);
   };
-  
+
   /**
    * Implementation of the required abstract methods from BaseRepository
    * These are needed for TypeScript compatibility but aren't used in tests
@@ -252,15 +252,15 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   get table() {
     return notes;
   }
-  
+
   get entityName(): string {
     return 'note';
   }
-  
+
   getIdColumn() {
     return notes.id;
   }
-  
+
   /**
    * Mock implementation of insertNoteChunk
    */
@@ -272,60 +272,60 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   }): Promise<string> => {
     return `chunk-${chunk.noteId}-${chunk.chunkIndex}`;
   };
-  
+
   /**
    * Get other notes with embeddings - matches the real implementation
    */
   getOtherNotesWithEmbeddings = async (excludeNoteId: string): Promise<Note[]> => {
-    return this.notes.filter(note => 
+    return this.notes.filter(note =>
       note.id !== excludeNoteId && note.embedding !== null,
     );
   };
-  
+
   /**
    * Get count of notes - matches the real implementation
    */
   getNoteCount = async (): Promise<number> => {
     return this.notes.length;
   };
-  
+
   /**
    * BaseRepository getCount implementation
    */
   getCount = async (): Promise<number> => {
     return this.notes.length;
   };
-  
+
   /**
    * Find notes by conversation metadata - matches the real implementation
    */
   findByConversationMetadata = async (field: string, value: string): Promise<Note[]> => {
     return this.notes.filter(note => {
       if (!note.conversationMetadata) return false;
-      
+
       // Type safe check for known fields
       if (field === 'conversationId' && note.conversationMetadata.conversationId === value) return true;
       if (field === 'userName' && note.conversationMetadata.userName === value) return true;
       if (field === 'promptSegment' && note.conversationMetadata.promptSegment === value) return true;
-      
+
       return false;
     });
   };
-  
+
   /**
    * Reset repository state
    */
   reset(): void {
     this.notes = createMockNotes();
   }
-  
+
   /**
    * Clear all notes
    */
   clear(): void {
     this.notes = [];
   }
-  
+
   /**
    * Add test notes
    */
@@ -339,18 +339,3 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     return newNotes;
   }
 }
-
-/**
- * Create a mock note repository
- */
-export function createMockNoteRepository(initialNotes?: Note[]): MockNoteRepository {
-  return MockNoteRepository.createFresh(initialNotes);
-}
-
-/**
- * Additional test utilities
- */
-export const NoteRepositoryUtils = {
-  createRepository: createMockNoteRepository,
-  createWithNotes: (notes: Note[]): MockNoteRepository => createMockNoteRepository(notes),
-};

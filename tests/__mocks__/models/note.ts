@@ -5,7 +5,7 @@
  * for use in tests across the codebase.
  */
 
-import type { NewNote, Note, NoteSearchParams } from '@models/note';
+import type { Note } from '@models/note';
 import { EmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
@@ -95,39 +95,4 @@ export function createTestNote(params: Partial<Note> = {}): Note {
   };
 
   return { ...defaultNote, ...params };
-}
-
-/**
- * Create a new note (for insertion)
- */
-export function createNewNote(params: Partial<NewNote> = {}): Partial<Note> {
-  // Note: This isn't a complete Note as required by the schema,
-  // but represents fields used for creating a new note
-  const defaultNewNote: Partial<Note> = {
-    title: 'New Test Note',
-    content: 'New test content',
-    tags: [],
-    embedding: null,
-    source: 'import',
-    verified: false,
-    id: `note-${Date.now()}`,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  };
-
-  return { ...defaultNewNote, ...params };
-}
-
-/**
- * Create mock note search parameters
- */
-export function createMockSearchParams(params: Partial<NoteSearchParams> = {}): NoteSearchParams {
-  const defaultParams: NoteSearchParams = {
-    query: '',
-    tags: [],
-    limit: 20,
-    offset: 0,
-  };
-
-  return { ...defaultParams, ...params };
 }

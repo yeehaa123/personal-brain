@@ -26,14 +26,14 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
   profiles: Profile[] = [];
   // Add logger to match the BaseRepository implementation
   protected logger = MockLogger.getInstance();
-  
+
   /**
    * Private constructor to enforce singleton pattern
    */
   constructor(initialProfiles: Profile[] = createMockProfiles()) {
     this.profiles = [...initialProfiles];
   }
-  
+
   /**
    * Get singleton instance
    */
@@ -43,28 +43,28 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
     }
     return MockProfileRepository.instance;
   }
-  
+
   /**
    * Reset singleton instance
    */
   public static resetInstance(): void {
     MockProfileRepository.instance = null;
   }
-  
+
   /**
    * Create fresh instance for isolated testing
    */
   public static createFresh(initialProfiles: Profile[] = createMockProfiles()): MockProfileRepository {
     return new MockProfileRepository(initialProfiles);
   }
-  
+
   /**
    * Get a profile by ID - BaseRepository method
    */
   getById = async (id: string): Promise<Profile | undefined> => {
     return this.profiles.find(profile => profile.id === id);
   };
-  
+
   /**
    * Insert profile - BaseRepository method
    */
@@ -77,7 +77,7 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
     this.profiles.push(profile);
     return profile;
   };
-  
+
   /**
    * Delete profile by ID - BaseRepository method
    */
@@ -86,14 +86,14 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
     this.profiles = this.profiles.filter(profile => profile.id !== id);
     return this.profiles.length < initialLength;
   };
-  
+
   /**
    * Get profile count - BaseRepository method
    */
   getCount = async (): Promise<number> => {
     return this.profiles.length;
   };
-  
+
   /**
    * Get the profile - specialized method from ProfileRepository
    */
@@ -103,48 +103,48 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
     }
     return this.profiles[0];
   };
-  
+
   /**
    * Insert a profile - specialized method from ProfileRepository
    */
   insertProfile = async (profileData: Profile): Promise<string> => {
     const id = profileData.id;
     const index = this.profiles.findIndex(p => p.id === id);
-    
+
     if (index !== -1) {
       this.profiles[index] = profileData;
     } else {
       this.profiles.push(profileData);
     }
-    
+
     return id;
   };
-  
+
   /**
    * Update a profile - specialized method from ProfileRepository
    */
   updateProfile = async (id: string, profileData: Partial<Profile>): Promise<boolean> => {
     const index = this.profiles.findIndex(profile => profile.id === id);
     if (index === -1) return false;
-    
+
     this.profiles[index] = { ...this.profiles[index], ...profileData, updatedAt: new Date() };
     return true;
   };
-  
+
   /**
    * Delete a profile - specialized method from ProfileRepository
    */
   deleteProfile = async (id: string): Promise<boolean> => {
     return this.deleteById(id);
   };
-  
+
   /**
    * Get all profiles
    */
   getAll = async (): Promise<Profile[]> => {
     return [...this.profiles];
   };
-  
+
   /**
    * Update a profile's embedding
    */
@@ -154,21 +154,21 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
       this.profiles[index] = { ...this.profiles[index], embedding };
     }
   };
-  
+
   /**
    * Get profiles without embeddings
    */
   getProfilesWithoutEmbeddings = async (): Promise<Profile[]> => {
     return this.profiles.filter(profile => profile.embedding === null);
   };
-  
+
   /**
    * Get profiles with embeddings
    */
   getProfilesWithEmbeddings = async (): Promise<Profile[]> => {
     return this.profiles.filter(profile => profile.embedding !== null);
   };
-  
+
   /**
    * Implementation of the required abstract methods from BaseRepository
    * These are needed for TypeScript compatibility but aren't used in tests
@@ -176,29 +176,29 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
   get table() {
     return profiles;
   }
-  
+
   get entityName(): string {
     return 'profile';
   }
-  
+
   getIdColumn() {
     return profiles.id;
   }
-  
+
   /**
    * Reset repository state
    */
   reset(): void {
     this.profiles = createMockProfiles();
   }
-  
+
   /**
    * Clear all profiles
    */
   clear(): void {
     this.profiles = [];
   }
-  
+
   /**
    * Add test profiles
    */
@@ -212,18 +212,3 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
     return newProfiles;
   }
 }
-
-/**
- * Create a mock profile repository
- */
-export function createMockProfileRepository(initialProfiles?: Profile[]): MockProfileRepository {
-  return MockProfileRepository.createFresh(initialProfiles);
-}
-
-/**
- * Additional test utilities
- */
-export const ProfileRepositoryUtils = {
-  createRepository: createMockProfileRepository,
-  createWithProfiles: (profiles: Profile[]): MockProfileRepository => createMockProfileRepository(profiles),
-};

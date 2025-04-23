@@ -19,16 +19,16 @@ export interface MockEmbeddingModelAdapter {
  */
 export class MockResourceRegistry {
   private static instance: MockResourceRegistry | null = null;
-  
+
   // Mock response to return from language model
   public mockModelResponse: ModelResponse<{ answer: string }> = {
     object: { answer: 'This is a mock response' },
     usage: { inputTokens: 10, outputTokens: 20 },
   };
-  
+
   // Mock embedding to return
   public mockEmbedding: number[] = [0.1, 0.2, 0.3, 0.4, 0.5];
-  
+
   // Mock similarity score to return
   public mockSimilarity: number = 0.75;
 
@@ -40,7 +40,7 @@ export class MockResourceRegistry {
       return this.mockModelResponse as ModelResponse<T>;
     },
   };
-  
+
   /**
    * Mock embedding model adapter
    */
@@ -48,11 +48,11 @@ export class MockResourceRegistry {
     getEmbedding: async (_text: string): Promise<number[]> => {
       return [...this.mockEmbedding];
     },
-    
+
     getBatchEmbeddings: async (_texts: string[]): Promise<number[][]> => {
       return _texts.map(() => [...this.mockEmbedding]);
     },
-    
+
     calculateSimilarity: (_vec1: number[], _vec2: number[]): number => {
       return this.mockSimilarity;
     },
@@ -67,35 +67,35 @@ export class MockResourceRegistry {
     }
     return MockResourceRegistry.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    */
   public static resetInstance(): void {
     MockResourceRegistry.instance = null;
   }
-  
+
   /**
    * Create a fresh instance
    */
   public static createFresh(_options?: Record<string, unknown>): MockResourceRegistry {
     return new MockResourceRegistry();
   }
-  
+
   /**
    * Get the language model
    */
   public getClaudeModel(): MockLanguageModelAdapter {
     return this.mockLanguageModel;
   }
-  
+
   /**
    * Get the embedding model
    */
   public getEmbeddingService(): MockEmbeddingModelAdapter {
     return this.mockEmbeddingModel;
   }
-  
+
   /**
    * Update configuration options
    */
@@ -103,6 +103,3 @@ export class MockResourceRegistry {
     // No-op in mock
   }
 }
-
-// Export the mock as the default export
-export default MockResourceRegistry;

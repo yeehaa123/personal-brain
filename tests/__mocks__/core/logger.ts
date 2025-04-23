@@ -161,24 +161,3 @@ export class MockLogger {
 export function createMockLogger(config?: MockLoggerConfig): MockLogger {
   return MockLogger.createFresh(config);
 }
-
-/**
- * Setup global mock for logger
- */
-export function setupLoggerMocks(mockFn: { module: (name: string, factory: () => unknown) => void }): void {
-  // Create a default mock logger that's silent in test mode
-  const mockLogger = createMockLogger({ silent: process.env.NODE_ENV === 'test' });
-
-  // Mock the logger module for both implementations:
-  // 1. Old logger (default export)
-  // 2. New Logger class (named export)
-  mockFn.module('@/utils/logger', () => ({
-    default: mockLogger,
-    createLogger: () => mockLogger,
-    Logger: {
-      getInstance: (config?: MockLoggerConfig) => MockLogger.getInstance(config),
-      resetInstance: () => MockLogger.resetInstance(),
-      createFresh: (config?: MockLoggerConfig) => MockLogger.createFresh(config),
-    },
-  }));
-}

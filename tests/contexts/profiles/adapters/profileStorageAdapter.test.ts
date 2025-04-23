@@ -1,7 +1,7 @@
 /**
  * Tests for ProfileStorageAdapter
  */
-import { beforeAll, afterAll, describe, expect, mock, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
 
 import { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAdapter';
 import type { Profile } from '@/models/profile';
