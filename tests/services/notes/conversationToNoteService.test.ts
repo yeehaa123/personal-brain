@@ -12,7 +12,7 @@ import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { MockConversationStorage } from '@test/__mocks__/storage';
+import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 
 // Mock the tagExtractor module
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));
@@ -191,7 +191,7 @@ describe('ConversationToNoteService', () => {
     // Should contain formatted turns
     expect(result.content).toContain('**Question**: What is ecosystem architecture?');
     expect(result.content).toContain('**Answer**: Ecosystem architecture refers to...');
-    
+
     // The attribution should be at the end (after the content)
     const contentParts = result.content.split('---');
     expect(contentParts.length).toBeGreaterThan(1);
@@ -214,16 +214,16 @@ describe('ConversationToNoteService', () => {
     const insertCall = insertNoteCalls[0];
     expect(insertCall.title).toBe('Custom Title');
     expect(insertCall.content).toContain('This is my custom edited content');
-    
+
     // Should still include attribution footer even with user edits
     expect(insertCall.content).toContain('**Note**: This content was derived from a conversation');
-    
+
     // Verify attribution is at the end of the content
     const contentLines = insertCall.content.split('\n');
     const lastContentSection = contentLines.slice(-5).join('\n');
     expect(lastContentSection).toContain('**Note**: This content was derived from a conversation');
   });
-  
+
   test('should always place attribution at the end of note content', async () => {
     // Create a complex user edit with multiple sections, headers and lists
     const complexUserEdits = `# Complex Note Structure
@@ -250,18 +250,18 @@ This is the final section with some concluding thoughts.`;
     // Assert
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
-    
+
     // The content should start with our complex structure
     expect(insertCall.content.startsWith('# Complex Note Structure')).toBe(true);
-    
+
     // The content should end with the attribution footer
     const lastLine = insertCall.content.split('\n').pop();
     expect(lastLine).toContain('Original Query');
-    
+
     // Verify proper ordering - "Final Section" should come before attribution
     const finalSectionPos = insertCall.content.indexOf('## Final Section');
     const attributionPos = insertCall.content.indexOf('**Note**: This content was derived');
-    
+
     expect(finalSectionPos).toBeGreaterThan(0);
     expect(attributionPos).toBeGreaterThan(0);
     expect(finalSectionPos).toBeLessThan(attributionPos);

@@ -4,21 +4,29 @@
  * Follows the Component Interface Standardization pattern with
  * getInstance(), resetInstance(), and createFresh()
  */
-import type { 
-  ConversationContext, 
-  ExternalSourceContext, 
-  NoteContext, 
-  ProfileContext, 
-  WebsiteContext, 
+import type {
+  ConversationContext,
+  ExternalSourceContext,
+  NoteContext,
+  ProfileContext,
+  WebsiteContext,
 } from '@/contexts';
 import type { IContextManager } from '@/protocol/types';
 import {
-  MockConversationContext,
+  MockConversationContext
+} from '@test/__mocks__/contexts/conversationContext';
+import {
   MockExternalSourceContext,
+} from '@test/__mocks__/contexts/externalSourceContext';
+import {
   MockNoteContext,
+} from '@test/__mocks__/contexts/noteContext';
+import {
   MockProfileContext,
+} from '@test/__mocks__/contexts/profileContext';
+import {
   MockWebsiteContext,
-} from '@test/__mocks__/contexts';
+} from '@test/__mocks__/contexts/websiteContext';
 
 export class MockContextManager implements IContextManager {
   private static instance: MockContextManager | null = null;
@@ -44,7 +52,7 @@ export class MockContextManager implements IContextManager {
    */
   static resetInstance(): void {
     MockContextManager.instance = null;
-    
+
     // Reset all context instances too
     MockNoteContext.resetInstance();
     MockProfileContext.resetInstance();

@@ -11,7 +11,7 @@ import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { Note, NoteSearchParams } from '@/models/note';
 
 import { MockBaseContext } from './baseContext';
-import { MockNoteFormatter } from './notes';
+import { MockNoteFormatter } from './notes/noteFormatter';
 import { MockNoteStorageAdapter } from './noteStorageAdapter';
 
 
@@ -26,13 +26,13 @@ export class MockNoteContext extends MockBaseContext<
   string
 > {
   private static instance: MockNoteContext | null = null;
-  
+
   // Mock storage implementation - override protected property from base class
   protected override storage: MockNoteStorageAdapter;
-  
+
   // Mock formatter implementation - override protected property from base class
   protected override formatter: MockNoteFormatter;
-  
+
   /**
    * Get singleton instance of MockNoteContext
    */
@@ -42,21 +42,21 @@ export class MockNoteContext extends MockBaseContext<
     }
     return MockNoteContext.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    */
   public static override resetInstance(): void {
     MockNoteContext.instance = null;
   }
-  
+
   /**
    * Create a fresh instance for testing
    */
   public static override createFresh(config: Record<string, unknown> = {}): MockNoteContext {
     return new MockNoteContext(config);
   }
-  
+
   /**
    * Factory method that creates a new instance with dependencies
    * @param config Configuration options or dependencies
@@ -66,20 +66,20 @@ export class MockNoteContext extends MockBaseContext<
     // Handle the case where storage or formatter are provided as dependencies
     const storage = config['storage'] as MockNoteStorageAdapter;
     const formatter = config['formatter'] as MockNoteFormatter;
-    
+
     const instance = new MockNoteContext(config);
-    
+
     if (storage) {
       instance.setStorage(storage);
     }
-    
+
     if (formatter) {
       instance.formatter = formatter;
     }
-    
+
     return instance;
   }
-  
+
   /**
    * Constructor
    */
@@ -88,13 +88,13 @@ export class MockNoteContext extends MockBaseContext<
       name: config['name'] || 'NoteBrain',
       version: config['version'] || '1.0.0',
     });
-    
+
     // Initialize storage adapter
     this.storage = MockNoteStorageAdapter.createFresh();
-    
+
     // Initialize formatter
     this.formatter = MockNoteFormatter.createFresh();
-    
+
     // Initialize mock resources
     this.resources = [
       {
@@ -112,7 +112,7 @@ export class MockNoteContext extends MockBaseContext<
         description: 'Search notes by criteria',
       },
     ];
-    
+
     // Initialize mock tools
     this.tools = [
       {
@@ -131,7 +131,7 @@ export class MockNoteContext extends MockBaseContext<
       },
     ];
   }
-  
+
   /**
    * Get the storage adapter
    * Overrides the base class implementation
@@ -139,7 +139,7 @@ export class MockNoteContext extends MockBaseContext<
   override getStorage(): MockNoteStorageAdapter {
     return this.storage;
   }
-  
+
   /**
    * Get the formatter implementation
    * Overrides the base class implementation
@@ -147,7 +147,7 @@ export class MockNoteContext extends MockBaseContext<
   override getFormatter(): MockNoteFormatter {
     return this.formatter;
   }
-  
+
   /**
    * Format data using the context's formatter
    * Overrides the base class implementation
@@ -155,70 +155,70 @@ export class MockNoteContext extends MockBaseContext<
   override format(data: Note, options?: FormattingOptions): string {
     return this.formatter.format(data, options);
   }
-  
+
   /**
    * Set a new storage adapter
    */
   setStorage(storage: MockNoteStorageAdapter): void {
     this.storage = storage;
   }
-  
+
   /**
    * Get a note by ID
    */
   async getNoteById(id: string): Promise<Note | null> {
     return this.storage.read(id);
   }
-  
+
   /**
    * Search notes by criteria
    */
   async searchNotes(params: NoteSearchParams): Promise<Note[]> {
     return this.storage.search(params);
   }
-  
+
   /**
    * Get recent notes
    */
   async getRecentNotes(limit = 10): Promise<Note[]> {
     return this.storage.list({ limit });
   }
-  
+
   /**
    * Create a new note
    */
   async createNote(note: Partial<Note>): Promise<string> {
     return this.storage.create(note);
   }
-  
+
   /**
    * Update a note
    */
   async updateNote(id: string, updates: Partial<Note>): Promise<boolean> {
     return this.storage.update(id, updates);
   }
-  
+
   /**
    * Delete a note
    */
   async deleteNote(id: string): Promise<boolean> {
     return this.storage.delete(id);
   }
-  
+
   /**
    * Count notes
    */
   async getNoteCount(): Promise<number> {
     return this.storage.count();
   }
-  
+
   /**
    * Find notes by source
    */
   async findNotesBySource(sourceId: string): Promise<Note[]> {
     return this.storage.findBySource(sourceId);
   }
-  
+
   /**
    * Get related notes for a given note ID
    */
@@ -228,7 +228,7 @@ export class MockNoteContext extends MockBaseContext<
     // For mock purposes, we'll just return an empty array
     return [];
   }
-  
+
   /**
    * Instance method that delegates to static createWithDependencies
    * Required for FullContextInterface compatibility

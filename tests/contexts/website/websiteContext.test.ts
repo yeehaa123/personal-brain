@@ -10,7 +10,7 @@ import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 // Import our mock implementations directly
 import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
-import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment';
+import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment/deploymentManager';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
 import { MockProfile } from '@test/__mocks__/models/profile';
 
@@ -179,7 +179,7 @@ describe('WebsiteContext', () => {
 
     // Create a fresh mock profile context
     const mockProfileContext = MockProfileContext.createFresh();
-    
+
     // Create a properly typed mock for the getProfile method
     const mockProfileObj = MockProfile.createWithCustomData('profile-1', {
       fullName: profileData.name,
@@ -237,7 +237,7 @@ describe('WebsiteContext', () => {
     // In local-dev mode (default for tests), the URL is http://localhost:port
     expect(result.url).toContain('http://localhost:');
   });
-  
+
   test('handleWebsiteBuild should handle errors when build fails', async () => {
     // Create context with mocked Astro service
     const context = WebsiteContext.createFresh({
@@ -256,7 +256,7 @@ describe('WebsiteContext', () => {
     expect(result.success).toBe(false);
     expect(result.message).toContain('Failed to build website');
   });
-  
+
   test('getDeploymentManager should create deployment manager if not injected', async () => {
     // Create context without providing a deployment manager
     const context = WebsiteContext.createFresh({
@@ -265,11 +265,11 @@ describe('WebsiteContext', () => {
 
     // Get the deployment manager
     const deploymentManager = await context.getDeploymentManager();
-    
+
     // The method should create a deployment manager
     expect(deploymentManager).toBeDefined();
   });
-  
+
   test('getDeploymentManager should return injected deployment manager', async () => {
     // Create context with mocked deployment manager
     const context = WebsiteContext.createFresh({
@@ -279,11 +279,11 @@ describe('WebsiteContext', () => {
 
     // Get the deployment manager
     const deploymentManager = await context.getDeploymentManager();
-    
+
     // The method should return the injected deployment manager
     expect(deploymentManager).toBe(mockDeploymentManager);
   });
-  
+
   test('handleWebsitePromote should use the deployment manager', async () => {
     // Create a manager with spied methods
     const spiedManager = MockWebsiteDeploymentManager.createFresh();
@@ -292,7 +292,7 @@ describe('WebsiteContext', () => {
       message: 'Test promotion message',
       url: 'https://test.example.com',
     });
-    
+
     // Create context with mocked deployment manager
     const context = WebsiteContext.createFresh({
       deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
@@ -304,11 +304,11 @@ describe('WebsiteContext', () => {
     expect(result.success).toBe(true);
     expect(result.message).toBe('Test promotion message');
     expect(result.url).toBe('https://test.example.com');
-    
+
     // Verify the deployment manager was called
     expect(spiedManager.promoteToProduction).toHaveBeenCalled();
   });
-  
+
   test('handleWebsiteStatus should use the deployment manager', async () => {
     // Create a manager with spied methods
     const spiedManager = MockWebsiteDeploymentManager.createFresh();
@@ -317,7 +317,7 @@ describe('WebsiteContext', () => {
       fileCount: 123,
       accessStatus: 'Test Status',
     });
-    
+
     // Create context with mocked deployment manager
     const context = WebsiteContext.createFresh({
       deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
@@ -325,32 +325,32 @@ describe('WebsiteContext', () => {
 
     // Test preview environment
     const previewResult = await context.handleWebsiteStatus();
-    
+
     // Verify result contains the data from our mock
     expect(previewResult.success).toBe(true);
     expect(previewResult.data?.environment).toBe('preview');
     expect(previewResult.data?.fileCount).toBe(123);
     expect(previewResult.data?.accessStatus).toBe('Test Status');
-    
+
     // Verify the deployment manager was called with the correct environment
     expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('preview');
-    
+
     // Test production environment
     spiedManager.setEnvironmentStatus('production', {
       buildStatus: 'Not Built' as const,
       fileCount: 0,
       accessStatus: 'Not Accessible',
     });
-    
+
     const prodResult = await context.handleWebsiteStatus('production');
-    
+
     // Verify result contains the data from our mock
     expect(prodResult.success).toBe(true);
     expect(prodResult.data?.environment).toBe('production');
     expect(prodResult.data?.buildStatus).toBe('Not Built');
     expect(prodResult.data?.fileCount).toBe(0);
     expect(prodResult.data?.accessStatus).toBe('Not Accessible');
-    
+
     // Verify the deployment manager was called with the correct environment
     expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('production');
   });

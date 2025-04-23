@@ -20,7 +20,7 @@ import { MockConversationQueryService } from '@test/__mocks__/contexts/conversat
 import { MockConversationResourceService } from '@test/__mocks__/contexts/conversationResourceService';
 import { MockConversationToolService } from '@test/__mocks__/contexts/conversationToolService';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
-import { MockConversationStorage } from '@test/__mocks__/storage';
+import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Create a standardized mock server for testing
@@ -53,11 +53,11 @@ describe('ConversationContext', () => {
     MockConversationToolService.resetInstance();
     MockConversationQueryService.resetInstance();
     MockConversationMemoryService.resetInstance();
-    
+
     // Create fresh storage and adapter instance for each test
     storage = MockConversationStorage.createFresh();
     adapter = new ConversationStorageAdapter(storage);
-    
+
     // Create standardized service mocks using the Component Interface Standardization pattern
     formatter = MockConversationFormatter.createFresh();
     mcpFormatter = MockConversationMcpFormatter.createFresh();
@@ -65,10 +65,10 @@ describe('ConversationContext', () => {
     toolService = MockConversationToolService.createFresh();
     queryService = MockConversationQueryService.createFresh();
     memoryService = MockConversationMemoryService.createFresh();
-    
+
     // Set up mock responses for specific methods
     formatter.formatConversation = mock(() => 'Formatted conversation');
-    
+
     mcpFormatter.formatConversationForMcp = mock(
       async (_conversation, _turns, _summaries, _options) => ({
         id: 'test-id',
@@ -82,7 +82,7 @@ describe('ConversationContext', () => {
         statistics: {},
       }),
     );
-    
+
     // Set up query service mocks
     queryService.createConversation = mock(() => Promise.resolve('test-id'));
     queryService.getConversation = mock(() => Promise.resolve({
@@ -101,7 +101,7 @@ describe('ConversationContext', () => {
     queryService.findConversations = mock(() => Promise.resolve([]));
     queryService.getConversationsByRoom = mock(() => Promise.resolve([]));
     queryService.getRecentConversations = mock(() => Promise.resolve([]));
-    
+
     // Set up memory service mocks
     memoryService.addTurn = mock(() => Promise.resolve('turn-id'));
     memoryService.getTurns = mock(() => Promise.resolve([
@@ -180,7 +180,7 @@ describe('ConversationContext', () => {
 
     test('initializes MCP components correctly', () => {
       const capabilities = conversationContext.getCapabilities();
-      
+
       expect(capabilities.resources).toBeDefined();
       expect(capabilities.tools).toBeDefined();
       expect(capabilities.features).toBeDefined();

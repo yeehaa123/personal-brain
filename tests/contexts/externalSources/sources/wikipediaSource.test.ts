@@ -1,10 +1,8 @@
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { WikipediaSource } from '@/contexts/externalSources/sources/wikipediaSource';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
-import { mockFetch } from '@test/helpers/outputUtils';
 
 // Helper to access private methods safely without using intersection types
 // This approach avoids the "never" type issue
@@ -34,10 +32,13 @@ interface WikipediaSearchResult {
 describe('WikipediaSource', () => {
   // No shared state between tests
   beforeEach(() => {
-    // Setup mock fetch with default responses for this test
-    // The global setup in tests/setup.ts already ensures no real network requests
-    // but we reinstall it here for test isolation
-    global.fetch = setupMockFetch({} as Record<string, unknown>);
+    // Create a basic mock for fetch that returns empty results
+    global.fetch = mock(async () => {
+      return new Response(JSON.stringify({ status: "ok" }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
   });
   
   test('should initialize correctly', () => {
@@ -145,11 +146,11 @@ describe('WikipediaSource', () => {
       }),
     });
     
-    // Set up fetch to return different responses on successive calls using the typed mock
-    // Create new fetch mock for this test
-    const [restoreFn, mockedFetch] = mockFetch();
+    // Create a mock fetch that returns different responses based on URL
+    const originalFetch = global.fetch;
     
-    mockedFetch.mockImplementation(async (url) => {
+    // Create a new mock that handles the specific URLs needed for this test
+    global.fetch = mock(async (url) => {
       const urlString = url.toString();
       if (urlString.includes('action=query') && urlString.includes('list=search')) {
         return mockFetchResponse;
@@ -179,9 +180,8 @@ describe('WikipediaSource', () => {
       expect(results[0].embedding).toBeDefined();
       expect(Array.isArray(results[0].embedding)).toBe(true);
     } finally {
-      // Always restore the original fetch
-      // Always restore the fetch mock
-      restoreFn();
+      // Restore the original mock
+      global.fetch = originalFetch;
     }
   });
   

@@ -9,7 +9,7 @@ import { mock } from 'bun:test';
 import type { ConversationContext } from '@/contexts';
 import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
 import type { IConversationManager } from '@/protocol/types';
-import { MockConversationContext } from '@test/__mocks__/contexts';
+import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 
 export class MockConversationManager implements IConversationManager {
   private static instance: MockConversationManager | null = null;
@@ -45,20 +45,20 @@ export class MockConversationManager implements IConversationManager {
   private constructor(options?: Record<string, unknown>) {
     // Use provided context or create fresh one
     const providedContext = options && options['conversationContext'] as ConversationContext;
-    this.conversationContext = providedContext || 
+    this.conversationContext = providedContext ||
       (MockConversationContext.createFresh() as unknown as ConversationContext);
 
     // Set up with options if provided
     if (options && options['hasActiveConversation'] === false) {
       this.hasActive = false;
     }
-    
+
     // Removed currentRoomId handling
-    
+
     if (options && typeof options['currentConversationId'] === 'string') {
       this.currentConversationId = options['currentConversationId'] as string;
     }
-    
+
     if (options && typeof options['conversationHistory'] === 'string') {
       this.conversationHistory = options['conversationHistory'] as string;
     }
@@ -80,7 +80,7 @@ export class MockConversationManager implements IConversationManager {
   hasActiveConversation(): boolean {
     return this.hasActive;
   }
-  
+
   /**
    * For testing - set the hasActive state
    */

@@ -14,7 +14,7 @@ import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 
 import { MockBaseContext } from './baseContext';
-import { MockExternalSourceFormatter } from './externalSources/formatters';
+import { MockExternalSourceFormatter } from './externalSources/formatters/externalSourceFormatter';
 import { MockExternalSourceStorageAdapter } from './externalSourceStorageAdapter';
 
 /**
@@ -27,7 +27,7 @@ export class MockExternalSourceContext extends MockBaseContext<
   string
 > {
   private static instance: MockExternalSourceContext | null = null;
-  
+
   // Mock sources
   protected sources: Array<{
     name: string;
@@ -36,7 +36,7 @@ export class MockExternalSourceContext extends MockBaseContext<
     checkAvailability: () => Promise<boolean>;
     isAvailable: boolean;
   }> = [];
-  
+
   /**
    * Get singleton instance of MockExternalSourceContext
    */
@@ -46,28 +46,28 @@ export class MockExternalSourceContext extends MockBaseContext<
     }
     return MockExternalSourceContext.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    */
   public static override resetInstance(): void {
     MockExternalSourceContext.instance = null;
   }
-  
+
   /**
    * Create a fresh instance for testing
    */
   public static override createFresh(config: Record<string, unknown> = {}): MockExternalSourceContext {
     return new MockExternalSourceContext(config);
   }
-  
+
   /**
    * Create with dependencies factory method
    */
   public static createWithDependencies(config: Record<string, unknown> = {}): MockExternalSourceContext {
     return new MockExternalSourceContext(config);
   }
-  
+
   /**
    * Constructor
    */
@@ -76,14 +76,14 @@ export class MockExternalSourceContext extends MockBaseContext<
       name: config['name'] || 'ExternalSourceBrain',
       version: config['version'] || '1.0.0',
     });
-    
+
     // Set up storage and formatter
-    this.storage = config['storage'] as StorageInterface<ExternalSourceResult> || 
+    this.storage = config['storage'] as StorageInterface<ExternalSourceResult> ||
       MockExternalSourceStorageAdapter.createFresh();
-    
-    this.formatter = config['formatter'] as MockExternalSourceFormatter || 
+
+    this.formatter = config['formatter'] as MockExternalSourceFormatter ||
       MockExternalSourceFormatter.createFresh();
-    
+
     // Initialize mock sources
     this.sources = [
       {
@@ -101,7 +101,7 @@ export class MockExternalSourceContext extends MockBaseContext<
         isAvailable: true,
       },
     ];
-    
+
     // Initialize mock resources
     this.resources = [
       {
@@ -112,7 +112,7 @@ export class MockExternalSourceContext extends MockBaseContext<
         description: 'List all available external sources',
       },
     ];
-    
+
     // Initialize mock tools
     this.tools = [
       {
@@ -124,7 +124,7 @@ export class MockExternalSourceContext extends MockBaseContext<
       },
     ];
   }
-  
+
   /**
    * Set up mock sources for testing
    * @param sources Array of sources to use
@@ -132,7 +132,7 @@ export class MockExternalSourceContext extends MockBaseContext<
   setMockSources(sources: typeof this.sources): void {
     this.sources = sources;
   }
-  
+
   /**
    * Add a mock source for testing
    * @param source Source to add
@@ -140,56 +140,56 @@ export class MockExternalSourceContext extends MockBaseContext<
   addMockSource(source: typeof this.sources[0]): void {
     this.sources.push(source);
   }
-  
+
   /**
    * Search all sources
    */
   async search(query: string, options: Record<string, unknown> = {}): Promise<ExternalSourceResult[]> {
     // Combine results from all available sources
     const results: ExternalSourceResult[] = [];
-    
+
     for (const source of this.sources) {
       if (source.isAvailable) {
         const sourceResults = await source.search(query, options);
         results.push(...sourceResults);
       }
     }
-    
+
     return results;
   }
-  
+
   /**
    * Semantic search across all sources
    */
   async semanticSearch(query: string, options: Record<string, unknown> = {}): Promise<ExternalSourceResult[]> {
     // Combine results from all available sources
     const results: ExternalSourceResult[] = [];
-    
+
     for (const source of this.sources) {
       if (source.isAvailable) {
         const sourceResults = await source.semanticSearch(query, options);
         results.push(...sourceResults);
       }
     }
-    
+
     return results;
   }
-  
+
   /**
    * Check if sources are available
    */
   async checkSourcesAvailability(): Promise<Record<string, boolean>> {
     const result: Record<string, boolean> = {};
-    
+
     for (const source of this.sources) {
       const isAvailable = await source.checkAvailability();
       source.isAvailable = isAvailable;
       result[source.name] = isAvailable;
     }
-    
+
     return result;
   }
-  
+
   /**
    * Get enabled sources
    */
@@ -200,7 +200,7 @@ export class MockExternalSourceContext extends MockBaseContext<
   }> {
     return this.sources.filter(source => source.isAvailable);
   }
-  
+
   /**
    * Get all available source names
    */
@@ -209,22 +209,22 @@ export class MockExternalSourceContext extends MockBaseContext<
       .filter(source => source.isAvailable)
       .map(source => source.name);
   }
-  
+
   /**
    * Required implementation of interface methods from FullContextInterface
    */
   override getInstance(): MockExternalSourceContext {
     return MockExternalSourceContext.getInstance();
   }
-  
+
   override resetInstance(): void {
     MockExternalSourceContext.resetInstance();
   }
-  
+
   override createFresh(options?: Record<string, unknown>): MockExternalSourceContext {
     return MockExternalSourceContext.createFresh(options);
   }
-  
+
   override createWithDependencies(dependencies: Record<string, unknown>): MockExternalSourceContext {
     return MockExternalSourceContext.createWithDependencies(dependencies);
   }

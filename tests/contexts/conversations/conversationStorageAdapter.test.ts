@@ -6,7 +6,7 @@ import { describe, expect, spyOn, test } from 'bun:test';
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import type { ListOptions, SearchCriteria } from '@/contexts/core/storageInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
-import { MockConversationStorage } from '@test/__mocks__/storage';
+import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 
 // The InMemoryStorage mock is now set up globally in setup.ts
 
@@ -102,23 +102,23 @@ describe('ConversationStorageAdapter', () => {
     test('search() correctly passes search criteria to storage', async () => {
       const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
-      
+
       // Create spy on the findConversations method
       const spy = spyOn(storage, 'findConversations');
-      
+
       // Mock implementation - just return empty array
       spy.mockImplementation(() => Promise.resolve([]));
-      
+
       // Search criteria
       const criteria = {
         interfaceType: 'cli',
         query: 'test',
         limit: 10,
       } as SearchCriteria;
-      
+
       // Call adapter search
       await adapter.search(criteria);
-      
+
       // Verify storage method was called with proper criteria
       expect(spy).toHaveBeenCalledWith(expect.objectContaining({
         interfaceType: 'cli',
@@ -130,23 +130,23 @@ describe('ConversationStorageAdapter', () => {
     test('list() correctly passes list options to getRecentConversations', async () => {
       const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
-      
+
       // Create spy on the getRecentConversations method
       const spy = spyOn(storage, 'getRecentConversations');
-      
+
       // Mock implementation - return empty array
       spy.mockImplementation(() => Promise.resolve([]));
-      
+
       // List options
       const options = {
         limit: 5,
         offset: 10,
         interfaceType: 'cli',
       } as ListOptions;
-      
+
       // Call adapter list
       await adapter.list(options);
-      
+
       // Verify storage method was called with correct parameters
       expect(spy).toHaveBeenCalledWith(options['limit'], options['interfaceType']);
     });
@@ -154,22 +154,22 @@ describe('ConversationStorageAdapter', () => {
     test('count() without criteria uses findConversations with empty object', async () => {
       const storage = MockConversationStorage.createFresh();
       const adapter = new ConversationStorageAdapter(storage);
-      
+
       // Create spy on findConversations
       const spy = spyOn(storage, 'findConversations');
-      
+
       // Mock to return two conversations
       spy.mockImplementation(() => Promise.resolve([
         { id: '1', interfaceType: 'cli', roomId: 'room1', startedAt: new Date(), updatedAt: new Date(), turnCount: 1 },
         { id: '2', interfaceType: 'cli', roomId: 'room2', startedAt: new Date(), updatedAt: new Date(), turnCount: 2 },
       ]));
-      
+
       // Call count without criteria
       const count = await adapter.count();
-      
+
       // Should call findConversations with empty object
       expect(spy).toHaveBeenCalledWith({});
-      
+
       // And return the length of the array from findConversations
       expect(count).toBe(2);
     });

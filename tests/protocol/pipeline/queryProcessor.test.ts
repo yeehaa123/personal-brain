@@ -9,10 +9,13 @@ import { QueryProcessor } from '@/protocol/pipeline/queryProcessor';
 import type { IContextManager } from '@/protocol/types';
 import { ClaudeModel } from '@/resources/ai/claude';
 import type { DefaultResponseType, ModelResponse } from '@/resources/ai/interfaces';
-import { MockConversationContext, MockNoteContext, MockProfileContext } from '@test/__mocks__/contexts';
+import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
+import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
+import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
-import { MockContextManager, MockConversationManager } from '@test/__mocks__/protocol/managers';
+import { MockConversationManager } from '@test/__mocks__/protocol/managers/conversationManager';
+import { MockContextManager } from '@test/__mocks__/protocol/managers/contextManager';
 
 // Sample data
 const sampleNote = createMockNote('note-1', 'Ecosystem Architecture', ['ecosystem', 'architecture']);

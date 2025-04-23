@@ -4,12 +4,12 @@
 
 import { mock } from 'bun:test';
 
-import type { 
-  DeploymentEnvironment, 
-  EnvironmentStatus, 
-  PromotionResult, 
+import type {
+  DeploymentEnvironment,
+  EnvironmentStatus,
+  PromotionResult,
   WebsiteDeploymentManager,
-} from '@/contexts/website/services/deployment';
+} from '@/contexts/website/services/deployment/deploymentManager';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
@@ -59,7 +59,7 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
   /**
    * Private constructor (use getInstance instead)
    */
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Get the singleton instance
@@ -114,15 +114,15 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
 export class MockDeploymentManagerFactory {
   private static instance: MockDeploymentManagerFactory | null = null;
   logger = MockLogger.createFresh({ silent: true });
-  
+
   // Mock deployment manager
   private deploymentManager = MockWebsiteDeploymentManager.createFresh();
-  
+
   /**
    * Private constructor (use getInstance instead)
    */
-  private constructor() {}
-  
+  private constructor() { }
+
   /**
    * Get the singleton instance
    */
@@ -132,21 +132,21 @@ export class MockDeploymentManagerFactory {
     }
     return MockDeploymentManagerFactory.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    */
   static resetInstance(): void {
     MockDeploymentManagerFactory.instance = null;
   }
-  
+
   /**
    * Create a fresh instance
    */
   static createFresh(): MockDeploymentManagerFactory {
     return new MockDeploymentManagerFactory();
   }
-  
+
   /**
    * Set the deployment manager instance
    * @param manager The deployment manager to use
@@ -154,7 +154,7 @@ export class MockDeploymentManagerFactory {
   setDeploymentManager(manager: MockWebsiteDeploymentManager): void {
     this.deploymentManager = manager;
   }
-  
+
   /**
    * Create a deployment manager instance
    * @returns A WebsiteDeploymentManager implementation

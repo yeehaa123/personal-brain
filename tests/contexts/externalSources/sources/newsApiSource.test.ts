@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { NewsApiSource } from '@/contexts/externalSources/sources/newsApiSource';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { setupMockFetch } from '@test/__mocks__/utils/fetchUtils';
 import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Helper to access private methods safely without using intersection types
@@ -48,8 +47,17 @@ describe('NewsApiSource', () => {
     // Set up environment variables
     setMockEnv(); // Use our centralized mock env setup
     
-    // Setup mock fetch with default responses for NewsAPI
-    global.fetch = setupMockFetch(null);
+    // Create a basic mock for fetch that returns empty results for news API
+    global.fetch = mock(async () => {
+      return new Response(JSON.stringify({
+        status: "ok",
+        totalResults: 0,
+        articles: []
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
   });
   
   afterEach(() => {

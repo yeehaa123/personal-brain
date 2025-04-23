@@ -4,12 +4,12 @@
 
 import { mock } from 'bun:test';
 
-import type { 
-  DeploymentEnvironment, 
-  EnvironmentStatus, 
-  PromotionResult, 
+import type {
+  DeploymentEnvironment,
+  EnvironmentStatus,
+  PromotionResult,
   WebsiteDeploymentManager,
-} from '@/contexts/website/services/deployment';
+} from '@/contexts/website/services/deployment/deploymentManager';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
@@ -59,7 +59,7 @@ export class MockLocalDevDeploymentManager implements WebsiteDeploymentManager {
   /**
    * Private constructor (use getInstance instead)
    */
-  private constructor() {}
+  private constructor() { }
 
   /**
    * Get the singleton instance

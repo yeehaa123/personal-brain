@@ -4,5 +4,5 @@
  * Exports all deployment-related services
  */
 
-export * from './deploymentManager';
-export * from './localDevDeploymentManager';
+export type { WebsiteDeploymentManager } from './deploymentManager';
+export { DeploymentManagerFactory, LocalCaddyDeploymentManager } from './deploymentManager';

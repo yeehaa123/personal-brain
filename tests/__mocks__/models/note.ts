@@ -131,15 +131,3 @@ export function createMockSearchParams(params: Partial<NoteSearchParams> = {}): 
 
   return { ...defaultParams, ...params };
 }
-
-/**
- * Utility functions for note mock operations
- */
-export const NoteMockUtils = {
-  createEmbedding: EmbeddingService.createMockEmbedding,
-  createNote: createMockNote,
-  createNotes: createMockNotes,
-  createTestNote,
-  createNewNote,
-  createSearchParams: createMockSearchParams,
-};

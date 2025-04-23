@@ -60,6 +60,7 @@ function shouldProcessFile(filePath) {
     /\.config\.(ts|js)$/,   // Config files
     /\.d\.ts$/,             // Declaration files
     /node_modules/,         // Node modules
+    /src/,         // Node modules
     /\.astro\//             // Astro files
   ];
   
