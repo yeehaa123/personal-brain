@@ -1,14 +1,13 @@
 /**
  * Tests for ProfileStorageAdapter
  */
-import { describe, expect, mock, test } from 'bun:test';
+import { beforeAll, afterAll, describe, expect, mock, test } from 'bun:test';
 
 import { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAdapter';
 import type { Profile } from '@/models/profile';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-import { silenceLogger } from '@test/__mocks__/core/logger';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
-import logger from '@utils/logger';
 
 // Mock profile for testing
 const mockProfile: Profile = {
@@ -63,10 +62,15 @@ function createMockRepository() {
 }
 
 describe('ProfileStorageAdapter', () => {
-  // Mock the logger to prevent output in tests
-  silenceLogger(logger);
+  // Set up and tear down the mock logger
+  beforeAll(() => {
+    MockLogger.resetInstance();
+    MockLogger.instance = MockLogger.createFresh({ silent: true });
+  });
   
-  // In Bun we can't do automatic cleanup, but we could do manual cleanup in each test if needed
+  afterAll(() => {
+    MockLogger.resetInstance();
+  });
   
   // Create a fresh adapter for each test
   function createFreshAdapter() {

@@ -3,16 +3,14 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-
 import { ProfileContext } from '@/contexts';
 import type { Profile } from '@/models/profile';
 import type { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
 import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import type { ProfileTagService } from '@/services/profiles/profileTagService';
-import { silenceLogger } from '@test/__mocks__/core/logger';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
-import logger from '@utils/logger';
 
 // Mock profile for testing
 const mockProfile: Profile = {
@@ -73,15 +71,16 @@ const mockProfileSearchService = {
 };
 
 describe('ProfileContext', () => {
-  // Mock the logger to prevent output in tests
-  silenceLogger(logger);
-  
   // Create a new context for each test with direct dependency injection
   let profileContext: ProfileContext;
   
   beforeEach(() => {
-    // Reset the singleton instance first
+    // Reset the singleton instances
     ProfileContext.resetInstance();
+    MockLogger.resetInstance();
+    
+    // Set up silent logger
+    MockLogger.instance = MockLogger.createFresh({ silent: true });
     
     // Create a fresh context with directly injected dependencies
     profileContext = new ProfileContext(

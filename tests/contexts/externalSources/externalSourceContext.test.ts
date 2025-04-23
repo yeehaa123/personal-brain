@@ -12,13 +12,9 @@ import type { ExternalSourceContextConfig } from '@/contexts/externalSources/ext
 import type { ExternalSourceStorageAdapter } from '@/contexts/externalSources/externalSourceStorageAdapter';
 import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { EmbeddingService } from '@/resources/ai/embedding';
-import { Logger } from '@/utils/logger';
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSourceStorageAdapter';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-
-// Suppress logs in tests
-const origLoggerWarn = Logger.getInstance().warn;
-Logger.getInstance().warn = mock(() => {});
 
 describe('ExternalSourceContext', () => {
   // Create mock dependencies directly
@@ -30,10 +26,17 @@ describe('ExternalSourceContext', () => {
     // Reset any instances
     ExternalSourceContext.resetInstance();
     MockEmbeddingService.resetInstance();
+    MockLogger.resetInstance();
     
     // Create fresh mock dependencies for each test
     mockStorageAdapter = MockExternalSourceStorageAdapter.createFresh();
     mockEmbeddingService = MockEmbeddingService.createFresh();
+    
+    // Create a silent mock logger
+    const mockLogger = MockLogger.createFresh({ silent: true });
+    
+    // Mock the Logger.getInstance to return our mock
+    MockLogger.instance = mockLogger;
     
     // Add spies to the embedding service methods we'll use
     mockEmbeddingService.getEmbedding = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
@@ -48,8 +51,8 @@ describe('ExternalSourceContext', () => {
   
   // Clean up after all tests
   afterAll(() => {
-    // Restore original logger
-    Logger.getInstance().warn = origLoggerWarn;
+    // Reset any static instances
+    MockLogger.resetInstance();
   });
   
   test('should initialize with proper configuration', () => {
