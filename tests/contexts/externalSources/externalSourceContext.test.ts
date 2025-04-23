@@ -15,7 +15,6 @@ import type { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSourceStorageAdapter';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Suppress logs in tests
 const origLoggerWarn = Logger.getInstance().warn;
@@ -28,9 +27,6 @@ describe('ExternalSourceContext', () => {
   
   // Set up before each test to ensure isolation
   beforeEach(() => {
-    // Set up environment
-    setMockEnv();
-    
     // Reset any instances
     ExternalSourceContext.resetInstance();
     MockEmbeddingService.resetInstance();
@@ -48,9 +44,6 @@ describe('ExternalSourceContext', () => {
   afterEach(() => {
     // Reset all instances to avoid test interference
     ExternalSourceContext.resetInstance();
-    
-    // Clean up environment
-    clearMockEnv();
   });
   
   // Clean up after all tests

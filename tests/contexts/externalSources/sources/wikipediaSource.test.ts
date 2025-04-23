@@ -34,9 +34,9 @@ describe('WikipediaSource', () => {
   beforeEach(() => {
     // Create a basic mock for fetch that returns empty results
     global.fetch = mock(async () => {
-      return new Response(JSON.stringify({ status: "ok" }), {
+      return new Response(JSON.stringify({ status: 'ok' }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
       });
     });
   });

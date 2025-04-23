@@ -1,31 +1,13 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { clearMockEnv, clearTestEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 import { CommandHandler as ActualCommandHandler } from '../../src/commands/index';
 import { MatrixRenderer } from '../../src/commands/matrix-renderer';
 import type { BrainProtocol } from '../../src/protocol/brainProtocol';
 
-// Mock environment variables
-beforeEach(() => {
-  setMockEnv();
-  setTestEnv('MATRIX_HOMESERVER_URL', 'https://matrix.test.org');
-  setTestEnv('MATRIX_USER_ID', '@test:test.org');
-  setTestEnv('MATRIX_ACCESS_TOKEN', 'mock-token');
-  setTestEnv('MATRIX_ROOM_IDS', '!room1:test.org');
-  setTestEnv('COMMAND_PREFIX', '!brain');
-});
-
-afterEach(() => {
-  clearMockEnv();
-  clearTestEnv('MATRIX_HOMESERVER_URL');
-  clearTestEnv('MATRIX_USER_ID');
-  clearTestEnv('MATRIX_ACCESS_TOKEN');
-  clearTestEnv('MATRIX_ROOM_IDS');
-  clearTestEnv('COMMAND_PREFIX');
-});
+// No need to set mock environment variables here since we're using mocks directly
 
 // Mock conversation note data
 const mockConversationNote = createMockNote(

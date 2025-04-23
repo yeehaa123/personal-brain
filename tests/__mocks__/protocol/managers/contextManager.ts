@@ -13,7 +13,7 @@ import type {
 } from '@/contexts';
 import type { IContextManager } from '@/protocol/types';
 import {
-  MockConversationContext
+  MockConversationContext,
 } from '@test/__mocks__/contexts/conversationContext';
 import {
   MockExternalSourceContext,

@@ -1,11 +1,10 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { CommandHandler } from '@commands/core/commandHandler';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
-import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Create a mock BrainProtocol that returns our mock WebsiteContext
 class TestBrainProtocol {
@@ -21,7 +20,7 @@ class TestBrainProtocol {
       getWebsiteContext: () => this.websiteContext,
     };
   }
-  
+
   // Keep old method for backward compatibility
   getWebsiteContext(): MockWebsiteContext {
     return this.websiteContext;
@@ -34,13 +33,6 @@ describe('WebsiteCommandHandler', () => {
   let mockBrainProtocol: TestBrainProtocol;
   let mockWebsiteContext: MockWebsiteContext;
 
-  beforeAll(() => {
-    setMockEnv();
-  });
-
-  afterAll(() => {
-    clearMockEnv();
-  });
 
   beforeEach(() => {
     // Reset all instances
@@ -105,7 +97,7 @@ describe('WebsiteCommandHandler', () => {
         productionPort: 4322,
       },
     }));
-    
+
     mockWebsiteContext.getConfig = mock(() => Promise.resolve({
       title: 'New Title',
       description: 'Mock Description',
@@ -118,7 +110,7 @@ describe('WebsiteCommandHandler', () => {
         productionPort: 4322,
       },
     }));
-    
+
     // Then update the config
     const result = await commandHandler.processCommand('website-config', 'title="New Title" author="New Author"');
 
@@ -171,7 +163,7 @@ describe('WebsiteCommandHandler', () => {
       path: '/dist/preview',
       url: 'https://preview.example.com',
     }));
-    
+
     // Build website
     const result = await commandHandler.processCommand('website-build', '');
 
@@ -181,7 +173,7 @@ describe('WebsiteCommandHandler', () => {
     expect(buildResult.message).toContain('preview');
     expect(mockWebsiteContext.handleWebsiteBuild).toHaveBeenCalled();
   });
-  
+
   test('should handle website-promote command', async () => {
     // Setup mock for the new function
     mockWebsiteContext.handleWebsitePromote = mock(() => Promise.resolve({
@@ -189,7 +181,7 @@ describe('WebsiteCommandHandler', () => {
       message: 'Preview successfully promoted to production',
       url: 'https://example.com',
     }));
-    
+
     // Promote preview to production
     const result = await commandHandler.processCommand('website-promote', '');
 
@@ -199,7 +191,7 @@ describe('WebsiteCommandHandler', () => {
     expect(promoteResult.message).toContain('production');
     expect(mockWebsiteContext.handleWebsitePromote).toHaveBeenCalled();
   });
-  
+
   test('should handle website-status command', async () => {
     // Setup mock for the new function
     mockWebsiteContext.handleWebsiteStatus = mock(() => Promise.resolve({
@@ -215,7 +207,7 @@ describe('WebsiteCommandHandler', () => {
         url: 'https://preview.example.com',
       },
     }));
-    
+
     // Check status
     const result = await commandHandler.processCommand('website-status', '');
 

@@ -14,8 +14,8 @@ import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
-import { MockConversationManager } from '@test/__mocks__/protocol/managers/conversationManager';
 import { MockContextManager } from '@test/__mocks__/protocol/managers/contextManager';
+import { MockConversationManager } from '@test/__mocks__/protocol/managers/conversationManager';
 
 // Sample data
 const sampleNote = createMockNote('note-1', 'Ecosystem Architecture', ['ecosystem', 'architecture']);

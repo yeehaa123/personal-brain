@@ -1,8 +1,7 @@
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
 import { createUnifiedMcpServer, type McpServerConfig } from '@/mcpServer';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
-import { clearTestEnv, setTestEnv } from '@test/helpers/envUtils';
 
 
 // Mock the Anthropic client
@@ -35,21 +34,13 @@ mock.module('@/resources/ai/embedding', () => {
 });
 
 describe('Unified MCP Server', () => {
-  beforeAll(() => {
-    // Set up mock environment
-    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
-    setTestEnv('NEWSAPI_KEY', 'mock-news-api-key');
-  });
-
-  afterAll(() => {
-    // Clean up mock environment
-    clearTestEnv('ANTHROPIC_API_KEY');
-    clearTestEnv('NEWSAPI_KEY');
-  });
 
   test('creates a unified MCP server with defaults', () => {
-    // Create the unified MCP server with default options
-    const unifiedServer = createUnifiedMcpServer();
+    // Create the unified MCP server with explicit config instead of environment variables
+    const unifiedServer = createUnifiedMcpServer({
+      apiKey: 'mock-api-key',
+      newsApiKey: 'mock-news-api-key'
+    });
 
     // Check that the server was created
     expect(unifiedServer).toBeDefined();

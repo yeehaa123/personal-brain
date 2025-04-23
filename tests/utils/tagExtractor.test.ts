@@ -1,6 +1,5 @@
-import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
-import { clearMockEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 import { extractTags } from '@utils/tagExtractor';
 
 // Mock the ai package's generateObject function
@@ -52,23 +51,14 @@ mock.module('@utils/textUtils', () => {
 });
 
 describe('Tag Extractor', () => {
-  beforeAll(() => {
-    setMockEnv();
-  });
-  
-  afterAll(() => {
-    clearMockEnv();
-  });
   
   test('should extract tags from ecosystem content', async () => {
     const content = `Ecosystem architecture is a practice of designing and building interconnected 
     communities and systems that are regenerative and decentralized. It focuses on collaboration
     instead of competition and aims to create healthy relationships between participants.`;
     
-    // Add API key to environment to ensure it uses our mock instead of fallback
-    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
-    
-    const tags = await extractTags(content, [], 5);
+    // Pass API key directly instead of using environment
+    const tags = await extractTags(content, [], 5, 'mock-api-key');
     
     // Check tags are returned and match expected format
     expect(tags).toBeDefined();
@@ -83,10 +73,8 @@ describe('Tag Extractor', () => {
     memorization of facts. Modern educational paradigms need to evolve to meet the challenges of
     a rapidly changing world. Learning how to learn is more important than specific knowledge domains.`;
     
-    // Add API key to environment to ensure it uses our mock instead of fallback
-    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
-    
-    const tags = await extractTags(content, [], 5);
+    // Pass API key directly instead of using environment
+    const tags = await extractTags(content, [], 5, 'mock-api-key');
     
     expect(tags).toBeDefined();
     expect(Array.isArray(tags)).toBe(true);
@@ -101,10 +89,8 @@ describe('Tag Extractor', () => {
     const content = 'Technology is rapidly evolving and changing how we live and work.';
     const existingTags = ['innovation', 'future'];
     
-    // Add API key to environment to ensure it uses our mock instead of fallback
-    setTestEnv('ANTHROPIC_API_KEY', 'mock-api-key');
-    
-    const tags = await extractTags(content, existingTags, 5);
+    // Pass API key directly instead of using environment
+    const tags = await extractTags(content, existingTags, 5, 'mock-api-key');
     
     expect(tags).toBeDefined();
     expect(Array.isArray(tags)).toBe(true);

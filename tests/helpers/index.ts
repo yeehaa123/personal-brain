@@ -5,4 +5,4 @@
  * These are shared helpers used across multiple test files.
  */
 
-export * from './envUtils';
+// Environment utilities have been removed as part of code cleanup

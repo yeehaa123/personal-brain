@@ -21,10 +21,14 @@ export async function extractTags(
   content: string,
   existingTags: string[] = [],
   maxTags: number = textConfig.defaultMaxTags,
+  apiKey?: string,
 ): Promise<string[]> {
   try {
+    // Use provided API key or fallback to config
+    const anthropicApiKey = apiKey || aiConfig.anthropic.apiKey;
+    
     // Check for API key
-    if (!aiConfig.anthropic.apiKey) {
+    if (!anthropicApiKey) {
       logger.warn('No Anthropic API key available, falling back to keyword extraction');
       return extractKeywords(content, maxTags);
     }
@@ -55,7 +59,7 @@ FORMAT: Respond with ONLY a comma-separated list of tags, with no additional tex
 
     // Get the Claude model instance from the ResourceRegistry
     const claude = ResourceRegistry.getInstance({
-      anthropicApiKey: aiConfig.anthropic.apiKey,
+      anthropicApiKey: anthropicApiKey,
     }).getClaudeModel();
 
     // Define the schema for the response

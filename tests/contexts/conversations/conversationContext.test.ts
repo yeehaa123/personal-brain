@@ -2,7 +2,7 @@
  * Tests for the ConversationContext with dependency injection
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ConversationContext } from '@/contexts';
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
@@ -21,7 +21,6 @@ import { MockConversationResourceService } from '@test/__mocks__/contexts/conver
 import { MockConversationToolService } from '@test/__mocks__/contexts/conversationToolService';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
-import { clearMockEnv, setMockEnv } from '@test/helpers/envUtils';
 
 // Create a standardized mock server for testing
 const mockMcpServer = createMockMcpServer('TestServer', '1.0');
@@ -36,14 +35,6 @@ describe('ConversationContext', () => {
   let toolService: MockConversationToolService;
   let queryService: MockConversationQueryService;
   let memoryService: MockConversationMemoryService;
-
-  beforeAll(() => {
-    setMockEnv();
-  });
-
-  afterAll(() => {
-    clearMockEnv();
-  });
 
   beforeEach(() => {
     // Reset all mock instances

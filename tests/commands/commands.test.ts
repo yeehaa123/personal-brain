@@ -1,20 +1,12 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { CommandHandler } from '@commands/index';
 import { MockCommandHandler } from '@test/__mocks__/commands/commandHandler';
-import { clearMockEnv, setMockEnv, setTestEnv } from '@test/helpers/envUtils';
 
 describe('CommandHandler', () => {
   // Use a more flexible type for our mock
   let commandHandler: Pick<CommandHandler, 'getCommands' | 'processCommand'>;
 
-  beforeAll(() => {
-    setMockEnv();
-  });
-
-  afterAll(() => {
-    clearMockEnv();
-  });
 
   beforeEach(async () => {
     // Instead of using the real CommandHandler with a mock BrainProtocol,
@@ -32,7 +24,7 @@ describe('CommandHandler', () => {
 
       // Check for required commands - we know only 'help' and 'profile' are included in our mock
       const commandNames = commands.map((cmd: unknown) => (cmd as { command: string }).command);
-      
+
       // Just check for the commands we know are defined in this mock
       expect(commandNames).toContain('help');
       expect(commandNames).toContain('profile');
@@ -43,7 +35,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('error');
-      
+
       // Use type assertion to check message
       if (result.type === 'error') {
         expect(result.message).toContain('Unknown command');
@@ -57,7 +49,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('profile');
-      
+
       if (result.type === 'profile') {
         expect(result.profile).toBeDefined();
         expect(result.profile.fullName).toBe('John Doe');
@@ -69,7 +61,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('profile-related');
-      
+
       if (result.type === 'profile-related') {
         expect(result.profile).toBeDefined();
         expect(Array.isArray(result.relatedNotes)).toBe(true);
@@ -85,7 +77,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('search');
-      
+
       if (result.type === 'search') {
         expect(result.query).toBe('ecosystem');
         expect(Array.isArray(result.notes)).toBe(true);
@@ -100,7 +92,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('notes');
-      
+
       if (result.type === 'notes') {
         expect(Array.isArray(result.notes)).toBe(true);
         expect(result.notes.length).toBeGreaterThan(0);
@@ -113,7 +105,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('notes');
-      
+
       if (result.type === 'notes') {
         expect(Array.isArray(result.notes)).toBe(true);
         expect(result.notes.length).toBeGreaterThan(0);
@@ -126,7 +118,7 @@ describe('CommandHandler', () => {
 
       expect(result).toBeDefined();
       expect(result.type).toBe('note');
-      
+
       if (result.type === 'note') {
         expect(result.note).toBeDefined();
         expect(result.note.id).toBe('note-1');
@@ -138,14 +130,11 @@ describe('CommandHandler', () => {
 
   describe('ask command', () => {
     test('should handle ask command', async () => {
-      // Set ANTHROPIC_API_KEY for test
-      setTestEnv('ANTHROPIC_API_KEY', 'test-key');
-
       const result = await commandHandler.processCommand('ask', 'What is ecosystem architecture?');
 
       expect(result).toBeDefined();
       expect(result.type).toBe('ask');  // Type is 'ask', not 'answer'
-      
+
       if (result.type === 'ask') {
         expect(result.answer).toBe('Mock answer');
         expect(Array.isArray(result.citations)).toBe(true);
@@ -159,14 +148,11 @@ describe('CommandHandler', () => {
 
   describe('status command', () => {
     test('should handle status command', async () => {
-      // Set ANTHROPIC_API_KEY for test
-      setTestEnv('ANTHROPIC_API_KEY', 'test-key');
-
       const result = await commandHandler.processCommand('status', '');
 
       expect(result).toBeDefined();
       expect(result.type).toBe('status');
-      
+
       if (result.type === 'status') {
         expect(result.status).toBeDefined();
         expect(result.status.apiConnected).toBe(true);
@@ -183,7 +169,7 @@ describe('CommandHandler', () => {
       // Enable external sources
       await commandHandler.processCommand('external', 'on');
       let result = await commandHandler.processCommand('status', '');
-      
+
       if (result.type === 'status') {
         expect(result.status.externalSourcesEnabled).toBe(true);
       }
@@ -191,7 +177,7 @@ describe('CommandHandler', () => {
       // Disable external sources
       await commandHandler.processCommand('external', 'off');
       result = await commandHandler.processCommand('status', '');
-      
+
       if (result.type === 'status') {
         expect(result.status.externalSourcesEnabled).toBe(false);
       }
