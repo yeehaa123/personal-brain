@@ -11,13 +11,13 @@
  */
 
 import { textConfig } from '@/config';
-import { BaseContext } from '@/contexts/core/baseContext';
+import { BaseContext } from '@/contexts/baseContext';
 import type { 
   ContextDependencies,
   ContextInterface,
-} from '@/contexts/core/contextInterface';
-import type { FormatterInterface } from '@/contexts/core/formatterInterface';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+} from '@/contexts/contextInterface';
+import type { FormatterInterface } from '@/contexts/formatterInterface';
+import type { StorageInterface } from '@/contexts/storageInterface';
 import type { Note } from '@/models/note';
 import type {
   NoteEmbeddingService,

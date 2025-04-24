@@ -5,9 +5,9 @@
  * and provides a simplified implementation for testing.
  */
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
 import type { ExternalSourceStorageConfig } from '@/contexts/externalSources/externalSourceStorageAdapter';
 import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
 
 /**
  * Mock adapter for external source storage

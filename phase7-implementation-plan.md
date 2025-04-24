@@ -31,6 +31,8 @@ Note: CLI Interface and Logger separation has been moved to post-MVP priorities 
 - ⏳ Remove remaining technical debt
   - ⏳ Remove transitional adapters
   - ✅ Clean up barrel files to reduce implementation leakage
+  - ✅ Eliminate export * patterns in barrel files
+  - ✅ Flatten directory structure (contexts/core → contexts/)
   - ⏳ Remove unused exports identified by find-real-dead-code
 - ⏳ Complete dependency injection implementation
   - ⏳ Standardize factory methods across remaining components

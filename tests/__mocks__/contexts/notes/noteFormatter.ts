@@ -5,7 +5,7 @@
  * Implements FormatterInterface for compatibility with the interface standardization
  */
 
-import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
 import type { Note } from '@/models/note';
 
 /**

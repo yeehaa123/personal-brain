@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 
 import { NoteContext } from '@/contexts';
-import { BaseContext } from '@/contexts/core/baseContext';
+import { BaseContext } from '@/contexts/baseContext';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import type { NoteSearchService } from '@/services/notes/noteSearchService';

@@ -13,6 +13,12 @@
 
 import { nanoid } from 'nanoid';
 
+import { BaseContext } from '@/contexts/baseContext';
+import type { 
+  ContextDependencies,
+  ContextInterface,
+  ResourceDefinition,
+} from '@/contexts/contextInterface';
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import { ConversationFormatter, type FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import {
@@ -31,14 +37,8 @@ import type {
 } from '@/contexts/conversations/storage/conversationStorage';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
-import { BaseContext } from '@/contexts/core/baseContext';
-import type { 
-  ContextDependencies,
-  ContextInterface,
-  ResourceDefinition,
-} from '@/contexts/core/contextInterface';
-import type { FormatterInterface } from '@/contexts/core/formatterInterface';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+import type { FormatterInterface } from '@/contexts/formatterInterface';
+import type { StorageInterface } from '@/contexts/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 // No need to import ServiceRegistry anymore
 import { Logger } from '@/utils/logger';

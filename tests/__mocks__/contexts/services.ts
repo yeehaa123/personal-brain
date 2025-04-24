@@ -8,7 +8,7 @@
 
 import { mock } from 'bun:test';
 
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 
 /**
  * Standardized Mock Query Service for Conversation Context tests

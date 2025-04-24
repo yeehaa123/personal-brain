@@ -7,7 +7,7 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { ListOptions, SearchCriteria } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria } from '@/contexts/storageInterface';
 import type { Profile } from '@/models/profile';
 // Import only the types we need
 

@@ -9,7 +9,7 @@ import { describe, expect, test } from 'bun:test';
 import type { 
   FormatterInterface,
   FormattingOptions,
-} from '@/contexts/core/formatterInterface';
+} from '@/contexts/formatterInterface';
 
 // Define sample input and output types for testing
 interface TestInput {

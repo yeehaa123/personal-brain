@@ -10,7 +10,7 @@ import type {
   ListOptions,
   SearchCriteria,
   StorageInterface,
-} from '@/contexts/core/storageInterface';
+} from '@/contexts/storageInterface';
 
 // Define a simple entity type for testing
 interface TestEntity {

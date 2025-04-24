@@ -9,8 +9,8 @@
 
 import { mock } from 'bun:test';
 
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 
 /**
  * Mock formatter for external source results

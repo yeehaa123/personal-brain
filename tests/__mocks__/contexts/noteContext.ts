@@ -7,7 +7,7 @@
 
 import { mock } from 'bun:test';
 
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 import type { Note, NoteSearchParams } from '@/models/note';
 
 import { MockBaseContext } from './baseContext';

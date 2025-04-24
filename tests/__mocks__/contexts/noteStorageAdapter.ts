@@ -7,7 +7,7 @@
 
 import { mock } from 'bun:test';
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 

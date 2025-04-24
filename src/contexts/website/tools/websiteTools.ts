@@ -11,7 +11,7 @@
 import { z } from 'zod';
 
 import type { WebsiteContext } from '@/contexts';
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { Logger } from '@/utils/logger';
 
 /**

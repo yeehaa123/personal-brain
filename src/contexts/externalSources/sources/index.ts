@@ -4,13 +4,12 @@
  * This barrel file simplifies imports from external sources
  */
 import type {
+  ExternalSearchOptions,
   ExternalSourceInterface,
   ExternalSourceResult,
-  ExternalSearchOptions,
 } from './externalSourceInterface';
-
-import { WikipediaSource } from './wikipediaSource';
 import { NewsApiSource } from './newsApiSource';
+import { WikipediaSource } from './wikipediaSource';
 
 // Export class implementations
 export { WikipediaSource, NewsApiSource };
@@ -19,4 +18,4 @@ export type {
   ExternalSourceInterface,
   ExternalSourceResult,
   ExternalSearchOptions,
-} 
+}; 

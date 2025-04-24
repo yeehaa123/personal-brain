@@ -4,7 +4,7 @@
 import { describe, expect, spyOn, test } from 'bun:test';
 
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
-import type { ListOptions, SearchCriteria } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria } from '@/contexts/storageInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 

@@ -8,7 +8,5 @@
 import { NoteFormatter, type NoteFormattingOptions } from './noteFormatter';
 
 // Only export the public API
-export {
-  NoteFormatter,
-  NoteFormattingOptions
-};
+export { NoteFormatter };
+export type { NoteFormattingOptions };

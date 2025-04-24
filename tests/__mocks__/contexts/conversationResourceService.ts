@@ -6,7 +6,7 @@
 
 import { mock } from 'bun:test';
 
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 
 /**
  * Mock implementation of ConversationResourceService

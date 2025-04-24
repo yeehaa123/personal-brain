@@ -13,7 +13,7 @@ import type {
   ConversationStorage, 
   ConversationSummary,
 } from '@/contexts/conversations/storage/conversationStorage';
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 /**

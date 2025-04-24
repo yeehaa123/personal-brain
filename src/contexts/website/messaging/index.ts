@@ -13,5 +13,5 @@ import { WebsiteNotifier } from './websiteNotifier';
 export {
   WebsiteContextMessaging,
   WebsiteMessageHandler,
-  WebsiteNotifier
+  WebsiteNotifier,
 };

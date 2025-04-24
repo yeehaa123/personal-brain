@@ -7,7 +7,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 
 
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { WebsiteToolService } from '@/contexts/website/tools';
 import { WebsiteContext } from '@/contexts/website/websiteContext';
 

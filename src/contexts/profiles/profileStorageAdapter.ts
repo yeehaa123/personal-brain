@@ -11,7 +11,7 @@
  * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
 import type { Profile } from '@/models/profile';
 import { ProfileRepository } from '@/services/profiles/profileRepository';
 import { Logger } from '@/utils/logger';

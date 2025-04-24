@@ -7,7 +7,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterAll, afterEach, describe, expect, test } from 'bun:test';
 
-import { BaseContext } from '@/contexts/core/baseContext';
+import { BaseContext } from '@/contexts/baseContext';
 import { Registry, type RegistryOptions } from '@/utils/registry';
 import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';
 import { MockStorageInterface } from '@test/__mocks__/storage/baseStorageInterface';

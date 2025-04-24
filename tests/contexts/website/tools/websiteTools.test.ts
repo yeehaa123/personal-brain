@@ -5,7 +5,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { WebsiteToolService } from '@/contexts/website/tools';
 import type { WebsiteContext } from '@/contexts/website/websiteContext';
 

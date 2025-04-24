@@ -13,10 +13,10 @@ import type {
   CoreContextInterface,
   McpContextInterface,
   ResourceDefinition, 
-} from '@/contexts/core/contextInterface';
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
-import type { FormatterInterface } from '@/contexts/core/formatterInterface';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+} from '@/contexts/contextInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
+import type { FormatterInterface } from '@/contexts/formatterInterface';
+import type { StorageInterface } from '@/contexts/storageInterface';
 import { Registry } from '@/utils/registry';
 
 /**

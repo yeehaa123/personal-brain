@@ -7,16 +7,16 @@
  * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-// Export core interfaces and base context
-export { BaseContext } from './core';
+// Export interfaces and base context
+export { BaseContext } from './baseContext';
 export type { 
   CoreContextInterface, 
   McpContextInterface, 
-  FormatterInterface, 
-  StorageInterface, 
   ContextStatus,
   ContextCapabilities,
-} from './core';
+} from './contextInterface';
+export type { FormatterInterface } from './formatterInterface';
+export type { StorageInterface } from './storageInterface';
 
 // Domain contexts - the main public API for each domain
 export { ConversationContext } from './conversations';

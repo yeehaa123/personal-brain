@@ -6,41 +6,36 @@
  */
 
 // Import specific exports from each formatter
-import { 
-  getMarkdownFormatter,
-  MatrixMarkdownFormatter,
-  type MarkdownFormatterOptions 
-} from './markdown-formatter';
-
 import {
-  getCitationFormatter,
-  MatrixCitationFormatter
-} from './citation-formatter';
-
-import {
+  type Block,
+  type BlockBuilderOptions,
+  type BlockElement, 
+  type BlockType,
   getBlockBuilder,
   MatrixBlockBuilder,
-  type BlockType, 
   type TextObject,
-  type Block,
-  type BlockElement,
-  type BlockBuilderOptions
 } from './block-formatter';
-
+import {
+  getCitationFormatter,
+  MatrixCitationFormatter,
+} from './citation-formatter';
+import { 
+  getMarkdownFormatter,
+  type MarkdownFormatterOptions,
+  MatrixMarkdownFormatter, 
+} from './markdown-formatter';
 import {
   getResponseFormatter,
   MatrixResponseFormatter,
+  type ResponseFormatterOptions,
   type ResponseType,
-  type ResponseFormatterOptions
 } from './response-formatter';
-
 import type { BlockContent } from './types';
 
-// Only export the public API
+// Only export the public API - value exports
 export {
   // Markdown formatter
   getMarkdownFormatter,
-  MarkdownFormatterOptions,
   MatrixMarkdownFormatter,
   
   // Citation formatter
@@ -49,17 +44,27 @@ export {
   
   // Block builder
   getBlockBuilder,
+  MatrixBlockBuilder,
+  
+  // Response formatter
+  getResponseFormatter,
+  MatrixResponseFormatter,
+};
+
+// Type exports
+export type {
+  // Markdown formatter
+  MarkdownFormatterOptions,
+  
+  // Block builder
   BlockType,
   TextObject,
   Block,
   BlockElement,
   BlockBuilderOptions,
-  MatrixBlockBuilder,
   BlockContent,
   
   // Response formatter
-  getResponseFormatter,
   ResponseType,
   ResponseFormatterOptions,
-  MatrixResponseFormatter
 };

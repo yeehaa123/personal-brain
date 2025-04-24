@@ -10,13 +10,13 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import { BaseContext } from '@/contexts/core/baseContext';
+import { BaseContext } from '@/contexts/baseContext';
 import type { 
   ContextDependencies,
   ContextInterface,
-} from '@/contexts/core/contextInterface';
-import type { FormatterInterface } from '@/contexts/core/formatterInterface';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+} from '@/contexts/contextInterface';
+import type { FormatterInterface } from '@/contexts/formatterInterface';
+import type { StorageInterface } from '@/contexts/storageInterface';
 import type { 
   Profile,
 } from '@/models/profile';

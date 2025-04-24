@@ -8,7 +8,5 @@
 import { ExternalSourceFormatter, type ExternalSourceFormattingOptions } from './externalSourceFormatter';
 
 // Only export the public API
-export {
-  ExternalSourceFormatter,
-  ExternalSourceFormattingOptions
-};
+export { ExternalSourceFormatter };
+export type { ExternalSourceFormattingOptions };

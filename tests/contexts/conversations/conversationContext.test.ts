@@ -5,6 +5,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { ConversationContext } from '@/contexts';
+import { BaseContext } from '@/contexts/baseContext';
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import type { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
@@ -12,7 +13,6 @@ import type { ConversationResourceService } from '@/contexts/conversations/resou
 import type { ConversationMemoryService } from '@/contexts/conversations/services/conversationMemoryService';
 import type { ConversationQueryService } from '@/contexts/conversations/services/conversationQueryService';
 import type { ConversationToolService } from '@/contexts/conversations/tools/conversationTools';
-import { BaseContext } from '@/contexts/core/baseContext';
 import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';
 import { MockConversationMcpFormatter } from '@test/__mocks__/contexts/conversationMcpFormatter';
 import { MockConversationMemoryService } from '@test/__mocks__/contexts/conversationMemoryService';

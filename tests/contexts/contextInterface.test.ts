@@ -19,8 +19,8 @@ import type {
   ContextInterface,
   ContextStatus,
   ResourceDefinition,
-} from '@/contexts/core/contextInterface';
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+} from '@/contexts/contextInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 // Imports for testing
 import type { Registry, RegistryOptions } from '@/utils/registry';

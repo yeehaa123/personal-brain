@@ -10,8 +10,8 @@
 
 import { mock } from 'bun:test';
 
-import type { StorageInterface } from '@/contexts/core/storageInterface';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
+import type { StorageInterface } from '@/contexts/storageInterface';
 
 import { MockBaseContext } from './baseContext';
 import { MockExternalSourceFormatter } from './externalSources/formatters/externalSourceFormatter';

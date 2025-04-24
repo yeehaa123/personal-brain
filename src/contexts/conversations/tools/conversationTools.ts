@@ -13,11 +13,11 @@
 import { z } from 'zod';
 
 import type { ConversationContext } from '@/contexts';
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 import type { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import type { ConversationFormatter, FormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
 import { Logger } from '@/utils/logger';
 
 /**

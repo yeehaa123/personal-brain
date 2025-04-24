@@ -7,7 +7,7 @@
 
 import type { FormattingOptions as ContextFormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
 import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 

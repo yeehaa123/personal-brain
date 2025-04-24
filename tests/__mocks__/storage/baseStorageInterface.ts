@@ -5,7 +5,7 @@
  * It serves as a foundation for more specialized storage mocks.
  */
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/core/storageInterface';
+import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
 
 /**
  * Generic in-memory storage map for mocking

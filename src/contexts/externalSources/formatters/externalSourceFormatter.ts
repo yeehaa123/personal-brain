@@ -10,7 +10,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
 
 import type { ExternalSourceResult } from '../sources';
 

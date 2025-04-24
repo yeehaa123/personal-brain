@@ -5,11 +5,8 @@
  * without leaking implementation details
  */
 
-import { WebsiteFormatter, type WebsiteFormattingOptions, type WebsiteData } from './websiteFormatter';
+import { type WebsiteData, WebsiteFormatter, type WebsiteFormattingOptions } from './websiteFormatter';
 
 // Only export the public API
-export {
-  WebsiteFormatter,
-  WebsiteFormattingOptions,
-  WebsiteData
-};
+export { WebsiteFormatter };
+export type { WebsiteFormattingOptions, WebsiteData };

@@ -1,9 +1,9 @@
 import config from '@/config';
-import { BaseContext } from '@/contexts/core/baseContext';
-import type { ContextDependencies, ContextInterface } from '@/contexts/core/contextInterface';
-import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
-import type { StorageInterface } from '@/contexts/core/storageInterface';
+import { BaseContext } from '@/contexts/baseContext';
+import type { ContextDependencies, ContextInterface } from '@/contexts/contextInterface';
+import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
 import { ProfileContext } from '@/contexts/profiles';
+import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
 

@@ -7,11 +7,11 @@
 import { nanoid } from 'nanoid';
 
 // Import only what we need from the real implementations - primarily just types
+import type { ResourceDefinition } from '@/contexts/contextInterface';
 import type { McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
-import type { ResourceDefinition } from '@/contexts/core/contextInterface';
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';

@@ -10,7 +10,7 @@
  * 
  * Implements the FormatterInterface for consistent formatting operations
  */
-import type { FormatterInterface } from '@/contexts/core/formatterInterface';
+import type { FormatterInterface } from '@/contexts/formatterInterface';
 import type { Note } from '@/models/note';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';

@@ -14,11 +14,11 @@
 
 import { z } from 'zod';
 
-import { BaseContext } from '@/contexts/core/baseContext';
+import { BaseContext } from '@/contexts/baseContext';
 import type { 
   ContextInterface,
-} from '@/contexts/core/contextInterface';
-import type { FormattingOptions } from '@/contexts/core/formatterInterface';
+} from '@/contexts/contextInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 // Importing from core interfaces
 import { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
