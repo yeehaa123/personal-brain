@@ -9,10 +9,10 @@ import { describe, expect, test } from 'bun:test';
 // Import domain contexts directly to verify they can be imported
 import { 
   ConversationContext,
+  ExternalSourceContext,
   NoteContext,
   ProfileContext,
-  ExternalSourceContext,
-  WebsiteContext
+  WebsiteContext,
 } from '@/contexts';
 
 describe('Context Exports', () => {

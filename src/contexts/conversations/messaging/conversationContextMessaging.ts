@@ -6,8 +6,8 @@
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import type { ContextMediator } from '@/protocol/messaging';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import type { ConversationContext } from '../conversationContext';

@@ -9,12 +9,14 @@ import {
   DataRequestType, 
   MessageFactory,
   type MessageHandler,
+} from '@/protocol/messaging';
+import {
   requestContextData,
   requestConversationHistory,
   requestNoteById,
   requestNotes,
   requestProfile,
-} from '@/protocol/messaging';
+} from '@/protocol/messaging/contextIntegration';
 import type { ContextCommunicationMessage } from '@/protocol/messaging/messageTypes';
 
 describe('Context Integration', () => {

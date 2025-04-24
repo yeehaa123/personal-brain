@@ -23,14 +23,3 @@ export { MessageFactory } from './messageFactory';
 // Export mediator interface (needed for contexts to communicate)
 export { ContextMediator } from './contextMediator';
 export type { MessageHandler } from './contextMediator';
-
-// Export context integration helpers needed by context implementations
-export { 
-  requestContextData,
-  requestNotes,
-  requestNoteById,
-  requestProfile,
-  requestConversationHistory,
-  requestExternalSources,
-  requestWebsiteStatus,
-} from './contextIntegration';

@@ -104,6 +104,9 @@ Remove remaining technical debt and unused code:
    - Focus on files with multiple unused exports
    - Prioritize cleaning up the core modules first
    - Remove unused exports systematically
+   - Exceptions:
+     - Keep the context integration helper functions in `protocol/messaging/contextIntegration.ts` (requestContextData, requestNotes, etc.) as they will be needed for the standardized context communication implementation
+     - These helper functions provide a standardized facade for cross-context communication and will be integrated as part of the dependency injection completion
 
 3. Refactor barrel files to reduce implementation leakage:
    - Review each barrel file to identify what's actually needed by upstream consumers
@@ -111,6 +114,7 @@ Remove remaining technical debt and unused code:
    - Remove unnecessary re-exports that leak implementation details
    - Use direct imports for implementation details that aren't part of the public API
    - Focus especially on the main context barrel files (in src/contexts/*/index.ts)
+   - For `protocol/messaging/index.ts`, keep core message types but remove helper functions to encourage direct imports
 
 4. Use `bun run lint:fix` with the unused-imports plugin to clean up unused imports
 
@@ -121,12 +125,18 @@ Finalize dependency injection implementation across remaining components:
 - Complete `createWithDependencies` in any remaining classes
 - Standardize factory methods across all components
 - Update tests to properly mock dependencies
+- Integrate existing context integration helper functions into the application
 
 **Specific Tasks:**
 1. Complete `createWithDependencies` implementation in utility classes
 2. Update any remaining service implementations to use dependency injection consistently
 3. Standardize dependency resolution in factory methods
 4. Update tests to use standardized mock implementations
+5. Integrate context integration helper functions:
+   - Implement cross-context communication using the helper functions in `protocol/messaging/contextIntegration.ts` 
+   - Use requestContextData, requestNotes, requestProfile, etc. in protocol components to create a standardized messaging layer
+   - Add these helper functions to the appropriate context implementations to enable seamless cross-context data access
+   - Update existing direct messaging implementations to use these standardized helpers
 
 ### 4. Error Handling Refinement (Priority: Medium)
 
