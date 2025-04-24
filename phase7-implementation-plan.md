@@ -30,7 +30,7 @@ Note: CLI Interface and Logger separation has been moved to post-MVP priorities 
   - ✅ Update WebsiteContext.initializeMcpComponents()
 - ⏳ Remove remaining technical debt
   - ⏳ Remove transitional adapters
-  - ⏳ Clean up barrel files to reduce implementation leakage
+  - ✅ Clean up barrel files to reduce implementation leakage
   - ⏳ Remove unused exports identified by find-real-dead-code
 - ⏳ Complete dependency injection implementation
   - ⏳ Standardize factory methods across remaining components
@@ -199,10 +199,10 @@ Complete comprehensive documentation for the architecture and components:
 
 ## Next Steps
 
-1. **Clean Up Technical Debt** (High Priority):
-   - Clean up barrel files
-   - Remove unused exports
-   - Update imports
+1. **Continue Technical Debt Cleanup** (High Priority):
+   - ✅ Clean up barrel files (completed)
+   - Remove unused exports identified by find-real-dead-code
+   - Remove any remaining transitional adapters
 
 2. **Complete Dependency Injection** (Medium Priority):
    - Finish remaining createWithDependencies implementations
