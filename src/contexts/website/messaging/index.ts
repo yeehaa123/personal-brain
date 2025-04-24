@@ -1,9 +1,17 @@
 /**
  * Website Context Messaging
  * 
- * This module exports messaging-related components for the Website context.
+ * This module exports public messaging-related components for the Website context
+ * without leaking implementation details.
  */
 
-export * from './websiteContextMessaging';
-export * from './websiteMessageHandler';
-export * from './websiteNotifier';
+import { WebsiteContextMessaging } from './websiteContextMessaging';
+import { WebsiteMessageHandler } from './websiteMessageHandler';
+import { WebsiteNotifier } from './websiteNotifier';
+
+// Export only the public API
+export {
+  WebsiteContextMessaging,
+  WebsiteMessageHandler,
+  WebsiteNotifier
+};

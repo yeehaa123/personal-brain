@@ -1,7 +1,15 @@
 /**
  * Website Formatters
  * 
- * This barrel file exports all formatter components for the WebsiteContext
+ * This barrel file exports public formatter components for the WebsiteContext
+ * without leaking implementation details
  */
 
-export * from './websiteFormatter';
+import { WebsiteFormatter, type WebsiteFormattingOptions, type WebsiteData } from './websiteFormatter';
+
+// Only export the public API
+export {
+  WebsiteFormatter,
+  WebsiteFormattingOptions,
+  WebsiteData
+};
