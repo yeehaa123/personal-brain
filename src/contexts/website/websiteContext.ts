@@ -1,3 +1,4 @@
+import config from '@/config';
 import { BaseContext } from '@/contexts/core/baseContext';
 import type { ContextDependencies, ContextInterface } from '@/contexts/core/contextInterface';
 import type { FormatterInterface, FormattingOptions } from '@/contexts/core/formatterInterface';
@@ -6,7 +7,7 @@ import { ProfileContext } from '@/contexts/profiles';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
 
-import { GlobalConfigWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
+import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import { type WebsiteData, WebsiteFormatter } from './formatters';
 import { AstroContentService } from './services/astroContentService';
@@ -66,7 +67,7 @@ export class WebsiteContext extends BaseContext<
     
     this.contextName = options?.name || 'website';
     this.contextVersion = options?.version || '1.0.0';
-    this.storage = options?.storage || new GlobalConfigWebsiteStorageAdapter();
+    this.storage = options?.storage || new InMemoryWebsiteStorageAdapter();
     this.formatter = options?.formatter || WebsiteFormatter.getInstance();
     
     // Initialize services if provided (primarily for testing)
@@ -167,7 +168,39 @@ export class WebsiteContext extends BaseContext<
     
     // Handle the case where this is called with a config object
     // Create storage adapter
-    const storage = new GlobalConfigWebsiteStorageAdapter();
+    const storage = new InMemoryWebsiteStorageAdapter();
+    
+    // Initialize with values from global config
+    const websiteConfig = {
+      title: config.website.title,
+      description: config.website.description,
+      author: config.website.author,
+      baseUrl: config.website.baseUrl,
+      astroProjectPath: config.website.astroProjectPath,
+      deployment: {
+        type: config.website.deployment.type as 'local-dev' | 'caddy',
+        previewDir: config.website.deployment.previewDir,
+        productionDir: config.website.deployment.productionDir,
+        previewPort: config.website.deployment.previewPort,
+        productionPort: config.website.deployment.productionPort,
+        domain: config.website.deployment.domain,
+      },
+    };
+    
+    // We need to initialize the adapter before we can update it
+    storage.initialize().then(() => {
+      storage.updateWebsiteConfig(websiteConfig).catch(error => {
+        Logger.getInstance().error('Error updating website config during initialization', {
+          error: error instanceof Error ? error.message : String(error),
+          context: 'WebsiteContext',
+        });
+      });
+    }).catch(error => {
+      Logger.getInstance().error('Error initializing website storage adapter', {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'WebsiteContext',
+      });
+    });
     
     // Create formatter
     const formatter = WebsiteFormatter.getInstance();
