@@ -14,6 +14,7 @@ import { AstroContentService } from './services/astroContentService';
 import { DeploymentManagerFactory } from './services/deployment';
 import type { WebsiteDeploymentManager } from './services/deployment';
 import { LandingPageGenerationService } from './services/landingPageGenerationService';
+import { WebsiteToolService } from './tools';
 import type { LandingPageData, WebsiteConfig } from './websiteStorage';
 
 /**
@@ -106,7 +107,16 @@ export class WebsiteContext extends BaseContext<
    * Initialize MCP components - resources and tools
    */
   protected override initializeMcpComponents(): void {
-    // No resources or tools yet, will be implemented in later phases
+    // Get the website tool service
+    const toolService = WebsiteToolService.getInstance();
+    
+    // Register website tools for MCP Inspector visibility
+    this.tools = toolService.getTools(this);
+    
+    this.logger.debug('Initialized WebsiteContext MCP components', { 
+      toolCount: this.tools.length,
+      context: 'WebsiteContext', 
+    });
   }
   
   /**
@@ -395,6 +405,10 @@ export class WebsiteContext extends BaseContext<
     
     if (serviceType === ProfileContext as unknown as new () => T) {
       return this.getProfileContext() as unknown as T;
+    }
+    
+    if (serviceType === WebsiteToolService as unknown as new () => T) {
+      return WebsiteToolService.getInstance() as unknown as T;
     }
     
     // Use registry for other service types

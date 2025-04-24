@@ -4,28 +4,37 @@
 
 Phase 7 builds upon the successful restructuring and interface standardization work completed in Phase 6. With the major architectural components now properly structured, implemented, and tested, Phase 7 focuses on:
 
-1. Removing any remaining legacy code, backward compatibility layers, and transitional adapters
-2. Completing the dependency injection pattern implementation throughout the codebase
+1. Adding Website Context MCP tools to provide visibility in the MCP Inspector (✅ Completed)
+2. Removing any remaining legacy code and technical debt
 3. Refining error handling and logging consistency
 4. Completing comprehensive documentation
 
+Note: CLI Interface and Logger separation has been moved to post-MVP priorities to focus on more critical MVP components.
+
 ## Goals
 
-1. **Legacy Code Removal**: Eliminate all remaining legacy code, compatibility layers, and technical debt
-2. **Dependency Injection Completion**: Finalize the standardized dependency injection pattern across all components
-3. **Error Handling**: Implement consistent error handling across all components
-4. **Documentation**: Complete comprehensive architecture and component documentation
+1. **Website Context MCP Tools**: Implement tools for the Website Context to appear in the MCP Inspector
+2. **Legacy Code Removal**: Eliminate remaining technical debt and unused code
+3. **Dependency Injection Completion**: Finalize the standardized DI pattern across all remaining components
+4. **Error Handling**: Implement consistent error handling across all components
+5. **Documentation**: Complete comprehensive architecture and component documentation
 
 ## Progress Tracking
 
-- ⏳ Remove legacy code and backward compatibility layers
-  - ⏳ Remove deprecated code paths and methods
+✅ = Completed, ⏳ = In Progress, 🔜 = Upcoming
+
+- ✅ Remove deprecated code paths and methods
+- ✅ Add Website Context MCP tools for Inspector visibility
+  - ✅ Create WebsiteToolService
+  - ✅ Implement website operation tools
+  - ✅ Update WebsiteContext.initializeMcpComponents()
+- ⏳ Remove remaining technical debt
   - ⏳ Remove transitional adapters
-  - ⏳ Eliminate any remaining technical debt
+  - ⏳ Clean up barrel files to reduce implementation leakage
+  - ⏳ Remove unused exports identified by find-real-dead-code
 - ⏳ Complete dependency injection implementation
-  - ⏳ Standardize factory methods across all components
-  - ⏳ Update any remaining classes to follow Component Interface Standardization pattern
-  - ⏳ Update tests to properly mock all dependencies
+  - ⏳ Standardize factory methods across remaining components
+  - ⏳ Update tests to properly mock dependencies
 - ⏳ Refine error handling and logging
   - ⏳ Implement consistent error handling
   - ⏳ Standardize logging patterns
@@ -37,26 +46,62 @@ Phase 7 builds upon the successful restructuring and interface standardization w
 
 ## Implementation Approach
 
-### 1. Legacy Code Removal (Priority: High)
+### 1. Website Context MCP Tools (Priority: Highest) ✅ COMPLETED
 
-Identify and remove all remaining legacy code, compatibility layers, and transitional adapters:
+We've successfully implemented MCP tools for the WebsiteContext to improve visibility in the MCP Inspector:
 
-- Remove all code marked with `@deprecated` comments
-- Remove all transitional adapters and intermediary layers
-- Eliminate any remaining technical debt and workarounds
-- Update imports and references to use the new standardized structure
+- Created a WebsiteToolService following the same pattern as ConversationToolService
+- Implemented tools for all website operations (generate landing page, build, deploy, etc.)
+- Updated the WebsiteContext.initializeMcpComponents() method to register these tools
+
+**Completed Tasks:**
+1. Created the `src/contexts/website/tools/websiteTools.ts` file with a WebsiteToolService class
+   - Followed the Component Interface Standardization pattern (getInstance/resetInstance/createFresh)
+   - Implemented getTools() method to return ResourceDefinition[] for website operations
+   - Implemented getToolSchema() method for Zod schema definitions
+
+2. Created the following tools:
+   - generate_landing_page: Generates a landing page from profile data
+   - build_website: Builds the website using Astro
+   - promote_website: Promotes preview to production
+   - get_website_status: Gets status of preview or production environment
+
+3. Created an index.ts barrel file in the tools directory to export WebsiteToolService
+
+4. Updated WebsiteContext.initializeMcpComponents() to register the tools:
+   ```typescript
+   protected override initializeMcpComponents(): void {
+     // Get the tool service
+     const toolService = WebsiteToolService.getInstance();
+     
+     // Register website tools
+     this.tools = toolService.getTools(this);
+   }
+   ```
+
+5. Updated WebsiteContext.getService() to handle WebsiteToolService
+
+6. Added comprehensive tests
+   - Unit tests for WebsiteToolService
+   - Integration tests for WebsiteContext MCP tools integration
+   - Verified tools registration with MCP Inspector
+
+### 2. Legacy Code Removal (Priority: High)
+
+Remove remaining technical debt and unused code:
+
+- Run `bun run find-real-dead-code` to identify and remove truly dead exports
+- Clean up barrel files to reduce implementation leakage
+- Remove transitional adapters and intermediary layers
+- Update imports and references to use the standardized structure
 
 **Specific Tasks:**
-1. Use `bun run find-deprecated` to identify and remove all deprecated methods:
-   - Remove deprecated methods in StatusManager
-   - Remove deprecated methods in ProfileSearchService (`src/services/profiles/profileSearchService.ts`)
-   - Remove deprecated methods in NoteSearchService (`src/services/notes/noteSearchService.ts`)
+1. ✅ Remove deprecated code - No items marked with `@deprecated` remain in the codebase
 
-2. Use `bun run find-real-dead-code` to systematically identify and remove truly dead exports:
-   - This uses our custom script which filters out irrelevant entries
+2. Use `bun run find-real-dead-code` to identify and remove unused exports:
    - Focus on files with multiple unused exports
    - Prioritize cleaning up the core modules first
-   - Look for patterns of dead code in related modules
+   - Remove unused exports systematically
 
 3. Refactor barrel files to reduce implementation leakage:
    - Review each barrel file to identify what's actually needed by upstream consumers
@@ -64,42 +109,24 @@ Identify and remove all remaining legacy code, compatibility layers, and transit
    - Remove unnecessary re-exports that leak implementation details
    - Use direct imports for implementation details that aren't part of the public API
    - Focus especially on the main context barrel files (in src/contexts/*/index.ts)
-   - Remove all barrel files in test and mock directories:
-     * Remove tests/__mocks__/*/index.ts files
-     * Update test imports to reference mock implementations directly
-     * Preserve only mocks that are actually used by tests
-     * Replace utility-based mocks with standardized mocks:
-       - Removed embeddingUtils.ts and incorporated functionality into MockEmbeddingService
-       - Updated all test files to use MockEmbeddingService directly
 
-4. Use `bun run lint:fix` with the newly added unused-imports plugin to clean up unused imports:
-   - Run periodically during the cleanup process
-   - Will automatically remove imports that aren't being used
-   - Particularly useful after removing unused exports
+4. Use `bun run lint:fix` with the unused-imports plugin to clean up unused imports
 
-5. Review code marked for removal:
-   - Remove transitional adapters in protocol messaging
-   - Update configuration handling in config.ts
-   - Clean up legacy error handling in various components
+### 3. Dependency Injection Completion (Priority: Medium)
 
-### 2. Dependency Injection Completion (Priority: High)
+Finalize dependency injection implementation across remaining components:
 
-Building on the work from Phase 6, we'll complete the dependency injection implementation across all components:
-
-- Standardize factory methods (`getInstance`, `resetInstance`, `createFresh`, `createWithDependencies`) across all remaining classes
-- Remove any direct instantiations of dependencies in constructors
-- Update all tests to properly mock dependencies using the standardized pattern
-- Ensure all classes follow the Component Interface Standardization pattern
-- Implement proper dependency resolution throughout the codebase
+- Complete `createWithDependencies` in any remaining classes
+- Standardize factory methods across all components
+- Update tests to properly mock dependencies
 
 **Specific Tasks:**
-1. Complete `createWithDependencies` implementation in smaller utility classes
-2. Update repository implementations to follow the standardized pattern
-3. Update service implementations to use dependency injection consistently
-4. Standardize dependency resolution in factory methods
-5. Ensure all tests use standardized mock implementations
+1. Complete `createWithDependencies` implementation in utility classes
+2. Update any remaining service implementations to use dependency injection consistently
+3. Standardize dependency resolution in factory methods
+4. Update tests to use standardized mock implementations
 
-### 3. Error Handling Refinement (Priority: Medium)
+### 4. Error Handling Refinement (Priority: Medium)
 
 Implement a consistent error handling approach across all components:
 
@@ -115,7 +142,7 @@ Implement a consistent error handling approach across all components:
 4. Create error recovery mechanisms for critical operations
 5. Update error handling documentation
 
-### 4. Documentation Completion (Priority: Medium)
+### 5. Documentation Completion (Priority: Medium)
 
 Complete comprehensive documentation for the architecture and components:
 
@@ -134,125 +161,156 @@ Complete comprehensive documentation for the architecture and components:
 ## Testing Strategy
 
 1. Maintain high test coverage throughout the codebase
-2. Update tests to reflect new dependency injection patterns
-3. Implement integration tests for critical workflows
+2. Write comprehensive tests for WebsiteToolService
+3. Test CLI/Logger separation with visual tests
 4. Ensure all components have unit tests for error conditions
 
 ## Progress Milestones
 
-### Milestone 1: Legacy Code Removal
+### Milestone 1: Website Context MCP Tools
 
-- Remove all deprecated code and methods
-- Remove all transitional adapters
-- Eliminate any remaining technical debt
-- Update all references to use the new standardized structure
+- Create WebsiteToolService class
+- Implement website operation tools
+- Update WebsiteContext.initializeMcpComponents()
+- Add unit tests for WebsiteToolService
+- Verify tools appear in MCP Inspector
 
-### Milestone 2: Dependency Injection Completion
+### Milestone 2: CLI Interface and Logger Separation
 
-- Standardize factory methods across all components
-- Remove direct instantiations in constructors
-- Update all tests to use standardized mock implementations
-- Ensure all classes follow the Component Interface Standardization pattern
+- Create LogOutput class
+- Update CLIInterface class
+- Add command-line options for log control
+- Add runtime commands for log visibility
+- Verify visual distinction between logs and content
 
-### Milestone 3: Error Handling Refinement
+### Milestone 3: Technical Debt Cleanup
 
-- Standardize error types and error handling patterns
-- Implement proper error recovery mechanisms
-- Enhance error logging with contextual information
-- Ensure all async operations have proper error boundaries
+- Remove unused exports identified by find-real-dead-code
+- Clean up barrel files to reduce implementation leakage
+- Remove transitional adapters and intermediary layers
+- Simplify imports and references
 
-### Milestone 4: Documentation Completion
+### Milestone 4: Error Handling and Documentation
 
-- Update architecture diagrams
-- Document component interactions and dependencies
+- Standardize error handling patterns
+- Enhance error logging and recovery
+- Update architecture documentation
 - Create developer guides for key subsystems
-- Update contributing guidelines
 
 ## Next Steps
 
-1. **Remove Legacy Code** (High Priority):
-   - Identify and remove deprecated code
-   - Remove transitional adapters
-   - Update imports and references
-   - Clean up technical debt
+1. **Clean Up Technical Debt** (High Priority):
+   - Clean up barrel files
+   - Remove unused exports
+   - Update imports
 
-2. **Complete Dependency Injection** (High Priority):
-   - Start with low-risk components like utility services
-   - Move to repository implementations
-   - Update higher-level components that depend on these
-   - Update all tests to use the standardized pattern
-   - Implement the unified ServiceRegistry-based dependency injection approach:
-     * Make ServiceRegistry the central point for all service resolution
-     * Remove direct service instantiation from contexts
-     * Create testing helpers for easy mocking
+2. **Complete Dependency Injection** (Medium Priority):
+   - Finish remaining createWithDependencies implementations
+   - Standardize factory methods
+   - Update tests to use proper mocking
 
-3. **Refine Error Handling** (Medium Priority):
-   - Standardize error types
-   - Implement consistent error handling patterns
+3. **Standardize Error Handling** (Medium Priority):
+   - Implement consistent error handling
    - Enhance error logging
-   - Create error recovery mechanisms
+   - Create recovery mechanisms
 
-## Detailed Task Breakdown
+## Detailed Implementation Plan for Website Context MCP Tools
 
-### Legacy Code Removal Tasks
+### Website Context MCP Tools Structure
 
-1. **StatusManager**:
-   - Remove deprecated methods and properties
-   - Update client code to use the new standardized interfaces
-   - Update tests to reflect the changes
+The WebsiteToolService will follow the same pattern as ConversationToolService, providing tools for website-related operations through MCP:
 
-2. **Search Services**:
-   - Remove legacy code in ProfileSearchService and NoteSearchService
-   - Update client code to use the new standardized interfaces
-   - Update tests to reflect the changes
+```typescript
+/**
+ * Website Tools for MCP
+ * 
+ * This file contains the tool definitions for the WebsiteContext
+ * following the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ */
+export class WebsiteToolService {
+  /** The singleton instance */
+  private static instance: WebsiteToolService | null = null;
+  
+  /** Logger instance */
+  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  
+  /**
+   * Get the singleton instance of WebsiteToolService
+   */
+  public static getInstance(): WebsiteToolService { /* implementation */ }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void { /* implementation */ }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   */
+  public static createFresh(): WebsiteToolService { /* implementation */ }
+  
+  /**
+   * Private constructor to enforce singleton pattern
+   */
+  private constructor() { /* implementation */ }
 
-3. **Error Handling**:
-   - Remove legacy error handling patterns
-   - Update client code to use the new standardized AppError hierarchy
-   - Update tests to verify proper error handling
+  /**
+   * Get the MCP tools for the website context
+   */
+  getTools(context: WebsiteContext): ResourceDefinition[] {
+    return [
+      // Tool implementations
+      this.generateLandingPageTool(context),
+      this.buildWebsiteTool(context),
+      this.deployWebsiteTool(context),
+      this.promoteWebsiteTool(context),
+      this.getWebsiteStatusTool(context),
+    ];
+  }
+  
+  /**
+   * Get the Zod schema for a tool based on its name
+   */
+  getToolSchema(tool: { name?: string }): Record<string, z.ZodTypeAny> {
+    // Schema definitions for each tool
+  }
+  
+  // Tool implementation methods
+  private generateLandingPageTool(context: WebsiteContext): ResourceDefinition {
+    // Implementation
+  }
+  
+  private buildWebsiteTool(context: WebsiteContext): ResourceDefinition {
+    // Implementation
+  }
+  
+  // Additional tool implementations...
+}
+```
 
-### Dependency Injection Tasks
+The WebsiteContext will need to be updated to initialize and use these tools:
 
-1. **Repository and Service Classes**:
-   - Update all remaining repository implementations to follow the factory method pattern
-   - Ensure all services use dependency injection for repositories
-   - Update service tests to properly mock dependencies
-
-2. **Utility Components**:
-   - Apply the Component Interface Standardization pattern to utility classes
-   - Update client code to use factory methods instead of direct instantiation
-   - Update utility tests to follow the standardized pattern
-
-3. **Protocol Components**:
-   - Ensure all protocol components use proper dependency injection
-   - Update messaging handlers to use dependency injection
-   - Update protocol tests to use standardized mock implementations
-
-4. **Unified ServiceRegistry-based Dependency Injection**:
-   - Refactor all contexts to consistently use ServiceRegistry for service resolution
-   - Remove direct service instantiation from context implementations
-   - Create standardized testing helpers for ServiceRegistry-based mocking
-   - Update all context tests to use the new dependency injection pattern
-   - Simplify barrel file exports by removing implementation classes that are now accessed through ServiceRegistry
-
-### Documentation Tasks
-
-1. **Architecture Documentation**:
-   - Update architecture diagrams to reflect the new simplified structure
-   - Document component interactions and dependencies
-   - Document factory method patterns and dependency injection
-
-2. **Developer Guides**:
-   - Create guides for context implementations
-   - Document error handling patterns
-   - Document component lifecycle management
+```typescript
+// In WebsiteContext.ts
+protected override initializeMcpComponents(): void {
+  // Get the tool service
+  const toolService = WebsiteToolService.getInstance();
+  
+  // Register website tools
+  this.tools = toolService.getTools(this);
+}
+```
 
 ## Success Criteria
 
-1. No deprecated code or methods remain in the codebase
-2. No transitional adapters or backward compatibility layers remain
-3. All components follow the Component Interface Standardization pattern
-4. No direct instantiation of dependencies in constructors
-5. Consistent error handling throughout the codebase
-6. Comprehensive documentation for all major components
-7. All tests pass with the new standardized patterns
+1. ✅ No deprecated code or methods remain in the codebase
+2. ✅ WebsiteContext tools appear and function correctly in the MCP Inspector
+3. CLI output clearly separates logs from content
+4. Unused exports and imports have been removed
+5. All components follow the Component Interface Standardization pattern
+6. Consistent error handling throughout the codebase
+7. Comprehensive documentation for all major components
+8. All tests pass with the new standardized patterns

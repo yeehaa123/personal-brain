@@ -77,7 +77,13 @@ This document outlines the development plan for the Personal Brain project, focu
 
 ## Post-MVP Priorities
 
-1. **Vercel AI SDK MCP Integration**: Integrate our MCP implementation with Vercel AI SDK
+1. **CLI Interface Improvements**: Separate logger output from CLI content
+   - Create clear visual distinction between logs and actual content
+   - Add option to control log visibility (hide/show/log level)
+   - Implement consistent formatting across output types
+   - See detailed plan in [`planning/cli-logger-separation.md`](/planning/cli-logger-separation.md)
+   
+2. **Vercel AI SDK MCP Integration**: Integrate our MCP implementation with Vercel AI SDK
    - Evaluate phased integration vs. complete migration approaches
    - Standardize AI model interactions using Vercel's implementation
    - Future-proof our architecture as Vercel's MCP support matures

@@ -9,16 +9,16 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 1. ✅ **Protocol Response Simplification**: Implemented schema-based responses in BrainProtocol
 2. ✅ **Deployment Architecture**: Completed with Caddy server instead of Netlify
 3. ⏳ **Website Landing Page Generation**: Partially completed (Context, Astro setup, service foundations)
-4. 🔜 **MCP Architecture Refactoring**: Added to MVP scope to improve architecture
-5. 🔜 **CLI Interface Improvements**: Planned to separate logger output from content
+4. ✅ **Website Context MCP Tools**: Added tools to provide visibility in MCP Inspector
+5. 🔜 **MCP Architecture Refactoring**: Added to MVP scope to improve architecture
 
 ## MVP Components
 
 1. **Protocol Response Simplification**: Simplify BrainProtocol using Claude's schema capabilities
 2. **Website Landing Page Generation**: Create a professional landing page from profile data
 3. **Caddy Deployment**: Implement flexible deployment architecture with Caddy
-4. **MCP Architecture Refactoring**: Align codebase with MCP architecture principles
-5. **CLI Interface Improvements**: Separate logger output from CLI content (refactoring task)
+4. **Website Context MCP Tools**: Add MCP Inspector visibility for website operations
+5. **MCP Architecture Refactoring**: Align codebase with MCP architecture principles
 
 ## Scope Boundaries
 
@@ -51,11 +51,11 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 - 🔜 BrainProtocol Decomposition
 - 🔜 Cross-Context Communication Standardization
 
-#### 5. CLI Interface Improvements 🔜
-- 🔜 Visual distinction between logs and content
-- 🔜 Log visibility controls
-- 🔜 Consistent formatting
-- 🔜 Feature parity with Matrix interface
+#### 5. Website Context MCP Tools ✅
+- ✅ WebsiteToolService implementation following Component Interface Standardization pattern
+- ✅ Tools for landing page generation, website build, and deployment
+- ✅ Integration with WebsiteContext
+- ✅ MCP Inspector visibility for all website operations
 
 ### What's Out (Explicitly Not in MVP)
 
@@ -71,6 +71,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 8. **Theme Customization**: Single default theme only
 9. **Conversation Schema Refactoring**: Keep existing conversation schema
 10. **Database-backed Memory**: Keep in-memory storage
+11. **CLI Interface Improvements**: Moved to post-MVP (CLI/logger separation)
 
 ## Component Dependencies
 
