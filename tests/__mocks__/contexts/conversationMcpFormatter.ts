@@ -8,7 +8,7 @@ import { mock } from 'bun:test';
 
 import type { McpFormattedConversation } from '@/contexts/conversations/formatters/conversationMcpFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 export interface McpFormattingOptions {
   includeFullTurns?: boolean;

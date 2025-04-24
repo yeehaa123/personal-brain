@@ -5,7 +5,7 @@
  * between the internal protocol format and external interfaces.
  */
 
-import type { ProtocolMessage, ResponseMessage } from '../formats/messageFormats';
+import type { DataRequestMessage, DataResponseMessage } from '../messaging/messageTypes';
 
 /**
  * Protocol adapter interface for connecting external interfaces to the protocol
@@ -17,7 +17,7 @@ export interface ProtocolAdapter<TExternalRequest, TExternalResponse> {
    * @param request External request format
    * @returns Protocol message
    */
-  toProtocolMessage(request: TExternalRequest): ProtocolMessage;
+  toProtocolMessage(request: TExternalRequest): DataRequestMessage;
   
   /**
    * Convert a protocol response message to external response format
@@ -25,7 +25,7 @@ export interface ProtocolAdapter<TExternalRequest, TExternalResponse> {
    * @param response Protocol response message
    * @returns External response format
    */
-  fromProtocolResponse(response: ResponseMessage): TExternalResponse;
+  fromProtocolResponse(response: DataResponseMessage): TExternalResponse;
 }
 
 /**

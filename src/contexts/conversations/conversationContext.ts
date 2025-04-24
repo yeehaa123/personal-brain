@@ -39,7 +39,7 @@ import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorag
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import type { FormatterInterface } from '@/contexts/formatterInterface';
 import type { StorageInterface } from '@/contexts/storageInterface';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 // No need to import ServiceRegistry anymore
 import { Logger } from '@/utils/logger';
 

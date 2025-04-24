@@ -7,7 +7,8 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-import type { CommandMessage, ProtocolMessage, QueryMessage, ResponseMessage } from '../formats/messageFormats';
+import type { DataRequestMessage, DataResponseMessage } from '../messaging/messageTypes';
+import { DataRequestType } from '../messaging/messageTypes';
 
 import type { BasicExternalRequest, BasicExternalResponse, ProtocolAdapter } from './protocolAdapter';
 
@@ -78,39 +79,47 @@ export class CliAdapter implements ProtocolAdapter<CliRequest, CliResponse> {
    * Convert a CLI request to a protocol message
    * 
    * @param request CLI request
-   * @returns Protocol message (either QueryMessage or CommandMessage)
+   * @returns Protocol message as a DataRequestMessage
    */
-  toProtocolMessage(request: CliRequest): ProtocolMessage {
+  toProtocolMessage(request: CliRequest): DataRequestMessage {
     const now = new Date();
     const id = uuidv4();
     
+    // Common message properties
+    const baseMessage = {
+      id,
+      timestamp: now,
+      type: 'data-request',
+      source: 'cli',
+      sourceContext: 'cli-interface',
+      targetContext: 'protocol-core',
+      category: 'request' as const,
+      timeout: 30000, // Default 30 second timeout
+    };
+    
     if (request.isCommand && request.commandName) {
-      // Create a command message
-      const message: CommandMessage = {
-        id,
-        timestamp: now,
-        type: 'command',
-        source: 'cli',
-        command: request.commandName,
-        args: request.commandArgs,
-        metadata: request.metadata,
-      };
-      
-      return message;
-    } else {
-      // Create a query message
-      const message: QueryMessage = {
-        id,
-        timestamp: now,
-        type: 'query',
-        source: 'cli',
-        content: request.text,
-        context: {
+      // Create a command request message
+      return {
+        ...baseMessage,
+        dataType: DataRequestType.COMMAND_EXECUTE,
+        parameters: {
+          command: request.commandName,
+          args: request.commandArgs || {},
+          metadata: request.metadata || {},
           userId: request.userId || 'cli-user',
         },
       };
-      
-      return message;
+    } else {
+      // Create a query request message
+      return {
+        ...baseMessage,
+        dataType: DataRequestType.QUERY_PROCESS,
+        parameters: {
+          query: request.text,
+          userId: request.userId || 'cli-user',
+          metadata: request.metadata || {},
+        },
+      };
     }
   }
   
@@ -120,7 +129,7 @@ export class CliAdapter implements ProtocolAdapter<CliRequest, CliResponse> {
    * @param response Protocol response message
    * @returns CLI response
    */
-  fromProtocolResponse(response: ResponseMessage): CliResponse {
+  fromProtocolResponse(response: DataResponseMessage): CliResponse {
     const cliResponse: CliResponse = {
       text: '',
       success: response.status === 'success',

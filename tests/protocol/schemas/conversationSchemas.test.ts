@@ -5,7 +5,7 @@ import {
   ConversationOptionsSchema,
   ConversationSchema,
   ConversationTurnSchema,
-} from '@/protocol/formats/schemas/conversationSchemas';
+} from '@/protocol/schemas/conversationSchemas';
 
 describe('Conversation Schema Validation', () => {
   test('should validate a valid conversation turn', () => {

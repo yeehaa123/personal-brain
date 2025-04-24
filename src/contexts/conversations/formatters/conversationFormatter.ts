@@ -9,7 +9,7 @@
  * Implements the FormatterInterface for consistent formatting operations
  */
 import type { FormatterInterface } from '@/contexts/formatterInterface';
-import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import type { ConversationSummary } from '../storage/conversationStorage';

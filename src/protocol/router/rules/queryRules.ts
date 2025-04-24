@@ -5,7 +5,8 @@
  * to appropriate handlers based on content patterns.
  */
 
-import type { QueryMessage } from '../../formats/messageFormats';
+import type { DataRequestMessage } from '../../messaging/messageTypes';
+import { DataRequestType } from '../../messaging/messageTypes';
 
 /**
  * Rule for matching a query message
@@ -30,8 +31,14 @@ export interface QueryRule {
  * @param rule Rule to test against
  * @returns Whether the query matches the rule
  */
-export function matchesQueryRule(query: QueryMessage, rule: QueryRule): boolean {
-  return rule.pattern.test(query.content);
+export function matchesQueryRule(query: DataRequestMessage, rule: QueryRule): boolean {
+  // Only match QUERY_PROCESS data requests
+  if (query.dataType !== DataRequestType.QUERY_PROCESS) {
+    return false;
+  }
+  
+  const queryText = query.parameters && query.parameters['query'] as string;
+  return queryText ? rule.pattern.test(queryText) : false;
 }
 
 /**

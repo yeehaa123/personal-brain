@@ -3,7 +3,7 @@
  */
 import { nanoid } from 'nanoid';
 
-import type { ConversationSummary, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationSummary, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ResourceRegistry } from '@/resources';
 import { type DefaultResponseType } from '@/resources/ai/interfaces';
 import logger from '@/utils/logger';

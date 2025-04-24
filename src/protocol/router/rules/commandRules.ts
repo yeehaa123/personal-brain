@@ -5,7 +5,8 @@
  * to appropriate handlers based on command name patterns.
  */
 
-import type { CommandMessage } from '../../formats/messageFormats';
+import type { DataRequestMessage } from '../../messaging/messageTypes';
+import { DataRequestType } from '../../messaging/messageTypes';
 
 /**
  * Rule for matching a command message
@@ -30,8 +31,14 @@ export interface CommandRule {
  * @param rule Rule to test against
  * @returns Whether the command matches the rule
  */
-export function matchesCommandRule(command: CommandMessage, rule: CommandRule): boolean {
-  return command.command === rule.commandName;
+export function matchesCommandRule(command: DataRequestMessage, rule: CommandRule): boolean {
+  // Only match COMMAND_EXECUTE data requests
+  if (command.dataType !== DataRequestType.COMMAND_EXECUTE) {
+    return false;
+  }
+  
+  const commandName = command.parameters && command.parameters['command'] as string;
+  return commandName === rule.commandName;
 }
 
 /**

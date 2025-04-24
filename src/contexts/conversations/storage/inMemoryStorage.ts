@@ -8,7 +8,7 @@
  */
 import { nanoid } from 'nanoid';
 
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import type {

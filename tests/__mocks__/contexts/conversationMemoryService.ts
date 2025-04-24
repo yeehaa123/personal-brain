@@ -9,7 +9,7 @@ import { nanoid } from 'nanoid';
 
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
-import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 /**
  * Mock implementation of ConversationMemoryService

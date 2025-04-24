@@ -10,7 +10,7 @@
 import { ConversationContext } from '@/contexts/conversations';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
-import type { Conversation } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';

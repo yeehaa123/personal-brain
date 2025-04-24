@@ -3,7 +3,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { generateStandardSystemPrompt, StandardResponseSchema } from '@/protocol/formats/schemas/standardResponseSchema';
+import { generateStandardSystemPrompt, StandardResponseSchema } from '@/protocol/schemas/standardResponseSchema';
 
 describe('Standard schema-based responses', () => {
   describe('Schema definition', () => {

@@ -12,7 +12,7 @@ import type { McpFormattedConversation } from '@/contexts/conversations/formatte
 import type { TieredHistory } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationInfo, ConversationSummary, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
 import type { FormattingOptions } from '@/contexts/formatterInterface';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 import { MockBaseContext } from './baseContext';
 import { MockConversationFormatter } from './conversationFormatter';

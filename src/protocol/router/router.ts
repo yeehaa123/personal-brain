@@ -14,12 +14,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { Logger } from '@/utils/logger';
 
-import type { CommandMessage, EventMessage, ProtocolMessage, QueryMessage, ResponseMessage } from '../formats/messageFormats';
+import type { DataRequestMessage, DataResponseMessage } from '../messaging/messageTypes';
+import { DataRequestType } from '../messaging/messageTypes';
 
 /**
  * Handler function for protocol messages
  */
-export type MessageHandler = (message: ProtocolMessage) => Promise<ResponseMessage>;
+export type MessageHandler = (message: DataRequestMessage) => Promise<DataResponseMessage>;
 
 /**
  * Route definition for a message pattern
@@ -27,8 +28,8 @@ export type MessageHandler = (message: ProtocolMessage) => Promise<ResponseMessa
 export interface Route {
   /** Pattern for matching messages (command name, query regex, etc.) */
   pattern: string | RegExp;
-  /** Message types this route applies to */
-  types: Array<'query' | 'command' | 'event'>;
+  /** Data request types this route applies to */
+  types: DataRequestType[];
   /** Handler function for matched messages */
   handler: MessageHandler;
   /** Priority order (higher number = higher priority) */
@@ -128,10 +129,10 @@ export class ProtocolRouter {
    * Remove a route by pattern and types
    * 
    * @param pattern Pattern to match
-   * @param types Message types
+   * @param types Data request types
    * @returns Whether a route was removed
    */
-  removeRoute(pattern: string | RegExp, types: Array<'query' | 'command' | 'event'>): boolean {
+  removeRoute(pattern: string | RegExp, types: DataRequestType[]): boolean {
     const initialCount = this.routes.length;
     
     // Filter out routes that match the pattern and types
@@ -172,37 +173,38 @@ export class ProtocolRouter {
   /**
    * Find a matching route for a message
    * 
-   * @param message Protocol message
+   * @param message Data request message
    * @returns Matching route or null if no match
    */
-  findRoute(message: ProtocolMessage): Route | null {
-    // Find the first matching route based on message type and pattern
+  findRoute(message: DataRequestMessage): Route | null {
+    // Find the first matching route based on data request type and pattern
     for (const route of this.routes) {
-      // Check if the route handles this message type
-      if (!route.types.includes(message.type as 'query' | 'command' | 'event')) {
+      // Check if the route handles this data request type
+      const messageDataType = message.dataType;
+      if (!route.types.some(type => type === messageDataType)) {
         continue;
       }
       
       // For command messages, match by exact command name
-      if (message.type === 'command') {
-        const cmdMessage = message as CommandMessage;
-        if (route.pattern === cmdMessage.command) {
+      if (message.dataType === DataRequestType.COMMAND_EXECUTE && typeof route.pattern === 'string') {
+        const command = message.parameters && message.parameters['command'] as string;
+        if (command && route.pattern === command) {
           return route;
         }
       }
       
       // For query messages, match by regex pattern if the pattern is a RegExp
-      if (message.type === 'query' && route.pattern instanceof RegExp) {
-        const queryMessage = message as QueryMessage;
-        if (route.pattern.test(queryMessage.content)) {
+      if (message.dataType === DataRequestType.QUERY_PROCESS && route.pattern instanceof RegExp) {
+        const query = message.parameters && message.parameters['query'] as string;
+        if (query && route.pattern.test(query)) {
           return route;
         }
       }
       
-      // For event messages, match by exact event name if pattern is a string
-      if (message.type === 'event' && typeof route.pattern === 'string') {
-        const eventMessage = message as EventMessage;
-        if (route.pattern === eventMessage.event) {
+      // For notification messages, match by exact event name if pattern is a string
+      if (typeof message.dataType === 'string' && message.dataType.includes('notification') && typeof route.pattern === 'string') {
+        const event = message.parameters && message.parameters['event'] as string;
+        if (event && route.pattern === event) {
           return route;
         }
       }
@@ -215,36 +217,37 @@ export class ProtocolRouter {
   /**
    * Route a message to the appropriate handler
    * 
-   * @param message Protocol message to route
-   * @returns Response message from the handler
+   * @param message Data request message to route
+   * @returns Data response message from the handler
    */
-  async routeMessage(message: ProtocolMessage): Promise<ResponseMessage> {
-    this.logger.debug(`Routing ${message.type} message from ${message.source}`);
+  async routeMessage(message: DataRequestMessage): Promise<DataResponseMessage> {
+    this.logger.debug(`Routing ${message.dataType} message from ${message.source}`);
     
     // Find a matching route
     const route = this.findRoute(message);
     
     if (route) {
       // Use the matched route's handler
-      this.logger.debug(`Found matching route for ${message.type} message`);
+      this.logger.debug(`Found matching route for ${message.dataType} message`);
       return route.handler(message);
     } else {
       // No matching route, create an error response
-      this.logger.warn(`No matching route for ${message.type} message from ${message.source}`);
+      this.logger.warn(`No matching route for ${message.dataType} message from ${message.source}`);
       
       const now = new Date();
-      const errorResponse: ResponseMessage = {
+      const errorResponse: DataResponseMessage = {
         id: uuidv4(),
         timestamp: now,
-        type: 'response',
+        type: 'data-response',
         source: 'router',
-        target: message.source,
-        correlationId: message.id,
+        sourceContext: 'protocol-router',
+        targetContext: message.sourceContext,
+        category: 'response',
+        requestId: message.id,
         status: 'error',
-        data: {},
         error: {
           code: 'NO_MATCHING_ROUTE',
-          message: `No matching route found for ${message.type} message`,
+          message: `No matching route found for ${message.dataType} message`,
         },
       };
       

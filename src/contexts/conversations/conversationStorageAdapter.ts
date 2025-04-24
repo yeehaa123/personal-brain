@@ -19,7 +19,7 @@ import type {
   NewConversation,
 } from '@/contexts/conversations/storage/conversationStorage';
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
 

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { nanoid } from 'nanoid';
 
 import { ConversationSummarizer } from '@/contexts/conversations/memory/summarizer';
-import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 // Define interface for test purposes
 interface ConversationSummarizerOptions {

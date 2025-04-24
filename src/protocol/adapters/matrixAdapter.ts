@@ -7,7 +7,8 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-import type { CommandMessage, ProtocolMessage, QueryMessage, ResponseMessage } from '../formats/messageFormats';
+import type { DataRequestMessage, DataResponseMessage } from '../messaging/messageTypes';
+import { DataRequestType } from '../messaging/messageTypes';
 
 import type { BasicExternalRequest, BasicExternalResponse, ProtocolAdapter } from './protocolAdapter';
 
@@ -89,46 +90,56 @@ export class MatrixAdapter implements ProtocolAdapter<MatrixRequest, MatrixRespo
    * Convert a Matrix request to a protocol message
    * 
    * @param request Matrix request
-   * @returns Protocol message (either QueryMessage or CommandMessage)
+   * @returns Protocol message as a DataRequestMessage
    */
-  toProtocolMessage(request: MatrixRequest): ProtocolMessage {
+  toProtocolMessage(request: MatrixRequest): DataRequestMessage {
     const now = new Date();
     const id = uuidv4();
     
+    // Common message properties
+    const baseMessage = {
+      id,
+      timestamp: now,
+      type: 'data-request',
+      source: 'matrix',
+      sourceContext: 'matrix-interface',
+      targetContext: 'protocol-core',
+      category: 'request' as const,
+      timeout: 30000, // Default 30 second timeout
+    };
+    
     if (request.isCommand && request.commandName) {
-      // Create a command message
-      const message: CommandMessage = {
-        id,
-        timestamp: now,
-        type: 'command',
-        source: 'matrix',
-        command: request.commandName,
-        args: {
-          ...request.commandArgs,
-          roomId: request.roomId,
-          sender: request.sender,
-          eventId: request.eventId,
-        },
-        metadata: request.metadata,
-      };
-      
-      return message;
-    } else {
-      // Create a query message
-      const message: QueryMessage = {
-        id,
-        timestamp: now,
-        type: 'query',
-        source: 'matrix',
-        content: request.text,
-        context: {
-          roomId: request.roomId,
+      // Create a command request message
+      return {
+        ...baseMessage,
+        dataType: DataRequestType.COMMAND_EXECUTE,
+        parameters: {
+          command: request.commandName,
+          args: {
+            ...request.commandArgs,
+            roomId: request.roomId,
+            sender: request.sender,
+            eventId: request.eventId,
+          },
+          metadata: request.metadata || {},
           userId: request.userId || request.sender,
+          roomId: request.roomId,
           eventId: request.eventId,
         },
       };
-      
-      return message;
+    } else {
+      // Create a query request message
+      return {
+        ...baseMessage,
+        dataType: DataRequestType.QUERY_PROCESS,
+        parameters: {
+          query: request.text,
+          userId: request.userId || request.sender,
+          roomId: request.roomId,
+          eventId: request.eventId,
+          metadata: request.metadata || {},
+        },
+      };
     }
   }
   
@@ -138,7 +149,7 @@ export class MatrixAdapter implements ProtocolAdapter<MatrixRequest, MatrixRespo
    * @param response Protocol response message
    * @returns Matrix response
    */
-  fromProtocolResponse(response: ResponseMessage): MatrixResponse {
+  fromProtocolResponse(response: DataResponseMessage): MatrixResponse {
     const matrixResponse: MatrixResponse = {
       text: '',
       metadata: response.data && response.data['metadata'] ? response.data['metadata'] as Record<string, unknown> : {},

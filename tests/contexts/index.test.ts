@@ -1,27 +1,34 @@
 /**
  * Tests for the contexts index exports
  * 
- * These tests verify that all expected interfaces are properly exported
- * from the contexts module after moving them from the core submodule.
+ * These tests verify that domain contexts are properly exported
+ * from the contexts module.
  */
 import { describe, expect, test } from 'bun:test';
-// Import the base interfaces directly to verify they can be imported
-import { BaseContext } from '@/contexts/baseContext';
 
-// Also verify we can import them via the barrel file
+// Import domain contexts directly to verify they can be imported
 import { 
-  BaseContext as BaseContextBarrel,
+  ConversationContext,
+  NoteContext,
+  ProfileContext,
+  ExternalSourceContext,
+  WebsiteContext
 } from '@/contexts';
 
-describe('Context Interfaces Exports', () => {
-  test('should be able to import the interfaces directly', () => {
+describe('Context Exports', () => {
+  test('should export domain contexts', () => {
     // If the imports succeed, the test passes
-    expect(BaseContext).toBeDefined();
-    expect(typeof BaseContext).toBe('function');
-  });
-  
-  test('should be able to import via barrel file', () => {
-    // Verify barrel imports work too
-    expect(BaseContextBarrel).toBe(BaseContext);
+    expect(ConversationContext).toBeDefined();
+    expect(NoteContext).toBeDefined();
+    expect(ProfileContext).toBeDefined();
+    expect(ExternalSourceContext).toBeDefined();
+    expect(WebsiteContext).toBeDefined();
+    
+    // Verify they are functions (classes)
+    expect(typeof ConversationContext).toBe('function');
+    expect(typeof NoteContext).toBe('function');
+    expect(typeof ProfileContext).toBe('function');
+    expect(typeof ExternalSourceContext).toBe('function');
+    expect(typeof WebsiteContext).toBe('function');
   });
 });

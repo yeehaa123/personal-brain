@@ -1,12 +1,26 @@
 /**
  * Message Types for Cross-Context Communication
  * 
- * This module defines specialized message types for communication
- * between different contexts in the system. These messages build upon
- * the base protocol message format but are specific to context interactions.
+ * This module defines message types for communication between different
+ * contexts in the system. It includes base message interfaces and
+ * specialized types for context-to-context communication.
  */
 
-import type { BaseMessage } from '../formats/messageFormats';
+/**
+ * Base message interface for all protocol messages
+ */
+export interface BaseMessage {
+  /** Unique message identifier */
+  id: string;
+  /** Timestamp of message creation */
+  timestamp: Date;
+  /** Message type identifier */
+  type: string;
+  /** Source component/context identifier */
+  source: string;
+  /** Optional target component/context identifier */
+  target?: string;
+}
 
 /**
  * Base interface for context-to-context messages
@@ -94,6 +108,10 @@ export enum DataRequestType {
   EXTERNAL_SOURCES = 'externalSources.search',
   /** Request for website generation status */
   WEBSITE_STATUS = 'website.status',
+  /** Request to execute a command */
+  COMMAND_EXECUTE = 'command.execute',
+  /** Request to process a natural language query */
+  QUERY_PROCESS = 'query.process',
 }
 
 /**

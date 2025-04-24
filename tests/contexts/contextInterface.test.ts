@@ -21,7 +21,7 @@ import type {
   ResourceDefinition,
 } from '@/contexts/contextInterface';
 import type { FormattingOptions } from '@/contexts/formatterInterface';
-import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 // Imports for testing
 import type { Registry, RegistryOptions } from '@/utils/registry';
 import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';

@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { ConversationStorage, ConversationSummary } from '@/contexts/conversations';
 import type { ConversationInfo, SearchCriteria } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';

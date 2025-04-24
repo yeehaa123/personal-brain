@@ -14,7 +14,7 @@ import type {
   NewConversation,
   SearchCriteria,
 } from '@/contexts/conversations/storage/conversationStorage';
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 /**
  * Standardized mock implementation of ConversationStorage

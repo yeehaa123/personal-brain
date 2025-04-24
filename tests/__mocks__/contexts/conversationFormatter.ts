@@ -8,7 +8,7 @@
 import type { FormattingOptions as ContextFormattingOptions } from '@/contexts/conversations/formatters/conversationFormatter';
 import type { ConversationSummary } from '@/contexts/conversations/storage/conversationStorage';
 import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
-import type { ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 
 // Re-export the FormattingOptions type

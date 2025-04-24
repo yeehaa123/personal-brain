@@ -3,7 +3,7 @@
  * Defines methods for storing and retrieving conversations, turns, and summaries
  */
 
-import type { Conversation, ConversationTurn } from '@/protocol/formats/schemas/conversationSchemas';
+import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 /**
  * New conversation data for creation
