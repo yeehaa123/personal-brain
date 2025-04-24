@@ -89,7 +89,7 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Factory method that resolves dependencies and creates a new instance
    * 
-   * @param apiKey Optional NewsAPI key
+   * @param apiKey Optional NewsAPI key, falls back to NEWSAPI_KEY env variable
    * @param openAiKey Optional OpenAI API key for embeddings
    * @param maxAgeHours Maximum age of news articles in hours
    * @returns A new NewsApiSource instance with resolved dependencies
@@ -99,8 +99,10 @@ export class NewsApiSource implements ExternalSourceInterface {
     openAiKey?: string,
     maxAgeHours = 24 * 7,
   ): NewsApiSource {
+    // Only in this factory method do we use the environment variable as fallback
+    const resolvedApiKey = apiKey || getEnv('NEWSAPI_KEY', '');
     const embeddingService = openAiKey ? EmbeddingService.getInstance({ apiKey: openAiKey }) : null;
-    return new NewsApiSource(apiKey, embeddingService, maxAgeHours);
+    return new NewsApiSource(resolvedApiKey, embeddingService, maxAgeHours);
   }
 
   /**
@@ -111,13 +113,13 @@ export class NewsApiSource implements ExternalSourceInterface {
    * @param maxAgeHours Maximum age of news articles in hours
    */
   constructor(
-    apiKey?: string,
-    embeddingService?: EmbeddingService | null,
+    apiKey = '',
+    embeddingService: EmbeddingService | null = null,
     maxAgeHours = 24 * 7,
   ) {
-    this.apiKey = apiKey || getEnv('NEWSAPI_KEY');
+    this.apiKey = apiKey;
     this.maxAgeHours = maxAgeHours;
-    this.embeddingService = embeddingService || null;
+    this.embeddingService = embeddingService;
     
     if (!this.apiKey) {
       logger.warn('NewsAPI source initialized without API key');

@@ -181,6 +181,19 @@ export class MockCommandHandler {
   
   registerHandler = mock(() => {});
   
+  // Mock confirmSaveNote method required by MatrixBrainInterface
+  confirmSaveNote = mock((_conversationId: string, title?: string): Promise<CommandResult> => {
+    return Promise.resolve({
+      type: 'note',
+      note: this.createMockNote(
+        'note-from-conversation',
+        title || 'Saved Conversation',
+        'Content from conversation',
+        ['conversation'],
+      ),
+    });
+  });
+  
   /**
    * Get the singleton instance
    */
