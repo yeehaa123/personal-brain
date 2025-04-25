@@ -115,7 +115,7 @@ export class QueryProcessor implements IQueryProcessor {
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): QueryProcessor {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating QueryProcessor with explicit dependencies');

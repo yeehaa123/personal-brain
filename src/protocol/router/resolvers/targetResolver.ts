@@ -62,6 +62,35 @@ export class TargetResolver {
   }
   
   /**
+   * Create a new instance with explicit dependencies
+   * 
+   * @param config Configuration options
+   * @param dependencies External dependencies
+   * @returns A new TargetResolver instance
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
+  ): TargetResolver {
+    const logger = Logger.getInstance();
+    logger.debug('Creating TargetResolver with explicit dependencies');
+    
+    // Create a new instance
+    const resolver = new TargetResolver();
+    
+    // If there are pre-registered handlers in dependencies, register them
+    if (dependencies['handlers'] && Array.isArray(dependencies['handlers'])) {
+      const handlers = dependencies['handlers'] as Array<{target: string, handler: MessageHandler}>;
+      
+      for (const { target, handler } of handlers) {
+        resolver.registerHandler(target, handler);
+      }
+    }
+    
+    return resolver;
+  }
+  
+  /**
    * Private constructor to enforce getInstance() usage
    */
   private constructor() {
