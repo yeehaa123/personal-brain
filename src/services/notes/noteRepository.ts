@@ -85,6 +85,25 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
     
     return new NoteRepository();
   }
+  
+  /**
+   * Create a new repository with dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * This method follows the standard pattern for dependency injection.
+   * 
+   * @param config Configuration options
+   * @returns A new NoteRepository instance
+   */
+  public static createWithDependencies(_config: Record<string, unknown> = {}): NoteRepository {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating NoteRepository with dependencies');
+    
+    // For this repository, we currently don't have any dependencies to inject,
+    // but we implement this method for consistency with the pattern
+    
+    return new NoteRepository();
+  }
   // New methods for conversation-to-notes feature
   
   /**

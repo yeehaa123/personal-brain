@@ -113,6 +113,47 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     
     return new NoteSearchService(repository, embeddingService);
   }
+  
+  /**
+   * Create a new NoteSearchService with dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * This method supports both a config object pattern and explicit dependencies.
+   * 
+   * @param configOrDependencies Configuration options or dependencies object
+   * @returns A new NoteSearchService instance
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): NoteSearchService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    
+    // Handle case where dependencies are explicitly provided
+    if ('repository' in configOrDependencies || 'embeddingService' in configOrDependencies) {
+      const dependencies = configOrDependencies as {
+        repository?: NoteRepository;
+        embeddingService?: NoteEmbeddingService;
+      };
+      
+      logger.debug('Creating NoteSearchService with explicit dependencies');
+      
+      // Use provided dependencies or get singleton instances
+      const repository = dependencies.repository || NoteRepository.getInstance();
+      const embeddingService = dependencies.embeddingService || NoteEmbeddingService.getInstance();
+      
+      return new NoteSearchService(repository, embeddingService);
+    }
+    
+    // Handle case where a config object is provided
+    logger.debug('Creating NoteSearchService with config');
+    
+    // For this service, we don't have specific config options that affect dependency creation,
+    // so we just use the singleton instances of our dependencies
+    const repository = NoteRepository.getInstance();
+    const embeddingService = NoteEmbeddingService.getInstance();
+    
+    return new NoteSearchService(repository, embeddingService);
+  }
 
   /**
    * Create a new NoteSearchService with injected dependencies

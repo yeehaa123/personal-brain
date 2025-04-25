@@ -98,6 +98,28 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
 
     return new EmbeddingService(config);
   }
+  
+  /**
+   * Create a new service instance with dependencies
+   * This method follows the standard pattern for dependency injection
+   * 
+   * @param config Configuration options
+   * @returns A new EmbeddingService instance
+   */
+  public static createWithDependencies(config: Record<string, unknown> = {}): EmbeddingService {
+    // Use a static logger for static methods
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating EmbeddingService with dependencies');
+    
+    // Convert generic config to our specific config type
+    const embeddingConfig: EmbeddingConfig = {
+      apiKey: config['apiKey'] as string,
+      embeddingModel: config['embeddingModel'] as string,
+      embeddingDimension: config['embeddingDimension'] as number,
+    };
+    
+    return new EmbeddingService(embeddingConfig);
+  }
 
   /**
    * Create a new embedding service
