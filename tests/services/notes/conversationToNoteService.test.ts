@@ -1,7 +1,7 @@
 /**
  * Tests for ConversationToNoteService
  */
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
@@ -13,12 +13,13 @@ import type { NoteRepository } from '@/services/notes/noteRepository';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
+import { MockTagExtractor } from '@test/__mocks__/utils/tagExtractor';
 
-// Mock the tagExtractor module
+// Import actual TagExtractor for mocking
+import { TagExtractor } from '@/utils/tagExtractor';
+
+// Create a spy for extractTags calls
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));
-mock.module('@/utils/tagExtractor', () => ({
-  extractTags: mockExtractTags,
-}));
 
 // Mock the nanoid module
 const mockNanoid = mock(() => 'mock-id');
@@ -111,18 +112,37 @@ describe('ConversationToNoteService', () => {
     },
   ];
 
+  // Store original getInstance for cleanup
+  let originalGetInstance: typeof TagExtractor.getInstance;
+  
   beforeEach(async () => {
     // Clear tracking variables
     insertNoteCalls = [];
 
     // Reset our standardized repository mock
     MockNoteRepository.resetInstance();
+    TagExtractor.resetInstance();
+    MockTagExtractor.resetInstance();
+    
+    // Store original function for restoration
+    originalGetInstance = TagExtractor.getInstance;
+    
+    // Set up a temporary override for TagExtractor.getInstance
+    // This avoids using mock.module which breaks isolation
+    TagExtractor.getInstance = () => {
+      // Return our MockTagExtractor but cast it as TagExtractor
+      return MockTagExtractor.getInstance() as unknown as TagExtractor;
+    };
 
     // Reset the mock for extractTags
     mockExtractTags.mockClear();
     mockExtractTags.mockImplementation(
       async () => ['ecosystem', 'architecture', 'example'],
     );
+    
+    // Set the extractTags method on our mock instance
+    const mockTagExtractorInstance = MockTagExtractor.getInstance();
+    mockTagExtractorInstance.extractTags = mockExtractTags;
 
     // Create a fresh storage instance for testing
     isolatedStorage = MockConversationStorage.createFresh();
@@ -164,6 +184,15 @@ describe('ConversationToNoteService', () => {
       mockEmbeddingService,
       isolatedStorage as unknown as ConversationStorage, // Using type assertion for test simplicity
     );
+  });
+  
+  // Clean up after each test in the test teardown
+  // Note: Using the correct bun:test's afterEach syntax
+  afterEach(() => {
+    // Restore original TagExtractor.getInstance
+    if (originalGetInstance) {
+      TagExtractor.getInstance = originalGetInstance;
+    }
   });
 
   test('should create a note from conversation turns', async () => {
@@ -277,8 +306,9 @@ This is the final section with some concluding thoughts.`;
     expect(insertCall.tags).toEqual(['ecosystem', 'architecture', 'example']);
   });
 
-  test('should use fallback tag extraction if AI generation fails', async () => {
-    mockExtractTags.mockImplementation(
+  test('should handle tag extraction failure gracefully', async () => {
+    // Configure our mock to throw an error for this test
+    mockExtractTags.mockImplementationOnce(
       async () => { throw new Error('Tag generation failed'); },
     );
 
@@ -286,8 +316,10 @@ This is the final section with some concluding thoughts.`;
 
     expect(insertNoteCalls.length).toBe(1);
     const insertCall = insertNoteCalls[0];
-    expect(insertCall.tags).toBeDefined();
-    expect(insertCall.tags?.length).toBeGreaterThan(0);
+    
+    // Since we removed the fallback mechanism and return empty array on error,
+    // we expect tags to be an empty array
+    expect(insertCall.tags).toEqual([]);
   });
 
   test('should extract main user name from conversation turns', async () => {

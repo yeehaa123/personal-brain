@@ -1,45 +1,135 @@
-import { sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { aiConfig, textConfig } from '@/config';
-import { db } from '@/db';
-import { notes } from '@/db/schema';
 import { ResourceRegistry } from '@/resources';
-import logger from '@/utils/logger';
-
-import { extractKeywords } from './textUtils';
-
+import { Logger } from '@/utils/logger';
 
 /**
- * Extract tags from content using Claude AI
- * @param content The text content to analyze
- * @param existingTags Optional array of existing tags to consider
- * @param maxTags Maximum number of tags to extract (default: 7)
- * @returns Array of extracted tags
+ * Dependencies interface for TagExtractor
  */
-export async function extractTags(
-  content: string,
-  existingTags: string[] = [],
-  maxTags: number = textConfig.defaultMaxTags,
-  apiKey?: string,
-): Promise<string[]> {
-  try {
-    // Use provided API key or fallback to config
-    const anthropicApiKey = apiKey || aiConfig.anthropic.apiKey;
-    
-    // Check for API key
-    if (!anthropicApiKey) {
-      logger.warn('No Anthropic API key available, falling back to keyword extraction');
-      return extractKeywords(content, maxTags);
+type TagExtractorDependencies = {
+  logger?: Logger;
+  resourceRegistry?: ResourceRegistry;
+} & Record<string, unknown>;
+
+/**
+ * TagExtractor class - handles tag extraction from content
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
+ */
+export class TagExtractor {
+  /**
+   * Singleton instance of TagExtractor
+   */
+  private static instance: TagExtractor | null = null;
+  
+  /**
+   * Logger instance
+   */
+  private logger = Logger.getInstance();
+  
+  /**
+   * ResourceRegistry instance used for Claude model access
+   * Lazy-loaded when needed in extractTags
+   */
+  private resourceRegistry?: ResourceRegistry;
+  
+  /**
+   * Get the singleton instance
+   * 
+   * @returns Singleton instance of TagExtractor
+   */
+  public static getInstance(): TagExtractor {
+    if (!TagExtractor.instance) {
+      TagExtractor.instance = new TagExtractor();
     }
+    return TagExtractor.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   */
+  public static resetInstance(): void {
+    TagExtractor.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @returns A new TagExtractor instance
+   */
+  public static createFresh(): TagExtractor {
+    return new TagExtractor();
+  }
+  
+  /**
+   * Create an instance with explicit dependencies
+   * 
+   * @param _config Optional configuration options (unused but kept for pattern consistency)
+   * @param dependencies Optional dependencies like logger and resourceRegistry
+   * @returns A new TagExtractor instance with the specified dependencies
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    dependencies: TagExtractorDependencies = {}
+  ): TagExtractor {
+    const instance = new TagExtractor();
+    
+    // Apply dependencies if provided
+    if (dependencies.logger) {
+      instance.logger = dependencies.logger;
+    }
+    
+    // Store resourceRegistry dependency for later use
+    if (dependencies.resourceRegistry) {
+      instance.resourceRegistry = dependencies.resourceRegistry;
+    }
+    
+    return instance;
+  }
+  
+  /**
+   * Private constructor to enforce using factory methods
+   */
+  private constructor() {
+    // Initialize with default dependencies
+    this.logger = Logger.getInstance();
+  }
 
-    // Truncate content if it's too long
-    const truncatedContent = content.length > textConfig.tagContentMaxLength
-      ? content.substring(0, textConfig.tagContentMaxLength) + '... [content truncated]'
-      : content;
+  /**
+   * Extract tags from content using Claude AI
+   * @param content The text content to analyze
+   * @param existingTags Optional array of existing tags to consider
+   * @param maxTags Maximum number of tags to extract (default: 7)
+   * @returns Array of extracted tags
+   */
+  public async extractTags(
+    content: string,
+    existingTags: string[] = [],
+    maxTags: number = textConfig.defaultMaxTags,
+    apiKey?: string,
+  ): Promise<string[]> {
+    try {
+      // Use provided API key or fallback to config
+      const anthropicApiKey = apiKey || aiConfig.anthropic.apiKey;
+      
+      // Check for API key
+      if (!anthropicApiKey) {
+        this.logger.error('No Anthropic API key available for tag extraction');
+        return [];
+      }
 
-    // Build the prompt
-    const prompt = `You are a precise tag extraction system. Your task is to extract the most relevant tags from the provided content.
+      // Truncate content if it's too long
+      const truncatedContent = content.length > textConfig.tagContentMaxLength
+        ? content.substring(0, textConfig.tagContentMaxLength) + '... [content truncated]'
+        : content;
+
+      // Build the prompt
+      const prompt = `You are a precise tag extraction system. Your task is to extract the most relevant tags from the provided content.
 
 The tags should capture the main concepts, topics, and themes in the content. The tags should be:
 - Relevant to the domain and content
@@ -57,129 +147,32 @@ Extract up to ${maxTags} tags that best represent this content.
 
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
-    // Get the Claude model instance from the ResourceRegistry
-    const claude = ResourceRegistry.getInstance({
-      anthropicApiKey: anthropicApiKey,
-    }).getClaudeModel();
+      // Get the Claude model instance from the ResourceRegistry
+      // Use the injected ResourceRegistry if available, otherwise get the singleton instance
+      const registry = this.resourceRegistry || ResourceRegistry.getInstance({
+        anthropicApiKey: anthropicApiKey,
+      });
+      const claude = registry.getClaudeModel();
 
-    // Define the schema for the response
-    const tagSchema = z.object({
-      tags: z.array(z.string()).max(maxTags),
-    });
+      // Define the schema for the response
+      const tagSchema = z.object({
+        tags: z.array(z.string()).max(maxTags),
+      });
 
-    // Call Claude with schema, type is inferred from the schema using z.infer
-    const response = await claude.complete<z.infer<typeof tagSchema>>({
-      schema: tagSchema,
-      systemPrompt: 'You extract tags from content. Only respond with the tags, nothing else.',
-      userPrompt: prompt,
-      temperature: aiConfig.anthropic.temperature,
-    });
+      // Call Claude with schema, type is inferred from the schema using z.infer
+      const response = await claude.complete<z.infer<typeof tagSchema>>({
+        schema: tagSchema,
+        systemPrompt: 'You extract tags from content. Only respond with the tags, nothing else.',
+        userPrompt: prompt,
+        temperature: aiConfig.anthropic.temperature,
+      });
 
-    // Return the tags array directly
-    return response.object.tags;
-  } catch (error) {
-    logger.error(`Error extracting tags with Claude: ${error}`);
-    // Fallback to simple keyword extraction
-    return extractKeywords(content, maxTags);
+      // Return the tags array directly
+      return response.object.tags;
+    } catch (error) {
+      this.logger.error(`Error extracting tags with Claude: ${error}`);
+      return [];
+    }
   }
-}
 
-/**
- * Generate and save tags for a note
- * @param note The note object to generate tags for
- * @param forceTags Whether to force tag generation even if tags already exist
- * @returns The generated tags array or existing tags if not regenerated
- */
-export async function generateAndSaveTagsForNote(
-  note: { id: string; title: string; content: string; tags?: string[] | null },
-  forceTags: boolean = false,
-): Promise<{ tags: string[], success: boolean }> {
-  try {
-    // Skip notes that already have tags unless force regeneration is enabled
-    if (!forceTags && note.tags && note.tags.length > 0) {
-      logger.info(`Skipping note "${note.title}" (already has tags)`);
-      return { tags: note.tags, success: true };
-    }
-
-    logger.info(`Generating tags for note: "${note.title}"`);
-
-    // Use title + content for better tagging context
-    const tagContent = `${note.title}\n\n${note.content}`;
-
-    // Get existing tags to consider (if any)
-    const existingTags = note.tags || [];
-
-    // Generate tags
-    const generatedTags = await extractTags(tagContent, existingTags, textConfig.defaultMaxTags);
-
-    if (generatedTags && generatedTags.length > 0) {
-      // Update the note with the new tags
-      await db.update(notes)
-        .set({ tags: generatedTags })
-        .where(sql`${notes.id} = ${note.id}`);
-
-      logger.info(`Updated tags for "${note.title}": ${generatedTags.join(', ')}`);
-      return { tags: generatedTags, success: true };
-    } else {
-      logger.info(`No tags generated for "${note.title}"`);
-      return { tags: existingTags, success: false };
-    }
-  } catch (error) {
-    logger.error(`Error generating tags for note "${note.title}": ${error}`);
-    return { tags: note.tags || [], success: false };
-  }
-}
-
-/**
- * Batch process tags for multiple notes
- * @param forceRegenerate Whether to force regeneration even if tags exist
- * @returns Statistics on processed notes
- */
-export async function batchProcessNoteTags(forceRegenerate: boolean = false): Promise<{
-  processed: number,
-  updated: number,
-  failed: number
-}> {
-  logger.info('=== Processing Note Tags ===');
-
-  try {
-    // Get all notes from the database
-    // If not forced, only process notes without tags
-    let allNotes;
-    if (!forceRegenerate) {
-      // For SQLite with JSON columns, we check if the tags field is NULL or an empty array
-      allNotes = await db.select().from(notes).where(
-        sql`${notes.tags} IS NULL OR ${notes.tags} = '[]'`,
-      );
-    } else {
-      allNotes = await db.select().from(notes);
-    }
-
-    if (allNotes.length === 0) {
-      logger.info('No notes found that need tag generation');
-      return { processed: 0, updated: 0, failed: 0 };
-    }
-
-    logger.info(`Found ${allNotes.length} notes to process`);
-    let updated = 0;
-    let failed = 0;
-
-    for (const note of allNotes) {
-      const result = await generateAndSaveTagsForNote(note, forceRegenerate);
-      if (result.success) {
-        updated++;
-      } else {
-        failed++;
-      }
-    }
-
-    logger.info(`\nNotes processed: ${updated + failed}`);
-    logger.info(`Notes updated: ${updated}`);
-    logger.info(`Notes failed: ${failed}`);
-
-    return { processed: updated + failed, updated, failed };
-  } catch (error) {
-    logger.error(`Error in batch note tag processing: ${error}`);
-    return { processed: 0, updated: 0, failed: 0 };
-  }
 }

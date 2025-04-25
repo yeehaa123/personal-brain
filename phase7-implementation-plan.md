@@ -284,6 +284,7 @@ Components updated:
 - ✅ PM2DeploymentAdapter
 - ✅ LocalCaddyDeploymentManager
 - ✅ DeploymentManagerFactory
+- ✅ WebsiteMessageHandler
 
 This pattern provides several benefits:
 - Enforces singleton usage when appropriate

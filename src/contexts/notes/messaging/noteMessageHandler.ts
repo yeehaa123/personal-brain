@@ -15,12 +15,120 @@ import type { NoteContext } from '../noteContext';
 
 /**
  * Handler for note context messages
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
+ * - createHandler(): Creates a message handler function (original functionality)
  */
 export class NoteMessageHandler {
+  /**
+   * Singleton instance of NoteMessageHandler
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: NoteMessageHandler | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
   private logger = Logger.getInstance();
   
   /**
+   * Get the singleton instance of the handler
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param noteContext The note context to handle messages for
+   * @returns The shared NoteMessageHandler instance
+   */
+  public static getInstance(noteContext?: NoteContext): NoteMessageHandler {
+    if (!NoteMessageHandler.instance && noteContext) {
+      NoteMessageHandler.instance = new NoteMessageHandler(noteContext);
+      
+      const logger = Logger.getInstance();
+      logger.debug('NoteMessageHandler singleton instance created');
+    } else if (!NoteMessageHandler.instance) {
+      throw new Error('NoteMessageHandler.getInstance() called without required noteContext');
+    } else if (noteContext) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with context but instance already exists. Context ignored.');
+    }
+    
+    return NoteMessageHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // No specific cleanup needed for this handler
+      if (NoteMessageHandler.instance) {
+        // Resource cleanup if needed
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during NoteMessageHandler instance reset:', error);
+    } finally {
+      NoteMessageHandler.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('NoteMessageHandler singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh handler instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param noteContext The note context to handle messages for
+   * @returns A new NoteMessageHandler instance
+   */
+  public static createFresh(noteContext: NoteContext): NoteMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh NoteMessageHandler instance');
+    
+    return new NoteMessageHandler(noteContext);
+  }
+  
+  /**
+   * Create a new handler instance with explicit dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * 
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new NoteMessageHandler instance with the provided dependencies
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): NoteMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating NoteMessageHandler with dependencies');
+    
+    // Handle the case where dependencies are explicitly provided
+    if ('noteContext' in configOrDependencies) {
+      const noteContext = configOrDependencies['noteContext'] as NoteContext;
+      return new NoteMessageHandler(noteContext);
+    }
+    
+    // Cannot create without a note context
+    throw new Error('NoteMessageHandler requires a noteContext dependency');
+  }
+  
+  /**
    * Create a message handler for the note context
+   * 
+   * This is the original functionality, maintained for backward compatibility.
    * 
    * @param noteContext The note context to handle messages for
    * @returns Message handler function
@@ -54,7 +162,7 @@ export class NoteMessageHandler {
   }
   
   /**
-   * Private constructor to enforce using createHandler
+   * Private constructor to enforce using factory methods
    * 
    * @param noteContext The note context to handle messages for
    */

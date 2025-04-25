@@ -6,12 +6,38 @@ import { ProfileTagService } from '@/services/profiles/profileTagService';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 
 
-// Mock the tag extractor module
+// Mock the TagExtractor class
 mock.module('@/utils/tagExtractor', () => {
   return {
-    extractTags: async (_input: string, _existingTags: string[] = [], _maxTags: number = 10) => {
-      // Return predictable tags regardless of content
-      return ['software-development', 'typescript', 'react', 'engineering'];
+    TagExtractor: class MockTagExtractor {
+      static instance: MockTagExtractor | null = null;
+      
+      static getInstance(): MockTagExtractor {
+        if (!MockTagExtractor.instance) {
+          MockTagExtractor.instance = new MockTagExtractor();
+        }
+        return MockTagExtractor.instance;
+      }
+      
+      static resetInstance(): void {
+        MockTagExtractor.instance = null;
+      }
+      
+      static createFresh(): MockTagExtractor {
+        return new MockTagExtractor();
+      }
+      
+      static createWithDependencies(
+        _config: Record<string, unknown> = {},
+        _dependencies: Record<string, unknown> = {}
+      ): MockTagExtractor {
+        return new MockTagExtractor();
+      }
+      
+      async extractTags(_input: string, _existingTags: string[] = [], _maxTags: number = 10): Promise<string[]> {
+        // Return predictable tags regardless of content
+        return ['software-development', 'typescript', 'react', 'engineering'];
+      }
     },
   };
 });

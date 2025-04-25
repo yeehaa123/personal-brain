@@ -64,16 +64,25 @@ describe('ResourceRegistry', () => {
       expect(fresh).toBeInstanceOf(ResourceRegistry);
     });
     
-    test('should initialize with options', () => {
+    test('should use provided API keys', () => {
+      // Remove from environment to ensure it uses the provided keys
+      delete process.env['ANTHROPIC_API_KEY'];
+      delete process.env['OPENAI_API_KEY'];
+      
+      // Create with custom keys
       const registry = ResourceRegistry.createFresh({
         anthropicApiKey: 'custom-key',
         openAiApiKey: 'custom-openai-key',
       });
       
-      // @ts-expect-error - Accessing private property for testing
-      expect(registry.options.anthropicApiKey).toBe('custom-key');
-      // @ts-expect-error - Accessing private property for testing
-      expect(registry.options.openAiApiKey).toBe('custom-openai-key');
+      // Test that we can access resources without errors
+      // If the keys weren't properly stored, this would throw
+      expect(() => registry.getClaudeModel()).not.toThrow();
+      expect(() => registry.getEmbeddingService()).not.toThrow();
+      
+      // Restore environment for other tests
+      process.env['ANTHROPIC_API_KEY'] = 'mock-anthropic-key';
+      process.env['OPENAI_API_KEY'] = 'mock-openai-key';
     });
   });
   

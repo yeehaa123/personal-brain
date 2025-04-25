@@ -21,7 +21,7 @@ export class MockResourceRegistry {
   private static instance: MockResourceRegistry | null = null;
 
   // Mock response to return from language model
-  public mockModelResponse: ModelResponse<{ answer: string }> = {
+  public mockModelResponse: ModelResponse<unknown> = {
     object: { answer: 'This is a mock response' },
     usage: { inputTokens: 10, outputTokens: 20 },
   };
@@ -81,6 +81,16 @@ export class MockResourceRegistry {
   public static createFresh(_options?: Record<string, unknown>): MockResourceRegistry {
     return new MockResourceRegistry();
   }
+  
+  /**
+   * Create an instance with explicit dependencies
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    _dependencies: Record<string, unknown> = {}
+  ): MockResourceRegistry {
+    return new MockResourceRegistry();
+  }
 
   /**
    * Get the language model
@@ -101,5 +111,21 @@ export class MockResourceRegistry {
    */
   public updateOptions(_options: Record<string, unknown>): void {
     // No-op in mock
+  }
+  
+  /**
+   * Check if the registry is initialized
+   * @returns true in mock implementation
+   */
+  public isInitialized(): boolean {
+    return true;
+  }
+  
+  /**
+   * Initialize the registry
+   * @returns true in mock implementation
+   */
+  public initialize(): boolean {
+    return true;
   }
 }

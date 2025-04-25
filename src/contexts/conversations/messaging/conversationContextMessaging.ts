@@ -36,6 +36,8 @@ export class ConversationContextMessaging {
     this.notifier = new ConversationNotifier(mediator);
     
     // Register message handler
+    // Continue using createHandler for now to maintain compatibility
+    // We can use getInstance() or createFresh() for more complex scenarios
     const handler = ConversationMessageHandler.createHandler(conversationContext);
     mediator.registerHandler(ContextId.CONVERSATION, handler);
     

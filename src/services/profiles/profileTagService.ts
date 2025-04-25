@@ -13,28 +13,40 @@ import type {
 import type { Profile } from '@/models/profile';
 import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
-import { extractTags } from '@/utils/tagExtractor';
+import { TagExtractor } from '@/utils/tagExtractor';
 
 import { ProfileRepository } from './profileRepository';
 
 
 /**
  * Service for generating and managing profile tags
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
  */
+
 export class ProfileTagService {
   private repository: ProfileRepository;
-  
+
   /**
    * Singleton instance of ProfileTagService
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
   private static instance: ProfileTagService | null = null;
-  
+
   /**
    * Logger instance for this class
    */
   private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-  
+
+  /**
+   * Tag extractor instance for generating tags
+   */
+  private tagExtractor: TagExtractor;
+
   /**
    * Get the singleton instance of the service
    * 
@@ -44,16 +56,20 @@ export class ProfileTagService {
    */
   public static getInstance(): ProfileTagService {
     if (!ProfileTagService.instance) {
-      const repository = ProfileRepository.getInstance();
-      ProfileTagService.instance = new ProfileTagService(repository);
-      
+      // Create with default dependencies
+      ProfileTagService.instance = new ProfileTagService({
+        repository: ProfileRepository.getInstance(),
+        tagExtractor: TagExtractor.getInstance(),
+        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' })
+      });
+
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileTagService singleton instance created');
     }
-    
+
     return ProfileTagService.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    * 
@@ -71,12 +87,12 @@ export class ProfileTagService {
       logger.error('Error during ProfileTagService instance reset:', error);
     } finally {
       ProfileTagService.instance = null;
-      
+
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileTagService singleton instance reset');
     }
   }
-  
+
   /**
    * Create a fresh service instance
    * 
@@ -89,38 +105,35 @@ export class ProfileTagService {
   public static createFresh(): ProfileTagService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileTagService instance');
-    
-    const repository = ProfileRepository.getInstance();
-    return new ProfileTagService(repository);
+
+    return new ProfileTagService({
+      repository: ProfileRepository.getInstance(),
+      tagExtractor: TagExtractor.getInstance(),
+      logger: logger
+    });
   }
 
   /**
    * Create a new service instance with explicit dependencies
    * 
    * Part of the Component Interface Standardization pattern.
-   * Uses the configOrDependencies pattern for flexible dependency injection.
    * 
-   * @param configOrDependencies Configuration or explicit dependencies
+   * @param _config Optional configuration (unused but kept for pattern consistency)
+   * @param dependencies Optional dependencies object with repository, tagExtractor, and logger
    * @returns A new ProfileTagService instance with the provided dependencies
    */
   public static createWithDependencies(
-    configOrDependencies: Record<string, unknown> = {},
+    _config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
   ): ProfileTagService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating ProfileTagService with dependencies');
     
-    // Handle the case where dependencies are explicitly provided
-    if ('repository' in configOrDependencies) {
-      const repository = configOrDependencies['repository'] as ProfileRepository;
-      return new ProfileTagService(repository);
-    }
-    
-    // Handle the case where this is called with a config object or empty object
-    // Use the default repository
-    const repository = ProfileRepository.getInstance();
-    return new ProfileTagService(repository);
+    // Create instance with provided dependencies
+    return new ProfileTagService(dependencies);
   }
-  
+
+
   /**
    * Create a new ProfileTagService
    * 
@@ -129,10 +142,23 @@ export class ProfileTagService {
    * - createFresh()
    * - createWithDependencies()
    * 
-   * @param repository The profile repository to use
+   * @param dependencies The dependencies to use (repository, tagExtractor, logger)
    */
-  private constructor(repository?: ProfileRepository) {
-    this.repository = repository || ProfileRepository.getInstance();
+  private constructor(dependencies: Record<string, unknown> = {}) {
+    // Initialize repository
+    const repo = dependencies['repository'] as ProfileRepository | undefined;
+    this.repository = repo || ProfileRepository.getInstance();
+
+    // Initialize logger if provided
+    const loggerDep = dependencies['logger'] as Logger | undefined;
+    if (loggerDep) {
+      this.logger = loggerDep;
+    }
+
+    // Initialize tag extractor
+    const tagExtractorDep = dependencies['tagExtractor'] as TagExtractor | undefined;
+    this.tagExtractor = tagExtractorDep || TagExtractor.getInstance();
+
     this.logger.debug('ProfileTagService instance created');
   }
 
@@ -148,7 +174,7 @@ export class ProfileTagService {
         return [];
       }
 
-      const tags = await extractTags(profileText, [], 10);
+      const tags = await this.tagExtractor.extractTags(profileText, [], 10);
 
       if (!tags?.length) {
         const profile = await this.repository.getProfile();
@@ -195,14 +221,14 @@ export class ProfileTagService {
       }
 
       this.logger.debug(`Generated ${tags.length} tags: ${tags.join(', ')}`);
-      
+
       // Update profile with new tags
       this.logger.debug(`Updating profile ${profile.id} with new tags`);
       const success = await this.repository.updateProfile(profile.id, { tags });
-      
+
       return success ? tags : null;
     } catch (error) {
-      this.logger.error('Error updating profile tags', { 
+      this.logger.error('Error updating profile tags', {
         error: error instanceof Error ? error.message : String(error),
         context: 'ProfileTagService',
       });
@@ -288,7 +314,7 @@ export class ProfileTagService {
 
     return parts.join('\n');
   }
-  
+
   /**
    * Prepare profile text for embedding generation
    * @param profile The profile to prepare text for
@@ -301,10 +327,10 @@ export class ProfileTagService {
     if (profile.fullName) parts.push(`Name: ${profile.fullName}`);
     if (profile.headline) parts.push(`Headline: ${profile.headline}`);
     if (profile.occupation) parts.push(`Occupation: ${profile.occupation}`);
-    
+
     // Add summary
     if (profile.summary) parts.push(`Summary: ${profile.summary}`);
-    
+
     // Add location information
     const location: string[] = [];
     if (profile.city) location.push(profile.city);
@@ -319,7 +345,7 @@ export class ProfileTagService {
         const expParts: string[] = [];
         if (exp.title) expParts.push(exp.title);
         if (exp.company) expParts.push(`at ${exp.company}`);
-        
+
         parts.push(`- ${expParts.join(' ')}`);
         if (exp.description) parts.push(`  ${exp.description}`);
       });
@@ -333,7 +359,7 @@ export class ProfileTagService {
         if (edu.degree_name) eduParts.push(edu.degree_name);
         if (edu.field_of_study) eduParts.push(`in ${edu.field_of_study}`);
         if (edu.school) eduParts.push(`from ${edu.school}`);
-        
+
         parts.push(`- ${eduParts.join(' ')}`);
       });
     }

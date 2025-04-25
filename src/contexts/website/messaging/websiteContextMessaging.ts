@@ -36,8 +36,9 @@ export class WebsiteContextMessaging {
     // Create notifier
     this.notifier = new WebsiteNotifier(mediator);
     
-    // Register message handler
-    const handler = WebsiteMessageHandler.createHandler(websiteContext);
+    // Register message handler using the standardized pattern
+    const messageHandler = WebsiteMessageHandler.getInstance({ websiteContext });
+    const handler = messageHandler.getMessageHandlerFunction();
     mediator.registerHandler(ContextId.WEBSITE, handler);
     
     this.logger.debug('WebsiteContextMessaging initialized');

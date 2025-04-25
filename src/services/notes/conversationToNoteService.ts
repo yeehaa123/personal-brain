@@ -12,7 +12,7 @@ import { ConversationContext, type ConversationStorage } from '@/contexts/conver
 import type { NewNote, Note } from '@/models/note';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
-import { extractTags } from '@/utils/tagExtractor';
+import { TagExtractor } from '@/utils/tagExtractor';
 
 import { NoteEmbeddingService } from './noteEmbeddingService';
 import { NoteRepository } from './noteRepository';
@@ -351,41 +351,17 @@ export class ConversationToNoteService {
   }
   
   /**
-   * Generate tags for note content
+   * Generate tags for note content using TagExtractor
    */
   private async generateTagsFromContent(content: string): Promise<string[]> {
     try {
       this.logger.debug('Generating tags for note content');
-      return await extractTags(content);
+      const tagExtractor = TagExtractor.getInstance();
+      return await tagExtractor.extractTags(content);
     } catch (error) {
-      // Log at debug level since we have a fallback mechanism
-      this.logger.debug('Tag extraction API failed, using fallback keyword extraction:', error);
-      // Extract keywords as fallback
-      return this.extractKeywords(content);
+      this.logger.error('Tag extraction failed:', error);
+      return []; // Return empty array if tag extraction fails
     }
-  }
-  
-  /**
-   * Extract keywords from content as a fallback for tag generation
-   */
-  private extractKeywords(content: string): string[] {
-    // Simple keyword extraction logic
-    const words = content.toLowerCase()
-      .replace(/[^\w\s]/g, '')
-      .split(/\s+/)
-      .filter(word => word.length > 3);
-      
-    // Count word frequency
-    const wordCount: Record<string, number> = {};
-    words.forEach(word => {
-      wordCount[word] = (wordCount[word] || 0) + 1;
-    });
-    
-    // Sort by frequency and return top 5
-    return Object.entries(wordCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([word]) => word);
   }
   
   /**

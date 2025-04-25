@@ -9,7 +9,7 @@ import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { EmbeddingService } from '@/resources/ai/embedding';
 import logger from '@/utils/logger';
-import { generateAndSaveTagsForNote } from '@/utils/tagExtractor';
+import { TagExtractor } from '@/utils/tagExtractor';
 
 interface MarkdownMetadata {
   title?: string;
@@ -166,19 +166,20 @@ export async function importMarkdownFile(filePath: string): Promise<string> {
     
     logger.info(`Created new note: ${id}`);
     
-    // Generate tags if none were provided in the frontmatter
-    if (tags.length === 0) {
-      // Use our shared utility function for tag generation
-      const tagResult = await generateAndSaveTagsForNote({
-        id: noteId,
-        title,
-        content: processedContent,
-        tags: [],
-      }, true); // Force tag generation
-      
-      // Update tags in memory for the return value
-      tags = tagResult.tags;
-    }
+    // Always generate tags for consistency, ignoring any frontmatter tags
+    const tagExtractor = TagExtractor.getInstance();
+    const generatedTags = await tagExtractor.extractTags(`${title}\n${processedContent}`, [], 10);
+    
+    // Update the note with generated tags
+    await db
+      .update(notes)
+      .set({ tags: generatedTags })
+      .where(sql`${notes.id} = ${noteId}`);
+    
+    // Update tags in memory for the return value
+    tags = generatedTags;
+    
+    logger.info(`Generated tags for note: ${generatedTags.join(', ')}`);
   }
   
   return id;

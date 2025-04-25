@@ -29,12 +29,120 @@ interface BaseContextMessage {
 
 /**
  * Handler for conversation context messages
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
+ * - createHandler(): Creates a message handler function (original functionality)
  */
 export class ConversationMessageHandler {
+  /**
+   * Singleton instance of ConversationMessageHandler
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: ConversationMessageHandler | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
   private logger = Logger.getInstance();
   
   /**
-   * Create a message handler for the conversation context
+   * Get the singleton instance of the handler
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param conversationContext The conversation context to handle messages for
+   * @returns The shared ConversationMessageHandler instance
+   */
+  public static getInstance(conversationContext?: ConversationContext): ConversationMessageHandler {
+    if (!ConversationMessageHandler.instance && conversationContext) {
+      ConversationMessageHandler.instance = new ConversationMessageHandler(conversationContext);
+      
+      const logger = Logger.getInstance();
+      logger.debug('ConversationMessageHandler singleton instance created');
+    } else if (!ConversationMessageHandler.instance) {
+      throw new Error('ConversationMessageHandler.getInstance() called without required conversationContext');
+    } else if (conversationContext) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with context but instance already exists. Context ignored.');
+    }
+    
+    return ConversationMessageHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // No specific cleanup needed for this handler
+      if (ConversationMessageHandler.instance) {
+        // Resource cleanup if needed
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during ConversationMessageHandler instance reset:', error);
+    } finally {
+      ConversationMessageHandler.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('ConversationMessageHandler singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh handler instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param conversationContext The conversation context to handle messages for
+   * @returns A new ConversationMessageHandler instance
+   */
+  public static createFresh(conversationContext: ConversationContext): ConversationMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh ConversationMessageHandler instance');
+    
+    return new ConversationMessageHandler(conversationContext);
+  }
+  
+  /**
+   * Create a new handler instance with explicit dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * 
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new ConversationMessageHandler instance with the provided dependencies
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): ConversationMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating ConversationMessageHandler with dependencies');
+    
+    // Handle the case where dependencies are explicitly provided
+    if ('conversationContext' in configOrDependencies) {
+      const conversationContext = configOrDependencies['conversationContext'] as ConversationContext;
+      return new ConversationMessageHandler(conversationContext);
+    }
+    
+    // Cannot create without a conversation context
+    throw new Error('ConversationMessageHandler requires a conversationContext dependency');
+  }
+  
+  /**
+   * Create a message handler function for the conversation context
+   * 
+   * This is the original functionality, maintained for backward compatibility.
    * 
    * @param conversationContext The conversation context to handle messages for
    * @returns Message handler function
@@ -68,7 +176,7 @@ export class ConversationMessageHandler {
   }
   
   /**
-   * Private constructor to enforce using createHandler
+   * Private constructor to enforce using factory methods
    * 
    * @param conversationContext The conversation context to handle messages for
    */

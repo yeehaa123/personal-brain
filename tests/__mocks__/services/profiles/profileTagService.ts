@@ -45,6 +45,16 @@ export class MockProfileTagService implements Partial<ProfileTagService> {
     return new MockProfileTagService();
   }
   
+  /**
+   * Create instance with dependencies
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    _dependencies: Record<string, unknown> = {}
+  ): MockProfileTagService {
+    return new MockProfileTagService();
+  }
+  
   // Mock methods with default implementations
   generateProfileTags = mock((_text: string): Promise<string[]> => {
     return Promise.resolve(['mock-tag', 'profile', 'test']);

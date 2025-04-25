@@ -4,6 +4,12 @@
  * This module provides message handling capabilities for the WebsiteContext,
  * allowing it to process request and notification messages from the
  * cross-context messaging system.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
@@ -30,25 +36,98 @@ interface BaseContextMessage {
 }
 
 /**
+ * Options for creating a WebsiteMessageHandler
+ */
+export interface WebsiteMessageHandlerOptions {
+  websiteContext: WebsiteContext;
+}
+
+/**
  * Handler for website context messages
  */
 export class WebsiteMessageHandler {
+  /**
+   * Singleton instance of WebsiteMessageHandler
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: WebsiteMessageHandler | null = null;
+  
   private logger = Logger.getInstance();
   
   /**
-   * Create a message handler for the website context
+   * Get the singleton instance of the message handler
+   * 
+   * @param options Handler configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(options?: WebsiteMessageHandlerOptions): WebsiteMessageHandler {
+    if (!WebsiteMessageHandler.instance) {
+      if (!options?.websiteContext) {
+        throw new Error('WebsiteContext is required to initialize WebsiteMessageHandler');
+      }
+      WebsiteMessageHandler.instance = new WebsiteMessageHandler(options.websiteContext);
+    }
+    return WebsiteMessageHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    WebsiteMessageHandler.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Handler configuration options
+   * @returns A new instance
+   */
+  public static createFresh(options: WebsiteMessageHandlerOptions): WebsiteMessageHandler {
+    if (!options?.websiteContext) {
+      throw new Error('WebsiteContext is required to initialize WebsiteMessageHandler');
+    }
+    return new WebsiteMessageHandler(options.websiteContext);
+  }
+  
+  /**
+   * Create an instance with explicit dependencies (primarily for testing/DI)
+   * 
+   * @param _config Optional configuration object (unused but kept for pattern consistency)
+   * @param dependencies Dependencies object with required websiteContext
+   * @returns A new instance with the specified dependencies
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    dependencies: { websiteContext: WebsiteContext },
+  ): WebsiteMessageHandler {
+    if (!dependencies.websiteContext) {
+      throw new Error('WebsiteContext is required to initialize WebsiteMessageHandler');
+    }
+    
+    return new WebsiteMessageHandler(dependencies.websiteContext);
+  }
+  
+  /**
+   * Private constructor to enforce using factory methods
    * 
    * @param websiteContext The website context to handle messages for
-   * @returns Message handler function
    */
-  static createHandler(websiteContext: WebsiteContext) {
+  private constructor(private websiteContext: WebsiteContext) {}
+  
+  /**
+   * Get a message handler function for registering with a mediator
+   * 
+   * @returns A function that can handle context messages
+   */
+  public getMessageHandlerFunction() {
     return async (message: BaseContextMessage) => {
-      const handler = new WebsiteMessageHandler(websiteContext);
-      
       if (message.category === 'request' && 'dataType' in message) {
-        return handler.handleRequest(message as DataRequestMessage);
+        return this.handleRequest(message as DataRequestMessage);
       } else if (message.category === 'notification' && 'notificationType' in message) {
-        await handler.handleNotification(message as NotificationMessage);
+        await this.handleNotification(message as NotificationMessage);
         // Return acknowledgment for notifications
         return MessageFactory.createAcknowledgment(
           ContextId.WEBSITE,
@@ -68,13 +147,6 @@ export class WebsiteMessageHandler {
       );
     };
   }
-  
-  /**
-   * Private constructor to enforce using createHandler
-   * 
-   * @param websiteContext The website context to handle messages for
-   */
-  private constructor(private websiteContext: WebsiteContext) {}
   
   /**
    * Handle data request messages
