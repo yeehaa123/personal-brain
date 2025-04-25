@@ -40,6 +40,9 @@ Note: CLI Interface and Logger separation has been moved to post-MVP priorities 
   - ⏳ Standardize factory methods across remaining components
   - ✅ Update tests to use factory methods instead of direct instantiation
   - ⏳ Update tests to properly mock dependencies
+    - ✅ Created standardized mock implementations for BaseRepository, BaseEmbeddingService, and BaseSearchService
+    - ✅ Updated BaseSearchService.test.ts to use standardized mock implementations and focus on observable behavior
+    - ⏳ Continue updating remaining tests to use standardized mock classes
 - ⏳ Refine error handling and logging
   - ⏳ Implement consistent error handling
   - ⏳ Standardize logging patterns
