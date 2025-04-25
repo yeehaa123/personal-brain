@@ -90,7 +90,7 @@ export abstract class BaseSearchService<
    */
   protected constructor(
     config?: BaseSearchServiceConfig,
-    dependencies?: BaseSearchServiceDependencies<TEntity, TRepository, TEmbeddingService>
+    dependencies?: BaseSearchServiceDependencies<TEntity, TRepository, TEmbeddingService>,
   ) {
     if (config && dependencies) {
       // New constructor with config and dependencies
@@ -98,7 +98,7 @@ export abstract class BaseSearchService<
       this.repository = dependencies.repository;
       this.embeddingService = dependencies.embeddingService;
       this.logger = dependencies.logger || Logger.getInstance({
-        silent: process.env.NODE_ENV === 'test'
+        silent: process.env.NODE_ENV === 'test',
       });
     } else {
       // Legacy constructor - derived classes must set these properties

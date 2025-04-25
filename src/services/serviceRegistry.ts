@@ -231,8 +231,8 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
           { entityName: 'note' },
           {
             repository,
-            embeddingService
-          }
+            embeddingService,
+          },
         );
       },
       [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService],
@@ -252,8 +252,8 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
           {
             repository,
             embeddingService,
-            tagService
-          }
+            tagService,
+          },
         );
       },
       [

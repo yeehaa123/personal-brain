@@ -161,8 +161,8 @@ describe('ProfileSearchService', () => {
       {
         repository: mockRepository as unknown as ProfileRepository,
         embeddingService: mockEmbeddingService,
-        tagService: mockTagService
-      }
+        tagService: mockTagService,
+      },
     );
   });
 
@@ -180,8 +180,8 @@ describe('ProfileSearchService', () => {
       {
         repository: mockRepository as unknown as ProfileRepository,
         embeddingService: mockEmbeddingService,
-        tagService: mockTagService
-      }
+        tagService: mockTagService,
+      },
     );
     
     expect(service).toBeDefined();
@@ -231,8 +231,8 @@ describe('ProfileSearchService', () => {
       {
         repository: emptyRepository as unknown as ProfileRepository,
         embeddingService: mockEmbeddingService,
-        tagService: mockTagService
-      }
+        tagService: mockTagService,
+      },
     );
 
     const results = await serviceWithEmptyRepo.findRelatedNotes(mockNoteContext, 5);
@@ -261,8 +261,8 @@ describe('ProfileSearchService', () => {
       {
         repository: repositoryWithoutEmbedding as unknown as ProfileRepository,
         embeddingService: mockEmbeddingService,
-        tagService: mockTagService
-      }
+        tagService: mockTagService,
+      },
     );
 
     const results = await serviceWithoutEmbedding.findRelatedNotes(mockNoteContext, 5);
@@ -292,8 +292,8 @@ describe('ProfileSearchService', () => {
       {
         repository: repositoryWithoutTags as unknown as ProfileRepository,
         embeddingService: mockEmbeddingService,
-        tagService: mockTagService
-      }
+        tagService: mockTagService,
+      },
     );
 
     const results = await serviceWithoutTags.findNotesWithSimilarTags(mockNoteContext, [], 5);

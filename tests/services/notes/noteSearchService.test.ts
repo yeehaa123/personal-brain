@@ -76,14 +76,14 @@ mockRepository.searchNotesByKeywords = mock((query: string | undefined, tags: st
     const lowerQuery = query.toLowerCase();
     results = results.filter(note => 
       note.title.toLowerCase().includes(lowerQuery) ||
-      note.content.toLowerCase().includes(lowerQuery)
+      note.content.toLowerCase().includes(lowerQuery),
     );
   }
   
   // Filter by tags if provided
   if (tags && tags.length > 0) {
     results = results.filter(note => 
-      note.tags && tags.some(tag => note.tags?.includes(tag))
+      note.tags && tags.some(tag => note.tags?.includes(tag)),
     );
   }
   
@@ -97,7 +97,7 @@ mockRepository.getRecentNotes = mock((limit = 10, offset = 0) => {
   return Promise.resolve(
     [...mockNotes]
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(offset, offset + limit)
+      .slice(offset, offset + limit),
   );
 });
 
@@ -165,8 +165,8 @@ describe('NoteSearchService', () => {
       { entityName: 'note' },
       { 
         repository: repository,
-        embeddingService: embeddingService
-      }
+        embeddingService: embeddingService,
+      },
     );
   });
 

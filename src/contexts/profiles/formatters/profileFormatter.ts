@@ -7,6 +7,7 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  * 
  * Implements the FormatterInterface for consistent formatting operations
  */
@@ -27,6 +28,26 @@ import { isNonEmptyString } from '@/utils/safeAccessUtils';
 import type { ProfileFormattingOptions } from '../profileTypes';
 
 /**
+ * Configuration options for ProfileFormatter
+ */
+export interface ProfileFormatterConfig {
+  /** Include section headers in the formatted output */
+  includeSectionHeaders?: boolean;
+  /** Include empty sections in the formatted output */
+  includeEmptySections?: boolean;
+  /** Maximum length for fields before truncation */
+  maxFieldLength?: number;
+}
+
+/**
+ * Dependencies for ProfileFormatter
+ */
+export interface ProfileFormatterDependencies {
+  /** Logger instance */
+  logger?: Logger;
+}
+
+/**
  * ProfileFormatter handles converting profile objects to human-readable text
  * Follows the Component Interface Standardization pattern
  * Implements FormatterInterface for Profile objects
@@ -35,17 +56,25 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
   /** The singleton instance */
   private static instance: ProfileFormatter | null = null;
   
+  /** Configuration values */
+  private readonly config: ProfileFormatterConfig;
+  
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private readonly logger: Logger;
   
   /**
    * Get the singleton instance of ProfileFormatter
    * 
+   * @param config Optional configuration
    * @returns The shared ProfileFormatter instance
    */
-  public static getInstance(): ProfileFormatter {
+  public static getInstance(config?: ProfileFormatterConfig): ProfileFormatter {
     if (!ProfileFormatter.instance) {
-      ProfileFormatter.instance = new ProfileFormatter();
+      ProfileFormatter.instance = new ProfileFormatter(config);
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return ProfileFormatter.instance;
   }
@@ -62,10 +91,54 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
+   * @param config Optional configuration
    * @returns A new ProfileFormatter instance
    */
-  public static createFresh(): ProfileFormatter {
-    return new ProfileFormatter();
+  public static createFresh(config?: ProfileFormatterConfig): ProfileFormatter {
+    return new ProfileFormatter(config);
+  }
+  
+  /**
+   * Create a new formatter with explicit dependencies
+   * @param config Configuration options
+   * @param dependencies Service dependencies
+   * @returns A new ProfileFormatter instance
+   */
+  public static createWithDependencies(
+    config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
+  ): ProfileFormatter {
+    // Convert config to typed config
+    const formatterConfig: ProfileFormatterConfig = {
+      includeSectionHeaders: config['includeSectionHeaders'] as boolean,
+      includeEmptySections: config['includeEmptySections'] as boolean,
+      maxFieldLength: config['maxFieldLength'] as number
+    };
+    
+    // Create with typed dependencies
+    return new ProfileFormatter(
+      formatterConfig,
+      {
+        logger: dependencies['logger'] as Logger
+      }
+    );
+  }
+  
+  /**
+   * Private constructor to enforce factory methods
+   * @param config Optional configuration
+   * @param dependencies Optional dependencies
+   */
+  private constructor(
+    config?: ProfileFormatterConfig,
+    dependencies?: ProfileFormatterDependencies
+  ) {
+    this.config = {
+      includeSectionHeaders: config?.includeSectionHeaders ?? true,
+      includeEmptySections: config?.includeEmptySections ?? false,
+      maxFieldLength: config?.maxFieldLength ?? 0
+    };
+    this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   }
   
   /**
@@ -73,26 +146,26 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * Maps to formatProfileForDisplay for compatibility
    * 
    * @param data The profile data to format
-   * @param options Optional formatting options
+   * @param options Optional formatting options (override defaults from config)
    * @returns Formatted string representation of the profile
    */
   format(data: Profile, options?: ProfileFormattingOptions): string {
     return this.formatProfileForDisplay(data, options || {});
   }
+
   /**
    * Formats a profile for display to users
    * 
    * @param profile - The profile to format
-   * @param options - Optional formatting options
+   * @param options - Optional formatting options (override defaults from config)
    * @returns Formatted profile string with sections and formatting
    */
   formatProfileForDisplay(profile: Profile, options: ProfileFormattingOptions = {}): string {
     try {
-      const { 
-        includeSectionHeaders = true,
-        includeEmptySections = false,
-        maxFieldLength = 0, 
-      } = options;
+      // Use options from the method call, then fall back to config values
+      const includeSectionHeaders = options.includeSectionHeaders ?? this.config.includeSectionHeaders ?? true;
+      const includeEmptySections = options.includeEmptySections ?? this.config.includeEmptySections ?? false;
+      const maxFieldLength = options.maxFieldLength ?? this.config.maxFieldLength ?? 0;
       
       const formatField = (value: string | null | undefined): string => {
         if (!value) return '';

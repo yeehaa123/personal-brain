@@ -66,12 +66,12 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       const dependencies: NoteSearchServiceDependencies = {
         repository: NoteRepository.getInstance(),
         embeddingService: NoteEmbeddingService.getInstance(),
-        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' })
+        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' }),
       };
       
       NoteSearchService.instance = new NoteSearchService(
         { entityName: 'note', ...config },
-        dependencies
+        dependencies,
       );
       
       dependencies.logger?.debug?.('NoteSearchService singleton instance created');
@@ -124,12 +124,12 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     const dependencies: NoteSearchServiceDependencies = {
       repository: NoteRepository.getInstance(),
       embeddingService: NoteEmbeddingService.getInstance(),
-      logger
+      logger,
     };
     
     return new NoteSearchService(
       { entityName: 'note', ...config },
-      dependencies
+      dependencies,
     );
   }
   
@@ -144,21 +144,21 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): NoteSearchService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating NoteSearchService with explicit dependencies');
     
     // Convert config to typed config
     const noteSearchConfig: NoteSearchServiceConfig = {
-      entityName: (config['entityName'] as string) || 'note'
+      entityName: (config['entityName'] as string) || 'note',
     };
     
     // Convert dependencies to typed dependencies
     const noteSearchDeps: NoteSearchServiceDependencies = {
       repository: (dependencies['repository'] as NoteRepository) || NoteRepository.getInstance(),
       embeddingService: (dependencies['embeddingService'] as NoteEmbeddingService) || NoteEmbeddingService.getInstance(),
-      logger: (dependencies['logger'] as Logger) || logger
+      logger: (dependencies['logger'] as Logger) || logger,
     };
     
     return new NoteSearchService(noteSearchConfig, noteSearchDeps);
@@ -181,8 +181,8 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       {
         repository: dependencies.repository,
         embeddingService: dependencies.embeddingService,
-        logger: dependencies.logger
-      }
+        logger: dependencies.logger,
+      },
     );
     
     if (dependencies.logger) {

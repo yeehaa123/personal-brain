@@ -229,8 +229,8 @@ export class ProfileContext extends BaseContext<
         {
           repository,
           embeddingService,
-          tagService
-        }
+          tagService,
+        },
       );
       
       // Create storage adapter with explicit repository dependency

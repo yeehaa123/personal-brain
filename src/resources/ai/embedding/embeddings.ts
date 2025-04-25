@@ -100,7 +100,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): EmbeddingService {
     // Convert generic config to typed config
     const embeddingConfig: EmbeddingConfig = {
@@ -113,8 +113,8 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     return new EmbeddingService(
       embeddingConfig,
       {
-        logger: dependencies['logger'] as Logger
-      }
+        logger: dependencies['logger'] as Logger,
+      },
     );
   }
 
@@ -127,7 +127,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    */
   private constructor(
     config?: EmbeddingConfig,
-    deps: EmbeddingDependencies = {}
+    deps: EmbeddingDependencies = {},
   ) {
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
     this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;

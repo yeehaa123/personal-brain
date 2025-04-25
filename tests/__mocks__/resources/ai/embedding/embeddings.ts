@@ -4,7 +4,7 @@
  */
 import type { EmbeddingConfig, EmbeddingDependencies } from '@/resources/ai/embedding/embeddings';
 import type { EmbeddingModelAdapter } from '@/resources/ai/interfaces';
-import { Logger } from '@/utils/logger';
+import type { Logger } from '@/utils/logger';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
@@ -66,7 +66,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): EmbeddingService {
     // Convert generic config to typed config
     const embeddingConfig: EmbeddingConfig = {
@@ -79,8 +79,8 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     return new EmbeddingService(
       embeddingConfig, 
       { 
-        logger: dependencies['logger'] as Logger 
-      }
+        logger: dependencies['logger'] as Logger, 
+      },
     );
   }
   
@@ -92,7 +92,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    */
   private constructor(
     _config?: EmbeddingConfig,
-    deps: EmbeddingDependencies = {}
+    deps: EmbeddingDependencies = {},
   ) {
     // Use type assertion for MockLogger since it doesn't have all the Logger properties
     // This is acceptable for tests since we're only interested in its behavior

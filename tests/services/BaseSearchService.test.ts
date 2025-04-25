@@ -71,7 +71,7 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
     // Call super with minimal configuration
     super({ entityName: 'test' }, {
       repository: new TestRepository(),
-      embeddingService: new TestEmbeddingService()
+      embeddingService: new TestEmbeddingService(),
     });
   }
 
@@ -216,7 +216,7 @@ describe('BaseSearchService', () => {
       constructor() {
         super({ entityName: 'test' }, {
           repository: new TestRepository(),
-          embeddingService: new TestEmbeddingService()
+          embeddingService: new TestEmbeddingService(),
         });
       }
 
@@ -262,7 +262,7 @@ describe('BaseSearchService', () => {
       constructor() {
         super({ entityName: 'test' }, {
           repository: new TestRepository(),
-          embeddingService: new TestEmbeddingService()
+          embeddingService: new TestEmbeddingService(),
         });
       }
 
@@ -311,7 +311,7 @@ describe('BaseSearchService', () => {
       constructor() {
         super({ entityName: 'test' }, {
           repository: new TestRepository(),
-          embeddingService: new TestEmbeddingService()
+          embeddingService: new TestEmbeddingService(),
         });
       }
 

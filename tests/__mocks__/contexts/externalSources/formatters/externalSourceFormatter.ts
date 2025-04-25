@@ -5,6 +5,7 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 
 import { mock } from 'bun:test';
@@ -71,6 +72,20 @@ export class MockExternalSourceFormatter {
    * @returns A new MockExternalSourceFormatter instance
    */
   public static createFresh(): MockExternalSourceFormatter {
+    return new MockExternalSourceFormatter();
+  }
+
+  /**
+   * Create a new instance with explicit dependencies
+   * This is a mock implementation that matches the real component's interface
+   * @param _config Optional configuration options (ignored in this mock)
+   * @param _dependencies Optional dependencies (ignored in this mock)
+   * @returns A new MockExternalSourceFormatter instance
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    _dependencies: Record<string, unknown> = {}
+  ): MockExternalSourceFormatter {
     return new MockExternalSourceFormatter();
   }
 }
