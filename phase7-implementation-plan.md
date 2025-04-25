@@ -348,7 +348,10 @@ This pattern provides several benefits:
    - ✅ Implement BaseSearchService with proper dependency injection
    - ✅ Update NoteSearchService to use the standardized pattern
    - ✅ Update ProfileSearchService to use the standardized pattern
-   - Finish remaining createWithDependencies implementations
+   - ✅ Update ConversationToolService to use the standardized pattern with createWithDependencies
+   - ✅ Update ExternalSourceFormatter to use the standardized pattern with createWithDependencies
+   - ✅ Update ProfileFormatter to use the standardized pattern with createWithDependencies
+   - Continue implementing createWithDependencies in remaining components
    - Standardize factory methods across other components
    - Update tests to use proper mocking
 
@@ -373,7 +376,7 @@ The following components still need to be refactored to follow the Component Int
 - ✅ **BaseFormatter**: Not needed - formatters implement FormatterInterface directly
 
 ### Tools & Utilities (Medium Priority)
-- **ConversationToolService**: Used for MCP tool integration
+- ✅ **ConversationToolService**: Completed - Fully implements the Component Interface Standardization pattern with createWithDependencies
 - **ExternalSourceTools**: Used for external source access
 - **NoteTools**: Used for note manipulation
 

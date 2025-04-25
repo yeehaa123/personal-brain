@@ -84,7 +84,7 @@ export class MockExternalSourceFormatter {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): MockExternalSourceFormatter {
     return new MockExternalSourceFormatter();
   }

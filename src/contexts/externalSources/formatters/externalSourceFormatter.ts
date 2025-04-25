@@ -114,19 +114,19 @@ export class ExternalSourceFormatter implements FormatterInterface<ExternalSourc
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): ExternalSourceFormatter {
     // Convert config to typed config
     const formatterConfig: ExternalSourceFormatterConfig = {
-      defaultFormat: config['defaultFormat'] as 'text' | 'markdown' | 'html' | 'json'
+      defaultFormat: config['defaultFormat'] as 'text' | 'markdown' | 'html' | 'json',
     };
     
     // Create with typed dependencies
     return new ExternalSourceFormatter(
       formatterConfig,
       {
-        logger: dependencies['logger'] as Logger
-      }
+        logger: dependencies['logger'] as Logger,
+      },
     );
   }
   
@@ -137,7 +137,7 @@ export class ExternalSourceFormatter implements FormatterInterface<ExternalSourc
    */
   private constructor(
     config?: ExternalSourceFormatterConfig,
-    dependencies?: ExternalSourceFormatterDependencies
+    dependencies?: ExternalSourceFormatterDependencies,
   ) {
     this.defaultFormat = config?.defaultFormat || 'markdown';
     this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });

@@ -106,21 +106,21 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    */
   public static createWithDependencies(
     config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): ProfileFormatter {
     // Convert config to typed config
     const formatterConfig: ProfileFormatterConfig = {
       includeSectionHeaders: config['includeSectionHeaders'] as boolean,
       includeEmptySections: config['includeEmptySections'] as boolean,
-      maxFieldLength: config['maxFieldLength'] as number
+      maxFieldLength: config['maxFieldLength'] as number,
     };
     
     // Create with typed dependencies
     return new ProfileFormatter(
       formatterConfig,
       {
-        logger: dependencies['logger'] as Logger
-      }
+        logger: dependencies['logger'] as Logger,
+      },
     );
   }
   
@@ -131,12 +131,12 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    */
   private constructor(
     config?: ProfileFormatterConfig,
-    dependencies?: ProfileFormatterDependencies
+    dependencies?: ProfileFormatterDependencies,
   ) {
     this.config = {
       includeSectionHeaders: config?.includeSectionHeaders ?? true,
       includeEmptySections: config?.includeEmptySections ?? false,
-      maxFieldLength: config?.maxFieldLength ?? 0
+      maxFieldLength: config?.maxFieldLength ?? 0,
     };
     this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   }

@@ -8,6 +8,7 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 
 import { z } from 'zod';
@@ -21,6 +22,28 @@ import type { ConversationSummary } from '@/contexts/conversations/storage/conve
 import { Logger } from '@/utils/logger';
 
 /**
+ * Configuration options for ConversationToolService
+ */
+export interface ConversationToolServiceConfig {
+  /** Whether to include metadata in exports by default */
+  includeMetadata?: boolean;
+  /** Whether to include timestamps in exports by default */
+  includeTimestamps?: boolean;
+  /** Whether to include summaries in exports by default */
+  includeSummaries?: boolean;
+  /** Default export format */
+  defaultFormat?: 'text' | 'markdown' | 'json' | 'html';
+}
+
+/**
+ * Dependencies for ConversationToolService
+ */
+export interface ConversationToolServiceDependencies {
+  /** Logger instance */
+  logger?: Logger;
+}
+
+/**
  * Service responsible for providing MCP tools for conversations
  * Follows the Component Interface Standardization pattern
  */
@@ -28,17 +51,25 @@ export class ConversationToolService {
   /** The singleton instance */
   private static instance: ConversationToolService | null = null;
   
+  /** Configuration values */
+  private readonly config: ConversationToolServiceConfig;
+  
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private readonly logger: Logger;
   
   /**
    * Get the singleton instance of ConversationToolService
    * 
+   * @param config Optional configuration
    * @returns The shared ConversationToolService instance
    */
-  public static getInstance(): ConversationToolService {
+  public static getInstance(config?: ConversationToolServiceConfig): ConversationToolService {
     if (!ConversationToolService.instance) {
-      ConversationToolService.instance = new ConversationToolService();
+      ConversationToolService.instance = new ConversationToolService(config);
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return ConversationToolService.instance;
   }
@@ -55,16 +86,59 @@ export class ConversationToolService {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
+   * @param config Optional configuration
    * @returns A new ConversationToolService instance
    */
-  public static createFresh(): ConversationToolService {
-    return new ConversationToolService();
+  public static createFresh(config?: ConversationToolServiceConfig): ConversationToolService {
+    return new ConversationToolService(config);
   }
   
   /**
-   * Private constructor to enforce singleton pattern
+   * Create a new instance with explicit dependencies
+   * 
+   * @param config Configuration options
+   * @param dependencies External dependencies
+   * @returns A new ConversationToolService instance
    */
-  private constructor() {
+  public static createWithDependencies(
+    config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {},
+  ): ConversationToolService {
+    // Convert config to typed config
+    const toolServiceConfig: ConversationToolServiceConfig = {
+      includeMetadata: config['includeMetadata'] as boolean,
+      includeTimestamps: config['includeTimestamps'] as boolean,
+      includeSummaries: config['includeSummaries'] as boolean,
+      defaultFormat: config['defaultFormat'] as 'text' | 'markdown' | 'json' | 'html',
+    };
+    
+    // Create with typed dependencies
+    return new ConversationToolService(
+      toolServiceConfig,
+      {
+        logger: dependencies['logger'] as Logger,
+      },
+    );
+  }
+  
+  /**
+   * Private constructor to enforce factory methods
+   * 
+   * @param config Optional configuration
+   * @param dependencies Optional dependencies
+   */
+  private constructor(
+    config?: ConversationToolServiceConfig,
+    dependencies?: ConversationToolServiceDependencies,
+  ) {
+    this.config = {
+      includeMetadata: config?.includeMetadata ?? false,
+      includeTimestamps: config?.includeTimestamps ?? true,
+      includeSummaries: config?.includeSummaries ?? false,
+      defaultFormat: config?.defaultFormat ?? 'markdown',
+    };
+    this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    
     this.logger.debug('ConversationToolService initialized', { context: 'ConversationToolService' });
   }
   /**
@@ -320,48 +394,65 @@ export class ConversationToolService {
       name: 'export_conversation',
       description: 'Exports a conversation in various formats',
       handler: async (params: Record<string, unknown>) => {
-        const conversationId = params['conversationId'] ? String(params['conversationId']) : '';
-        const format = params['format'] ? String(params['format']) : 'text';
-        const includeMetadata = !!params['includeMetadata'];
-        const includeTimestamps = !!params['includeTimestamps'];
-        const includeSummaries = !!params['includeSummaries'];
+        try {
+          const conversationId = params['conversationId'] ? String(params['conversationId']) : '';
+          // Use params if provided, otherwise fall back to config defaults
+          const format = params['format'] 
+            ? String(params['format']) 
+            : this.config.defaultFormat || 'text';
+            
+          const includeMetadata = params['includeMetadata'] !== undefined 
+            ? !!params['includeMetadata'] 
+            : this.config.includeMetadata || false;
+            
+          const includeTimestamps = params['includeTimestamps'] !== undefined 
+            ? !!params['includeTimestamps'] 
+            : this.config.includeTimestamps || true;
+            
+          const includeSummaries = params['includeSummaries'] !== undefined 
+            ? !!params['includeSummaries'] 
+            : this.config.includeSummaries || false;
 
-        // Get conversation data
-        const conversation = await storageAdapter.read(conversationId);
-        if (!conversation) {
-          throw new Error(`Conversation with ID ${conversationId} not found`);
+          // Get conversation data
+          const conversation = await storageAdapter.read(conversationId);
+          if (!conversation) {
+            throw new Error(`Conversation with ID ${conversationId} not found`);
+          }
+
+          // Get turns and possibly summaries
+          const turns = await storageAdapter.getTurns(conversationId);
+          let summaries: ConversationSummary[] = [];
+          if (includeSummaries) {
+            summaries = await storageAdapter.getSummaries(conversationId);
+          }
+
+          // Format options
+          const options: FormattingOptions = {
+            format: format as 'text' | 'markdown' | 'json' | 'html',
+            includeMetadata,
+            includeTimestamps,
+            anchorName,
+            anchorId,
+            highlightAnchor: true,
+          };
+
+          // Format conversation
+          const formatted = formatter.formatConversation(turns, summaries, options);
+
+          return {
+            conversationId,
+            content: formatted,
+            metadata: {
+              format,
+              turnCount: turns.length,
+              summaryCount: summaries.length,
+              exportedAt: new Date().toISOString(),
+            },
+          };
+        } catch (error) {
+          this.logger.error(`Error exporting conversation: ${error instanceof Error ? error.message : String(error)}`);
+          throw error;
         }
-
-        // Get turns and possibly summaries
-        const turns = await storageAdapter.getTurns(conversationId);
-        let summaries: ConversationSummary[] = [];
-        if (includeSummaries) {
-          summaries = await storageAdapter.getSummaries(conversationId);
-        }
-
-        // Format options
-        const options: FormattingOptions = {
-          format: format as 'text' | 'markdown' | 'json' | 'html',
-          includeMetadata,
-          includeTimestamps,
-          anchorName,
-          anchorId,
-          highlightAnchor: true,
-        };
-
-        // Format conversation
-        const formatted = formatter.formatConversation(turns, summaries, options);
-
-        return {
-          conversationId,
-          content: formatted,
-          metadata: {
-            format,
-            turnCount: turns.length,
-            summaryCount: summaries.length,
-            exportedAt: new Date().toISOString(),
-          },
-        };
       },
     };
   }
