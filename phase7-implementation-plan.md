@@ -354,6 +354,7 @@ This pattern provides several benefits:
    - ✅ Update QueryProcessor to implement createWithDependencies with dependency validation
    - ✅ Update TargetResolver to implement createWithDependencies with handler initialization
    - ✅ Update SystemPromptGenerator to implement createWithDependencies for future extensibility
+   - ✅ Update PromptFormatter to implement createWithDependencies for future extensibility
    - Continue implementing createWithDependencies in remaining components
    - Standardize factory methods across other components
    - Update tests to use proper mocking
@@ -387,7 +388,7 @@ The following components still need to be refactored to follow the Component Int
 - ✅ **QueryProcessor**: Completed - Implemented createWithDependencies method with dependency validation
 - ✅ **TargetResolver**: Completed - Implemented createWithDependencies method with handler initialization
 - ✅ **SystemPromptGenerator**: Completed - Implemented createWithDependencies method for future extensibility
-- **PromptFormatter**: Used for formatting prompts with content
+- ✅ **PromptFormatter**: Completed - Implemented createWithDependencies method for future extensibility
 
 ### Storage Adapters (Low Priority)
 - **BaseStorageAdapter**: Common base for all storage adapters

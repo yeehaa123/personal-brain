@@ -67,7 +67,7 @@ export class SystemPromptGenerator {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): SystemPromptGenerator {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating SystemPromptGenerator with explicit dependencies');

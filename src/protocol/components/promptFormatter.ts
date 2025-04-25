@@ -63,6 +63,26 @@ export class PromptFormatter {
     
     return new PromptFormatter();
   }
+  
+  /**
+   * Create a new instance with explicit dependencies
+   * 
+   * @param config Configuration options (currently unused)
+   * @param dependencies External dependencies (currently unused)
+   * @returns A new PromptFormatter instance
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    _dependencies: Record<string, unknown> = {}
+  ): PromptFormatter {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating PromptFormatter with explicit dependencies');
+    
+    // Currently this class doesn't have any configurable options or dependencies,
+    // but this method is implemented for consistency with the Component Interface 
+    // Standardization pattern and future extensibility
+    return new PromptFormatter();
+  }
 
   /**
    * Private constructor to enforce factory method usage
