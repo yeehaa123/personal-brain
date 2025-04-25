@@ -57,6 +57,26 @@ export class SystemPromptGenerator {
     
     return new SystemPromptGenerator();
   }
+  
+  /**
+   * Create a new instance with explicit dependencies
+   * 
+   * @param config Configuration options (thresholds, etc.)
+   * @param dependencies External dependencies (none currently required)
+   * @returns A new SystemPromptGenerator instance
+   */
+  public static createWithDependencies(
+    _config: Record<string, unknown> = {},
+    _dependencies: Record<string, unknown> = {}
+  ): SystemPromptGenerator {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating SystemPromptGenerator with explicit dependencies');
+    
+    // Currently this class doesn't have any configurable options or dependencies,
+    // but this method is implemented for consistency with the Component Interface 
+    // Standardization pattern and future extensibility
+    return new SystemPromptGenerator();
+  }
 
   /**
    * Private constructor to enforce factory method usage

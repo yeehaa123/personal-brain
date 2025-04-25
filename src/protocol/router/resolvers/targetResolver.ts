@@ -70,7 +70,7 @@ export class TargetResolver {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): TargetResolver {
     const logger = Logger.getInstance();
     logger.debug('Creating TargetResolver with explicit dependencies');

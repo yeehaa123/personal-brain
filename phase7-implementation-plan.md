@@ -353,6 +353,7 @@ This pattern provides several benefits:
    - ✅ Update ProfileFormatter to use the standardized pattern with createWithDependencies
    - ✅ Update QueryProcessor to implement createWithDependencies with dependency validation
    - ✅ Update TargetResolver to implement createWithDependencies with handler initialization
+   - ✅ Update SystemPromptGenerator to implement createWithDependencies for future extensibility
    - Continue implementing createWithDependencies in remaining components
    - Standardize factory methods across other components
    - Update tests to use proper mocking
@@ -385,7 +386,7 @@ The following components still need to be refactored to follow the Component Int
 ### Protocol Components (Medium Priority)
 - ✅ **QueryProcessor**: Completed - Implemented createWithDependencies method with dependency validation
 - ✅ **TargetResolver**: Completed - Implemented createWithDependencies method with handler initialization
-- **SystemPromptGenerator**: Used for generating system prompts
+- ✅ **SystemPromptGenerator**: Completed - Implemented createWithDependencies method for future extensibility
 - **PromptFormatter**: Used for formatting prompts with content
 
 ### Storage Adapters (Low Priority)
