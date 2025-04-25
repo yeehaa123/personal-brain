@@ -36,7 +36,9 @@ Note: CLI Interface and Logger separation has been moved to post-MVP priorities 
   - ⏳ Remove unused exports identified by find-real-dead-code
 - ⏳ Complete dependency injection implementation
   - ✅ Implement createWithDependencies in key utility classes
+  - ✅ Standardize factory methods across deployment-related components
   - ⏳ Standardize factory methods across remaining components
+  - ✅ Update tests to use factory methods instead of direct instantiation
   - ⏳ Update tests to properly mock dependencies
 - ⏳ Refine error handling and logging
   - ⏳ Implement consistent error handling
@@ -134,10 +136,20 @@ Finalize dependency injection implementation across remaining components:
    - ✅ Implemented in EmbeddingService
    - ✅ Implemented in NoteRepository
    - Identify and implement in any remaining utility classes
-2. Update any remaining service implementations to use dependency injection consistently
-3. Standardize dependency resolution in factory methods
-4. Update tests to use standardized mock implementations
-5. Integrate context integration helper functions:
+
+2. ✅ Standardize factory methods across deployment-related components:
+   - ✅ Implemented DeploymentManager interface for typing classes with static factory methods
+   - ✅ Standardized LocalDevDeploymentManager to use private constructor and factory methods
+   - ✅ Standardized PM2DeploymentAdapter to use private constructor and factory methods
+   - ✅ Standardized LocalCaddyDeploymentManager to use private constructor and factory methods
+   - ✅ Renamed DeploymentManagerFactory.createDeploymentManager() to create() for consistency
+   - ✅ Updated WebsiteContext to use the new create() method
+   - ✅ Updated tests to use factory methods instead of direct instantiation
+
+3. Standardize factory methods across any remaining service implementations
+4. Standardize dependency resolution in factory methods
+5. Update tests to use standardized mock implementations
+6. Integrate context integration helper functions:
    - Implement cross-context communication using the helper functions in `protocol/messaging/contextIntegration.ts` 
    - Use requestContextData, requestNotes, requestProfile, etc. in protocol components to create a standardized messaging layer
    - Add these helper functions to the appropriate context implementations to enable seamless cross-context data access
@@ -174,6 +186,110 @@ Complete comprehensive documentation for the architecture and components:
 3. Update component interaction diagrams
 4. Create developer guides for each major context
 5. Document error handling patterns and best practices
+
+## Component Interface Standardization Implementation
+
+We've successfully implemented the Component Interface Standardization pattern across deployment-related components. This pattern ensures consistent instantiation, dependency injection, and testing support across all components.
+
+### Deployment Manager Standardization
+
+We've updated the following deployment-related components to follow the standardized pattern:
+
+1. **Interface Definition**:
+   ```typescript
+   // Defined a consistent interface for deployment manager classes
+   export interface DeploymentManager {
+     // Static methods defined in the interface for type safety
+     getInstance(options?: DeploymentManagerOptions): WebsiteDeploymentManager;
+     resetInstance(): void;
+     createFresh(options?: DeploymentManagerOptions): WebsiteDeploymentManager;
+     createWithDependencies?(config: Record<string, unknown>): WebsiteDeploymentManager;
+   }
+   ```
+
+2. **Factory Method Standardization**:
+   ```typescript
+   // Renamed to follow standard naming convention
+   create(options?: DeploymentManagerOptions): WebsiteDeploymentManager {
+     // Create an instance of the configured deployment manager class
+     return this.deploymentManagerClass.getInstance(options);
+   }
+   ```
+
+3. **Private Constructors**:
+   ```typescript
+   /**
+    * Create a new LocalCaddyDeploymentManager
+    * Private constructor to enforce use of factory methods
+    */
+   private constructor(options?: LocalCaddyDeploymentManagerOptions) {
+     // Implementation
+   }
+   ```
+
+4. **Factory Methods Implementation**:
+   ```typescript
+   /**
+    * Get the singleton instance
+    */
+   public static getInstance(options?: Options): Class {
+     if (!Class.instance) {
+       Class.instance = new Class(options);
+     }
+     return Class.instance;
+   }
+   
+   /**
+    * Reset the singleton instance
+    */
+   public static resetInstance(): void {
+     // Cleanup code here
+     Class.instance = null;
+   }
+   
+   /**
+    * Create a fresh instance
+    */
+   public static createFresh(options?: Options): Class {
+     return new Class(options);
+   }
+   
+   /**
+    * Create with dependencies
+    */
+   public static createWithDependencies(
+     configOrDependencies: Record<string, unknown> = {},
+   ): Class {
+     // Handle explicit dependencies
+     if ('dependency' in configOrDependencies) {
+       // Use provided dependency
+     } else {
+       // Create dependencies as needed
+     }
+     return new Class(options);
+   }
+   ```
+
+5. **Test Updates**:
+   ```typescript
+   // Before: Direct instantiation (not allowed with private constructors)
+   const manager = new LocalDevDeploymentManager({ baseDir: '/test-dir' });
+   
+   // After: Use factory methods instead
+   const manager = LocalDevDeploymentManager.createFresh({ baseDir: '/test-dir' });
+   ```
+
+Components updated:
+- ✅ LocalDevDeploymentManager
+- ✅ PM2DeploymentAdapter
+- ✅ LocalCaddyDeploymentManager
+- ✅ DeploymentManagerFactory
+
+This pattern provides several benefits:
+- Enforces singleton usage when appropriate
+- Simplifies dependency management
+- Makes testing easier by providing reset and creation hooks
+- Standardizes component creation across the codebase
 
 ## Testing Strategy
 
@@ -222,8 +338,9 @@ Complete comprehensive documentation for the architecture and components:
    - Remove any remaining transitional adapters
 
 2. **Complete Dependency Injection** (Medium Priority):
+   - ✅ Standardize factory methods across deployment components
    - Finish remaining createWithDependencies implementations
-   - Standardize factory methods
+   - Standardize factory methods across other components
    - Update tests to use proper mocking
 
 3. **Standardize Error Handling** (Medium Priority):
@@ -327,7 +444,11 @@ protected override initializeMcpComponents(): void {
 2. ✅ WebsiteContext tools appear and function correctly in the MCP Inspector
 3. CLI output clearly separates logs from content
 4. Unused exports and imports have been removed
-5. All components follow the Component Interface Standardization pattern
+5. ⏳ All components follow the Component Interface Standardization pattern
+   - ✅ All Context classes follow the pattern (getInstance/resetInstance/createFresh)
+   - ✅ All deployment-related components follow the pattern
+   - ⏳ Remaining utility and service classes to be updated
 6. Consistent error handling throughout the codebase
 7. Comprehensive documentation for all major components
-8. All tests pass with the new standardized patterns
+8. ✅ All tests pass with the new standardized patterns for deployment components
+9. ⏳ All tests updated to use proper mocking with dependency injection

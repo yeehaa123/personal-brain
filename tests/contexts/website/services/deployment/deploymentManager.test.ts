@@ -73,16 +73,16 @@ describe('DeploymentManagerFactory', () => {
     expect(factory1).not.toBe(factory2);
   });
 
-  test('createDeploymentManager creates the correct type of manager', () => {
+  test('create method creates the correct type of manager', () => {
     const factory = DeploymentManagerFactory.createFresh();
     
     // Default is LocalCaddyDeploymentManager
-    const defaultManager = factory.createDeploymentManager();
+    const defaultManager = factory.create();
     expect(defaultManager instanceof LocalCaddyDeploymentManager).toBe(true);
     
     // Set a different class
     factory.setDeploymentManagerClass(LocalDevDeploymentManager);
-    const devManager = factory.createDeploymentManager();
+    const devManager = factory.create();
     expect(devManager instanceof LocalDevDeploymentManager).toBe(true);
   });
 });
@@ -100,7 +100,7 @@ describe('LocalCaddyDeploymentManager', () => {
     mockExec.mockClear();
     
     // Create a fresh manager
-    manager = new LocalCaddyDeploymentManager({ baseDir: '/test-dir' });
+    manager = LocalCaddyDeploymentManager.createFresh({ baseDir: '/test-dir' });
   });
   
   test('getEnvironmentStatus returns status for preview environment', async () => {
@@ -190,7 +190,7 @@ describe('LocalDevDeploymentManager', () => {
     mockCopyFile.mockClear();
     
     // Create a fresh manager
-    manager = new LocalDevDeploymentManager({ baseDir: '/test-dir' }) as unknown as MockableLocalDevDeploymentManager;
+    manager = LocalDevDeploymentManager.createFresh({ baseDir: '/test-dir' }) as unknown as MockableLocalDevDeploymentManager;
   });
   
   test('getEnvironmentStatus returns status for preview environment', async () => {

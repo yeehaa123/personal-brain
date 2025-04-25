@@ -159,7 +159,7 @@ export class MockDeploymentManagerFactory {
    * Create a deployment manager instance
    * @returns A WebsiteDeploymentManager implementation
    */
-  createDeploymentManager = mock((): WebsiteDeploymentManager => {
+  create = mock((): WebsiteDeploymentManager => {
     return this.deploymentManager;
   });
 }

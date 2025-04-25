@@ -227,7 +227,7 @@ export class WebsiteContext extends BaseContext<
     
     // Create DeploymentManager
     const deploymentManager = DeploymentManagerFactory.getInstance()
-      .createDeploymentManager({
+      .create({
         baseDir: process.env['WEBSITE_ROOT'] || './src/website',
       });
     
@@ -451,7 +451,7 @@ export class WebsiteContext extends BaseContext<
       }
       
       // Create the deployment manager with appropriate configuration
-      this.deploymentManager = factory.createDeploymentManager({
+      this.deploymentManager = factory.create({
         baseDir: config.astroProjectPath,
         deploymentConfig: {
           previewPort: config.deployment.previewPort,

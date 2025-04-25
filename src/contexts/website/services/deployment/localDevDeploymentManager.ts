@@ -3,41 +3,175 @@
  * 
  * Implementation of WebsiteDeploymentManager for local development
  * Uses simple file operations in local directories and PM2 for process management
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import { Logger } from '@/utils/logger';
 
-import type { DeploymentAdapter} from '../../adapters/deploymentAdapter';
+import type { DeploymentAdapter } from '../../adapters/deploymentAdapter';
 import { getDeploymentAdapter } from '../../adapters/deploymentAdapter';
 
 import type { DeploymentEnvironment, EnvironmentStatus, PromotionResult, WebsiteDeploymentManager } from './deploymentManager';
+
+/**
+ * Configuration options for LocalDevDeploymentManager
+ */
+export interface LocalDevDeploymentManagerOptions {
+  baseDir?: string;
+  previewPort?: number;
+  productionPort?: number;
+  deploymentConfig?: {
+    previewPort?: number;
+    productionPort?: number;
+  };
+  deploymentAdapter?: DeploymentAdapter;
+}
 
 /**
  * Local development implementation of WebsiteDeploymentManager
  * Uses local directories for development and testing
  */
 export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
+  /**
+   * Singleton instance
+   */
+  private static instance: LocalDevDeploymentManager | null = null;
+  
+  /**
+   * Get the singleton instance of LocalDevDeploymentManager
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(options?: LocalDevDeploymentManagerOptions): LocalDevDeploymentManager {
+    if (!LocalDevDeploymentManager.instance) {
+      LocalDevDeploymentManager.instance = new LocalDevDeploymentManager(options);
+      
+      const logger = Logger.getInstance();
+      logger.debug('LocalDevDeploymentManager singleton instance created');
+    }
+    
+    return LocalDevDeploymentManager.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // Clean up resources if needed
+      if (LocalDevDeploymentManager.instance) {
+        // Stop any running servers
+        LocalDevDeploymentManager.instance.stopServers().catch(error => {
+          const logger = Logger.getInstance();
+          logger.error('Error stopping servers during reset:', error);
+        });
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during LocalDevDeploymentManager instance reset:', error);
+    } finally {
+      LocalDevDeploymentManager.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('LocalDevDeploymentManager singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh LocalDevDeploymentManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param options Configuration options
+   * @returns A new LocalDevDeploymentManager instance
+   */
+  public static createFresh(options?: LocalDevDeploymentManagerOptions): LocalDevDeploymentManager {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh LocalDevDeploymentManager instance');
+    
+    return new LocalDevDeploymentManager(options);
+  }
+  
+  /**
+   * Create a new deployment manager with dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * This method follows the standard pattern for dependency injection.
+   * 
+   * @param configOrDependencies Configuration options or dependencies object
+   * @returns A new LocalDevDeploymentManager instance
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): LocalDevDeploymentManager {
+    const logger = Logger.getInstance();
+    logger.debug('Creating LocalDevDeploymentManager with dependencies');
+    
+    // Handle case where dependencies are explicitly provided
+    if ('deploymentAdapter' in configOrDependencies) {
+      const dependencies = configOrDependencies as {
+        deploymentAdapter?: DeploymentAdapter;
+        baseDir?: string;
+        previewPort?: number;
+        productionPort?: number;
+        deploymentConfig?: {
+          previewPort?: number;
+          productionPort?: number;
+        };
+      };
+      
+      // Create with explicit dependencies
+      return new LocalDevDeploymentManager({
+        deploymentAdapter: dependencies.deploymentAdapter,
+        baseDir: dependencies.baseDir,
+        previewPort: dependencies.previewPort,
+        productionPort: dependencies.productionPort,
+        deploymentConfig: dependencies.deploymentConfig,
+      });
+    }
+    
+    // Handle case where a config object is provided
+    // Convert generic config to our specific config type
+    const options: LocalDevDeploymentManagerOptions = {
+      baseDir: configOrDependencies['baseDir'] as string,
+      previewPort: configOrDependencies['previewPort'] as number,
+      productionPort: configOrDependencies['productionPort'] as number,
+      deploymentConfig: configOrDependencies['deploymentConfig'] as {
+        previewPort?: number;
+        productionPort?: number;
+      },
+    };
+    
+    return new LocalDevDeploymentManager(options);
+  }
+  
   private readonly logger = Logger.getInstance();
   private readonly baseDir: string;
   private readonly deploymentAdapter: DeploymentAdapter;
-  
-  /**
-   * Create a new LocalDevDeploymentManager
-   * @param options Configuration options
-   */
   private readonly previewPort: number;
   private readonly productionPort: number;
 
-  constructor(options?: { 
-    baseDir?: string; 
-    previewPort?: number; 
-    productionPort?: number;
-    deploymentConfig?: {
-      previewPort?: number;
-      productionPort?: number;
-    },
-    deploymentAdapter?: DeploymentAdapter
-  }) {
+  /**
+   * Create a new LocalDevDeploymentManager
+   * 
+   * Private constructor to enforce use of factory methods
+   * Part of the Component Interface Standardization pattern
+   * 
+   * @param options Configuration options
+   */
+  private constructor(options?: LocalDevDeploymentManagerOptions) {
     this.baseDir = options?.baseDir || process.cwd();
     // Prefer deploymentConfig properties if provided, fall back to direct options for backward compatibility
     this.previewPort = options?.deploymentConfig?.previewPort || options?.previewPort || 4321;

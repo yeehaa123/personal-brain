@@ -63,18 +63,122 @@ export interface WebsiteDeploymentManager {
 }
 
 /**
+ * Configuration options for LocalCaddyDeploymentManager
+ */
+export interface LocalCaddyDeploymentManagerOptions {
+  baseDir?: string;
+}
+
+/**
  * Local file system implementation of WebsiteDeploymentManager
  * Uses Caddy for serving websites
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
+  /**
+   * Singleton instance
+   */
+  private static instance: LocalCaddyDeploymentManager | null = null;
+  
+  /**
+   * Get the singleton instance of LocalCaddyDeploymentManager
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(options?: LocalCaddyDeploymentManagerOptions): LocalCaddyDeploymentManager {
+    if (!LocalCaddyDeploymentManager.instance) {
+      LocalCaddyDeploymentManager.instance = new LocalCaddyDeploymentManager(options);
+      
+      const logger = Logger.getInstance();
+      logger.debug('LocalCaddyDeploymentManager singleton instance created');
+    }
+    
+    return LocalCaddyDeploymentManager.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // No specific cleanup needed for this manager
+      if (LocalCaddyDeploymentManager.instance) {
+        // Resource cleanup if needed
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during LocalCaddyDeploymentManager instance reset:', error);
+    } finally {
+      LocalCaddyDeploymentManager.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('LocalCaddyDeploymentManager singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh LocalCaddyDeploymentManager instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param options Configuration options
+   * @returns A new LocalCaddyDeploymentManager instance
+   */
+  public static createFresh(options?: LocalCaddyDeploymentManagerOptions): LocalCaddyDeploymentManager {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh LocalCaddyDeploymentManager instance');
+    
+    return new LocalCaddyDeploymentManager(options);
+  }
+  
+  /**
+   * Create a new deployment manager with dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * This method follows the standard pattern for dependency injection.
+   * 
+   * @param configOrDependencies Configuration options or dependencies object
+   * @returns A new LocalCaddyDeploymentManager instance
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): LocalCaddyDeploymentManager {
+    const logger = Logger.getInstance();
+    logger.debug('Creating LocalCaddyDeploymentManager with dependencies');
+    
+    // For this manager, we don't have external dependencies, just configuration options
+    // Convert generic config to our specific options type
+    const options: LocalCaddyDeploymentManagerOptions = {
+      baseDir: configOrDependencies['baseDir'] as string,
+    };
+    
+    return new LocalCaddyDeploymentManager(options);
+  }
+  
   private readonly logger = Logger.getInstance();
   private readonly baseDir: string;
   
   /**
    * Create a new LocalCaddyDeploymentManager
+   * 
+   * Private constructor to enforce use of factory methods
+   * Part of the Component Interface Standardization pattern
+   * 
    * @param options Configuration options
    */
-  constructor(options?: { baseDir?: string }) {
+  private constructor(options?: LocalCaddyDeploymentManagerOptions) {
     this.baseDir = options?.baseDir || process.env['WEBSITE_BASE_DIR'] || '/opt/personal-brain-website';
   }
   
@@ -480,15 +584,27 @@ export interface DeploymentManagerOptions {
   };
 }
 
+/**
+ * Interface for deployment manager classes that follow
+ * the Component Interface Standardization pattern
+ */
+export interface DeploymentManager {
+  // Static methods required by the Component Interface Standardization pattern
+  getInstance(options?: DeploymentManagerOptions): WebsiteDeploymentManager;
+  resetInstance(): void;
+  createFresh(options?: DeploymentManagerOptions): WebsiteDeploymentManager;
+  createWithDependencies?(config: Record<string, unknown>): WebsiteDeploymentManager;
+}
+
 export class DeploymentManagerFactory {
   private static instance: DeploymentManagerFactory | null = null;
-  private deploymentManagerClass: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager;
+  private deploymentManagerClass: DeploymentManager;
   
   /**
    * Constructor for DeploymentManagerFactory
    * @param deploymentManagerClass The deployment manager class to use
    */
-  constructor(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager) {
+  constructor(deploymentManagerClass?: DeploymentManager) {
     // Default to LocalCaddyDeploymentManager if no class is provided
     this.deploymentManagerClass = deploymentManagerClass || LocalCaddyDeploymentManager;
   }
@@ -496,7 +612,7 @@ export class DeploymentManagerFactory {
   /**
    * Get the singleton instance
    */
-  static getInstance(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): DeploymentManagerFactory {
+  static getInstance(deploymentManagerClass?: DeploymentManager): DeploymentManagerFactory {
     if (!DeploymentManagerFactory.instance) {
       DeploymentManagerFactory.instance = new DeploymentManagerFactory(deploymentManagerClass);
     }
@@ -513,7 +629,7 @@ export class DeploymentManagerFactory {
   /**
    * Create a fresh instance
    */
-  static createFresh(deploymentManagerClass?: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): DeploymentManagerFactory {
+  static createFresh(deploymentManagerClass?: DeploymentManager): DeploymentManagerFactory {
     return new DeploymentManagerFactory(deploymentManagerClass);
   }
   
@@ -521,7 +637,7 @@ export class DeploymentManagerFactory {
    * Set the deployment manager class
    * @param deploymentManagerClass The deployment manager class to use
    */
-  setDeploymentManagerClass(deploymentManagerClass: new (options?: DeploymentManagerOptions) => WebsiteDeploymentManager): void {
+  setDeploymentManagerClass(deploymentManagerClass: DeploymentManager): void {
     this.deploymentManagerClass = deploymentManagerClass;
   }
   
@@ -530,8 +646,8 @@ export class DeploymentManagerFactory {
    * @param options Configuration options
    * @returns A WebsiteDeploymentManager implementation
    */
-  createDeploymentManager(options?: DeploymentManagerOptions): WebsiteDeploymentManager {
-    // Create an instance of the configured deployment manager class
-    return new this.deploymentManagerClass(options);
+  create(options?: DeploymentManagerOptions): WebsiteDeploymentManager {
+    // Create an instance of the configured deployment manager class using the standardized pattern
+    return this.deploymentManagerClass.getInstance(options);
   }
 }

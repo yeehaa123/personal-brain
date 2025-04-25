@@ -19,7 +19,7 @@ describe('DeploymentAdapter', () => {
   });
   
   test('PM2DeploymentAdapter should implement DeploymentAdapter interface', () => {
-    const adapter = new PM2DeploymentAdapter();
+    const adapter = PM2DeploymentAdapter.getInstance();
     expect(typeof adapter.initialize).toBe('function');
     expect(typeof adapter.startServer).toBe('function');
     expect(typeof adapter.stopServer).toBe('function');
@@ -29,7 +29,7 @@ describe('DeploymentAdapter', () => {
   });
   
   test('PM2DeploymentAdapter getDeploymentConfig should return configuration', () => {
-    const adapter = new PM2DeploymentAdapter();
+    const adapter = PM2DeploymentAdapter.getInstance();
     const config = adapter.getDeploymentConfig();
     expect(config).toHaveProperty('type');
     expect(config).toHaveProperty('useReverseProxy');
@@ -45,7 +45,7 @@ describe('LocalDevDeploymentManager with DeploymentAdapter', () => {
   
   beforeEach(() => {
     mockAdapter = MockDeploymentAdapter.createFresh();
-    manager = new LocalDevDeploymentManager({
+    manager = LocalDevDeploymentManager.createWithDependencies({
       deploymentAdapter: mockAdapter,
     });
   });

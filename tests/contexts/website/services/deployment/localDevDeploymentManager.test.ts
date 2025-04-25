@@ -55,7 +55,7 @@ describe('LocalDevDeploymentManager', () => {
     mockPath.join.mockClear();
     
     // Create a fresh manager
-    manager = new LocalDevDeploymentManager({ baseDir: '/test-dir' }) as unknown as MockableLocalDevDeploymentManager;
+    manager = LocalDevDeploymentManager.createFresh({ baseDir: '/test-dir' }) as unknown as MockableLocalDevDeploymentManager;
   });
   
   test('getEnvironmentStatus returns correct status for preview environment', async () => {

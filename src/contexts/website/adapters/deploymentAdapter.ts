@@ -60,9 +60,129 @@ export interface DeploymentAdapter {
 }
 
 /**
+ * Configuration options for PM2DeploymentAdapter
+ */
+export interface PM2DeploymentAdapterOptions {
+  serverNames?: {
+    preview: string;
+    production: string;
+  };
+  defaultScripts?: {
+    preview: string;
+    production: string;
+  };
+  config?: {
+    type: string;
+    useReverseProxy: boolean;
+    previewPort: number;
+    productionPort: number;
+    domain: string;
+  };
+}
+
+/**
  * PM2 implementation of the deployment adapter
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class PM2DeploymentAdapter implements DeploymentAdapter {
+  /**
+   * Singleton instance
+   */
+  private static instance: PM2DeploymentAdapter | null = null;
+  
+  /**
+   * Get the singleton instance of PM2DeploymentAdapter
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Configuration options
+   * @returns The singleton instance
+   */
+  public static getInstance(options?: PM2DeploymentAdapterOptions): PM2DeploymentAdapter {
+    if (!PM2DeploymentAdapter.instance) {
+      PM2DeploymentAdapter.instance = new PM2DeploymentAdapter(options);
+      
+      const logger = Logger.getInstance();
+      logger.debug('PM2DeploymentAdapter singleton instance created');
+    }
+    
+    return PM2DeploymentAdapter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // Clean up resources if needed
+      if (PM2DeploymentAdapter.instance) {
+        // Stop any running servers
+        PM2DeploymentAdapter.instance.cleanup().catch(error => {
+          const logger = Logger.getInstance();
+          logger.error('Error during cleanup on reset:', error);
+        });
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during PM2DeploymentAdapter instance reset:', error);
+    } finally {
+      PM2DeploymentAdapter.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('PM2DeploymentAdapter singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh PM2DeploymentAdapter instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param options Configuration options
+   * @returns A new PM2DeploymentAdapter instance
+   */
+  public static createFresh(options?: PM2DeploymentAdapterOptions): PM2DeploymentAdapter {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh PM2DeploymentAdapter instance');
+    
+    return new PM2DeploymentAdapter(options);
+  }
+  
+  /**
+   * Create a new adapter with dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * This method follows the standard pattern for dependency injection.
+   * 
+   * @param configOrDependencies Configuration options or dependencies object
+   * @returns A new PM2DeploymentAdapter instance
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): PM2DeploymentAdapter {
+    const logger = Logger.getInstance();
+    logger.debug('Creating PM2DeploymentAdapter with dependencies');
+    
+    // For this adapter, we just use the config directly as we don't have external dependencies
+    // Convert generic config to our specific options type
+    const options: PM2DeploymentAdapterOptions = {
+      serverNames: configOrDependencies['serverNames'] as PM2DeploymentAdapterOptions['serverNames'],
+      defaultScripts: configOrDependencies['defaultScripts'] as PM2DeploymentAdapterOptions['defaultScripts'],
+      config: configOrDependencies['config'] as PM2DeploymentAdapterOptions['config'],
+    };
+    
+    return new PM2DeploymentAdapter(options);
+  }
+  
   private readonly logger = Logger.getInstance();
   private initialized = false;
   
@@ -93,7 +213,28 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
     domain: process.env['WEBSITE_DOMAIN'] || 'example.com',
   };
   
-  constructor() {
+  /**
+   * Create a new PM2DeploymentAdapter
+   * 
+   * Private constructor to enforce use of factory methods
+   * Part of the Component Interface Standardization pattern
+   * 
+   * @param options Configuration options
+   */
+  private constructor(options?: PM2DeploymentAdapterOptions) {
+    // Apply configuration options if provided
+    if (options?.serverNames) {
+      this.serverNames = { ...this.serverNames, ...options.serverNames };
+    }
+    
+    if (options?.defaultScripts) {
+      this.defaultScripts = { ...this.defaultScripts, ...options.defaultScripts };
+    }
+    
+    if (options?.config) {
+      this.config = { ...this.config, ...options.config };
+    }
+    
     // IMPORTANT: We don't register any handlers here to avoid conflicts
     // All signal handlers are now consolidated in the main CLI and Matrix interfaces
     // Those handlers will call cleanup through the ServerManager when needed
@@ -297,5 +438,5 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
  * @returns A deployment adapter instance
  */
 export function getDeploymentAdapter(): DeploymentAdapter {
-  return new PM2DeploymentAdapter();
+  return PM2DeploymentAdapter.getInstance();
 }
