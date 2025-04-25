@@ -351,6 +351,7 @@ This pattern provides several benefits:
    - ✅ Update ConversationToolService to use the standardized pattern with createWithDependencies
    - ✅ Update ExternalSourceFormatter to use the standardized pattern with createWithDependencies
    - ✅ Update ProfileFormatter to use the standardized pattern with createWithDependencies
+   - ✅ Update QueryProcessor to implement createWithDependencies with dependency validation
    - Continue implementing createWithDependencies in remaining components
    - Standardize factory methods across other components
    - Update tests to use proper mocking
@@ -381,7 +382,7 @@ The following components still need to be refactored to follow the Component Int
 - **NoteTools**: Used for note manipulation
 
 ### Protocol Components (Medium Priority)
-- **QueryProcessor**: Core component for handling user requests
+- ✅ **QueryProcessor**: Completed - Implemented createWithDependencies method with dependency validation
 - **TargetResolver**: Used for determining request targets
 - **SystemPromptGenerator**: Used for generating system prompts
 - **PromptFormatter**: Used for formatting prompts with content
