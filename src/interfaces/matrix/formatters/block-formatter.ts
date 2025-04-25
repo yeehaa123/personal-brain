@@ -9,7 +9,7 @@
 
 import logger from '@/utils/logger';
 
-import { getMarkdownFormatter } from './markdown-formatter';
+import { MatrixMarkdownFormatter } from './markdown-formatter';
 
 // Block element types
 export enum BlockType {
@@ -61,7 +61,7 @@ export interface BlockBuilderOptions {
 export class MatrixBlockBuilder {
   private blocks: Block[] = [];
   private options: BlockBuilderOptions;
-  private markdown = getMarkdownFormatter();
+  private markdown = MatrixMarkdownFormatter.getInstance();
 
   constructor(options: BlockBuilderOptions = {}) {
     this.options = {

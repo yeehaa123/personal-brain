@@ -87,7 +87,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       ProfileSearchService.instance = new ProfileSearchService(
         repository || ProfileRepository.getInstance(),
         embeddingService || ProfileEmbeddingService.getInstance(),
-        tagService || new ProfileTagService(),
+        tagService || ProfileTagService.getInstance(),
       );
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });

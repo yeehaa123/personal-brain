@@ -44,7 +44,8 @@ export class ProfileTagService {
    */
   public static getInstance(): ProfileTagService {
     if (!ProfileTagService.instance) {
-      ProfileTagService.instance = new ProfileTagService();
+      const repository = ProfileRepository.getInstance();
+      ProfileTagService.instance = new ProfileTagService(repository);
       
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
       logger.debug('ProfileTagService singleton instance created');
@@ -89,17 +90,49 @@ export class ProfileTagService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileTagService instance');
     
-    return new ProfileTagService();
+    const repository = ProfileRepository.getInstance();
+    return new ProfileTagService(repository);
   }
 
   /**
+   * Create a new service instance with explicit dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * 
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new ProfileTagService instance with the provided dependencies
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): ProfileTagService {
+    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating ProfileTagService with dependencies');
+    
+    // Handle the case where dependencies are explicitly provided
+    if ('repository' in configOrDependencies) {
+      const repository = configOrDependencies['repository'] as ProfileRepository;
+      return new ProfileTagService(repository);
+    }
+    
+    // Handle the case where this is called with a config object or empty object
+    // Use the default repository
+    const repository = ProfileRepository.getInstance();
+    return new ProfileTagService(repository);
+  }
+  
+  /**
    * Create a new ProfileTagService
    * 
-   * While this constructor is public, it is recommended to use the factory methods
-   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * Private constructor to enforce use of factory methods:
+   * - getInstance()
+   * - createFresh()
+   * - createWithDependencies()
+   * 
+   * @param repository The profile repository to use
    */
-  constructor() {
-    this.repository = ProfileRepository.getInstance();
+  private constructor(repository?: ProfileRepository) {
+    this.repository = repository || ProfileRepository.getInstance();
     this.logger.debug('ProfileTagService instance created');
   }
 

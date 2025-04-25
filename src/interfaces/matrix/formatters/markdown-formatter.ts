@@ -29,11 +29,69 @@ const DEFAULT_OPTIONS: MarkdownFormatterOptions = {
  * Matrix Markdown Formatter
  * 
  * Provides enhanced markdown formatting for Matrix messages
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class MatrixMarkdownFormatter {
+  /**
+   * Singleton instance of MatrixMarkdownFormatter
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: MatrixMarkdownFormatter | null = null;
+  
+  /**
+   * Get the singleton instance of the formatter
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Optional formatter options
+   * @returns The shared MatrixMarkdownFormatter instance
+   */
+  public static getInstance(options?: Partial<MarkdownFormatterOptions>): MatrixMarkdownFormatter {
+    if (!MatrixMarkdownFormatter.instance) {
+      MatrixMarkdownFormatter.instance = new MatrixMarkdownFormatter(options);
+    }
+    return MatrixMarkdownFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    MatrixMarkdownFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh formatter instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param options Optional formatter options
+   * @returns A new MatrixMarkdownFormatter instance
+   */
+  public static createFresh(options?: Partial<MarkdownFormatterOptions>): MatrixMarkdownFormatter {
+    return new MatrixMarkdownFormatter(options);
+  }
+
   private options: MarkdownFormatterOptions;
   private marked: typeof marked;
 
+  /**
+   * Create a new MatrixMarkdownFormatter
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * 
+   * @param options Optional formatter options
+   */
   constructor(options: Partial<MarkdownFormatterOptions> = {}) {
     this.options = { ...DEFAULT_OPTIONS, ...options };
     
@@ -157,15 +215,11 @@ export class MatrixMarkdownFormatter {
   }
 }
 
-// Singleton instance
-let formatter: MatrixMarkdownFormatter | null = null;
-
 /**
  * Get the singleton instance of the formatter
+ * 
+ * @deprecated Use MatrixMarkdownFormatter.getInstance() instead for better consistency with the Component Interface Standardization pattern
  */
 export function getMarkdownFormatter(options?: Partial<MarkdownFormatterOptions>): MatrixMarkdownFormatter {
-  if (!formatter) {
-    formatter = new MatrixMarkdownFormatter(options);
-  }
-  return formatter;
+  return MatrixMarkdownFormatter.getInstance(options);
 }
