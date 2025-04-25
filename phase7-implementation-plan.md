@@ -285,6 +285,10 @@ Components updated:
 - ✅ LocalCaddyDeploymentManager
 - ✅ DeploymentManagerFactory
 - ✅ WebsiteMessageHandler
+- ✅ TagExtractor
+- ✅ ConversationMessageHandler
+- ✅ NoteMessageHandler
+- ✅ ProfileMessageHandler
 
 This pattern provides several benefits:
 - Enforces singleton usage when appropriate
@@ -348,6 +352,67 @@ This pattern provides several benefits:
    - Implement consistent error handling
    - Enhance error logging
    - Create recovery mechanisms
+
+## Remaining Components to Standardize
+
+The following components still need to be refactored to follow the Component Interface Standardization pattern. The list is organized by category, with a focus on prioritizing frequently used components and those with the most dependencies.
+
+### Core Services (High Priority)
+- **EmbeddingService**: Partial implementation, needs completion
+- **NoteSearchService**: Used throughout application, critical for note functionality
+- **ProfileSearchService**: Used for profile search and tagging
+- **BaseSearchService**: Base class for search services, needs to set standard for implementations
+
+### Formatters (Medium Priority)
+- **ExternalSourceFormatter**: Used for formatting external content
+- **ProfileFormatter**: Used for formatting profile data
+- **BaseFormatter**: Common base for all formatters
+
+### Tools & Utilities (Medium Priority)
+- **ConversationToolService**: Used for MCP tool integration
+- **ExternalSourceTools**: Used for external source access
+- **NoteTools**: Used for note manipulation
+
+### Protocol Components (Medium Priority)
+- **QueryProcessor**: Core component for handling user requests
+- **TargetResolver**: Used for determining request targets
+- **SystemPromptGenerator**: Used for generating system prompts
+- **PromptFormatter**: Used for formatting prompts with content
+
+### Storage Adapters (Low Priority)
+- **BaseStorageAdapter**: Common base for all storage adapters
+- **ConversationStorageAdapter**: Used for conversation persistence
+- **ProfileStorageAdapter**: Used for profile persistence
+
+### Message Handlers (In Progress)
+- ✅ **ConversationMessageHandler**: Completed
+- ✅ **NoteMessageHandler**: Completed 
+- ✅ **ProfileMessageHandler**: Completed
+- ✅ **WebsiteMessageHandler**: Completed
+- **ExternalSourceMessageHandler**: Still needs implementation
+
+### Utilities (Low Priority)
+- ✅ **TagExtractor**: Completed
+- **ConfigUtils**: Used for configuration management
+- **TextUtils**: Used for text processing
+- **SafeAccessUtils**: Used for safe property access
+
+### Implementation Approach
+For each component, the standardization process will involve:
+
+1. Adding static factory methods:
+   - `getInstance()`: Singleton access
+   - `resetInstance()`: Reset for testing
+   - `createFresh()`: New instance for testing
+   - `createWithDependencies()`: Explicit dependency injection
+
+2. Making constructors private to enforce factory method usage
+
+3. Implementing proper dependency injection
+
+4. Updating tests to use standardized mock implementations
+
+5. Refactoring any direct instantiation to use factory methods
 
 ## Detailed Implementation Plan for Website Context MCP Tools
 
@@ -448,6 +513,8 @@ protected override initializeMcpComponents(): void {
 5. ⏳ All components follow the Component Interface Standardization pattern
    - ✅ All Context classes follow the pattern (getInstance/resetInstance/createFresh)
    - ✅ All deployment-related components follow the pattern
+   - ✅ MessageHandler classes follow the pattern
+   - ✅ TagExtractor utility follows the pattern
    - ⏳ Remaining utility and service classes to be updated
 6. Consistent error handling throughout the codebase
 7. Comprehensive documentation for all major components
