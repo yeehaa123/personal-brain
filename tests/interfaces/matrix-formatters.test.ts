@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 
-import { getCitationFormatter, getMarkdownFormatter, getResponseFormatter, MatrixBlockBuilder } from '../../src/interfaces/matrix/formatters';
+import { MatrixBlockBuilder, MatrixCitationFormatter, MatrixMarkdownFormatter, MatrixResponseFormatter } from '@/interfaces/matrix/formatters';
 
 describe('Matrix Formatters', () => {
   describe('MarkdownFormatter', () => {
     test('should format basic markdown', () => {
-      const formatter = getMarkdownFormatter();
+      const formatter = MatrixMarkdownFormatter.getInstance();
       const result = formatter.format('# Hello World');
       
       // Should contain the header with no styling
@@ -13,7 +13,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should format code blocks', () => {
-      const formatter = getMarkdownFormatter();
+      const formatter = MatrixMarkdownFormatter.getInstance();
       const result = formatter.formatCodeBlock('console.log("Hello")', 'javascript');
       
       // Should contain the code and language formatting
@@ -23,7 +23,7 @@ describe('Matrix Formatters', () => {
   
   describe('CitationFormatter', () => {
     test('should format a citation', () => {
-      const formatter = getCitationFormatter();
+      const formatter = MatrixCitationFormatter.getInstance();
       const result = formatter.formatCitation({
         source: 'Test Source',
         title: 'Test Title',
@@ -40,7 +40,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should create a note-based citation', () => {
-      const formatter = getCitationFormatter();
+      const formatter = MatrixCitationFormatter.getInstance();
       const note = {
         id: 'note-id',
         title: 'Note Title',
@@ -86,7 +86,7 @@ describe('Matrix Formatters', () => {
   
   describe('ResponseFormatter', () => {
     test('should format search results', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const notes = [
         { 
           id: 'note-1', 
@@ -114,7 +114,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should format note display', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const note = {
         id: 'note-id',
         title: 'Note Title',
@@ -133,7 +133,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should format an answer with citations', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const answer = 'This is the answer with some *markdown*.';
       const citations = [
         { noteId: 'note-1', noteTitle: 'Source 1', excerpt: 'Excerpt 1' },
@@ -150,7 +150,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should put Sources section after Related Notes in answer', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const answer = 'This is the answer with some markdown.';
       const citations = [
         { noteId: 'note-1', noteTitle: 'Source 1', excerpt: 'Excerpt 1' },
@@ -181,7 +181,7 @@ describe('Matrix Formatters', () => {
     });
     
     test('should filter out footer attributions from note previews', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       
       // Create a note with attribution footer (like those created from conversations)
       const noteWithAttribution = {

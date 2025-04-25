@@ -8,8 +8,8 @@ import logger from '@/utils/logger';
 import { getExcerpt } from '@/utils/noteUtils';
 
 import { MatrixBlockBuilder } from './block-formatter';
-import { getCitationFormatter } from './citation-formatter';
-import { getMarkdownFormatter } from './markdown-formatter';
+import { MatrixCitationFormatter } from './citation-formatter';
+import { MatrixMarkdownFormatter } from './markdown-formatter';
 import type { 
   CitationReference, 
   LandingPageResult, 
@@ -90,13 +90,71 @@ export interface ResponseFormatterOptions {
  * Matrix Response Formatter
  * 
  * Creates structured, consistent responses for different result types
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class MatrixResponseFormatter {
-  private markdown = getMarkdownFormatter();
-  private citations = getCitationFormatter();
+  /**
+   * Singleton instance of MatrixResponseFormatter
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: MatrixResponseFormatter | null = null;
+  
+  /**
+   * Get the singleton instance of the formatter
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param options Optional formatter options
+   * @returns The shared MatrixResponseFormatter instance
+   */
+  public static getInstance(options?: ResponseFormatterOptions): MatrixResponseFormatter {
+    if (!MatrixResponseFormatter.instance) {
+      MatrixResponseFormatter.instance = new MatrixResponseFormatter(options);
+    }
+    return MatrixResponseFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    MatrixResponseFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh formatter instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param options Optional formatter options
+   * @returns A new MatrixResponseFormatter instance
+   */
+  public static createFresh(options?: ResponseFormatterOptions): MatrixResponseFormatter {
+    return new MatrixResponseFormatter(options);
+  }
+
+  private markdown = MatrixMarkdownFormatter.getInstance();
+  private citations = MatrixCitationFormatter.getInstance();
   private useBlocks: boolean;
   private commandPrefix: string;
 
+  /**
+   * Create a new MatrixResponseFormatter
+   * 
+   * While this constructor is public, it is recommended to use the factory methods
+   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * 
+   * @param options Optional formatter options
+   */
   constructor(options: ResponseFormatterOptions = {}) {
     this.useBlocks = options.useBlocks || false;
     this.commandPrefix = options.commandPrefix || '!brain';
@@ -1070,15 +1128,3 @@ export class MatrixResponseFormatter {
   }
 }
 
-// Singleton instance
-let formatter: MatrixResponseFormatter | null = null;
-
-/**
- * Get the singleton instance of the response formatter
- */
-export function getResponseFormatter(options?: ResponseFormatterOptions): MatrixResponseFormatter {
-  if (!formatter) {
-    formatter = new MatrixResponseFormatter(options);
-  }
-  return formatter;
-}

@@ -16,7 +16,7 @@ import { MatrixRenderer } from '../commands/matrix-renderer';
 import { getEnv } from '../utils/configUtils';
 import { Logger } from '../utils/logger';
 
-import { getMarkdownFormatter } from './matrix/formatters';
+import { MatrixMarkdownFormatter } from './matrix/formatters';
 
 
 // Configuration constants - load from environment
@@ -546,7 +546,7 @@ export class MatrixBrainInterface {
     
     // Use our enhanced formatter but without bot styling
     // Matrix will handle this itself
-    const formatter = getMarkdownFormatter({
+    const formatter = MatrixMarkdownFormatter.getInstance({
       applyBotStyling: false,
       enableCustomStyles: false,
     });

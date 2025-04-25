@@ -16,16 +16,13 @@ import {
   type TextObject,
 } from './block-formatter';
 import {
-  getCitationFormatter,
   MatrixCitationFormatter,
 } from './citation-formatter';
 import { 
-  getMarkdownFormatter,
   type MarkdownFormatterOptions,
   MatrixMarkdownFormatter, 
 } from './markdown-formatter';
 import {
-  getResponseFormatter,
   MatrixResponseFormatter,
   type ResponseFormatterOptions,
   type ResponseType,
@@ -35,11 +32,9 @@ import type { BlockContent } from './types';
 // Only export the public API - value exports
 export {
   // Markdown formatter
-  getMarkdownFormatter,
   MatrixMarkdownFormatter,
   
   // Citation formatter
-  getCitationFormatter,
   MatrixCitationFormatter,
   
   // Block builder
@@ -47,7 +42,6 @@ export {
   MatrixBlockBuilder,
   
   // Response formatter
-  getResponseFormatter,
   MatrixResponseFormatter,
 };
 

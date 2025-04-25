@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
-import { getMarkdownFormatter, getResponseFormatter, MatrixBlockBuilder } from '@/interfaces/matrix/formatters';
+import { MatrixBlockBuilder, MatrixMarkdownFormatter, MatrixResponseFormatter } from '@/interfaces/matrix/formatters';
 import type { 
   WebsiteBuildResult, 
   WebsitePromoteResult, 
@@ -13,7 +13,7 @@ import type { LandingPageData } from '@website/schemas';
 describe('Matrix Website Command Formatters', () => {
   describe('Website Command Formatting', () => {
     test('should format website-promote success output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const result: WebsiteCommandResult = {
         type: 'website-promote',
         success: true,
@@ -30,7 +30,7 @@ describe('Matrix Website Command Formatters', () => {
     });
 
     test('should format website-status output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const result: WebsiteCommandResult = {
         type: 'website-status',
         success: true,
@@ -58,7 +58,7 @@ describe('Matrix Website Command Formatters', () => {
     });
 
     test('should format website-config display output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const config: WebsiteConfig = {
         title: 'Personal Website',
         description: 'My personal website',
@@ -88,7 +88,7 @@ describe('Matrix Website Command Formatters', () => {
     });
 
     test('should format website-config update output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const config: Partial<WebsiteConfig> = {
         title: 'Updated Website Title',
       };
@@ -110,7 +110,7 @@ describe('Matrix Website Command Formatters', () => {
     });
 
     test('should format landing-page generate output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const result: WebsiteCommandResult = {
         type: 'landing-page',
         success: true,
@@ -125,7 +125,7 @@ describe('Matrix Website Command Formatters', () => {
     });
 
     test('should format landing-page view output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const landingPageData: LandingPageData = {
         name: 'John Doe',
         title: 'Software Developer',
@@ -147,7 +147,7 @@ describe('Matrix Website Command Formatters', () => {
 
 
     test('should format website-build output', () => {
-      const formatter = getResponseFormatter();
+      const formatter = MatrixResponseFormatter.getInstance();
       const result: WebsiteCommandResult = {
         type: 'website-build',
         success: true,
@@ -171,7 +171,7 @@ describe('Matrix Website Command Formatters', () => {
   describe('Website BlockBuilder Integration', () => {
     test('should build website build blocks correctly', () => {
       const builder = new MatrixBlockBuilder({ clientSupportsBlocks: false });
-      const markdownFormatter = getMarkdownFormatter();
+      const markdownFormatter = MatrixMarkdownFormatter.getInstance();
       
       builder.addHeader('Website Build');
       

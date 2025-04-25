@@ -11,7 +11,7 @@
  * - Support for MSC2398 blocks (with fallback)
  */
 
-import { getResponseFormatter } from '../interfaces/matrix/formatters';
+import { MatrixResponseFormatter } from '../interfaces/matrix/formatters';
 import type { 
   NotePreview, 
   WebsiteBuildResult, 
@@ -32,13 +32,13 @@ export class MatrixRenderer {
   // private member used in methods called by tests
   private commandHandler?: CommandHandler;
   // Response formatter with consistent styling
-  private formatter = getResponseFormatter();
+  private formatter = MatrixResponseFormatter.getInstance();
 
   constructor(commandPrefix: string, sendMessageFn: (roomId: string, message: string) => void) {
     this.commandPrefix = commandPrefix;
     this.sendMessageFn = sendMessageFn;
     // Initialize formatter with command prefix
-    this.formatter = getResponseFormatter({ commandPrefix });
+    this.formatter = MatrixResponseFormatter.getInstance({ commandPrefix });
   }
   
   /**

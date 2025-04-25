@@ -11,8 +11,55 @@ import type { Citation, CitationSourceType } from './types';
  * Matrix Citation Formatter
  * 
  * Formats citations in a visually distinct way for Matrix messages
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class MatrixCitationFormatter {
+  /**
+   * Singleton instance of MatrixCitationFormatter
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: MatrixCitationFormatter | null = null;
+  
+  /**
+   * Get the singleton instance of the formatter
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @returns The shared MatrixCitationFormatter instance
+   */
+  public static getInstance(): MatrixCitationFormatter {
+    if (!MatrixCitationFormatter.instance) {
+      MatrixCitationFormatter.instance = new MatrixCitationFormatter();
+    }
+    return MatrixCitationFormatter.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    MatrixCitationFormatter.instance = null;
+  }
+  
+  /**
+   * Create a fresh formatter instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @returns A new MatrixCitationFormatter instance
+   */
+  public static createFresh(): MatrixCitationFormatter {
+    return new MatrixCitationFormatter();
+  }
 
   /**
    * Format a single citation
@@ -166,15 +213,3 @@ export class MatrixCitationFormatter {
   }
 }
 
-// Singleton instance
-let formatter: MatrixCitationFormatter | null = null;
-
-/**
- * Get the singleton instance of the formatter
- */
-export function getCitationFormatter(): MatrixCitationFormatter {
-  if (!formatter) {
-    formatter = new MatrixCitationFormatter();
-  }
-  return formatter;
-}
