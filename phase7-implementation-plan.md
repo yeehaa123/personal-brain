@@ -35,6 +35,7 @@ Note: CLI Interface and Logger separation has been moved to post-MVP priorities 
   - ✅ Flatten directory structure (contexts/core → contexts/)
   - ⏳ Remove unused exports identified by find-real-dead-code
 - ⏳ Complete dependency injection implementation
+  - ✅ Implement createWithDependencies in key utility classes
   - ⏳ Standardize factory methods across remaining components
   - ⏳ Update tests to properly mock dependencies
 - ⏳ Refine error handling and logging
@@ -122,13 +123,17 @@ Remove remaining technical debt and unused code:
 
 Finalize dependency injection implementation across remaining components:
 
-- Complete `createWithDependencies` in any remaining classes
+- ✅ Complete `createWithDependencies` in key utility classes
 - Standardize factory methods across all components
 - Update tests to properly mock dependencies
 - Integrate existing context integration helper functions into the application
 
 **Specific Tasks:**
-1. Complete `createWithDependencies` implementation in utility classes
+1. ✅ Complete `createWithDependencies` implementation in utility classes:
+   - ✅ Implemented in NoteSearchService
+   - ✅ Implemented in EmbeddingService
+   - ✅ Implemented in NoteRepository
+   - Identify and implement in any remaining utility classes
 2. Update any remaining service implementations to use dependency injection consistently
 3. Standardize dependency resolution in factory methods
 4. Update tests to use standardized mock implementations
