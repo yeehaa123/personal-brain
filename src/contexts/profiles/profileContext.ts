@@ -223,11 +223,14 @@ export class ProfileContext extends BaseContext<
       // Create tag service
       const tagService = ProfileTagService.getInstance();
       
-      // Create search service with explicit dependencies
-      const searchService = ProfileSearchService.getInstance(
-        repository,
-        embeddingService,
-        tagService,
+      // Create search service with explicit dependencies using the updated interface
+      const searchService = ProfileSearchService.createWithDependencies(
+        { entityName: 'profile' },
+        {
+          repository,
+          embeddingService,
+          tagService
+        }
       );
       
       // Create storage adapter with explicit repository dependency

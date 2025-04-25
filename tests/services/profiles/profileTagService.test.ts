@@ -29,7 +29,7 @@ mock.module('@/utils/tagExtractor', () => {
       
       static createWithDependencies(
         _config: Record<string, unknown> = {},
-        _dependencies: Record<string, unknown> = {}
+        _dependencies: Record<string, unknown> = {},
       ): MockTagExtractor {
         return new MockTagExtractor();
       }

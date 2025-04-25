@@ -56,7 +56,7 @@ export class MockTagExtractor {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): MockTagExtractor {
     return MockTagExtractor.createFresh();
   }
@@ -68,7 +68,7 @@ export class MockTagExtractor {
     _content: string,
     _existingTags: string[] = [],
     maxTags: number = 5,
-    _apiKey?: string
+    _apiKey?: string,
   ): Promise<string[]> {
     if (this.shouldThrowError) {
       throw new Error('Mock tag extraction error');

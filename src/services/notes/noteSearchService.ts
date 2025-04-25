@@ -18,15 +18,33 @@ import { NoteEmbeddingService } from './noteEmbeddingService';
 import { NoteRepository } from './noteRepository';
 
 
+/**
+ * Note search service configuration options
+ */
+export interface NoteSearchServiceConfig {
+  /** Name of the entity being searched */
+  entityName?: string;
+}
+
+/**
+ * Note search service dependencies
+ */
+export interface NoteSearchServiceDependencies {
+  /** Repository for accessing notes */
+  repository: NoteRepository;
+  /** Embedding service for semantic operations */
+  embeddingService: NoteEmbeddingService;
+  /** Logger instance */
+  logger?: Logger;
+}
+
 export type NoteSearchOptions = BaseSearchOptions;
 
 /**
  * Service for searching notes using various strategies
  */
 export class NoteSearchService extends BaseSearchService<Note, NoteRepository, NoteEmbeddingService> {
-  protected entityName = 'note';
-  protected repository: NoteRepository;
-  protected embeddingService: NoteEmbeddingService;
+  protected override entityName = 'note';
   
   /**
    * Singleton instance of NoteSearchService
@@ -35,36 +53,32 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
   private static instance: NoteSearchService | null = null;
   
   /**
-   * Override the logger from the base class with protected visibility
-   * This allows the derived class to use the logger directly
-   */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-  
-  /**
    * Get the singleton instance of the service
    * 
    * Part of the Component Interface Standardization pattern.
    * 
-   * @param repository Repository for accessing notes (defaults to singleton instance)
-   * @param embeddingService Service for note embeddings (defaults to singleton instance)
+   * @param config Optional configuration
    * @returns The singleton instance
    */
-  public static getInstance(
-    repository?: NoteRepository,
-    embeddingService?: NoteEmbeddingService,
-  ): NoteSearchService {
+  public static getInstance(config?: NoteSearchServiceConfig): NoteSearchService {
     if (!NoteSearchService.instance) {
+      // Create with defaults
+      const dependencies: NoteSearchServiceDependencies = {
+        repository: NoteRepository.getInstance(),
+        embeddingService: NoteEmbeddingService.getInstance(),
+        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' })
+      };
+      
       NoteSearchService.instance = new NoteSearchService(
-        repository || NoteRepository.getInstance(),
-        embeddingService || NoteEmbeddingService.getInstance(),
+        { entityName: 'note', ...config },
+        dependencies
       );
       
+      dependencies.logger?.debug?.('NoteSearchService singleton instance created');
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.debug('NoteSearchService singleton instance created');
-    } else if (repository || embeddingService) {
-      // Log a warning if trying to get instance with different dependencies
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     
     return NoteSearchService.instance;
@@ -100,59 +114,54 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * Creates a new instance without affecting the singleton instance.
    * Primarily used for testing.
    * 
-   * @param repository Repository for accessing notes
-   * @param embeddingService Service for note embeddings
+   * @param config Optional configuration
    * @returns A new NoteSearchService instance
    */
-  public static createFresh(
-    repository: NoteRepository,
-    embeddingService: NoteEmbeddingService,
-  ): NoteSearchService {
+  public static createFresh(config?: NoteSearchServiceConfig): NoteSearchService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh NoteSearchService instance');
     
-    return new NoteSearchService(repository, embeddingService);
+    const dependencies: NoteSearchServiceDependencies = {
+      repository: NoteRepository.getInstance(),
+      embeddingService: NoteEmbeddingService.getInstance(),
+      logger
+    };
+    
+    return new NoteSearchService(
+      { entityName: 'note', ...config },
+      dependencies
+    );
   }
   
   /**
-   * Create a new NoteSearchService with dependencies
+   * Create a new NoteSearchService with explicit dependencies
    * 
    * Part of the Component Interface Standardization pattern.
-   * This method supports both a config object pattern and explicit dependencies.
    * 
-   * @param configOrDependencies Configuration options or dependencies object
+   * @param config Configuration options
+   * @param dependencies Dependencies object
    * @returns A new NoteSearchService instance
    */
   public static createWithDependencies(
-    configOrDependencies: Record<string, unknown> = {},
+    config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
   ): NoteSearchService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    logger.debug('Creating NoteSearchService with explicit dependencies');
     
-    // Handle case where dependencies are explicitly provided
-    if ('repository' in configOrDependencies || 'embeddingService' in configOrDependencies) {
-      const dependencies = configOrDependencies as {
-        repository?: NoteRepository;
-        embeddingService?: NoteEmbeddingService;
-      };
-      
-      logger.debug('Creating NoteSearchService with explicit dependencies');
-      
-      // Use provided dependencies or get singleton instances
-      const repository = dependencies.repository || NoteRepository.getInstance();
-      const embeddingService = dependencies.embeddingService || NoteEmbeddingService.getInstance();
-      
-      return new NoteSearchService(repository, embeddingService);
-    }
+    // Convert config to typed config
+    const noteSearchConfig: NoteSearchServiceConfig = {
+      entityName: (config['entityName'] as string) || 'note'
+    };
     
-    // Handle case where a config object is provided
-    logger.debug('Creating NoteSearchService with config');
+    // Convert dependencies to typed dependencies
+    const noteSearchDeps: NoteSearchServiceDependencies = {
+      repository: (dependencies['repository'] as NoteRepository) || NoteRepository.getInstance(),
+      embeddingService: (dependencies['embeddingService'] as NoteEmbeddingService) || NoteEmbeddingService.getInstance(),
+      logger: (dependencies['logger'] as Logger) || logger
+    };
     
-    // For this service, we don't have specific config options that affect dependency creation,
-    // so we just use the singleton instances of our dependencies
-    const repository = NoteRepository.getInstance();
-    const embeddingService = NoteEmbeddingService.getInstance();
-    
-    return new NoteSearchService(repository, embeddingService);
+    return new NoteSearchService(noteSearchConfig, noteSearchDeps);
   }
 
   /**
@@ -160,17 +169,25 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * 
    * Note: When not testing, prefer using getInstance() or createFresh() factory methods
    * 
-   * @param repository Repository for accessing notes
-   * @param embeddingService Service for note embeddings
+   * @param config Service configuration
+   * @param dependencies Service dependencies
    */
-  public constructor(
-    repository: NoteRepository,
-    embeddingService: NoteEmbeddingService,
+  constructor(
+    config: NoteSearchServiceConfig,
+    dependencies: NoteSearchServiceDependencies,
   ) {
-    super();
-    this.repository = repository;
-    this.embeddingService = embeddingService;
-    this.logger.debug('NoteSearchService instance created with dependencies');
+    super(
+      { entityName: config.entityName || 'note' },
+      {
+        repository: dependencies.repository,
+        embeddingService: dependencies.embeddingService,
+        logger: dependencies.logger
+      }
+    );
+    
+    if (dependencies.logger) {
+      dependencies.logger.debug('NoteSearchService instance created with dependencies');
+    }
   }
 
 
@@ -191,7 +208,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  protected async keywordSearch(
+  protected override async keywordSearch(
     query?: string,
     tags?: string[],
     limit = 10,
@@ -214,7 +231,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  protected async semanticSearch(
+  protected override async semanticSearch(
     query: string,
     tags?: string[],
     limit = 10,
@@ -264,7 +281,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param maxResults Maximum number of results to return
    * @returns Array of related notes
    */
-  async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
+  override async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
     try {
       // Apply safe limits
       const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
@@ -293,7 +310,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param maxKeywords Maximum number of keywords to extract (default: 10)
    * @returns Array of extracted keywords
    */
-  protected extractKeywords(text: string, maxKeywords = 10): string[] {
+  protected override extractKeywords(text: string, maxKeywords = 10): string[] {
     if (!isNonEmptyString(text)) {
       this.logger.debug('Empty text provided for keyword extraction');
       return [];

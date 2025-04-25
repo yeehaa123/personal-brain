@@ -2,10 +2,11 @@
  * Base search service for common search functionality
  * Provides shared search patterns for different entity types
  * 
- * Derived classes should implement the Component Interface Standardization pattern with:
+ * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 
 import type { SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -17,12 +18,34 @@ import { safeExec, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
-
-
 /**
  * Re-export SearchOptions type from interface
  */
 export type BaseSearchOptions = SearchOptions;
+
+/**
+ * Configuration options for BaseSearchService
+ */
+export interface BaseSearchServiceConfig {
+  /** Name of the entity being searched */
+  entityName: string;
+}
+
+/**
+ * Dependencies for BaseSearchService
+ */
+export interface BaseSearchServiceDependencies<
+  TEntity,
+  TRepository extends BaseRepository<SQLiteTable, TEntity>,
+  TEmbeddingService extends BaseEmbeddingService
+> {
+  /** Repository for accessing entity data */
+  repository: TRepository;
+  /** Embedding service for semantic operations */
+  embeddingService: TEmbeddingService;
+  /** Logger instance */
+  logger?: Logger;
+}
 
 /**
  * Scored entity with similarity score and other metadata
@@ -36,21 +59,55 @@ export type ScoredEntity<T> = {
 
 /**
  * Base class for search services that provides common search functionality
+ * 
+ * Derived classes should implement the Component Interface Standardization pattern with
+ * static methods:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 export abstract class BaseSearchService<
   TEntity, 
   TRepository extends BaseRepository<SQLiteTable, TEntity>,
   TEmbeddingService extends BaseEmbeddingService
 > implements ISearchService<TEntity> {
-  /**
-   * Logger instance for this class and its derived classes
-   * Each instance of BaseSearchService has its own logger
-   */
-  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
   
-  protected abstract entityName: string;
-  protected abstract repository: TRepository;
-  protected abstract embeddingService: TEmbeddingService;
+  /** Configuration values */
+  protected readonly entityName: string;
+  
+  /** Dependencies */
+  protected readonly repository: TRepository;
+  protected readonly embeddingService: TEmbeddingService;
+  protected readonly logger: Logger;
+  
+  /**
+   * Constructor for BaseSearchService
+   * Supports both legacy (no-args) and new (with config and dependencies) patterns
+   * 
+   * @param config Optional configuration
+   * @param dependencies Optional dependencies
+   */
+  protected constructor(
+    config?: BaseSearchServiceConfig,
+    dependencies?: BaseSearchServiceDependencies<TEntity, TRepository, TEmbeddingService>
+  ) {
+    if (config && dependencies) {
+      // New constructor with config and dependencies
+      this.entityName = config.entityName;
+      this.repository = dependencies.repository;
+      this.embeddingService = dependencies.embeddingService;
+      this.logger = dependencies.logger || Logger.getInstance({
+        silent: process.env.NODE_ENV === 'test'
+      });
+    } else {
+      // Legacy constructor - derived classes must set these properties
+      this.entityName = 'entity';
+      this.repository = null as unknown as TRepository;
+      this.embeddingService = null as unknown as TEmbeddingService;
+      this.logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    }
+  }
 
   /**
    * Search entities using various search strategies
@@ -147,6 +204,29 @@ export abstract class BaseSearchService<
     text: string, 
     maxKeywords?: number
   ): string[];
+  
+  // Add dummy method implementations to avoid typescript override errors
+  // These are meant to be overridden by derived classes
+  
+  /** @internal */
+  protected keywordSearchImpl(_query?: string, _tags?: string[], _limit?: number, _offset?: number): Promise<TEntity[]> {
+    return Promise.resolve([]);
+  }
+  
+  /** @internal */
+  protected semanticSearchImpl(_query: string, _tags?: string[], _limit?: number, _offset?: number): Promise<TEntity[]> {
+    return Promise.resolve([]);
+  }
+  
+  /** @internal */
+  protected findRelatedImpl(_entityId: string, _maxResults?: number): Promise<TEntity[]> {
+    return Promise.resolve([]);
+  }
+  
+  /** @internal */
+  protected extractKeywordsImpl(_text: string, _maxKeywords?: number): string[] {
+    return [];
+  }
 
   /**
    * Calculate tag match score between two sets of tags

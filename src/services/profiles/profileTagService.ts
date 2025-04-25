@@ -60,7 +60,7 @@ export class ProfileTagService {
       ProfileTagService.instance = new ProfileTagService({
         repository: ProfileRepository.getInstance(),
         tagExtractor: TagExtractor.getInstance(),
-        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' })
+        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' }),
       });
 
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
@@ -109,7 +109,7 @@ export class ProfileTagService {
     return new ProfileTagService({
       repository: ProfileRepository.getInstance(),
       tagExtractor: TagExtractor.getInstance(),
-      logger: logger
+      logger: logger,
     });
   }
 
@@ -124,7 +124,7 @@ export class ProfileTagService {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
+    dependencies: Record<string, unknown> = {},
   ): ProfileTagService {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating ProfileTagService with dependencies');

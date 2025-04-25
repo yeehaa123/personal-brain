@@ -62,17 +62,20 @@ class TestEmbeddingService extends BaseEmbeddingService {
 
 // Concrete implementation of BaseSearchService for testing
 class TestSearchService extends BaseSearchService<TestEntity, TestRepository, TestEmbeddingService> {
-  protected entityName = 'test';
-  protected repository: TestRepository;
-  protected embeddingService: TestEmbeddingService;
+  // Configuration values with override modifier
+  protected override entityName = 'test';
+  // We don't need to re-declare these properties as they're provided by the base class
+  // and initialized in the constructor via super()
 
   constructor() {
-    super();
-    this.repository = new TestRepository();
-    this.embeddingService = new TestEmbeddingService();
+    // Call super with minimal configuration
+    super({ entityName: 'test' }, {
+      repository: new TestRepository(),
+      embeddingService: new TestEmbeddingService()
+    });
   }
 
-  protected async keywordSearch(
+  protected override async keywordSearch(
     _query?: string,
     _tags?: string[],
     _limit = 10,
@@ -81,7 +84,7 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
     return this.repository.searchByKeywords(_query, _tags);
   }
 
-  protected async semanticSearch(
+  protected override async semanticSearch(
     query: string,
     tags?: string[],
     _limit = 10,
@@ -100,14 +103,14 @@ class TestSearchService extends BaseSearchService<TestEntity, TestRepository, Te
     return results;
   }
 
-  async findRelated(_entityId: string, _maxResults = 5): Promise<TestEntity[]> {
+  override async findRelated(_entityId: string, _maxResults = 5): Promise<TestEntity[]> {
     return [
       { id: '7', name: 'Related 1' },
       { id: '8', name: 'Related 2' },
     ];
   }
 
-  protected extractKeywords(text: string, _maxKeywords = 10): string[] {
+  protected override extractKeywords(text: string, _maxKeywords = 10): string[] {
     return text.split(' ').slice(0, _maxKeywords);
   }
 }
@@ -207,14 +210,14 @@ describe('BaseSearchService', () => {
   test('calculateTagMatchScore should correctly calculate score', () => {
     // Create a test subclass that exposes the protected method
     class TestServiceWithExposedMethods extends BaseSearchService<TestEntity, TestRepository, TestEmbeddingService> {
-      protected entityName = 'test';
-      protected repository: TestRepository;
-      protected embeddingService: TestEmbeddingService;
+      protected override entityName = 'test';
+      // Properties come from base class
 
       constructor() {
-        super();
-        this.repository = new TestRepository();
-        this.embeddingService = new TestEmbeddingService();
+        super({ entityName: 'test' }, {
+          repository: new TestRepository(),
+          embeddingService: new TestEmbeddingService()
+        });
       }
 
       // Expose protected methods for testing
@@ -223,10 +226,10 @@ describe('BaseSearchService', () => {
       }
 
       // Implement abstract methods
-      protected keywordSearch() { return Promise.resolve([]); }
-      protected semanticSearch() { return Promise.resolve([]); }
-      async findRelated() { return Promise.resolve([]); }
-      protected extractKeywords() { return []; }
+      protected override keywordSearch() { return Promise.resolve([]); }
+      protected override semanticSearch() { return Promise.resolve([]); }
+      override async findRelated() { return Promise.resolve([]); }
+      protected override extractKeywords() { return []; }
     }
 
     const testService = new TestServiceWithExposedMethods();
@@ -253,14 +256,14 @@ describe('BaseSearchService', () => {
   test('deduplicateResults should remove duplicates', () => {
     // Create a test subclass that exposes the protected method
     class TestServiceWithExposedMethods extends BaseSearchService<TestEntity, TestRepository, TestEmbeddingService> {
-      protected entityName = 'test';
-      protected repository: TestRepository;
-      protected embeddingService: TestEmbeddingService;
+      protected override entityName = 'test';
+      // Properties come from base class
 
       constructor() {
-        super();
-        this.repository = new TestRepository();
-        this.embeddingService = new TestEmbeddingService();
+        super({ entityName: 'test' }, {
+          repository: new TestRepository(),
+          embeddingService: new TestEmbeddingService()
+        });
       }
 
       // Expose protected methods for testing
@@ -273,10 +276,10 @@ describe('BaseSearchService', () => {
       }
 
       // Implement abstract methods
-      protected keywordSearch() { return Promise.resolve([]); }
-      protected semanticSearch() { return Promise.resolve([]); }
-      async findRelated() { return Promise.resolve([]); }
-      protected extractKeywords() { return []; }
+      protected override keywordSearch() { return Promise.resolve([]); }
+      protected override semanticSearch() { return Promise.resolve([]); }
+      override async findRelated() { return Promise.resolve([]); }
+      protected override extractKeywords() { return []; }
     }
 
     const testService = new TestServiceWithExposedMethods();
@@ -302,14 +305,14 @@ describe('BaseSearchService', () => {
   test('deduplicateResults should exclude specified ID', () => {
     // Use the same exposed method class
     class TestServiceWithExposedMethods extends BaseSearchService<TestEntity, TestRepository, TestEmbeddingService> {
-      protected entityName = 'test';
-      protected repository: TestRepository;
-      protected embeddingService: TestEmbeddingService;
+      protected override entityName = 'test';
+      // Properties come from base class
 
       constructor() {
-        super();
-        this.repository = new TestRepository();
-        this.embeddingService = new TestEmbeddingService();
+        super({ entityName: 'test' }, {
+          repository: new TestRepository(),
+          embeddingService: new TestEmbeddingService()
+        });
       }
 
       // Expose protected methods for testing
@@ -322,10 +325,10 @@ describe('BaseSearchService', () => {
       }
 
       // Implement abstract methods
-      protected keywordSearch() { return Promise.resolve([]); }
-      protected semanticSearch() { return Promise.resolve([]); }
-      async findRelated() { return Promise.resolve([]); }
-      protected extractKeywords() { return []; }
+      protected override keywordSearch() { return Promise.resolve([]); }
+      protected override semanticSearch() { return Promise.resolve([]); }
+      override async findRelated() { return Promise.resolve([]); }
+      protected override extractKeywords() { return []; }
     }
 
     const testService = new TestServiceWithExposedMethods();

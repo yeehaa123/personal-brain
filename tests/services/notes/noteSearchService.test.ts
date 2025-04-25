@@ -67,6 +67,40 @@ const mockNotes = [
 // Create a mock repository using our standardized implementation
 const mockRepository = MockNoteRepository.createFresh(mockNotes);
 
+// Mock the repository's search methods using Bun's mock functionality
+mockRepository.searchNotesByKeywords = mock((query: string | undefined, tags: string[] | undefined, limit = 10, offset = 0) => {
+  let results = [...mockNotes];
+  
+  // Filter by query if provided
+  if (query) {
+    const lowerQuery = query.toLowerCase();
+    results = results.filter(note => 
+      note.title.toLowerCase().includes(lowerQuery) ||
+      note.content.toLowerCase().includes(lowerQuery)
+    );
+  }
+  
+  // Filter by tags if provided
+  if (tags && tags.length > 0) {
+    results = results.filter(note => 
+      note.tags && tags.some(tag => note.tags?.includes(tag))
+    );
+  }
+  
+  // Apply pagination
+  return Promise.resolve(results.slice(offset, offset + limit));
+});
+
+// Mock the getRecentNotes method using Bun's mock functionality
+mockRepository.getRecentNotes = mock((limit = 10, offset = 0) => {
+  // Sort by createdAt in descending order and apply pagination
+  return Promise.resolve(
+    [...mockNotes]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(offset, offset + limit)
+  );
+});
+
 // Create a mock embedding service
 class MockNoteEmbeddingService {
   async generateEmbedding(text: string): Promise<number[]> {
@@ -125,7 +159,15 @@ describe('NoteSearchService', () => {
     
     repository = mockRepository as unknown as NoteRepository;
     embeddingService = new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
-    searchService = NoteSearchService.createFresh(repository, embeddingService);
+    
+    // Use the new createWithDependencies method with the updated interface
+    searchService = NoteSearchService.createWithDependencies(
+      { entityName: 'note' },
+      { 
+        repository: repository,
+        embeddingService: embeddingService
+      }
+    );
   });
 
   describe('search', () => {

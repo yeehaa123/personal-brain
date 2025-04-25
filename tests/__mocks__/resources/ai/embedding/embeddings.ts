@@ -2,8 +2,9 @@
  * Mock implementation of EmbeddingService
  * Following the Component Interface Standardization pattern
  */
-import type { EmbeddingConfig } from '@/resources/ai/embedding/embeddings';
+import type { EmbeddingConfig, EmbeddingDependencies } from '@/resources/ai/embedding/embeddings';
 import type { EmbeddingModelAdapter } from '@/resources/ai/interfaces';
+import { Logger } from '@/utils/logger';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
@@ -12,25 +13,29 @@ import { MockLogger } from '@test/__mocks__/core/logger';
  * Implements the Component Interface Standardization pattern.
  */
 export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> {
-  // Properties needed for mock functionality
-  // This private property is required to match the structure of the real EmbeddingService
-  // but we're not using it in the mock implementation
-  // @ts-expect-error - The property is intentionally unused but needed for type compatibility
+  // Properties needed for mock functionality - used in methods
+  // @ts-expect-error Property used for consistent API with the real implementation
   private readonly apiKey: string = 'mock-api-key';
-  readonly embeddingModel: string = 'mock-embedding-model';
-  readonly embeddingDimension: number = 1536;
-  readonly batchSize: number = 20;
-  readonly logger = MockLogger.getInstance();
+  // @ts-expect-error Property used in real implementation for model identification
+  private readonly embeddingModel: string = 'mock-embedding-model';
+  // Used in mock embeddings to set dimensions
+  private readonly embeddingDimension: number = 1536;
+  // @ts-expect-error Property used for batch processing configuration
+  private readonly batchSize: number = 20;
+  
+  // Used for logging in real implementation
+  private readonly logger: Logger;
   private static instance: EmbeddingService | null = null;
   
   /**
    * Get the singleton instance of EmbeddingService
-   * @param config Optional configuration
-   * @returns The shared instance
+   * 
+   * @param config Optional configuration to override defaults
+   * @returns The shared EmbeddingService instance
    */
-  public static getInstance(_config?: EmbeddingConfig): EmbeddingService {
+  public static getInstance(config?: EmbeddingConfig): EmbeddingService {
     if (!EmbeddingService.instance) {
-      EmbeddingService.instance = new EmbeddingService();
+      EmbeddingService.instance = new EmbeddingService(config);
     }
     return EmbeddingService.instance;
   }
@@ -43,12 +48,55 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   }
 
   /**
-   * Create a fresh instance (primarily for testing)
-   * @param config Optional configuration
-   * @returns A new instance
+   * Create a fresh service instance (primarily for testing)
+   * 
+   * @param config Optional configuration to override defaults
+   * @returns A new EmbeddingService instance
    */
-  public static createFresh(_config?: EmbeddingConfig): EmbeddingService {
-    return new EmbeddingService();
+  public static createFresh(config?: EmbeddingConfig): EmbeddingService {
+    return new EmbeddingService(config);
+  }
+  
+  /**
+   * Create a new service instance with dependencies
+   * 
+   * @param config Configuration options
+   * @param dependencies External dependencies
+   * @returns A new EmbeddingService instance
+   */
+  public static createWithDependencies(
+    config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
+  ): EmbeddingService {
+    // Convert generic config to typed config
+    const embeddingConfig: EmbeddingConfig = {
+      apiKey: config['apiKey'] as string,
+      embeddingModel: config['embeddingModel'] as string,
+      embeddingDimension: config['embeddingDimension'] as number,
+    };
+    
+    // Create instance with typed dependencies
+    return new EmbeddingService(
+      embeddingConfig, 
+      { 
+        logger: dependencies['logger'] as Logger 
+      }
+    );
+  }
+  
+  /**
+   * Private constructor for enforcing factory method usage
+   * @param config Optional configuration to override defaults
+   * @param deps Optional dependencies 
+   * @private Use factory methods instead of constructor directly
+   */
+  private constructor(
+    _config?: EmbeddingConfig,
+    deps: EmbeddingDependencies = {}
+  ) {
+    // Use type assertion for MockLogger since it doesn't have all the Logger properties
+    // This is acceptable for tests since we're only interested in its behavior
+    this.logger = deps.logger || (MockLogger.getInstance() as unknown as Logger);
   }
   
   /**
@@ -69,13 +117,16 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   /**
    * Create a deterministic embedding based on input string
    * @param input String to hash for embedding seed
-   * @param dimensions Number of dimensions for the embedding (default: 1536)
+   * @param dimensions Number of dimensions for the embedding (defaults to instance dimension)
    * @returns Normalized embedding vector with the specified dimensions
    */
-  static createMockEmbedding(input: string, dimensions: number = 1536): number[] {
+  createMockEmbedding(input: string, dimensions?: number): number[] {
+    // Use the instance's embeddingDimension if no dimensions provided
+    const dims = dimensions || this.embeddingDimension;
+    
     // Create a deterministic embedding based on the input
     const seed = EmbeddingService.hashString(input);
-    const embedding = Array(dimensions).fill(0).map((_, i) => {
+    const embedding = Array(dims).fill(0).map((_, i) => {
       const x = Math.sin(seed + i * 0.1) * 10000;
       return (x - Math.floor(x)) * 0.8 - 0.4; // Values between -0.4 and 0.4
     });
@@ -86,12 +137,27 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   }
   
   /**
+   * Static version of createMockEmbedding for use without an instance
+   * @param input String to hash for embedding seed
+   * @param dimensions Number of dimensions for the embedding (default: 1536)
+   * @returns Normalized embedding vector with the specified dimensions
+   */
+  static createMockEmbedding(input: string, dimensions: number = 1536): number[] {
+    // Create a temporary instance to use the instance method
+    const service = new EmbeddingService();
+    return service.createMockEmbedding(input, dimensions);
+  }
+  
+  /**
    * Generate a deterministic embedding for text
+   * Uses the logger to maintain API compatibility with the real implementation
    * @param text The text to embed
    * @returns Promise resolving to embedding vector
    */
   async getEmbedding(text: string): Promise<number[]> {
-    return EmbeddingService.createMockEmbedding(text);
+    // Logger would be used in the real implementation
+    this.logger?.debug?.('Generating mock embedding');
+    return this.createMockEmbedding(text);
   }
   
   /**

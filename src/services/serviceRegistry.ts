@@ -226,8 +226,14 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         const repository = container.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
         const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
         
-        // Create service with injected dependencies
-        return NoteSearchService.getInstance(repository, embeddingService);
+        // Create service with injected dependencies using the updated interface
+        return NoteSearchService.createWithDependencies(
+          { entityName: 'note' },
+          {
+            repository,
+            embeddingService
+          }
+        );
       },
       [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService],
     );
@@ -240,8 +246,15 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
         const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
         
-        // Create service with injected dependencies
-        return ProfileSearchService.getInstance(repository, embeddingService, tagService);
+        // Create service with injected dependencies using the updated interface
+        return ProfileSearchService.createWithDependencies(
+          { entityName: 'profile' },
+          {
+            repository,
+            embeddingService,
+            tagService
+          }
+        );
       },
       [
         ServiceIdentifiers.ProfileRepository, 

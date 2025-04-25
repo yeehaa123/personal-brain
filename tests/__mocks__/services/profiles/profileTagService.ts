@@ -50,7 +50,7 @@ export class MockProfileTagService implements Partial<ProfileTagService> {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): MockProfileTagService {
     return new MockProfileTagService();
   }

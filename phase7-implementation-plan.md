@@ -133,7 +133,7 @@ Finalize dependency injection implementation across remaining components:
 **Specific Tasks:**
 1. ✅ Complete `createWithDependencies` implementation in utility classes:
    - ✅ Implemented in NoteSearchService
-   - ✅ Implemented in EmbeddingService
+   - ✅ Implemented in EmbeddingService (fully refactored with Component Interface Standardization pattern)
    - ✅ Implemented in NoteRepository
    - Identify and implement in any remaining utility classes
 
@@ -344,6 +344,10 @@ This pattern provides several benefits:
 
 2. **Complete Dependency Injection** (Medium Priority):
    - ✅ Standardize factory methods across deployment components
+   - ✅ Implement EmbeddingService with Component Interface Standardization pattern
+   - ✅ Implement BaseSearchService with proper dependency injection
+   - ✅ Update NoteSearchService to use the standardized pattern
+   - ✅ Update ProfileSearchService to use the standardized pattern
    - Finish remaining createWithDependencies implementations
    - Standardize factory methods across other components
    - Update tests to use proper mocking
@@ -358,10 +362,10 @@ This pattern provides several benefits:
 The following components still need to be refactored to follow the Component Interface Standardization pattern. The list is organized by category, with a focus on prioritizing frequently used components and those with the most dependencies.
 
 ### Core Services (High Priority)
-- **EmbeddingService**: Partial implementation, needs completion
-- **NoteSearchService**: Used throughout application, critical for note functionality
-- **ProfileSearchService**: Used for profile search and tagging
-- **BaseSearchService**: Base class for search services, needs to set standard for implementations
+- ✅ **EmbeddingService**: Completed with full implementation of Component Interface Standardization pattern
+- ✅ **BaseSearchService**: Completed - added constructor with proper dependency injection, setting standard for derived search services
+- ✅ **NoteSearchService**: Completed - Refactored to use the Component Interface Standardization pattern
+- ✅ **ProfileSearchService**: Completed - Refactored to use the Component Interface Standardization pattern
 
 ### Formatters (Medium Priority)
 - **ExternalSourceFormatter**: Used for formatting external content

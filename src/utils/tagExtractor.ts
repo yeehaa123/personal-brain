@@ -75,7 +75,7 @@ export class TagExtractor {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    dependencies: TagExtractorDependencies = {}
+    dependencies: TagExtractorDependencies = {},
   ): TagExtractor {
     const instance = new TagExtractor();
     

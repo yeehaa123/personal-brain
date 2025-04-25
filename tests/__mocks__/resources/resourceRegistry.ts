@@ -87,7 +87,7 @@ export class MockResourceRegistry {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): MockResourceRegistry {
     return new MockResourceRegistry();
   }

@@ -29,23 +29,34 @@ export interface EmbeddingConfig {
 }
 
 /**
+ * Dependencies interface for EmbeddingService
+ */
+export interface EmbeddingDependencies {
+  /** Logger instance */
+  logger?: Logger;
+}
+
+/**
  * Service for generating and working with text embeddings
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
  * 
  * Implements the EmbeddingModelAdapter interface for consistent integration.
  */
 export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> {
-  /** Configuration values */
+  /** Configuration values - used in methods */
+  // apiKey is used by the AI SDK internally
+  // @ts-expect-error Property is used by the AI SDK
   private readonly apiKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private readonly logger: Logger;
 
   /** Singleton instance */
   private static instance: EmbeddingService | null = null;
@@ -57,80 +68,71 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    * @returns The shared EmbeddingService instance
    */
   public static getInstance(config?: EmbeddingConfig): EmbeddingService {
-    // Use a static logger for static methods
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-
     if (!EmbeddingService.instance) {
       EmbeddingService.instance = new EmbeddingService(config);
-      logger.info(`Embedding service initialized (API key available: ${Boolean(EmbeddingService.instance.apiKey)})`);
-      logger.info(`Using OpenAI model: ${EmbeddingService.instance.embeddingModel}`);
-    } else if (config) {
-      // Log a warning if trying to get instance with different config
-      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     return EmbeddingService.instance;
   }
 
   /**
    * Reset the singleton instance (primarily for testing)
-   * This clears the instance and any resources it holds
    */
   public static resetInstance(): void {
-    // Use a static logger for static methods
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-
-    // No special cleanup needed for this service
     EmbeddingService.instance = null;
-    logger.debug('EmbeddingService singleton instance reset');
   }
 
   /**
    * Create a fresh service instance (primarily for testing)
-   * This creates a new instance without affecting the singleton
    * 
    * @param config Optional configuration to override defaults
    * @returns A new EmbeddingService instance
    */
   public static createFresh(config?: EmbeddingConfig): EmbeddingService {
-    // Use a static logger for static methods
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.debug('Creating fresh EmbeddingService instance');
-
     return new EmbeddingService(config);
   }
-  
+
   /**
    * Create a new service instance with dependencies
-   * This method follows the standard pattern for dependency injection
    * 
    * @param config Configuration options
+   * @param dependencies External dependencies
    * @returns A new EmbeddingService instance
    */
-  public static createWithDependencies(config: Record<string, unknown> = {}): EmbeddingService {
-    // Use a static logger for static methods
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.debug('Creating EmbeddingService with dependencies');
-    
-    // Convert generic config to our specific config type
+  public static createWithDependencies(
+    config: Record<string, unknown> = {},
+    dependencies: Record<string, unknown> = {}
+  ): EmbeddingService {
+    // Convert generic config to typed config
     const embeddingConfig: EmbeddingConfig = {
       apiKey: config['apiKey'] as string,
       embeddingModel: config['embeddingModel'] as string,
       embeddingDimension: config['embeddingDimension'] as number,
     };
-    
-    return new EmbeddingService(embeddingConfig);
+
+    // Create instance with typed dependencies
+    return new EmbeddingService(
+      embeddingConfig,
+      {
+        logger: dependencies['logger'] as Logger
+      }
+    );
   }
 
   /**
    * Create a new embedding service
    * 
    * @param config Optional configuration to override defaults
-   * @private Use getInstance() or createFresh() instead of constructor directly
+   * @param deps Optional dependencies 
+   * @private Use factory methods instead of constructor directly
    */
-  private constructor(config?: EmbeddingConfig) {
+  private constructor(
+    config?: EmbeddingConfig,
+    deps: EmbeddingDependencies = {}
+  ) {
     this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
     this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
     this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
+    this.logger = deps.logger || Logger.getInstance();
   }
 
   /**

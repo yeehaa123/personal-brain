@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { ResourceRegistry } from '@/resources';
-import { Logger } from '@/utils/logger';
+import type { ResourceRegistry } from '@/resources';
+import type { Logger } from '@/utils/logger';
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockResourceRegistry } from '@test/__mocks__/resources/resourceRegistry';
 import { TagExtractor } from '@utils/tagExtractor';
@@ -28,10 +28,10 @@ describe('TagExtractor', () => {
           'regenerative-systems',
           'decentralized',
           'collaboration',
-          'interconnected-communities'
-        ]
+          'interconnected-communities',
+        ],
       },
-      usage: { inputTokens: 10, outputTokens: 20 } // Required by ModelResponse
+      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
     };
 
     // Create tag extractor with dependencies
@@ -40,8 +40,8 @@ describe('TagExtractor', () => {
       {},
       {
         logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     const content = `Ecosystem architecture is a practice of designing and building interconnected 
@@ -73,10 +73,10 @@ describe('TagExtractor', () => {
           'critical-thinking',
           'creativity',
           'learning',
-          'modern-education'
-        ]
+          'modern-education',
+        ],
       },
-      usage: { inputTokens: 10, outputTokens: 20 } // Required by ModelResponse
+      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
     };
 
     // Create tag extractor with dependencies
@@ -85,8 +85,8 @@ describe('TagExtractor', () => {
       {},
       {
         logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     const content = `Education should focus on developing critical thinking and creativity rather than 
@@ -118,10 +118,10 @@ describe('TagExtractor', () => {
           'digital-transformation',
           'innovation',
           'future',
-          'digital'
-        ]
+          'digital',
+        ],
       },
-      usage: { inputTokens: 10, outputTokens: 20 } // Required by ModelResponse
+      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
     };
 
     // Create tag extractor with dependencies
@@ -130,8 +130,8 @@ describe('TagExtractor', () => {
       {},
       {
         logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     // Make sure to include "technology" in the content to match our mock condition
@@ -163,10 +163,10 @@ describe('TagExtractor', () => {
         tags: [
           'ecosystem-architecture',
           'innovation',
-          'collaboration'
-        ]
+          'collaboration',
+        ],
       },
-      usage: { inputTokens: 10, outputTokens: 20 } // Required by ModelResponse
+      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
     };
 
     // Create tag extractor with dependencies
@@ -175,8 +175,8 @@ describe('TagExtractor', () => {
       {},
       {
         logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     const content = `This is a long content about various topics including technology, innovation, 
@@ -204,7 +204,7 @@ describe('TagExtractor', () => {
       return {
         complete: async () => {
           throw new Error('Test error');
-        }
+        },
       };
     };
 
@@ -213,8 +213,8 @@ describe('TagExtractor', () => {
       {},
       {
         logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     const content = 'Some content for error testing';
@@ -238,15 +238,15 @@ describe('TagExtractor', () => {
     // Add proper ModelResponse format to avoid type errors
     mockRegistry.mockModelResponse = {
       object: { tags: [] },
-      usage: { inputTokens: 10, outputTokens: 20 } // Required by ModelResponse
+      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
     };
 
     // Create tag extractor with empty tags for this test
     const tagExtractor = TagExtractor.createWithDependencies(
       {},
       {
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry
-      }
+        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+      },
     );
 
     // Pass an empty API key

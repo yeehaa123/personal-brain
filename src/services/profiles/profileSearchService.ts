@@ -5,9 +5,11 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 import type { Profile } from '@/models/profile';
 import { BaseSearchService } from '@/services/common/baseSearchService';
+import type { BaseSearchServiceConfig, BaseSearchServiceDependencies } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
@@ -18,6 +20,25 @@ import { ProfileEmbeddingService } from './profileEmbeddingService';
 import { ProfileRepository } from './profileRepository';
 import { ProfileTagService } from './profileTagService';
 
+/**
+ * Configuration options for ProfileSearchService
+ */
+export interface ProfileSearchServiceConfig extends BaseSearchServiceConfig {
+  /** Whether to include content in search results */
+  includeContent?: boolean;
+}
+
+/**
+ * Dependencies for ProfileSearchService
+ */
+export interface ProfileSearchServiceDependencies extends BaseSearchServiceDependencies<
+  Profile, 
+  ProfileRepository,
+  ProfileEmbeddingService
+> {
+  /** Tag service for profile tag operations */
+  tagService: ProfileTagService;
+}
 
 export type ProfileSearchOptions = BaseSearchOptions;
 
@@ -51,11 +72,6 @@ interface NoteContext {
  * Service for finding notes related to a profile
  */
 export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepository, ProfileEmbeddingService> {
-  protected entityName = 'profile';
-  protected repository: ProfileRepository;
-  protected embeddingService: ProfileEmbeddingService;
-  private tagService: ProfileTagService;
-  
   /**
    * Singleton instance of ProfileSearchService
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
@@ -63,39 +79,39 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
   private static instance: ProfileSearchService | null = null;
   
   /**
-   * Override the logger from the base class with protected visibility
-   * This allows the derived class to use the logger directly
+   * The tag service for profile tag operations
+   * This is specific to ProfileSearchService, not in the base class
    */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private tagService: ProfileTagService;
   
   /**
    * Get the singleton instance of the service
    * 
    * Part of the Component Interface Standardization pattern.
    * 
-   * @param repository Repository for accessing profiles (defaults to singleton instance)
-   * @param embeddingService Service for profile embeddings (defaults to singleton instance)
-   * @param tagService Service for profile tag operations (defaults to a new instance)
+   * @param config Optional configuration options
    * @returns The singleton instance
    */
-  public static getInstance(
-    repository?: ProfileRepository,
-    embeddingService?: ProfileEmbeddingService,
-    tagService?: ProfileTagService,
-  ): ProfileSearchService {
+  public static getInstance(config?: ProfileSearchServiceConfig): ProfileSearchService {
     if (!ProfileSearchService.instance) {
+      // Create with defaults
+      const dependencies: ProfileSearchServiceDependencies = {
+        repository: ProfileRepository.getInstance(),
+        embeddingService: ProfileEmbeddingService.getInstance(),
+        tagService: ProfileTagService.getInstance(),
+        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' }),
+      };
+      
       ProfileSearchService.instance = new ProfileSearchService(
-        repository || ProfileRepository.getInstance(),
-        embeddingService || ProfileEmbeddingService.getInstance(),
-        tagService || ProfileTagService.getInstance(),
+        { entityName: 'profile', ...config },
+        dependencies,
       );
       
+      dependencies.logger?.debug?.('ProfileSearchService singleton instance created');
+    } else if (config) {
+      // Log a warning if trying to get instance with different config
       const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.debug('ProfileSearchService singleton instance created');
-    } else if (repository || embeddingService || tagService) {
-      // Log a warning if trying to get instance with different dependencies
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     
     return ProfileSearchService.instance;
@@ -131,41 +147,54 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * Creates a new instance without affecting the singleton instance.
    * Primarily used for testing.
    * 
-   * @param repository Repository for accessing profiles
-   * @param embeddingService Service for profile embeddings
-   * @param tagService Service for profile tag operations
+   * @param config Configuration options
+   * @param dependencies Service dependencies
    * @returns A new ProfileSearchService instance
    */
   public static createFresh(
-    repository: ProfileRepository,
-    embeddingService: ProfileEmbeddingService,
-    tagService: ProfileTagService,
+    config: ProfileSearchServiceConfig,
+    dependencies: ProfileSearchServiceDependencies,
   ): ProfileSearchService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = dependencies.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating fresh ProfileSearchService instance');
     
-    return new ProfileSearchService(repository, embeddingService, tagService);
+    return new ProfileSearchService(config, dependencies);
   }
 
   /**
    * Create a new ProfileSearchService with injected dependencies
    * 
-   * While this constructor is public, it is recommended to use the factory methods
-   * getInstance() or createFresh() instead to ensure consistent instance management.
+   * This is an alias for createFresh() to maintain consistency with other services
+   * that implement the Component Interface Standardization pattern.
    * 
-   * @param repository Repository for accessing profiles
-   * @param embeddingService Service for profile embeddings
-   * @param tagService Service for profile tag operations
+   * @param config Configuration options
+   * @param dependencies Service dependencies
+   * @returns A new ProfileSearchService instance
    */
-  constructor(
-    repository: ProfileRepository,
-    embeddingService: ProfileEmbeddingService,
-    tagService: ProfileTagService,
+  public static createWithDependencies(
+    config: ProfileSearchServiceConfig,
+    dependencies: ProfileSearchServiceDependencies,
+  ): ProfileSearchService {
+    return ProfileSearchService.createFresh(config, dependencies);
+  }
+
+  /**
+   * Create a new ProfileSearchService with injected dependencies
+   * 
+   * While this constructor is private, it is used by the static factory methods.
+   * Use getInstance(), createFresh(), or createWithDependencies() instead of calling this directly.
+   * 
+   * @param config Configuration options
+   * @param dependencies Service dependencies
+   */
+  private constructor(
+    config: ProfileSearchServiceConfig,
+    dependencies: ProfileSearchServiceDependencies,
   ) {
-    super();
-    this.repository = repository;
-    this.embeddingService = embeddingService;
-    this.tagService = tagService;
+    super(config, dependencies);
+    
+    // Set the tag service from dependencies
+    this.tagService = dependencies.tagService;
     
     this.logger.debug('ProfileSearchService instance created');
   }
@@ -188,7 +217,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @param offset Pagination offset
    * @returns Array of matching profiles
    */
-  protected async keywordSearch(
+  protected override async keywordSearch(
     query?: string, 
     tags?: string[], 
     _limit = 10, 
@@ -234,7 +263,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @param offset Pagination offset
    * @returns Array of matching profiles
    */
-  protected async semanticSearch(
+  protected override async semanticSearch(
     query: string, 
     tags?: string[], 
     _limit = 10, // Renamed to avoid unused parameter warning
@@ -278,7 +307,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @param maxResults Maximum results to return
    * @returns Empty array (not implemented for profiles)
    */
-  async findRelated(_profileId: string, _maxResults = 5): Promise<Profile[]> {
+  public override async findRelated(_profileId: string, _maxResults = 5): Promise<Profile[]> {
     // This method doesn't make sense for profiles since there's only one
     return [];
   }

@@ -10,13 +10,13 @@ import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversa
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
+import { TagExtractor } from '@/utils/tagExtractor';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 import { MockTagExtractor } from '@test/__mocks__/utils/tagExtractor';
 
 // Import actual TagExtractor for mocking
-import { TagExtractor } from '@/utils/tagExtractor';
 
 // Create a spy for extractTags calls
 const mockExtractTags = mock(() => Promise.resolve(['ecosystem', 'architecture', 'example']));

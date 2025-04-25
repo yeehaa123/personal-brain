@@ -155,10 +155,14 @@ describe('ProfileSearchService', () => {
     // Create a fresh instance for testing using the standardized factory method
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    searchService = ProfileSearchService.createFresh(
-      mockRepository as unknown as ProfileRepository,
-      mockEmbeddingService,
-      mockTagService,
+    
+    searchService = ProfileSearchService.createWithDependencies(
+      { entityName: 'profile' }, // config
+      {
+        repository: mockRepository as unknown as ProfileRepository,
+        embeddingService: mockEmbeddingService,
+        tagService: mockTagService
+      }
     );
   });
 
@@ -169,11 +173,17 @@ describe('ProfileSearchService', () => {
   test('should create instance using factory method', () => {
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    const service = ProfileSearchService.createFresh(
-      mockRepository as unknown as ProfileRepository,
-      mockEmbeddingService,
-      mockTagService,
+    
+    // Use createWithDependencies for clearer naming
+    const service = ProfileSearchService.createWithDependencies(
+      { entityName: 'profile' }, // config
+      {
+        repository: mockRepository as unknown as ProfileRepository,
+        embeddingService: mockEmbeddingService,
+        tagService: mockTagService
+      }
     );
+    
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ProfileSearchService);
   });
@@ -215,10 +225,14 @@ describe('ProfileSearchService', () => {
 
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    const serviceWithEmptyRepo = new ProfileSearchService(
-      emptyRepository as unknown as ProfileRepository,
-      mockEmbeddingService,
-      mockTagService,
+    
+    const serviceWithEmptyRepo = ProfileSearchService.createWithDependencies(
+      { entityName: 'profile' },
+      {
+        repository: emptyRepository as unknown as ProfileRepository,
+        embeddingService: mockEmbeddingService,
+        tagService: mockTagService
+      }
     );
 
     const results = await serviceWithEmptyRepo.findRelatedNotes(mockNoteContext, 5);
@@ -241,10 +255,14 @@ describe('ProfileSearchService', () => {
 
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    const serviceWithoutEmbedding = new ProfileSearchService(
-      repositoryWithoutEmbedding as unknown as ProfileRepository,
-      mockEmbeddingService,
-      mockTagService,
+    
+    const serviceWithoutEmbedding = ProfileSearchService.createWithDependencies(
+      { entityName: 'profile' },
+      {
+        repository: repositoryWithoutEmbedding as unknown as ProfileRepository,
+        embeddingService: mockEmbeddingService,
+        tagService: mockTagService
+      }
     );
 
     const results = await serviceWithoutEmbedding.findRelatedNotes(mockNoteContext, 5);
@@ -268,10 +286,14 @@ describe('ProfileSearchService', () => {
 
     const mockEmbeddingService = {} as ProfileEmbeddingService;
     const mockTagService = {} as ProfileTagService;
-    const serviceWithoutTags = new ProfileSearchService(
-      repositoryWithoutTags as unknown as ProfileRepository,
-      mockEmbeddingService,
-      mockTagService,
+    
+    const serviceWithoutTags = ProfileSearchService.createWithDependencies(
+      { entityName: 'profile' },
+      {
+        repository: repositoryWithoutTags as unknown as ProfileRepository,
+        embeddingService: mockEmbeddingService,
+        tagService: mockTagService
+      }
     );
 
     const results = await serviceWithoutTags.findNotesWithSimilarTags(mockNoteContext, [], 5);
