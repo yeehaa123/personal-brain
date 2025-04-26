@@ -4,6 +4,12 @@
  * This module provides notification capabilities for the ExternalSourceContext,
  * allowing it to send notifications to other contexts when external source
  * operations occur.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
@@ -17,14 +23,95 @@ import type { ExternalSourceResult } from '../sources';
  * Notifier for external source-related events
  */
 export class ExternalSourceNotifier {
+  /**
+   * Singleton instance of ExternalSourceNotifier
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: ExternalSourceNotifier | null = null;
+  
+  /**
+   * Get the singleton instance of the notifier
+   * 
+   * @param mediator The context mediator for sending notifications
+   * @returns The shared ExternalSourceNotifier instance
+   */
+  public static getInstance(mediator?: ContextMediator): ExternalSourceNotifier {
+    if (!ExternalSourceNotifier.instance && mediator) {
+      ExternalSourceNotifier.instance = new ExternalSourceNotifier(mediator);
+      
+      const logger = Logger.getInstance();
+      logger.debug('ExternalSourceNotifier singleton instance created');
+    } else if (!ExternalSourceNotifier.instance) {
+      throw new Error('ExternalSourceNotifier.getInstance() called without required mediator');
+    } else if (mediator) {
+      // Log a warning if trying to get instance with different mediator
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with mediator but instance already exists. Mediator ignored.');
+    }
+    
+    return ExternalSourceNotifier.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    ExternalSourceNotifier.instance = null;
+    
+    const logger = Logger.getInstance();
+    logger.debug('ExternalSourceNotifier singleton instance reset');
+  }
+  
+  /**
+   * Create a fresh notifier instance
+   * 
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param mediator The context mediator for sending notifications
+   * @returns A new ExternalSourceNotifier instance
+   */
+  public static createFresh(mediator: ContextMediator): ExternalSourceNotifier {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh ExternalSourceNotifier instance');
+    
+    return new ExternalSourceNotifier(mediator);
+  }
+  
+  /**
+   * Create a new instance with explicit dependencies
+   * 
+   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * 
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new ExternalSourceNotifier instance with the provided dependencies
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): ExternalSourceNotifier {
+    const logger = Logger.getInstance();
+    logger.debug('Creating ExternalSourceNotifier with dependencies');
+    
+    // Handle the case where dependencies are explicitly provided
+    if ('mediator' in configOrDependencies) {
+      const mediator = configOrDependencies['mediator'] as ContextMediator;
+      return new ExternalSourceNotifier(mediator);
+    }
+    
+    // Cannot create without a mediator
+    throw new Error('ExternalSourceNotifier requires a mediator dependency');
+  }
+  
   private logger = Logger.getInstance();
   
   /**
-   * Create a new external source notifier
+   * Private constructor to enforce using factory methods
    * 
    * @param mediator Context mediator for sending notifications
    */
-  constructor(private mediator: ContextMediator) {}
+  private constructor(private mediator: ContextMediator) {}
   
   /**
    * Notify other contexts that external sources were searched

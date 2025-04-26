@@ -91,12 +91,42 @@ export class ExternalSourceContextMessaging {
    * @param externalSourceContext The external source context to extend
    * @param mediator The context mediator for messaging
    */
-  constructor(
+  /**
+   * Create with dependencies constructor
+   *
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new ExternalSourceContextMessaging instance
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): ExternalSourceContextMessaging {
+    const logger = Logger.getInstance();
+    logger.debug('Creating ExternalSourceContextMessaging with dependencies');
+    
+    // Handle case where dependencies are explicitly provided
+    if ('externalSourceContext' in configOrDependencies && 'mediator' in configOrDependencies) {
+      const externalSourceContext = configOrDependencies['externalSourceContext'] as ExternalSourceContext;
+      const mediator = configOrDependencies['mediator'] as ContextMediator;
+      
+      return new ExternalSourceContextMessaging(externalSourceContext, mediator);
+    }
+    
+    // Cannot create without required dependencies
+    throw new Error('ExternalSourceContextMessaging requires externalSourceContext and mediator dependencies');
+  }
+
+  /**
+   * Private constructor to enforce using factory methods
+   *
+   * @param externalSourceContext The external source context to extend
+   * @param mediator The context mediator for messaging
+   */
+  private constructor(
     private externalSourceContext: ExternalSourceContext,
     mediator: ContextMediator,
   ) {
-    // Create notifier
-    this.notifier = new ExternalSourceNotifier(mediator);
+    // Create notifier using the standardized pattern
+    this.notifier = ExternalSourceNotifier.getInstance(mediator);
     
     // Register message handler using the Component Interface Standardization pattern
     // Create the handler using the singleton approach for consistency
