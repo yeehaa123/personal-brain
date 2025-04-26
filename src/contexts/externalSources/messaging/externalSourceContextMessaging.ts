@@ -6,7 +6,8 @@
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { ContextMediator } from '@/protocol/messaging';
+import type { ContextMediator, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
+import { MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
 import type { ExternalSourceContext } from '../externalSourceContext';
@@ -17,8 +18,70 @@ import { ExternalSourceNotifier } from './externalSourceNotifier';
 
 /**
  * Messaging-enabled extension of ExternalSourceContext
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 export class ExternalSourceContextMessaging {
+  /**
+   * Singleton instance of ExternalSourceContextMessaging
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: ExternalSourceContextMessaging | null = null;
+  
+  /**
+   * Get the singleton instance of ExternalSourceContextMessaging
+   * 
+   * @param externalSourceContext The external source context to extend
+   * @param mediator The context mediator for messaging
+   * @returns The shared ExternalSourceContextMessaging instance
+   */
+  public static getInstance(
+    externalSourceContext: ExternalSourceContext,
+    mediator: ContextMediator,
+  ): ExternalSourceContextMessaging {
+    if (!ExternalSourceContextMessaging.instance) {
+      ExternalSourceContextMessaging.instance = new ExternalSourceContextMessaging(
+        externalSourceContext,
+        mediator,
+      );
+      
+      const logger = Logger.getInstance();
+      logger.debug('ExternalSourceContextMessaging singleton instance created');
+    }
+    
+    return ExternalSourceContextMessaging.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   */
+  public static resetInstance(): void {
+    ExternalSourceContextMessaging.instance = null;
+    
+    const logger = Logger.getInstance();
+    logger.debug('ExternalSourceContextMessaging singleton instance reset');
+  }
+  
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @param externalSourceContext The external source context to extend
+   * @param mediator The context mediator for messaging
+   * @returns A new ExternalSourceContextMessaging instance
+   */
+  public static createFresh(
+    externalSourceContext: ExternalSourceContext,
+    mediator: ContextMediator,
+  ): ExternalSourceContextMessaging {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh ExternalSourceContextMessaging instance');
+    
+    return new ExternalSourceContextMessaging(externalSourceContext, mediator);
+  }
+  
   private logger = Logger.getInstance();
   private notifier: ExternalSourceNotifier;
   
@@ -35,9 +98,33 @@ export class ExternalSourceContextMessaging {
     // Create notifier
     this.notifier = new ExternalSourceNotifier(mediator);
     
-    // Register message handler
-    const handler = ExternalSourceMessageHandler.createHandler(externalSourceContext);
-    mediator.registerHandler(ContextId.EXTERNAL_SOURCES, handler);
+    // Register message handler using the Component Interface Standardization pattern
+    // Create the handler using the singleton approach for consistency
+    const handler = ExternalSourceMessageHandler.getInstance(externalSourceContext);
+    mediator.registerHandler(ContextId.EXTERNAL_SOURCES, async (message) => {
+      if (message.category === 'request' && 'dataType' in message) {
+        return handler.handleRequest(message as DataRequestMessage);
+      } else if (message.category === 'notification' && 'notificationType' in message) {
+        await handler.handleNotification(message as NotificationMessage);
+        
+        // Return acknowledgment for notifications
+        return MessageFactory.createAcknowledgment(
+          ContextId.EXTERNAL_SOURCES,
+          message.sourceContext || '*',
+          message.id || 'unknown',
+          'processed',
+        );
+      }
+      
+      // Default return value for unrecognized message format
+      return MessageFactory.createErrorResponse(
+        ContextId.EXTERNAL_SOURCES,
+        message.sourceContext || '*',
+        message.id || 'unknown',
+        'INVALID_MESSAGE_FORMAT',
+        'Message format not recognized',
+      );
+    });
     
     this.logger.debug('ExternalSourceContextMessaging initialized');
   }

@@ -8,7 +8,7 @@ import { mock } from 'bun:test';
 import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
-import { BaseSearchService, type BaseSearchOptions } from '@/services/common/baseSearchService';
+import { type BaseSearchOptions, BaseSearchService } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
 import { MockBaseRepository, type MockEntity } from '@test/__mocks__/services/BaseRepository';
 import { MockBaseEmbeddingService } from '@test/__mocks__/services/common/baseEmbeddingService';
@@ -56,7 +56,7 @@ class TestSearchService extends BaseSearchService<
    */
   public static createFresh(
     repository = MockBaseRepository.createFresh<MockEntity>(),
-    embeddingService = MockBaseEmbeddingService.createFresh() as unknown as BaseEmbeddingService
+    embeddingService = MockBaseEmbeddingService.createFresh() as unknown as BaseEmbeddingService,
   ): TestSearchService {
     return new TestSearchService(
       { entityName: 'test-entity' },
