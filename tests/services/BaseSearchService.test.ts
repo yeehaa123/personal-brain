@@ -7,11 +7,11 @@
 import { mock } from 'bun:test';
 import { beforeEach, describe, expect, test } from 'bun:test';
 
+import type { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
 import { BaseSearchService, type BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
-import { MockBaseEmbeddingService } from '@test/__mocks__/services/common/baseEmbeddingService';
 import { MockBaseRepository, type MockEntity } from '@test/__mocks__/services/BaseRepository';
-import type { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import { MockBaseEmbeddingService } from '@test/__mocks__/services/common/baseEmbeddingService';
 
 /**
  * Concrete implementation of BaseSearchService for testing
@@ -75,7 +75,7 @@ class TestSearchService extends BaseSearchService<
     const repo = dependencies['repository'] as MockBaseRepository<MockEntity> ||
       MockBaseRepository.createFresh<MockEntity>();
 
-    const embeddingService = (dependencies['embeddingService'] || MockBaseEmbeddingService.createFresh()) as unknown as BaseEmbeddingService
+    const embeddingService = (dependencies['embeddingService'] || MockBaseEmbeddingService.createFresh()) as unknown as BaseEmbeddingService;
 
     return new TestSearchService(
       { entityName: config['entityName'] as string || 'test-entity' },

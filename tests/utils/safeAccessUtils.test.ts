@@ -1,8 +1,10 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import {
   assertDefined,
   isDefined,
+  isNonEmptyString,
+  SafeAccessUtils,
   safeArrayAccess,
   safeIndexAccess,
   safeNestedAccess,
@@ -10,6 +12,31 @@ import {
 } from '@/utils/safeAccessUtils';
 
 describe('safeAccessUtils', () => {
+  beforeEach(() => {
+    // Reset the singleton for each test
+    SafeAccessUtils.resetInstance();
+  });
+
+  describe('SafeAccessUtils class', () => {
+    test('getInstance returns singleton instance', () => {
+      const instance1 = SafeAccessUtils.getInstance();
+      const instance2 = SafeAccessUtils.getInstance();
+      expect(instance1).toBe(instance2);
+    });
+    
+    test('resetInstance clears the singleton', () => {
+      const instance1 = SafeAccessUtils.getInstance();
+      SafeAccessUtils.resetInstance();
+      const instance2 = SafeAccessUtils.getInstance();
+      expect(instance1).not.toBe(instance2);
+    });
+    
+    test('createFresh creates new instance', () => {
+      const instance1 = SafeAccessUtils.getInstance();
+      const instance2 = SafeAccessUtils.createFresh();
+      expect(instance1).not.toBe(instance2);
+    });
+  });
   describe('safeArrayAccess', () => {
     test('should return array element when index is valid', () => {
       const array = [1, 2, 3];
@@ -127,6 +154,26 @@ describe('safeAccessUtils', () => {
         // TypeScript should recognize value as undefined here
         expect(value).toBeUndefined();
       }
+    });
+  });
+  
+  describe('isNonEmptyString', () => {
+    test('should return true for non-empty strings', () => {
+      expect(isNonEmptyString('value')).toBe(true);
+      expect(isNonEmptyString(' value with spaces ')).toBe(true);
+    });
+    
+    test('should return false for empty strings', () => {
+      expect(isNonEmptyString('')).toBe(false);
+      expect(isNonEmptyString('   ')).toBe(false);
+    });
+    
+    test('should return false for non-string values', () => {
+      expect(isNonEmptyString(123)).toBe(false);
+      expect(isNonEmptyString(null)).toBe(false);
+      expect(isNonEmptyString(undefined)).toBe(false);
+      expect(isNonEmptyString({})).toBe(false);
+      expect(isNonEmptyString([])).toBe(false);
     });
   });
 });
