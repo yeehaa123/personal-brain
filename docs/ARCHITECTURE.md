@@ -9,10 +9,11 @@ Personal Brain is built with a modular, service-oriented architecture that follo
 ### Key Architectural Patterns
 
 1. **Model-Context-Protocol (MCP)** - Core architecture for AI integration
-2. **Facade Pattern** - Context classes as facades over specialized services
-3. **Repository Pattern** - Data access abstraction
-4. **Service Layer** - Focused business logic components
-5. **Tiered Memory** - Multi-level conversation history management
+2. **Component Interface Standardization** - Consistent factory methods and dependency injection
+3. **Facade Pattern** - Context classes as facades over specialized services
+4. **Repository Pattern** - Data access abstraction
+5. **Service Layer** - Focused business logic components
+6. **Tiered Memory** - Multi-level conversation history management
 
 ## Core Components
 
@@ -59,6 +60,58 @@ Services provide focused implementations of specific functionality:
 - **Embedding Services** - Vector embeddings for semantic search
 - **Search Services** - Searching across various content types
 - **Tag Services** - Generation and management of tags
+
+## Component Interface Standardization
+
+A core architectural pattern implemented across all components in the system:
+
+### Key Features
+- **Consistent Factory Methods**: All components implement `getInstance()`, `resetInstance()`, `createFresh()`, and `createWithDependencies()`
+- **Private Constructors**: Forces use of factory methods for better dependency management
+- **Explicit Initialization**: Components provide `initialize()` and `isInitialized()` methods
+- **Dependency Injection**: Dependencies are passed through constructor or factory methods
+- **Testability**: Methods allow creating isolated instances for testing
+
+```typescript
+export class ExampleComponent {
+  // Singleton instance
+  private static instance: ExampleComponent | null = null;
+  
+  // Private constructor enforces factory method usage
+  private constructor(options?: Options) {
+    // Implementation with dependencies
+  }
+  
+  // Singleton access
+  public static getInstance(options?: Options): ExampleComponent {
+    if (!ExampleComponent.instance) {
+      ExampleComponent.instance = new ExampleComponent(options);
+      // Auto-initialize when applicable
+    }
+    return ExampleComponent.instance;
+  }
+  
+  // Reset for testing
+  public static resetInstance(): void {
+    ExampleComponent.instance = null;
+  }
+  
+  // Create isolated instance
+  public static createFresh(options?: Options): ExampleComponent {
+    return new ExampleComponent(options);
+  }
+  
+  // Create with explicit dependencies
+  public static createWithDependencies(
+    dependencies: Record<string, unknown>
+  ): ExampleComponent {
+    // Handle dependency resolution
+    return new ExampleComponent({ ...dependencies });
+  }
+}
+```
+
+This pattern is implemented across all contexts, services, managers, and utility classes in the codebase.
 
 ## Interface Layer
 
