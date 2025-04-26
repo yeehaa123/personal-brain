@@ -10,6 +10,7 @@ import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
 import { BaseRepository } from '@/services/BaseRepository';
+import type { Logger } from '@/utils/logger';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
@@ -45,7 +46,7 @@ export class MockBaseRepository<
   constructor() {
     super();
     // Override logger with MockLogger
-    this.logger = MockLogger.createFresh({ silent: true }) as any;
+    this.logger = MockLogger.createFresh({ silent: true }) as unknown as Logger;
   }
   
   /**
@@ -166,7 +167,7 @@ export class MockBaseRepository<
   override insert = mock(async (entity: TEntity): Promise<TEntity> => {
     // Make sure we have an ID
     if (!entity.id) {
-      (entity as any).id = `mock-${nanoid(6)}`;
+      (entity as unknown as Record<string, string>)['id'] = `mock-${nanoid(6)}`;
     }
     
     // Add to our collection
