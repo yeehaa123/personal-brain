@@ -4,13 +4,19 @@
  * This module provides message handling capabilities for the ExternalSourceContext,
  * allowing it to process request and notification messages from the
  * cross-context messaging system.
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
+ * - createWithDependencies(): Creates an instance with explicit dependencies
+ * - createHandler(): Creates a message handler function (for backward compatibility)
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { 
   DataRequestType, 
-  MessageFactory, 
-  NotificationType, 
+  MessageFactory,
 } from '@/protocol/messaging';
 import type { 
   ContextMessage,
@@ -26,10 +32,118 @@ import type { ExternalSourceContext } from '../externalSourceContext';
  * Handler for external source context messages
  */
 export class ExternalSourceMessageHandler {
+  /**
+   * Singleton instance of ExternalSourceMessageHandler
+   * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
+   */
+  private static instance: ExternalSourceMessageHandler | null = null;
+  
+  /**
+   * Logger instance for this class
+   */
   private logger = Logger.getInstance();
+
+  /**
+   * Private constructor to enforce using factory methods
+   * 
+   * @param externalSourceContext The external source context to handle messages for
+   */
+  private constructor(private externalSourceContext: ExternalSourceContext) {}
+  
+  /**
+   * Get the singleton instance of the handler
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * 
+   * @param externalSourceContext The external source context to handle messages for
+   * @returns The shared ExternalSourceMessageHandler instance
+   */
+  public static getInstance(externalSourceContext?: ExternalSourceContext): ExternalSourceMessageHandler {
+    if (!ExternalSourceMessageHandler.instance && externalSourceContext) {
+      ExternalSourceMessageHandler.instance = new ExternalSourceMessageHandler(externalSourceContext);
+      
+      const logger = Logger.getInstance();
+      logger.debug('ExternalSourceMessageHandler singleton instance created');
+    } else if (!ExternalSourceMessageHandler.instance) {
+      throw new Error('ExternalSourceMessageHandler.getInstance() called without required externalSourceContext');
+    } else if (externalSourceContext) {
+      // Log a warning if trying to get instance with different dependencies
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with context but instance already exists. Context ignored.');
+    }
+    
+    return ExternalSourceMessageHandler.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Primarily used for testing to ensure a clean state.
+   */
+  public static resetInstance(): void {
+    try {
+      // No specific cleanup needed for this handler
+      if (ExternalSourceMessageHandler.instance) {
+        // Resource cleanup if needed
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during ExternalSourceMessageHandler instance reset:', error);
+    } finally {
+      ExternalSourceMessageHandler.instance = null;
+      
+      const logger = Logger.getInstance();
+      logger.debug('ExternalSourceMessageHandler singleton instance reset');
+    }
+  }
+  
+  /**
+   * Create a fresh handler instance
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Creates a new instance without affecting the singleton instance.
+   * Primarily used for testing.
+   * 
+   * @param externalSourceContext The external source context to handle messages for
+   * @returns A new ExternalSourceMessageHandler instance
+   */
+  public static createFresh(externalSourceContext: ExternalSourceContext): ExternalSourceMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh ExternalSourceMessageHandler instance');
+    
+    return new ExternalSourceMessageHandler(externalSourceContext);
+  }
+  
+  /**
+   * Create a new handler instance with explicit dependencies
+   * 
+   * Part of the Component Interface Standardization pattern.
+   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * 
+   * @param configOrDependencies Configuration or explicit dependencies
+   * @returns A new ExternalSourceMessageHandler instance with the provided dependencies
+   */
+  public static createWithDependencies(
+    configOrDependencies: Record<string, unknown> = {},
+  ): ExternalSourceMessageHandler {
+    const logger = Logger.getInstance();
+    logger.debug('Creating ExternalSourceMessageHandler with dependencies');
+    
+    // Handle the case where dependencies are explicitly provided
+    if ('externalSourceContext' in configOrDependencies) {
+      const externalSourceContext = configOrDependencies['externalSourceContext'] as ExternalSourceContext;
+      return new ExternalSourceMessageHandler(externalSourceContext);
+    }
+    
+    // Cannot create without an external source context
+    throw new Error('ExternalSourceMessageHandler requires an externalSourceContext dependency');
+  }
   
   /**
    * Create a message handler for the external source context
+   * 
+   * This is the original functionality, maintained for backward compatibility.
    * 
    * @param externalSourceContext The external source context to handle messages for
    * @returns Message handler function
@@ -56,7 +170,7 @@ export class ExternalSourceMessageHandler {
         );
       }
       
-      // Return error for unrecognized message format
+      // Default return value for unrecognized message format
       return MessageFactory.createErrorResponse(
         ContextId.EXTERNAL_SOURCES,
         message.sourceContext || '*',
@@ -68,25 +182,22 @@ export class ExternalSourceMessageHandler {
   }
   
   /**
-   * Private constructor to enforce using createHandler
-   * 
-   * @param externalSourceContext The external source context to handle messages for
-   */
-  private constructor(private externalSourceContext: ExternalSourceContext) {}
-  
-  /**
    * Handle data request messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param request Data request message
    * @returns Response message
    */
-  private async handleRequest(request: DataRequestMessage): Promise<DataResponseMessage> {
+  public async handleRequest(request: DataRequestMessage): Promise<DataResponseMessage> {
     const dataType = request.dataType;
     
     switch (dataType) {
     case DataRequestType.EXTERNAL_SOURCES:
-      return this.handleExternalSourcesSearch(request);
-        
+      return this.handleExternalSearch(request);
+      
+    case 'externalSources.status':
+      return this.handleExternalSourceStatus(request);
+      
     default:
       return MessageFactory.createErrorResponse(
         ContextId.EXTERNAL_SOURCES,
@@ -103,43 +214,42 @@ export class ExternalSourceMessageHandler {
    * 
    * @param notification Notification message
    */
-  private async handleNotification(notification: NotificationMessage): Promise<void> {
+  public async handleNotification(notification: NotificationMessage): Promise<void> {
     const notificationType = notification.notificationType;
     
     switch (notificationType) {
-    case NotificationType.CONVERSATION_STARTED:
-      this.logger.debug('External sources context received conversation start notification');
-      // Could prepare external source access for the conversation
+    case 'query.submitted':
+      this.logger.debug('External source context received query notification');
+      // Could trigger a search in external sources
       break;
-        
+      
     default:
-      this.logger.debug(`External sources context received unhandled notification type: ${notificationType}`);
+      this.logger.debug(`External source context received unhandled notification type: ${notificationType}`);
       break;
     }
   }
   
   /**
-   * Handle external sources search request
+   * Handle external search request
    * 
-   * @param request Data request message
+   * @param request Data request message for external search
    * @returns Response message
    */
-  private async handleExternalSourcesSearch(request: DataRequestMessage): Promise<DataResponseMessage> {
+  private async handleExternalSearch(request: DataRequestMessage): Promise<DataResponseMessage> {
     try {
-      const query = request.parameters?.['query'] as string;
+      const { query, limit } = request.parameters as { query?: string; limit?: number } || { query: '', limit: 5 };
       
       if (!query) {
         return MessageFactory.createErrorResponse(
           ContextId.EXTERNAL_SOURCES,
           request.sourceContext,
           request.id,
-          'MISSING_PARAMETER',
-          'Query parameter is required for external sources search',
+          'MISSING_QUERY',
+          'Search query is required',
         );
       }
       
-      // Use the search method instead of the non-existent searchExternalSources
-      const results = await this.externalSourceContext.search(query);
+      const results = await this.externalSourceContext.search(query, { limit: limit || 5 });
       
       return MessageFactory.createSuccessResponse(
         ContextId.EXTERNAL_SOURCES,
@@ -154,6 +264,35 @@ export class ExternalSourceMessageHandler {
         request.id,
         'SEARCH_ERROR',
         `Error searching external sources: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  
+  /**
+   * Handle external source status request
+   * 
+   * @param request Data request message for external source status
+   * @returns Response message
+   */
+  private async handleExternalSourceStatus(request: DataRequestMessage): Promise<DataResponseMessage> {
+    try {
+      // Check availability of all sources
+      const availability = await this.externalSourceContext.checkSourcesAvailability();
+      const sources = Object.entries(availability).map(([name, isAvailable]) => ({ name, isAvailable }));
+      
+      return MessageFactory.createSuccessResponse(
+        ContextId.EXTERNAL_SOURCES,
+        request.sourceContext,
+        request.id,
+        { sources },
+      );
+    } catch (error) {
+      return MessageFactory.createErrorResponse(
+        ContextId.EXTERNAL_SOURCES,
+        request.sourceContext,
+        request.id,
+        'STATUS_ERROR',
+        `Error getting external source status: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
