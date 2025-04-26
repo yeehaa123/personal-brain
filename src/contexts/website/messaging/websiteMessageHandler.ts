@@ -150,11 +150,12 @@ export class WebsiteMessageHandler {
   
   /**
    * Handle data request messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param request Data request message
    * @returns Response message
    */
-  private async handleRequest(request: DataRequestMessage) {
+  public async handleRequest(request: DataRequestMessage) {
     const dataType = request.dataType as DataRequestType;
     
     switch (dataType) {
@@ -174,10 +175,11 @@ export class WebsiteMessageHandler {
   
   /**
    * Handle notification messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param notification Notification message
    */
-  private async handleNotification(notification: NotificationMessage) {
+  public async handleNotification(notification: NotificationMessage) {
     const notificationType = notification.notificationType as NotificationType;
     
     switch (notificationType) {

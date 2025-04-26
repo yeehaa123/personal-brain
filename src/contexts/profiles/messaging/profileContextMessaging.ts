@@ -7,10 +7,10 @@
 
 import type { Profile } from '@/models/profile';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { ContextMediator } from '@/protocol/messaging';
+import { type ContextMediator, MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { NoteContext } from '../../notes/noteContext';
+// Removed direct import of NoteContext
 import type { ProfileContext } from '../profileContext';
 import type { NoteWithSimilarity } from '../profileTypes';
 
@@ -37,9 +37,32 @@ export class ProfileContextMessaging {
     // Create notifier
     this.notifier = new ProfileNotifier(mediator);
     
-    // Register message handler
-    const handler = ProfileMessageHandler.createHandler(profileContext);
-    mediator.registerHandler(ContextId.PROFILE, handler);
+    // Register message handler using the Component Interface Standardization pattern
+    // Create the handler using the singleton approach for consistency
+    const handler = ProfileMessageHandler.getInstance(profileContext);
+    mediator.registerHandler(ContextId.PROFILE, async (message) => {
+      if (message.category === 'request' && 'dataType' in message) {
+        return handler.handleRequest(message);
+      } else if (message.category === 'notification' && 'notificationType' in message) {
+        await handler.handleNotification(message);
+        // Return acknowledgment for notifications
+        return MessageFactory.createAcknowledgment(
+          ContextId.PROFILE,
+          message.sourceContext,
+          message.id,
+          'processed',
+        );
+      }
+      
+      // Default return value for unrecognized message format
+      return MessageFactory.createErrorResponse(
+        ContextId.PROFILE,
+        message.sourceContext,
+        message.id,
+        'INVALID_MESSAGE_FORMAT',
+        'Message format not recognized',
+      );
+    });
     
     this.logger.debug('ProfileContextMessaging initialized');
   }
@@ -93,22 +116,27 @@ export class ProfileContextMessaging {
   // These methods should be implemented as adapters to the available methods
 
   /**
-   * Find notes related to the profile using tags or embeddings
-   * This proxies to the findRelatedNotes method if noteContext is available
+   * Find notes related to the profile using tags or embeddings via messaging
    * 
-   * @param noteContext The NoteContext for searching notes
    * @param limit Maximum number of results to return
    * @returns Array of notes with similarity information
    */
-  async findRelatedNotes(
-    noteContext: NoteContext, 
-    limit = 5,
-  ): Promise<NoteWithSimilarity[]> {
-    if (typeof this.profileContext.findRelatedNotes === 'function') {
-      return this.profileContext.findRelatedNotes(noteContext, limit);
+  async findRelatedNotes(limit = 5): Promise<NoteWithSimilarity[]> {
+    // Get the profile search service from the context
+    const searchService = this.profileContext.getSearchService();
+    
+    if (!searchService) {
+      this.logger.warn('Cannot find related notes: No search service available');
+      return [];
     }
     
-    this.logger.warn('findRelatedNotes not available on ProfileContext');
-    return [];
+    // Use the search service's implementation which now uses messaging
+    const notes = await searchService.findRelatedNotes(limit);
+    
+    // Ensure proper type casting
+    return notes.map(note => ({
+      ...note,
+      embedding: note.embedding || null, // Ensure embedding is null, not undefined
+    }));
   }
 }

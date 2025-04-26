@@ -228,6 +228,60 @@ export class MockNoteContext extends MockBaseContext<
     // For mock purposes, we'll just return an empty array
     return [];
   }
+  
+  /**
+   * Search notes using text to generate embedding and find similar notes
+   * @param text The text to generate an embedding for
+   * @param limit Maximum number of results to return
+   * @param tags Optional tags to filter by
+   * @returns Array of similar notes with similarity scores
+   */
+  async searchWithEmbedding(_text: string, limit = 10, tags?: string[]): Promise<(Note & { similarity?: number })[]> {
+    // For mock purposes, we'll just return some sample notes with similarity scores
+    const notes: (Note & { similarity?: number })[] = [
+      {
+        id: 'mock-note-1',
+        title: 'Mock Note 1',
+        content: 'This is a mock note that matches the search criteria',
+        tags: ['test', 'mock'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        source: 'import',
+        embedding: [0.1, 0.2, 0.3],
+        confidence: null,
+        conversationMetadata: null,
+        verified: null,
+        similarity: 0.95,
+      },
+      {
+        id: 'mock-note-2',
+        title: 'Mock Note 2',
+        content: 'This is another mock note that matches the search criteria',
+        tags: ['example', 'mock'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        source: 'import',
+        embedding: [0.1, 0.2, 0.3],
+        confidence: null,
+        conversationMetadata: null,
+        verified: null,
+        similarity: 0.85,
+      },
+    ];
+    
+    // Filter by tags if needed
+    let results = notes;
+    if (tags && tags.length > 0) {
+      results = notes.filter(note => {
+        if (!note.tags || note.tags.length === 0) {
+          return false;
+        }
+        return note.tags.some(tag => tags.includes(tag));
+      });
+    }
+    
+    return results.slice(0, limit);
+  }
 
   /**
    * Instance method that delegates to static createWithDependencies

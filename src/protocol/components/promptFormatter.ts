@@ -73,7 +73,7 @@ export class PromptFormatter {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {}
+    _dependencies: Record<string, unknown> = {},
   ): PromptFormatter {
     const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
     logger.debug('Creating PromptFormatter with explicit dependencies');

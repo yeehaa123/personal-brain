@@ -266,7 +266,7 @@ describe('ProfileContext', () => {
   test('setNoteContext and getNoteContext should work correctly', () => {
     const mockNoteContext = { 
       getStatus: () => ({ ready: true }),
-      searchNotesWithEmbedding: mock(() => Promise.resolve([])),
+      searchWithEmbedding: mock(() => Promise.resolve([])),
       searchNotes: mock(() => Promise.resolve([])),
     };
     

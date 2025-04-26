@@ -8,7 +8,7 @@
 import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
-import type { NoteContext, NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
+import type { NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
 import type { ProfileSearchService } from '@/services/profiles/profileSearchService';
 
 /**
@@ -47,11 +47,11 @@ export class MockProfileSearchService implements Partial<ProfileSearchService> {
   }
   
   // Mock methods with default implementations
-  findRelatedNotes = mock((_noteContext: NoteContext, _limit: number = 5): Promise<NoteWithSimilarity[]> => {
+  findRelatedNotes = mock((_limit: number = 5): Promise<NoteWithSimilarity[]> => {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
   });
   
-  findNotesWithSimilarTags = mock((_noteContext: NoteContext, _tags: string[], _limit: number = 5): Promise<NoteWithSimilarity[]> => {
+  findNotesWithSimilarTags = mock((_tags: string[], _limit: number = 5): Promise<NoteWithSimilarity[]> => {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
   });
   

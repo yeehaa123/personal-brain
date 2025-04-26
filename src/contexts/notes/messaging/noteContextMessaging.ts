@@ -7,7 +7,7 @@
 
 import type { Note } from '@/models/note';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { ContextMediator } from '@/protocol/messaging';
+import { type ContextMediator, MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
 import type { NoteContext } from '../noteContext';
@@ -35,11 +35,32 @@ export class NoteContextMessaging {
     // Create notifier
     this.notifier = new NoteNotifier(mediator);
     
-    // Register message handler
-    // Continue using createHandler for now to maintain compatibility
-    // We can use getInstance() or createFresh() for more complex scenarios
-    const handler = NoteMessageHandler.createHandler(noteContext);
-    mediator.registerHandler(ContextId.NOTES, handler);
+    // Register message handler using the Component Interface Standardization pattern
+    // Create the handler using the singleton approach for consistency
+    const handler = NoteMessageHandler.getInstance(noteContext);
+    mediator.registerHandler(ContextId.NOTES, async (message) => {
+      if (message.category === 'request' && 'dataType' in message) {
+        return handler.handleRequest(message);
+      } else if (message.category === 'notification' && 'notificationType' in message) {
+        await handler.handleNotification(message);
+        // Return acknowledgment for notifications
+        return MessageFactory.createAcknowledgment(
+          ContextId.NOTES,
+          message.sourceContext,
+          message.id,
+          'processed',
+        );
+      }
+      
+      // Default return value for unrecognized message format
+      return MessageFactory.createErrorResponse(
+        ContextId.NOTES,
+        message.sourceContext,
+        message.id,
+        'INVALID_MESSAGE_FORMAT',
+        'Message format not recognized',
+      );
+    });
     
     this.logger.debug('NoteContextMessaging initialized');
   }
@@ -158,8 +179,8 @@ export class NoteContextMessaging {
   //   return this.noteContext.getAllNotes(limit);
   // }
   
-  searchNotesWithEmbedding(embedding: number[]): Promise<Note[]> {
-    return this.noteContext.searchNotesWithEmbedding(embedding);
+  searchWithEmbedding(text: string, limit?: number, tags?: string[]): Promise<Array<Note & { score?: number }>> {
+    return this.noteContext.searchWithEmbedding(text, limit, tags);
   }
   
   generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {

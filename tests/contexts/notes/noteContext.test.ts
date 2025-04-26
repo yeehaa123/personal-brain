@@ -1,169 +1,111 @@
 /**
  * Unit tests for NoteContext that extends BaseContext
  * 
- * These tests only validate the interface and API of the NoteContext,
- * not the actual storage functionality.
+ * These tests validate the interface and API of the NoteContext using standardized mocks.
  */
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import { NoteContext } from '@/contexts';
 import { BaseContext } from '@/contexts/baseContext';
-import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
-import type { NoteRepository } from '@/services/notes/noteRepository';
-import type { NoteSearchService } from '@/services/notes/noteSearchService';
+import { MockNoteStorageAdapter } from '@test/__mocks__/contexts/noteStorageAdapter';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
-
-// Create mock dependencies
-const mockNoteRepository = {
-  getNoteById: mock(() => Promise.resolve(null)),
-  getRecentNotes: mock(() => Promise.resolve([])),
-  searchNotesByKeywords: mock(() => Promise.resolve([])),
-};
-
-const mockNoteEmbeddingService = {
-  findRelatedNotes: mock(() => Promise.resolve([])),
-  createNoteChunks: mock(() => Promise.resolve(['chunk-1', 'chunk-2'])),
-};
-
-const mockNoteSearchService = {
-  searchNotes: mock(() => Promise.resolve([])),
-  findRelated: mock(() => Promise.resolve([])),
-};
+import { createMockNote } from '@test/__mocks__/models/note';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
+import { MockNoteEmbeddingService } from '@test/__mocks__/services/notes/noteEmbeddingService';
+import { MockNoteSearchService } from '@test/__mocks__/services/notes/noteSearchService';
 
 describe('NoteContext', () => {
-  let noteContext: NoteContext;
-  
+  // Reset all singletons before each test to ensure isolation
   beforeEach(() => {
-    // Reset singleton
     NoteContext.resetInstance();
-    
-    // Create a new context with direct dependency injection
-    noteContext = new NoteContext(
-      { 
-        name: 'TestNoteBrain',
-        version: '1.0.0-test',
-        apiKey: 'mock-api-key',
-      },
-      mockNoteRepository as unknown as NoteRepository,
-      mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-      mockNoteSearchService as unknown as NoteSearchService,
-    );
+    MockNoteRepository.resetInstance();
+    MockNoteEmbeddingService.resetInstance();
+    MockNoteSearchService.resetInstance();
+    MockNoteStorageAdapter.resetInstance();
   });
   
   afterEach(() => {
     NoteContext.resetInstance();
+    MockNoteRepository.resetInstance();
+    MockNoteEmbeddingService.resetInstance();
+    MockNoteSearchService.resetInstance();
+    MockNoteStorageAdapter.resetInstance();
   });
   
   test('should extend BaseContext', () => {
+    // No need to create mock instances for this test
+    
+    // Create context with mocked dependencies
+    const noteContext = NoteContext.createFresh({
+      name: 'TestNoteBrain',
+      version: '1.0.0-test',
+      apiKey: 'mock-api-key',
+    });
+    
     expect(noteContext).toBeInstanceOf(BaseContext);
   });
   
   test('getInstance should return a singleton instance', () => {
-    // We need to mock createWithDependencies to ensure it returns our mocked context
-    const origCreateWithDependencies = NoteContext.createWithDependencies;
-    NoteContext.createWithDependencies = mock(() => {
-      return new NoteContext(
-        { apiKey: 'mock-api-key' },
-        mockNoteRepository as unknown as NoteRepository,
-        mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-        mockNoteSearchService as unknown as NoteSearchService,
-      );
-    });
+    const instance1 = NoteContext.getInstance();
+    const instance2 = NoteContext.getInstance();
     
-    try {
-      const instance1 = NoteContext.getInstance();
-      const instance2 = NoteContext.getInstance();
-      
-      expect(instance1).toBe(instance2);
-    } finally {
-      // Restore original implementation
-      NoteContext.createWithDependencies = origCreateWithDependencies;
-    }
+    expect(instance1).toBe(instance2);
   });
   
   test('createFresh should return a new instance', () => {
-    // We need to mock createWithDependencies to ensure it returns our mocked context
-    const origCreateWithDependencies = NoteContext.createWithDependencies;
-    NoteContext.createWithDependencies = mock(() => {
-      return new NoteContext(
-        { apiKey: 'mock-api-key' },
-        mockNoteRepository as unknown as NoteRepository,
-        mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-        mockNoteSearchService as unknown as NoteSearchService,
-      );
-    });
+    const instance1 = NoteContext.getInstance();
+    const instance2 = NoteContext.createFresh();
     
-    try {
-      const instance1 = NoteContext.getInstance();
-      const instance2 = NoteContext.createFresh();
-      
-      expect(instance1).not.toBe(instance2);
-    } finally {
-      // Restore original implementation
-      NoteContext.createWithDependencies = origCreateWithDependencies;
-    }
+    expect(instance1).not.toBe(instance2);
   });
   
   test('resetInstance should clear the singleton instance', () => {
-    // We need to mock createWithDependencies to ensure it returns our mocked context
-    const origCreateWithDependencies = NoteContext.createWithDependencies;
-    NoteContext.createWithDependencies = mock(() => {
-      return new NoteContext(
-        { apiKey: 'mock-api-key' },
-        mockNoteRepository as unknown as NoteRepository,
-        mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-        mockNoteSearchService as unknown as NoteSearchService,
-      );
-    });
+    const instance1 = NoteContext.getInstance();
+    NoteContext.resetInstance();
+    const instance2 = NoteContext.getInstance();
     
-    try {
-      const instance1 = NoteContext.getInstance();
-      NoteContext.resetInstance();
-      const instance2 = NoteContext.getInstance();
-      
-      expect(instance1).not.toBe(instance2);
-    } finally {
-      // Restore original implementation
-      NoteContext.createWithDependencies = origCreateWithDependencies;
-    }
+    expect(instance1).not.toBe(instance2);
   });
   
   test('getContextName should return the configured name or default', () => {
-    expect(noteContext.getContextName()).toBe('TestNoteBrain');
+    // Test with custom name
+    const customContext = NoteContext.createFresh({
+      name: 'TestNoteBrain',
+    });
+    expect(customContext.getContextName()).toBe('TestNoteBrain');
     
-    // Create new context with default name
-    const defaultContext = new NoteContext(
-      {},
-      mockNoteRepository as unknown as NoteRepository,
-      mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-      mockNoteSearchService as unknown as NoteSearchService,
-    );
+    // Test with default name
+    const defaultContext = NoteContext.createFresh({});
     expect(defaultContext.getContextName()).toBe('NoteBrain');
   });
   
   test('getContextVersion should return the configured version or default', () => {
-    expect(noteContext.getContextVersion()).toBe('1.0.0-test');
+    // Test with custom version
+    const customContext = NoteContext.createFresh({
+      version: '1.0.0-test',
+    });
+    expect(customContext.getContextVersion()).toBe('1.0.0-test');
     
-    // Create new context with default version
-    const defaultContext = new NoteContext(
-      {},
-      mockNoteRepository as unknown as NoteRepository,
-      mockNoteEmbeddingService as unknown as NoteEmbeddingService,
-      mockNoteSearchService as unknown as NoteSearchService,
-    );
+    // Test with default version
+    const defaultContext = NoteContext.createFresh({});
     expect(defaultContext.getContextVersion()).toBe('1.0.0');
   });
   
   test('initialize should set readyState to true', async () => {
-    const result = await noteContext.initialize();
+    const context = NoteContext.createFresh();
+    const result = await context.initialize();
     
     expect(result).toBe(true);
-    expect(noteContext.isReady()).toBe(true);
+    expect(context.isReady()).toBe(true);
   });
   
   test('getStatus should return correct status object', () => {
-    const status = noteContext.getStatus();
+    const context = NoteContext.createFresh({
+      name: 'TestNoteBrain',
+      version: '1.0.0-test',
+    });
+    
+    const status = context.getStatus();
     
     expect(status.name).toBe('TestNoteBrain');
     expect(status.version).toBe('1.0.0-test');
@@ -175,8 +117,9 @@ describe('NoteContext', () => {
   test('registerOnServer registers resources and tools', () => {
     // Create a standardized mock server
     const mockServer = createMockMcpServer('NoteBrainTest', '1.0.0');
+    const context = NoteContext.createFresh();
     
-    const result = noteContext.registerOnServer(mockServer);
+    const result = context.registerOnServer(mockServer);
     
     expect(result).toBe(true);
     
@@ -184,9 +127,9 @@ describe('NoteContext', () => {
     const registeredResources = mockServer.getRegisteredResources();
     const registeredTools = mockServer.getRegisteredTools();
     
-    // NoteContext should register 4 resources and 3 tools
+    // NoteContext should register 4 resources and multiple tools
     expect(registeredResources.length).toBe(4);
-    expect(registeredTools.length).toBe(3);
+    expect(registeredTools.length).toBeGreaterThanOrEqual(5); // At least 5 tools should be registered
     
     // Check that specific resource and tool paths are registered
     expect(registeredResources.some(r => r.path === ':id')).toBe(true);
@@ -194,14 +137,59 @@ describe('NoteContext', () => {
     expect(registeredResources.some(r => r.path === 'recent')).toBe(true);
     expect(registeredResources.some(r => r.path === 'related/:id')).toBe(true);
     
+    // Verify essential tools are present
     expect(registeredTools.some(t => t.path === 'create_note')).toBe(true);
     expect(registeredTools.some(t => t.path === 'generate_embeddings')).toBe(true);
     expect(registeredTools.some(t => t.path === 'search_with_embedding')).toBe(true);
+    expect(registeredTools.some(t => t.path === 'search_notes')).toBe(true);
+    expect(registeredTools.some(t => t.path === 'get_note')).toBe(true);
   });
   
   test('getStorage should return storage adapter', () => {
-    const storage = noteContext.getStorage();
+    const context = NoteContext.createFresh();
+    const storage = context.getStorage();
     
     expect(storage).toBeDefined();
+  });
+  
+  test('searchWithEmbedding should work with tags filtering', async () => {
+    // Create standardized mock embedding service with controlled response
+    const embeddingService = MockNoteEmbeddingService.createFresh();
+    
+    // Setup mock implementation for searchSimilarNotes
+    embeddingService.searchSimilarNotes = async () => {
+      return [
+        { ...createMockNote('note-1', 'Test Note 1', ['test']), score: 0.95 },
+        { ...createMockNote('note-2', 'Test Note 2', ['example']), score: 0.85 },
+        { ...createMockNote('note-3', 'Test Note 3', ['test', 'example']), score: 0.75 },
+      ];
+    };
+    
+    // Create standardized mock repository
+    const repository = MockNoteRepository.createFresh();
+    
+    // Create standardized mock search service
+    const searchService = MockNoteSearchService.createFresh();
+    
+    // Create the context with our mock dependencies
+    const context = NoteContext.createWithDependencies(
+      { name: 'TestNoteBrain' },
+      { 
+        repository,
+        embeddingService,
+        searchService,
+      },
+    );
+    
+    // Call the method under test with tag filtering
+    const results = await context.searchWithEmbedding('test query', 5, ['test']);
+    
+    // Verify the results
+    expect(results).toBeDefined();
+    expect(Array.isArray(results)).toBe(true);
+    expect(results.length).toBe(2); // Should only include notes with 'test' tag
+    expect(results[0].id).toBe('note-1');
+    expect(results[1].id).toBe('note-3');
+    expect(results.every(note => note.tags?.includes('test'))).toBe(true);
   });
 });

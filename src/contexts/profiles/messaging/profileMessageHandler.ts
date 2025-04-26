@@ -170,11 +170,12 @@ export class ProfileMessageHandler {
   
   /**
    * Handle data request messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param request Data request message
    * @returns Response message
    */
-  private async handleRequest(request: DataRequestMessage) {
+  public async handleRequest(request: DataRequestMessage) {
     const dataType = request.dataType;
     
     switch (dataType) {
@@ -197,7 +198,7 @@ export class ProfileMessageHandler {
    * 
    * @param notification Notification message
    */
-  private async handleNotification(notification: NotificationMessage) {
+  public async handleNotification(notification: NotificationMessage) {
     const notificationType = notification.notificationType;
     
     switch (notificationType) {

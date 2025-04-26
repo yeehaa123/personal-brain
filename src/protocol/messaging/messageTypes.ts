@@ -100,6 +100,8 @@ export enum DataRequestType {
   NOTES_SEARCH = 'notes.search',
   /** Request for a specific note by ID */
   NOTE_BY_ID = 'notes.byId',
+  /** Request for semantic search of notes using text */
+  NOTES_SEMANTIC_SEARCH = 'notes.semanticSearch',
   /** Request for profile data */
   PROFILE_DATA = 'profile.data',
   /** Request for conversation history */

@@ -9,7 +9,8 @@ import { mock } from 'bun:test';
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import { nanoid } from 'nanoid';
 
-import type { BaseRepository as IBaseRepository } from '@/services/BaseRepository';
+import { BaseRepository } from '@/services/BaseRepository';
+import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
  * Generic entity type for testing
@@ -32,11 +33,20 @@ export interface MockEntity {
  */
 export class MockBaseRepository<
   TEntity extends MockEntity = MockEntity
-> implements Partial<IBaseRepository<SQLiteTable, TEntity>> {
+> extends BaseRepository<SQLiteTable, TEntity> {
   private static instance: MockBaseRepository | null = null;
   
   // Mock storage
-  private entities: TEntity[] = [];
+  public entities: TEntity[] = [];
+  
+  /**
+   * Constructor
+   */
+  constructor() {
+    super();
+    // Override logger with MockLogger
+    this.logger = MockLogger.createFresh({ silent: true }) as any;
+  }
   
   /**
    * Get singleton instance
@@ -60,14 +70,14 @@ export class MockBaseRepository<
    * @param initialEntities Initial entities to populate the repository with
    */
   public static createFresh<T extends MockEntity = MockEntity>(
-    initialEntities: T[] = []
+    initialEntities: T[] = [],
   ): MockBaseRepository<T> {
     const repo = new MockBaseRepository<T>();
     repo.entities = [...initialEntities];
     return repo;
   }
   
-  // Mock properties
+  // Mock properties required by BaseRepository
   protected get table() {
     return { id: { name: 'id' } } as unknown as SQLiteTable;
   }
@@ -80,16 +90,26 @@ export class MockBaseRepository<
     return { name: 'id' } as unknown as SQLiteColumn;
   }
   
-  // Mock methods
-  getById = mock(async (id: string): Promise<TEntity | undefined> => {
+  // Override methods with mocked implementations
+  
+  /**
+   * Get an entity by ID
+   */
+  override getById = mock(async (id: string): Promise<TEntity | undefined> => {
     const entity = this.entities.find(e => e.id === id);
     return entity || undefined;
   });
   
+  /**
+   * Get all entities
+   */
   getAll = mock(async (): Promise<TEntity[]> => {
     return [...this.entities];
   });
   
+  /**
+   * Create an entity
+   */
   create = mock(async (entity: Partial<TEntity>): Promise<string> => {
     const id = entity.id || `mock-${nanoid(6)}`;
     const newEntity = {
@@ -101,6 +121,9 @@ export class MockBaseRepository<
     return id;
   });
   
+  /**
+   * Update an entity
+   */
   update = mock(async (id: string, updates: Partial<TEntity>): Promise<boolean> => {
     const index = this.entities.findIndex(e => e.id === id);
     if (index === -1) return false;
@@ -113,6 +136,9 @@ export class MockBaseRepository<
     return true;
   });
   
+  /**
+   * Delete an entity
+   */
   delete = mock(async (id: string): Promise<boolean> => {
     const initialLength = this.entities.length;
     this.entities = this.entities.filter(e => e.id !== id);
@@ -132,5 +158,36 @@ export class MockBaseRepository<
       { id: '3', name: 'Recent 1' } as TEntity,
       { id: '4', name: 'Recent 2' } as TEntity,
     ];
+  });
+  
+  /**
+   * Override insert method
+   */
+  override insert = mock(async (entity: TEntity): Promise<TEntity> => {
+    // Make sure we have an ID
+    if (!entity.id) {
+      (entity as any).id = `mock-${nanoid(6)}`;
+    }
+    
+    // Add to our collection
+    this.entities.push(entity);
+    
+    // Return the entity
+    return entity;
+  });
+  
+  /**
+   * Override deleteById method
+   */
+  override deleteById = mock(async (id: string): Promise<boolean> => {
+    // Delegate to delete method for consistency
+    return this.delete(id);
+  });
+  
+  /**
+   * Override getCount method
+   */
+  override getCount = mock(async (): Promise<number> => {
+    return this.entities.length;
   });
 }

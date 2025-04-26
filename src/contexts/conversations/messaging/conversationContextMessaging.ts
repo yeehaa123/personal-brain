@@ -6,7 +6,8 @@
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { ContextMediator } from '@/protocol/messaging';
+import type { ContextMediator, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
+import { MessageFactory } from '@/protocol/messaging';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
@@ -35,11 +36,29 @@ export class ConversationContextMessaging {
     // Create notifier
     this.notifier = new ConversationNotifier(mediator);
     
-    // Register message handler
-    // Continue using createHandler for now to maintain compatibility
-    // We can use getInstance() or createFresh() for more complex scenarios
-    const handler = ConversationMessageHandler.createHandler(conversationContext);
-    mediator.registerHandler(ContextId.CONVERSATION, handler);
+    // Register message handler using the Component Interface Standardization pattern
+    const handler = ConversationMessageHandler.getInstance(conversationContext);
+    mediator.registerHandler(ContextId.CONVERSATION, async (message) => {
+      if (message.category === 'request' && 'dataType' in message) {
+        return handler.handleRequest(message as DataRequestMessage);
+      } else if (message.category === 'notification' && 'notificationType' in message) {
+        await handler.handleNotification(message as NotificationMessage);
+        return MessageFactory.createAcknowledgment(
+          ContextId.CONVERSATION,
+          message.sourceContext || '*',
+          message.id || 'unknown',
+          'processed',
+        );
+      }
+      
+      return MessageFactory.createErrorResponse(
+        ContextId.CONVERSATION,
+        message.sourceContext || '*',
+        message.id || 'unknown',
+        'INVALID_MESSAGE_FORMAT',
+        'Message format not recognized',
+      );
+    });
     
     this.logger.debug('ConversationContextMessaging initialized');
   }

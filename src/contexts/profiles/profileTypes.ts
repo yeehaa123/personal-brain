@@ -49,12 +49,13 @@ export interface NoteWithSimilarity extends Omit<Note, 'source' | 'confidence' |
  */
 export interface NoteContext {
   /**
-   * Search notes using embedding vector for semantic similarity
-   * @param embedding - The embedding vector to compare against
+   * Search notes using text for semantic similarity
+   * @param text - The text to search for similar notes
    * @param limit - Optional limit on number of results
+   * @param tags - Optional tags to filter by
    * @returns Array of notes with similarity scores
    */
-  searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<NoteWithSimilarity[]>;
+  searchWithEmbedding: (text: string, limit?: number, tags?: string[]) => Promise<NoteWithSimilarity[]>;
   
   /**
    * Search notes using text and/or tags

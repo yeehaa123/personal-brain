@@ -242,19 +242,18 @@ export class MockProfileContext extends MockBaseContext {
   /**
    * Find notes related to the profile using tags or embeddings
    */
-  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<NoteWithSimilarity[]> {
-    return this.searchService.findRelatedNotes(noteContext, limit);
+  async findRelatedNotes(limit = 5): Promise<NoteWithSimilarity[]> {
+    return this.searchService.findRelatedNotes(limit);
   }
 
   /**
    * Find notes that have similar tags to the profile
    */
   async findNotesWithSimilarTags(
-    noteContext: NoteContext,
     profileTags: string[],
     limit = 5,
   ): Promise<NoteWithSimilarity[]> {
-    return this.searchService.findNotesWithSimilarTags(noteContext, profileTags, limit);
+    return this.searchService.findNotesWithSimilarTags(profileTags, limit);
   }
 
   /**

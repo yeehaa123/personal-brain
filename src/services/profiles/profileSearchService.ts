@@ -8,6 +8,9 @@
  * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 import type { Profile } from '@/models/profile';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
+import { DataRequestType, MessageFactory } from '@/protocol/messaging';
+import type { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchServiceConfig, BaseSearchServiceDependencies } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
@@ -19,6 +22,7 @@ import { extractKeywords } from '@/utils/textUtils';
 import { ProfileEmbeddingService } from './profileEmbeddingService';
 import { ProfileRepository } from './profileRepository';
 import { ProfileTagService } from './profileTagService';
+
 
 /**
  * Configuration options for ProfileSearchService
@@ -38,6 +42,9 @@ export interface ProfileSearchServiceDependencies extends BaseSearchServiceDepen
 > {
   /** Tag service for profile tag operations */
   tagService: ProfileTagService;
+  
+  /** Context mediator for cross-context communication */
+  mediator?: ContextMediator;
 }
 
 export type ProfileSearchOptions = BaseSearchOptions;
@@ -61,11 +68,6 @@ interface NoteWithSimilarity {
     promptSegment?: string;
   } | null;
   verified?: boolean | null;
-}
-
-interface NoteContext {
-  searchNotesWithEmbedding: (embedding: number[], limit?: number) => Promise<NoteWithSimilarity[]>;
-  searchNotes: (options: { query?: string; tags?: string[]; limit?: number; includeContent?: boolean }) => Promise<NoteWithSimilarity[]>;
 }
 
 /**
@@ -196,8 +198,14 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     // Set the tag service from dependencies
     this.tagService = dependencies.tagService;
     
+    // Store the mediator if provided
+    this.mediator = dependencies.mediator;
+    
     this.logger.debug('ProfileSearchService instance created');
   }
+  
+  /** Context mediator for cross-context communication */
+  private mediator?: ContextMediator;
   
 
   /**
@@ -314,11 +322,16 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
 
   /**
    * Find notes related to the profile using tags or embeddings
-   * @param noteContext The NoteContext for searching notes
    * @param limit Maximum number of results to return
    * @returns Array of notes with similarity information
    */
-  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<NoteWithSimilarity[]> {
+  async findRelatedNotes(limit = 5): Promise<NoteWithSimilarity[]> {
+    // Check if we have a mediator
+    if (!this.mediator) {
+      this.logger.error('Cannot find related notes: No mediator available for cross-context communication');
+      return [];
+    }
+    
     const profile = await this.repository.getProfile();
     if (!profile) {
       return [];
@@ -327,9 +340,25 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     // Try to find notes based on tags if available
     if (profile.tags?.length) {
       try {
-        const tagResults = await this.findNotesWithSimilarTags(noteContext, profile.tags as string[], limit);
-        if (tagResults.length > 0) {
-          return tagResults;
+        // Create a data request for notes with similar tags
+        const tagRequest = MessageFactory.createDataRequest(
+          ContextId.PROFILE, 
+          ContextId.NOTES,
+          DataRequestType.NOTES_SEARCH,
+          {
+            tags: profile.tags,
+            limit: limit,
+          },
+        );
+        
+        // Send the request via mediator
+        const tagResponse = await this.mediator.sendRequest(tagRequest);
+        
+        // Check if we got a successful response with notes
+        if (tagResponse.status === 'success' && tagResponse.data && 
+            'notes' in tagResponse.data && Array.isArray(tagResponse.data['notes']) && 
+            tagResponse.data['notes'].length > 0) {
+          return tagResponse.data['notes'] as NoteWithSimilarity[];
         }
       } catch (error) {
         this.logger.error('Error finding notes with similar tags', { 
@@ -343,18 +372,56 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     try {
       // If profile has embeddings, use semantic search
       if (profile.embedding?.length) {
-        return await noteContext.searchNotesWithEmbedding(
-          profile.embedding as number[],
-          limit,
+        // Use the profile text instead of raw embedding for better semantic understanding
+        const profileText = this.tagService.prepareProfileTextForEmbedding(profile);
+        
+        // Create a data request for semantic search
+        const semanticRequest = MessageFactory.createDataRequest(
+          ContextId.PROFILE, 
+          ContextId.NOTES,
+          DataRequestType.NOTES_SEMANTIC_SEARCH,
+          {
+            text: profileText,
+            limit: limit,
+          },
         );
+        
+        // Send the request via mediator
+        const semanticResponse = await this.mediator.sendRequest(semanticRequest);
+        
+        // Check if we got a successful response with notes
+        if (semanticResponse.status === 'success' && semanticResponse.data && 
+            'notes' in semanticResponse.data && Array.isArray(semanticResponse.data['notes']) && 
+            semanticResponse.data['notes'].length > 0) {
+          return semanticResponse.data['notes'] as NoteWithSimilarity[];
+        }
       }
 
       // Otherwise fall back to keyword search
       const keywords = this.extractKeywords(this.tagService.prepareProfileTextForEmbedding(profile));
-      return await noteContext.searchNotes({
-        query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
-        limit,
-      });
+      
+      // Create a data request for keyword search
+      const keywordRequest = MessageFactory.createDataRequest(
+        ContextId.PROFILE, 
+        ContextId.NOTES,
+        DataRequestType.NOTES_SEARCH,
+        {
+          query: keywords.slice(0, 10).join(' '), // Use top 10 keywords
+          limit: limit,
+        },
+      );
+      
+      // Send the request via mediator
+      const keywordResponse = await this.mediator.sendRequest(keywordRequest);
+      
+      // Check if we got a successful response with notes
+      if (keywordResponse.status === 'success' && keywordResponse.data && 
+          'notes' in keywordResponse.data && Array.isArray(keywordResponse.data['notes']) && 
+          keywordResponse.data['notes'].length > 0) {
+        return keywordResponse.data['notes'] as NoteWithSimilarity[];
+      }
+      
+      return [];
     } catch (error) {
       this.logger.error('Error finding notes related to profile:', { 
         error: error instanceof Error ? error.message : String(error),
@@ -366,55 +433,85 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
 
   /**
    * Find notes that have similar tags to the profile
-   * @param noteContext The NoteContext for searching notes
    * @param profileTags The profile tags to match against
    * @param limit Maximum number of results to return
    * @returns Array of notes with similarity information
    */
   async findNotesWithSimilarTags(
-    noteContext: NoteContext,
     profileTags: string[],
     limit = 5,
-    _offset = 0, // Add unused parameter for consistency
   ): Promise<NoteWithSimilarity[]> {
+    // Check if we have a mediator
+    if (!this.mediator) {
+      this.logger.error('Cannot find notes with similar tags: No mediator available for cross-context communication');
+      return [];
+    }
+    
     if (!profileTags?.length) {
       return [];
     }
 
-    // Get all notes with tags
-    const allNotes = await noteContext.searchNotes({
-      limit: 100,
-      includeContent: false,
-    });
+    try {
+      // Create a data request for notes with specific tags
+      const tagsRequest = MessageFactory.createDataRequest(
+        ContextId.PROFILE, 
+        ContextId.NOTES,
+        DataRequestType.NOTES_SEARCH,
+        {
+          tags: profileTags,
+          limit: 100, // Get more notes to score and filter
+          includeContent: false,
+        },
+      );
+      
+      // Send the request via mediator
+      const tagsResponse = await this.mediator.sendRequest(tagsRequest);
+      
+      // Check if we got a successful response with notes
+      if (tagsResponse.status !== 'success' || !tagsResponse.data || 
+          !('notes' in tagsResponse.data) || !Array.isArray(tagsResponse.data['notes']) || 
+          tagsResponse.data['notes'].length === 0) {
+        return [];
+      }
+      
+      const allNotes = tagsResponse.data['notes'] as NoteWithSimilarity[];
+      
+      // Filter to notes that have tags and score them
+      const scoredNotes = allNotes
+        .filter(note => note.tags && Array.isArray(note.tags) && note.tags.length > 0)
+        .map(note => {
+          // We know tags is not null from the filter above
+          const noteTags = note.tags as string[]; 
+          const matchCount = this.calculateTagMatchScore(noteTags, profileTags);
+          return {
+            ...note,
+            tagScore: matchCount,
+            matchRatio: matchCount / noteTags.length,
+            similarity: matchCount / Math.max(noteTags.length, profileTags.length), // Normalize to 0-1 range
+          };
+        })
+        .filter(note => note.tagScore > 0);
 
-    // Filter to notes that have tags and score them
-    const scoredNotes = allNotes
-      .filter(note => note.tags && Array.isArray(note.tags) && note.tags.length > 0)
-      .map(note => {
-        // We know tags is not null from the filter above
-        const noteTags = note.tags as string[]; 
-        const matchCount = this.calculateTagMatchScore(noteTags, profileTags);
-        return {
-          ...note,
-          tagScore: matchCount,
-          matchRatio: matchCount / noteTags.length,
-        };
-      })
-      .filter(note => note.tagScore > 0);
+      // Sort by tag match score and ratio
+      const sortedNotes = scoredNotes
+        .sort((a, b) => {
+          // First sort by absolute number of matches
+          if (b.tagScore !== a.tagScore) {
+            return b.tagScore - a.tagScore;
+          }
+          // Then by ratio of matches to total tags
+          return b.matchRatio - a.matchRatio;
+        })
+        .map(({ tagScore, matchRatio, ...note }) => note);
 
-    // Sort by tag match score and ratio
-    const sortedNotes = scoredNotes
-      .sort((a, b) => {
-        // First sort by absolute number of matches
-        if (b.tagScore !== a.tagScore) {
-          return b.tagScore - a.tagScore;
-        }
-        // Then by ratio of matches to total tags
-        return b.matchRatio - a.matchRatio;
-      })
-      .map(({ tagScore: _tagScore, matchRatio: _matchRatio, ...note }) => note);
-
-    return sortedNotes.slice(0, limit);
+      return sortedNotes.slice(0, limit);
+    } catch (error) {
+      this.logger.error('Error finding notes with similar tags:', { 
+        error: error instanceof Error ? error.message : String(error),
+        context: 'ProfileSearchService',
+      });
+      return [];
+    }
   }
 
   /**

@@ -1,92 +1,82 @@
 /**
- * Mock BaseEmbeddingService Implementation
+ * Mock implementation for BaseEmbeddingService
  * 
- * This file provides a standardized mock implementation of the BaseEmbeddingService
- * for use in tests across the codebase.
+ * Provides a standardized mock that follows the Component Interface Standardization pattern.
  */
 
-import { mock } from 'bun:test';
-
-import type { BaseEmbeddingService as IBaseEmbeddingService } from '@/services/common/baseEmbeddingService';
-import type { MockEntity } from '@test/__mocks__/services/BaseRepository';
+import type { EmbeddingService } from '@/resources/ai/embedding';
 
 /**
- * MockBaseEmbeddingService class with standardized interface
- * 
- * Follows the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
- * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
+ * Standardized mock implementation for BaseEmbeddingService
+ * Implements the Component Interface Standardization pattern
  */
-export class MockBaseEmbeddingService<
-  TEntity extends MockEntity = MockEntity
-> implements Partial<IBaseEmbeddingService> {
+export class MockBaseEmbeddingService {
+  /** Singleton instance */
   private static instance: MockBaseEmbeddingService | null = null;
-  
-  // Mock configuration
-  public mockEmbeddingDimension = 3;
-  public mockEmbeddings: Record<string, number[]> = {};
-  
+
+  /** Mock embedding service */
+  protected embeddingService: EmbeddingService | undefined;
+
   /**
-   * Get singleton instance
+   * Get the singleton instance
    */
-  public static getInstance(): MockBaseEmbeddingService {
+  public static getInstance(embeddingService?: EmbeddingService): MockBaseEmbeddingService {
     if (!MockBaseEmbeddingService.instance) {
-      MockBaseEmbeddingService.instance = new MockBaseEmbeddingService();
+      MockBaseEmbeddingService.instance = new MockBaseEmbeddingService(embeddingService);
     }
     return MockBaseEmbeddingService.instance;
   }
-  
+
   /**
-   * Reset singleton instance
+   * Reset the singleton instance
    */
   public static resetInstance(): void {
     MockBaseEmbeddingService.instance = null;
   }
-  
+
   /**
-   * Create fresh instance for isolated testing
+   * Create a fresh instance
    */
-  public static createFresh(): MockBaseEmbeddingService {
-    return new MockBaseEmbeddingService();
+  public static createFresh(embeddingService?: EmbeddingService): MockBaseEmbeddingService {
+    return new MockBaseEmbeddingService(embeddingService);
   }
-  
-  // Mock methods
-  generateEmbedding = mock(async (text: string): Promise<number[]> => {
-    // Check if we have a pre-configured embedding for this text
-    if (this.mockEmbeddings[text]) {
-      return this.mockEmbeddings[text];
+
+  /**
+   * Constructor
+   */
+  constructor(embeddingService?: EmbeddingService) {
+    this.embeddingService = embeddingService;
+  }
+
+  /**
+   * Generate an embedding for a text
+   */
+  async generateEmbedding(_text: string): Promise<number[]> {
+    return [0.1, 0.2, 0.3, 0.4, 0.5];
+  }
+
+  /**
+   * Generate embeddings for multiple texts
+   */
+  async getBatchEmbeddings(_texts: string[]): Promise<number[][]> {
+    return Array.from({ length: _texts.length }, () => [0.1, 0.2, 0.3, 0.4, 0.5]);
+  }
+
+  /**
+   * Calculate similarity between two embeddings
+   */
+  calculateSimilarity(_embedding1: number[], _embedding2: number[]): number {
+    return 0.85; // Mock similarity score
+  }
+
+  /**
+   * Chunk text into smaller pieces
+   */
+  chunkText(text: string, chunkSize = 1000, _overlap = 200): string[] {
+    const chunks: string[] = [];
+    for (let i = 0; i < text.length; i += chunkSize) {
+      chunks.push(text.slice(i, i + chunkSize));
     }
-    
-    // Generate a deterministic but random-looking embedding based on the text content
-    const hash = Array.from(text).reduce((h, c) => 
-      Math.imul(31, h) + c.charCodeAt(0) | 0, 0);
-    
-    return Array.from({ length: this.mockEmbeddingDimension }, (_, i) => {
-      // Generate values between 0 and 1 based on the hash and position
-      return ((hash + i * 7) % 1000) / 1000;
-    });
-  });
-  
-  calculateSimilarity = mock((embedding1: number[], embedding2: number[]): number => {
-    // Simple mock implementation that checks if dimensions match
-    if (embedding1.length !== embedding2.length) {
-      return 0;
-    }
-    
-    // Return a value between 0.1 and 0.9 based on the first element of each embedding
-    return 0.5 + (embedding1[0] - embedding2[0]) * 0.4;
-  });
-  
-  searchSimilar = mock(async (_embedding: number[]): Promise<TEntity[]> => {
-    return [
-      { id: '5', name: 'Similar 1', embedding: [0.1, 0.2, 0.3] } as TEntity,
-      { id: '6', name: 'Similar 2', embedding: [0.2, 0.3, 0.4] } as TEntity,
-    ];
-  });
-  
-  // Helper method to set up mock embeddings for specific text
-  public setMockEmbedding(text: string, embedding: number[]): void {
-    this.mockEmbeddings[text] = embedding;
+    return chunks;
   }
 }

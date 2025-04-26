@@ -384,6 +384,14 @@ export class ProfileContext extends BaseContext<
   }
   
   /**
+   * Get the search service
+   * @returns The ProfileSearchService instance
+   */
+  getSearchService(): ProfileSearchService {
+    return this.searchService;
+  }
+  
+  /**
    * Get the storage adapter
    * Implements StorageAccess interface
    * @returns The storage adapter
@@ -601,12 +609,11 @@ export class ProfileContext extends BaseContext<
 
   /**
    * Find notes related to the profile using tags or embeddings
-   * @param noteContext The NoteContext for searching notes
    * @param limit Maximum number of results to return
    * @returns Array of notes with similarity information
    */
-  async findRelatedNotes(noteContext: NoteContext, limit = 5): Promise<NoteWithSimilarity[]> {
-    const notes = await this.searchService.findRelatedNotes(noteContext, limit);
+  async findRelatedNotes(limit = 5): Promise<NoteWithSimilarity[]> {
+    const notes = await this.searchService.findRelatedNotes(limit);
     // Ensure proper type casting
     return notes.map(note => ({
       ...note,
@@ -616,17 +623,15 @@ export class ProfileContext extends BaseContext<
 
   /**
    * Find notes that have similar tags to the profile
-   * @param noteContext The NoteContext for searching notes
    * @param profileTags The profile tags to match against
    * @param limit Maximum number of results to return
    * @returns Array of notes with similarity information
    */
   async findNotesWithSimilarTags(
-    noteContext: NoteContext,
     profileTags: string[],
     limit = 5,
   ): Promise<NoteWithSimilarity[]> {
-    const notes = await this.searchService.findNotesWithSimilarTags(noteContext, profileTags, limit);
+    const notes = await this.searchService.findNotesWithSimilarTags(profileTags, limit);
     // Ensure proper type casting
     return notes.map(note => ({
       ...note,

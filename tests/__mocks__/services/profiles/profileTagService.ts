@@ -78,4 +78,13 @@ export class MockProfileTagService implements Partial<ProfileTagService> {
     
     return keywords;
   });
+  
+  // Add missing methods needed by ProfileSearchService
+  prepareProfileTextForEmbedding = mock((_profile: Partial<Profile>): string => {
+    return `Mock profile text for ${_profile.fullName || 'Unknown User'}`;
+  });
+  
+  getProfileTextForTagGeneration = mock((_profile: Partial<Profile>): string => {
+    return `Mock profile text for tagging ${_profile.fullName || 'Unknown User'}`;
+  });
 }

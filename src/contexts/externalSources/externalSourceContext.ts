@@ -12,8 +12,6 @@
  * Uses the Dependency Injection pattern to improve testability and reduce coupling.
  */
 
-import { z } from 'zod';
-
 import { BaseContext } from '@/contexts/baseContext';
 import type { 
   ContextInterface,
@@ -34,6 +32,7 @@ import type {
   ExternalSourceInterface,
   ExternalSourceResult, 
 } from './sources';
+import { ExternalSourceToolService } from './tools';
 
 /**
  * Configuration for the ExternalSourceContext
@@ -237,7 +236,10 @@ export class ExternalSourceContext extends BaseContext<
    * Initialize MCP components
    */
   protected override initializeMcpComponents(): void {
-    // Register external search resources
+    // Get the tool service instance
+    const toolService = ExternalSourceToolService.getInstance();
+    
+    // Register external resources
     this.resources.push({
       protocol: 'external',
       path: 'search',
@@ -323,114 +325,8 @@ export class ExternalSourceContext extends BaseContext<
       description: 'List available external knowledge sources',
     });
     
-    // Register external source tools
-    this.tools.push({
-      protocol: 'external',
-      path: 'search',
-      handler: async (params) => {
-        try {
-          const query = params['query'] as string;
-          const limit = params['limit'] as number || 5;
-          const semantic = params['semantic'] as boolean !== false;
-          
-          const results = semantic
-            ? await this.semanticSearch(query, limit)
-            : await this.search(query, { limit });
-          
-          if (results.length === 0) {
-            return {
-              content: [{
-                type: 'text',
-                text: `No results found for query: "${query}"`,
-              }],
-            };
-          }
-          
-          return {
-            content: results.map(result => ({
-              type: 'text',
-              text: `### ${result.title}\nSource: ${result.source}\n\n${result.content}\n`,
-            })),
-          };
-        } catch (error) {
-          this.logger.error('Error searching external sources via MCP tool', { error, context: 'ExternalSourceContext' });
-          return {
-            content: [{
-              type: 'text',
-              text: `Failed to search external sources: ${error instanceof Error ? error.message : String(error)}`,
-            }],
-            isError: true,
-          };
-        }
-      },
-      name: 'search_external_sources',
-      description: 'Search across multiple external knowledge sources with optional semantic search',
-      parameters: {
-        query: z.string().min(1, 'Query must not be empty'),
-        limit: z.number().min(1).max(20).optional(),
-        semantic: z.boolean().optional(),
-      },
-    });
-    
-    // Tool to toggle external sources
-    this.tools.push({
-      protocol: 'external',
-      path: 'toggle_source',
-      handler: async (params) => {
-        try {
-          const sourceName = params['sourceName'] as string;
-          const enabled = params['enabled'] as boolean;
-          
-          // Get the storage adapter
-          const adapter = this.storage;
-          const sources = Array.from(adapter.getEnabledSources());
-          const sourceNames = sources.map(s => s.name);
-          
-          // Update the enabled sources list based on the toggle
-          if (enabled && !sourceNames.includes(sourceName)) {
-            // Add the source if not already enabled
-            sourceNames.push(sourceName);
-          } else if (!enabled) {
-            // Remove the source if enabled
-            const index = sourceNames.indexOf(sourceName);
-            if (index >= 0) {
-              sourceNames.splice(index, 1);
-            }
-          }
-          
-          // Update the storage adapter with the new enabled sources
-          const newAdapter = new ExternalSourceStorageAdapter({
-            ...this.config as ExternalSourceStorageConfig,
-            enabledSources: sourceNames,
-          });
-          
-          // Replace the current adapter
-          Object.assign(this.storage, newAdapter);
-          
-          return {
-            content: [{
-              type: 'text',
-              text: `Source "${sourceName}" is now ${enabled ? 'enabled' : 'disabled'}. Enabled sources: ${sourceNames.join(', ') || 'None'}`,
-            }],
-          };
-        } catch (error) {
-          this.logger.error('Error toggling external source via MCP tool', { error, context: 'ExternalSourceContext' });
-          return {
-            content: [{
-              type: 'text',
-              text: `Failed to toggle external source: ${error instanceof Error ? error.message : String(error)}`,
-            }],
-            isError: true,
-          };
-        }
-      },
-      name: 'toggle_external_source',
-      description: 'Enable or disable a specific external knowledge source',
-      parameters: {
-        sourceName: z.string(),
-        enabled: z.boolean(),
-      },
-    });
+    // Register external source tools using the tool service
+    this.tools = toolService.getTools(this);
   }
   
   // Public API methods
@@ -603,5 +499,23 @@ export class ExternalSourceContext extends BaseContext<
    */
   registerSource(source: ExternalSourceInterface): void {
     this.storage.registerSource(source);
+  }
+  
+  /**
+   * Update enabled sources
+   * @param sourceNames Array of source names to enable
+   * @returns The updated storage adapter
+   */
+  updateEnabledSources(sourceNames: string[]): ExternalSourceStorageAdapter {
+    // Update the storage adapter with the new enabled sources
+    const newAdapter = new ExternalSourceStorageAdapter({
+      ...this.config as ExternalSourceStorageConfig,
+      enabledSources: sourceNames,
+    });
+    
+    // Replace the current adapter
+    Object.assign(this.storage, newAdapter);
+    
+    return this.storage;
   }
 }

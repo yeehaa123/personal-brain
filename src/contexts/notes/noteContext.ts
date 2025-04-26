@@ -27,10 +27,11 @@ import type {
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
-import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
+import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteFormatter } from './formatters';
 import { NoteStorageAdapter } from './noteStorageAdapter';
+import { NoteToolService } from './tools';
 
 /**
  * Configuration for the NoteContext
@@ -154,31 +155,53 @@ export class NoteContext extends BaseContext<
     TFormatter extends FormatterInterface<unknown, unknown>
   >(
     config: Record<string, unknown> = {}, 
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
+    dependencies?: ContextDependencies<TStorage, TFormatter> | Record<string, unknown>,
   ): NoteContext {
     // Convert the generic config to our specific config type
     const noteConfig: NoteContextConfig = {
       apiKey: config['apiKey'] as string,
+      name: config['name'] as string,
+      version: config['version'] as string,
     };
     
     // If dependencies are provided, use them with proper casting
     if (dependencies) {
-      // Use registry from dependencies or create a service registry
-      const serviceRegistry = (dependencies.registry || ServiceRegistry.getInstance()) as ServiceRegistry;
-      
-      // Extract needed services from registry with correct type assertions
-      const repository = serviceRegistry.getNoteRepository() as unknown as NoteRepository;
-      const embeddingService = serviceRegistry.getNoteEmbeddingService() as unknown as NoteEmbeddingService;
-      const searchService = serviceRegistry.getNoteSearchService() as unknown as NoteSearchService;
-      
-      // Create context with explicitly provided dependencies, cast storage to correct type
-      return new NoteContext(
-        noteConfig,
-        repository,
-        embeddingService,
-        searchService,
-        dependencies.storage as unknown as NoteStorageAdapter,
-      );
+      // Handle both standard ContextDependencies and object with specific services
+      if ('repository' in dependencies) {
+        // Direct service dependencies provided (used in tests)
+        const repository = dependencies['repository'] as NoteRepository;
+        const embeddingService = dependencies['embeddingService'] as NoteEmbeddingService;
+        const searchService = dependencies['searchService'] as NoteSearchService;
+        const storage = dependencies['storage'] as NoteStorageAdapter;
+        
+        return new NoteContext(
+          noteConfig,
+          repository,
+          embeddingService,
+          searchService,
+          storage,
+        );
+      } else if ('registry' in dependencies || 'storage' in dependencies) {
+        // Traditional ContextDependencies format
+        const dependencies2 = dependencies as ContextDependencies<TStorage, TFormatter>;
+        
+        // Use registry from dependencies or create a service registry
+        const serviceRegistry = (dependencies2.registry || ServiceRegistry.getInstance()) as ServiceRegistry;
+        
+        // Extract needed services from registry with correct type assertions
+        const repository = serviceRegistry.getNoteRepository() as unknown as NoteRepository;
+        const embeddingService = serviceRegistry.getNoteEmbeddingService() as unknown as NoteEmbeddingService;
+        const searchService = serviceRegistry.getNoteSearchService() as unknown as NoteSearchService;
+        
+        // Create context with explicitly provided dependencies, cast storage to correct type
+        return new NoteContext(
+          noteConfig,
+          repository,
+          embeddingService,
+          searchService,
+          dependencies2.storage as unknown as NoteStorageAdapter,
+        );
+      }
     }
     
     // Otherwise use services from registry
@@ -352,74 +375,11 @@ export class NoteContext extends BaseContext<
       },
     ];
     
-    // Register note tools
-    this.tools = [
-      {
-        protocol: 'notes',
-        path: 'create_note',
-        name: 'create_note',
-        description: 'Create a new note with optional title and tags',
-        handler: async (params) => {
-          const title = params['title'] as string;
-          const content = params['content'] as string;
-          const tags = params['tags'] as string[] | undefined;
-          
-          if (!content) {
-            throw new Error('Note content is required');
-          }
-          
-          const noteId = await this.createNote({
-            title: title || '',
-            content,
-            tags: tags || null,
-          });
-          
-          return { noteId };
-        },
-      },
-      
-      {
-        protocol: 'notes',
-        path: 'generate_embeddings',
-        name: 'generate_embeddings',
-        description: 'Generate or update embeddings for all notes in the database',
-        handler: async () => {
-          const result = await this.generateEmbeddingsForAllNotes();
-          return {
-            success: true,
-            updated: result.updated,
-            failed: result.failed,
-          };
-        },
-      },
-      
-      {
-        protocol: 'notes',
-        path: 'search_with_embedding',
-        name: 'search_with_embedding',
-        description: 'Search for notes similar to a given embedding vector',
-        handler: async (params) => {
-          const embedding = params['embedding'] as number[];
-          const maxResults = params['maxResults'] as number || 5;
-          
-          if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
-            throw new Error('Valid embedding vector is required');
-          }
-          
-          const notes = await this.searchNotesWithEmbedding(embedding, maxResults);
-          
-          return {
-            count: notes.length,
-            notes: notes.map(note => ({
-              id: note.id,
-              title: note.title || 'Untitled Note',
-              preview: note.content?.substring(0, 150) || '',
-              tags: note.tags,
-            })),
-          };
-        },
-      },
-    ];
+    // Get the tool service instance
+    const toolService = NoteToolService.getInstance();
+    
+    // Register note tools using the tool service
+    this.tools = toolService.getTools(this);
   }
   
   // Public API methods that delegate to storage and services
@@ -506,26 +466,46 @@ export class NoteContext extends BaseContext<
     return this.searchService.findRelated(noteId, maxResults);
   }
 
+  
   /**
-   * Search notes by embedding similarity (for profile integration)
-   * Finds notes similar to a given embedding vector
-   * @param embedding The embedding vector to search with
-   * @param maxResults Maximum number of results to return
-   * @returns Array of similar notes
+   * Search notes using text instead of embedding vector
+   * First generates an embedding for the text then searches similar notes
+   * @param text The text to generate an embedding for
+   * @param limit Maximum number of results to return
+   * @param tags Optional tags to filter by
+   * @returns Array of similar notes with similarity scores
    */
-  async searchNotesWithEmbedding(embedding: number[], maxResults = 5): Promise<Note[]> {
-    if (!isDefined(embedding) || !Array.isArray(embedding)) {
-      this.logger.error('Invalid embedding provided to searchNotesWithEmbedding', { context: 'NoteContext' });
+  async searchWithEmbedding(text: string, limit = 10, tags?: string[]): Promise<(Note & { similarity?: number })[]> {
+    if (!text) {
+      this.logger.error('Empty text provided to searchWithEmbedding', { context: 'NoteContext' });
       return [];
     }
 
     try {
-      const scoredNotes = await this.embeddingService.searchSimilarNotes(embedding, maxResults);
-
-      // Return notes without the score property
-      return scoredNotes.map(({ score: _score, ...note }) => note);
+      // Generate embedding for the text
+      const embedding = await this.embeddingService.generateEmbedding(text);
+      
+      // Search for similar notes
+      const scoredNotes = await this.embeddingService.searchSimilarNotes(embedding, limit * 2); // Get more to allow for tag filtering
+      
+      // Filter by tags if needed
+      let results = scoredNotes;
+      if (tags && tags.length > 0) {
+        results = scoredNotes.filter(note => {
+          // If the note has no tags, it doesn't match
+          if (!note.tags || note.tags.length === 0) {
+            return false;
+          }
+          
+          // Check if any of the note's tags match any of the requested tags
+          return note.tags.some(tag => tags.includes(tag));
+        });
+      }
+      
+      // Limit results
+      return results.slice(0, limit);
     } catch (error) {
-      this.logger.error(`Error searching notes with embedding: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+      this.logger.error(`Error in searchWithEmbedding: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
       return [];
     }
   }
@@ -553,6 +533,59 @@ export class NoteContext extends BaseContext<
    */
   async getNoteCount(): Promise<number> {
     return this.storage.count();
+  }
+  
+  /**
+   * Update an existing note
+   * @param id The ID of the note to update
+   * @param updates The fields to update
+   * @returns True if the update was successful
+   */
+  async updateNote(id: string, updates: Partial<Note>): Promise<boolean> {
+    try {
+      // Generate a new embedding if content or title was updated
+      if (updates.content || updates.title) {
+        try {
+          const existingNote = await this.getNoteById(id);
+          if (existingNote) {
+            const title = updates.title || existingNote.title || '';
+            const content = updates.content || existingNote.content || '';
+            
+            // Generate embedding for combined text
+            const combinedText = `${title} ${content}`.trim();
+            const embedding = await this.embeddingService.generateEmbedding(combinedText);
+            
+            // Add embedding to updates
+            updates.embedding = embedding;
+          }
+        } catch (error) {
+          this.logger.error(`Error generating embedding for updated note: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+        }
+      }
+      
+      // Add updated timestamp
+      updates.updatedAt = new Date();
+      
+      // Update the note
+      return this.storage.update(id, updates);
+    } catch (error) {
+      this.logger.error(`Failed to update note ${id}: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+      return false;
+    }
+  }
+  
+  /**
+   * Delete a note by ID
+   * @param id The ID of the note to delete
+   * @returns True if the deletion was successful
+   */
+  async deleteNote(id: string): Promise<boolean> {
+    try {
+      return this.storage.delete(id);
+    } catch (error) {
+      this.logger.error(`Failed to delete note ${id}: ${error instanceof Error ? error.message : String(error)}`, { error, context: 'NoteContext' });
+      return false;
+    }
   }
 
   /**

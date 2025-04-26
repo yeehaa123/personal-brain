@@ -1,215 +1,121 @@
 /**
- * Mock BaseSearchService Implementation
+ * Mock implementation for BaseSearchService
  * 
- * This file provides a standardized mock implementation of the BaseSearchService
- * for use in tests across the codebase.
+ * Provides a standardized mock that follows the Component Interface Standardization pattern.
  */
 
-import { mock } from 'bun:test';
+// We use SearchOptions directly from ISearchService instead
+// import type { BaseSearchOptions } from '@/services/common/baseSearchService';
+import type { SearchOptions } from '@/services/interfaces/ISearchService';
 
-import type { BaseSearchOptions } from '@/services/common/baseSearchService';
-import type { ISearchService } from '@/services/interfaces/ISearchService';
-import { MockBaseEmbeddingService } from '@test/__mocks__/services/common/baseEmbeddingService';
-import { MockBaseRepository } from '@test/__mocks__/services/BaseRepository';
-import type { MockEntity } from '@test/__mocks__/services/BaseRepository';
+// Define SearchResult type locally
+export type SearchResult<T> = {
+  item: T;
+  score: number;
+};
 
 /**
- * MockBaseSearchService class with standardized interface
- * 
- * Follows the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
- * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
+ * Standardized mock implementation for BaseSearchService
+ * Implements the Component Interface Standardization pattern
  */
-export class MockBaseSearchService<
-  TEntity extends MockEntity = MockEntity,
-  TRepository extends MockBaseRepository<TEntity> = MockBaseRepository<TEntity>,
-  TEmbeddingService extends MockBaseEmbeddingService<TEntity> = MockBaseEmbeddingService<TEntity>
-> implements Partial<ISearchService<TEntity>> {
+export class MockBaseSearchService {
+  /** Singleton instance */
   private static instance: MockBaseSearchService | null = null;
-  
-  // Dependencies
-  protected repository: TRepository;
-  protected embeddingService: TEmbeddingService;
-  protected entityName: string;
-  
+
   /**
-   * Get singleton instance
+   * Get the singleton instance
    */
   public static getInstance(): MockBaseSearchService {
     if (!MockBaseSearchService.instance) {
-      MockBaseSearchService.instance = MockBaseSearchService.createWithDependencies();
+      MockBaseSearchService.instance = new MockBaseSearchService();
     }
     return MockBaseSearchService.instance;
   }
-  
+
   /**
-   * Reset singleton instance
+   * Reset the singleton instance
    */
   public static resetInstance(): void {
     MockBaseSearchService.instance = null;
   }
-  
+
   /**
-   * Create fresh instance for isolated testing
+   * Create a fresh instance
    */
   public static createFresh(): MockBaseSearchService {
-    return MockBaseSearchService.createWithDependencies();
+    return new MockBaseSearchService();
   }
-  
+
   /**
-   * Create an instance with explicit dependencies
+   * Default full-text search implementation
    */
-  public static createWithDependencies<
-    T extends MockEntity = MockEntity,
-    R extends MockBaseRepository<T> = MockBaseRepository<T>,
-    E extends MockBaseEmbeddingService<T> = MockBaseEmbeddingService<T>
-  >(
-    config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {}
-  ): MockBaseSearchService<T, R, E> {
-    const entityName = config['entityName'] as string || 'mock';
-    const repository = dependencies['repository'] as R || MockBaseRepository.createFresh() as unknown as R;
-    const embeddingService = dependencies['embeddingService'] as E || 
-      MockBaseEmbeddingService.createFresh() as unknown as E;
+  async fullTextSearch<T extends Record<string, unknown>>(
+    query: string, 
+    entities: T[], 
+    options?: SearchOptions,
+  ): Promise<SearchResult<T>[]> {
+    if (!query || entities.length === 0) {
+      return [];
+    }
     
-    return new MockBaseSearchService<T, R, E>(entityName, repository, embeddingService);
+    // Mock implementation that always returns the first few entities with a mock score
+    const limit = options?.limit || 10;
+    const results = entities.slice(0, limit).map((entity, index) => {
+      return {
+        item: entity,
+        score: 1 - (index * 0.1),  // Mock decreasing scores
+      };
+    });
+    
+    return results;
   }
-  
+
   /**
-   * Private constructor to enforce factory methods
+   * Default vector search implementation
    */
-  protected constructor(
-    entityName: string,
-    repository: TRepository,
-    embeddingService: TEmbeddingService
-  ) {
-    this.entityName = entityName;
-    this.repository = repository;
-    this.embeddingService = embeddingService;
+  async vectorSearch<T extends Record<string, unknown>>(
+    embedding: number[], 
+    entities: Array<T & { embedding?: number[] }>, 
+    options?: SearchOptions,
+  ): Promise<SearchResult<T>[]> {
+    if (!embedding || entities.length === 0) {
+      return [];
+    }
+    
+    // Mock implementation that always returns the first few entities with a mock score
+    const limit = options?.limit || 10;
+    const results = entities.slice(0, limit).map((entity, index) => {
+      return {
+        item: entity,
+        score: 0.9 - (index * 0.1),  // Mock decreasing scores
+      };
+    });
+    
+    return results;
   }
-  
-  // Mock methods
-  search = mock(async (options: BaseSearchOptions): Promise<TEntity[]> => {
-    // Validate options
-    if (!options) {
-      throw new Error('Search options cannot be null or undefined');
-    }
-    
-    // Determine which search method to use based on options
-    if (options.semanticSearch && options.query) {
-      return this.semanticSearch(options.query, options.tags, options.limit, options.offset);
-    }
-    
-    if (options.query || (options.tags && options.tags.length > 0)) {
-      return this.keywordSearch(options.query, options.tags, options.limit, options.offset);
-    }
-    
-    // Fall back to recent entities if no search criteria provided
-    return this.repository.getRecentEntities();
-  });
-  
-  findRelated = mock(async (_entityId: string, _maxResults = 5): Promise<TEntity[]> => {
-    return [
-      { id: '7', name: 'Related 1' } as TEntity,
-      { id: '8', name: 'Related 2' } as TEntity,
-    ];
-  });
-  
-  // Protected methods (exposed for testing)
-  protected keywordSearch = mock(async (
-    _query?: string,
-    _tags?: string[],
-    _limit = 10,
-    _offset = 0,
-  ): Promise<TEntity[]> => {
-    return this.repository.searchByKeywords(_query, _tags);
-  });
-  
-  protected semanticSearch = mock(async (
+
+  /**
+   * Default hybrid search implementation
+   */
+  async hybridSearch<T extends Record<string, unknown>>(
     query: string,
-    _tags?: string[],
-    _limit = 10,
-    _offset = 0,
-  ): Promise<TEntity[]> => {
-    const embedding = await this.embeddingService.generateEmbedding(query);
-    return this.embeddingService.searchSimilar(embedding);
-  });
-  
-  protected extractKeywords = mock((text: string, maxKeywords = 10): string[] => {
-    return text.split(' ').slice(0, maxKeywords);
-  });
-  
-  // Helper method to expose protected method for testing
-  public exposeCalculateTagMatchScore(sourceTags: string[], targetTags: string[]): number {
-    return this.calculateTagMatchScore(sourceTags, targetTags);
-  }
-  
-  // Implementation of tag match calculation for testing
-  protected calculateTagMatchScore(sourceTags: string[], targetTags: string[]): number {
-    if (!sourceTags || sourceTags.length === 0 || !targetTags || targetTags.length === 0) {
-      return 0;
+    embedding: number[],
+    entities: Array<T & { embedding?: number[] }>,
+    options?: SearchOptions,
+  ): Promise<SearchResult<T>[]> {
+    if ((!query && !embedding) || entities.length === 0) {
+      return [];
     }
     
-    let score = 0;
+    // Mock implementation that always returns the first few entities with a mock score
+    const limit = options?.limit || 10;
+    const results = entities.slice(0, limit).map((entity, index) => {
+      return {
+        item: entity,
+        score: 0.95 - (index * 0.1),  // Mock decreasing scores
+      };
+    });
     
-    // Check for exact matches (1.0 points each)
-    for (const sourceTag of sourceTags) {
-      if (targetTags.includes(sourceTag)) {
-        score += 1.0;
-        continue;
-      }
-      
-      // Check for partial matches (0.5 points each)
-      for (const targetTag of targetTags) {
-        if (
-          (sourceTag.includes(targetTag) && targetTag.length > 3) ||
-          (targetTag.includes(sourceTag) && sourceTag.length > 3)
-        ) {
-          score += 0.5;
-          break;
-        }
-      }
-    }
-    
-    return score;
-  }
-  
-  // Helper method to expose protected method for testing
-  public exposeDeduplicateResults<T>(
-    results: T[],
-    getEntityId: (entity: T) => string,
-    excludeId?: string,
-  ): T[] {
-    return this.deduplicateResults(results, getEntityId, excludeId);
-  }
-  
-  // Implementation of deduplication for testing
-  protected deduplicateResults<T>(
-    results: T[],
-    getEntityId: (entity: T) => string,
-    excludeId?: string,
-  ): T[] {
-    const seen = new Set<string>();
-    const filtered: T[] = [];
-    
-    for (const result of results) {
-      const id = getEntityId(result);
-      
-      // Skip excluded ID if specified
-      if (excludeId && id === excludeId) {
-        continue;
-      }
-      
-      // Skip duplicates
-      if (seen.has(id)) {
-        continue;
-      }
-      
-      seen.add(id);
-      filtered.push(result);
-    }
-    
-    return filtered;
+    return results;
   }
 }

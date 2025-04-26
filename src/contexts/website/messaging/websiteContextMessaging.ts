@@ -6,7 +6,8 @@
  */
 
 import { ContextId } from '@/protocol/core/contextOrchestrator';
-import type { ContextMediator } from '@/protocol/messaging';
+import type { ContextMediator, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
+import { MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
 import type { WebsiteContext } from '../websiteContext';
@@ -36,10 +37,29 @@ export class WebsiteContextMessaging {
     // Create notifier
     this.notifier = new WebsiteNotifier(mediator);
     
-    // Register message handler using the standardized pattern
-    const messageHandler = WebsiteMessageHandler.getInstance({ websiteContext });
-    const handler = messageHandler.getMessageHandlerFunction();
-    mediator.registerHandler(ContextId.WEBSITE, handler);
+    // Register message handler using the Component Interface Standardization pattern
+    const handler = WebsiteMessageHandler.getInstance({ websiteContext });
+    mediator.registerHandler(ContextId.WEBSITE, async (message) => {
+      if (message.category === 'request' && 'dataType' in message) {
+        return handler.handleRequest(message as DataRequestMessage);
+      } else if (message.category === 'notification' && 'notificationType' in message) {
+        await handler.handleNotification(message as NotificationMessage);
+        return MessageFactory.createAcknowledgment(
+          ContextId.WEBSITE,
+          message.sourceContext || '*',
+          message.id || 'unknown',
+          'processed',
+        );
+      }
+      
+      return MessageFactory.createErrorResponse(
+        ContextId.WEBSITE,
+        message.sourceContext || '*',
+        message.id || 'unknown',
+        'INVALID_MESSAGE_FORMAT',
+        'Message format not recognized',
+      );
+    });
     
     this.logger.debug('WebsiteContextMessaging initialized');
   }

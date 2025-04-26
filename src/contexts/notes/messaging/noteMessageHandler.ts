@@ -168,13 +168,14 @@ export class NoteMessageHandler {
    */
   private constructor(private noteContext: NoteContext) {}
   
-  /**
+  /** 
    * Handle data request messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param request Data request message
    * @returns Response message
    */
-  private async handleRequest(request: DataRequestMessage) {
+  public async handleRequest(request: DataRequestMessage) {
     const dataType = request.dataType;
     
     switch (dataType) {
@@ -183,7 +184,10 @@ export class NoteMessageHandler {
         
     case DataRequestType.NOTE_BY_ID:
       return this.handleNoteById(request);
-        
+    
+    case DataRequestType.NOTES_SEMANTIC_SEARCH:
+      return this.handleNoteSemanticSearch(request);
+      
     default:
       return MessageFactory.createErrorResponse(
         ContextId.NOTES,
@@ -197,10 +201,11 @@ export class NoteMessageHandler {
   
   /**
    * Handle notification messages
+   * This exposed public method is used by the ContextMessaging wrapper
    * 
    * @param notification Notification message
    */
-  private async handleNotification(notification: NotificationMessage) {
+  public async handleNotification(notification: NotificationMessage) {
     const notificationType = notification.notificationType;
     
     switch (notificationType) {
@@ -313,6 +318,48 @@ export class NoteMessageHandler {
         request.id,
         'READ_ERROR',
         `Error retrieving note: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  
+  /**
+   * Handle semantic search request for notes
+   * 
+   * @param request Data request message
+   * @returns Response message with search results
+   */
+  private async handleNoteSemanticSearch(request: DataRequestMessage) {
+    try {
+      const text = request.parameters?.['text'] as string;
+      const limit = request.parameters?.['limit'] as number || 10;
+      const tags = request.parameters?.['tags'] as string[] | undefined;
+      
+      if (!text) {
+        return MessageFactory.createErrorResponse(
+          ContextId.NOTES,
+          request.sourceContext,
+          request.id,
+          'MISSING_PARAMETER',
+          'Text parameter is required for semantic search',
+        );
+      }
+      
+      // Use the searchWithEmbedding method
+      const notes = await this.noteContext.searchWithEmbedding(text, limit, tags);
+      
+      return MessageFactory.createSuccessResponse(
+        ContextId.NOTES,
+        request.sourceContext,
+        request.id,
+        { notes },
+      );
+    } catch (error) {
+      return MessageFactory.createErrorResponse(
+        ContextId.NOTES,
+        request.sourceContext,
+        request.id,
+        'SEARCH_ERROR',
+        `Error in semantic search: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }

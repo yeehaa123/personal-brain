@@ -67,8 +67,8 @@ export class ProfileCommandHandler extends BaseCommandHandler {
 
     // Check if we want related notes
     if (args && args.toLowerCase() === 'related') {
-      const noteContext = this.brainProtocol.getContextManager().getNoteContext();
-      const relatedNotes = await this.profileContext.findRelatedNotes(noteContext, 5);
+      // Get related notes using the messaging architecture
+      const relatedNotes = await this.profileContext.findRelatedNotes(5);
 
       // Determine match type
       let matchType: 'tags' | 'semantic' | 'keyword' = 'keyword';
