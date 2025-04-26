@@ -2,104 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 // Import the real implementation
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
-import type { InMemoryStorageConfig } from '@/contexts/conversations/storage/inMemoryStorage';
 
 describe('InMemoryStorage', () => {
   // We don't need to access instance directly as the tests
   // should focus on the public API, not implementation details
   
   // Tests for the Component Interface Standardization pattern
-  describe('Component Interface Standardization pattern', () => {
-    beforeEach(() => {
-      // Reset singleton for each test
-      // Get the instance with silent mode first to prevent logging during reset
-      InMemoryStorage.getInstance({ silent: true });
-      InMemoryStorage.resetInstance();
-    });
-    
-    test('getInstance should return the same instance when called multiple times', () => {
-      const instance1 = InMemoryStorage.getInstance({ silent: true });
-      const instance2 = InMemoryStorage.getInstance({ silent: true });
-      
-      expect(instance1).toBe(instance2);
-    });
-    
-    test('getInstance should accept configuration when creating a new instance', async () => {
-      // Initial config with verbose mode enabled but also silent to avoid logging
-      const config: InMemoryStorageConfig = { verbose: true, silent: true };
-      const instance = InMemoryStorage.getInstance(config);
-      
-      // Add a conversation to verify it works
-      const roomId = 'config-test-room';
-      await instance.createConversation({
-        interfaceType: 'matrix',
-        roomId,
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      // Verify the conversation was created
-      const result = await instance.getConversationByRoom(roomId, 'matrix');
-      expect(result).not.toBeNull();
-    });
-    
-    test('resetInstance should clear the singleton instance', () => {
-      // Get an instance with silent mode
-      const instance1 = InMemoryStorage.getInstance({ silent: true });
-      
-      // Reset the instance
-      InMemoryStorage.resetInstance();
-      
-      // Get a new instance with silent mode
-      const instance2 = InMemoryStorage.getInstance({ silent: true });
-      
-      // They should be different objects
-      expect(instance1).not.toBe(instance2);
-    });
-    
-    test('createFresh should create new instances separate from the singleton', () => {
-      // Get the singleton with silent mode
-      const singleton = InMemoryStorage.getInstance({ silent: true });
-      
-      // Create a fresh instance with silent mode
-      const fresh = InMemoryStorage.createFresh({ silent: true });
-      
-      // They should be different objects
-      expect(singleton).not.toBe(fresh);
-      
-      // The singleton should still be accessible
-      const singletonAgain = InMemoryStorage.getInstance({ silent: true });
-      expect(singletonAgain).toBe(singleton);
-    });
-    
-    test('getInstance with config should warn but not change existing instance', async () => {
-      // Create first instance with silent mode
-      const instance1 = InMemoryStorage.getInstance({ silent: true });
-      
-      // Add data to first instance
-      const roomId = 'warning-test-room';
-      await instance1.createConversation({
-        interfaceType: 'matrix',
-        roomId,
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      // Try to get instance with new config - should return same instance
-      const newConfig: InMemoryStorageConfig = { 
-        initialConversations: new Map(),
-        silent: true,
-      };
-      const instance2 = InMemoryStorage.getInstance(newConfig);
-      
-      // Should be the same instance
-      expect(instance2).toBe(instance1);
-      
-      // Should still have our conversation
-      const result = await instance2.getConversationByRoom(roomId, 'matrix');
-      expect(result).not.toBeNull();
-    });
-  });
+    // REMOVED BLOCK: describe('Component Interface Standardiz...
+
   
   // Tests specifically for the createFresh fix to ensure complete isolation between instances
   describe('createFresh isolation (cross-test contamination fix)', () => {

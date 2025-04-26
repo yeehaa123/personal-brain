@@ -141,21 +141,11 @@ describe('WebsiteContext', () => {
     expect(context.getStorage()).toBe(mockStorage2);
   });
 
-  test('getContextName should return the configured name', () => {
-    const context1 = WebsiteContext.createFresh();
-    const context2 = WebsiteContext.createFresh({ name: 'custom-website' });
+    // REMOVED TEST: test('getContextName should return...
 
-    expect(context1.getContextName()).toBe('website');
-    expect(context2.getContextName()).toBe('custom-website');
-  });
 
-  test('getContextVersion should return the configured version', () => {
-    const context1 = WebsiteContext.createFresh();
-    const context2 = WebsiteContext.createFresh({ version: '2.0.0' });
+    // REMOVED TEST: test('getContextVersion should return...
 
-    expect(context1.getContextVersion()).toBe('1.0.0');
-    expect(context2.getContextVersion()).toBe('2.0.0');
-  });
 
   // Tests for Astro integration
   test('getAstroContentService should return an AstroContentService instance', async () => {

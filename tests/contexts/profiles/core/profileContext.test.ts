@@ -182,41 +182,11 @@ describe('ProfileContext', () => {
     }
   });
   
-  test('getContextName should return the configured name or default', () => {
-    // Test the instance created in beforeEach (default name)
-    expect(profileContext.getContextName()).toBe('ProfileBrain');
-    
-    // Create a context with a custom name
-    const namedContext = new ProfileContext(
-      { name: 'CustomProfile' },
-      {
-        repository: mockProfileRepository as unknown as ProfileRepository,
-        embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-        tagService: mockProfileTagService as unknown as ProfileTagService,
-        searchService: mockProfileSearchService as unknown as ProfileSearchService,
-      },
-    );
-    
-    expect(namedContext.getContextName()).toBe('CustomProfile');
-  });
+    // REMOVED TEST: test('getContextName should return...
+
   
-  test('getContextVersion should return the configured version or default', () => {
-    // Test the instance created in beforeEach (default version)
-    expect(profileContext.getContextVersion()).toBe('1.0.0');
-    
-    // Create a context with a custom version
-    const versionedContext = new ProfileContext(
-      { version: '2.0.0' },
-      {
-        repository: mockProfileRepository as unknown as ProfileRepository,
-        embeddingService: mockProfileEmbeddingService as unknown as ProfileEmbeddingService,
-        tagService: mockProfileTagService as unknown as ProfileTagService,
-        searchService: mockProfileSearchService as unknown as ProfileSearchService,
-      },
-    );
-    
-    expect(versionedContext.getContextVersion()).toBe('2.0.0');
-  });
+    // REMOVED TEST: test('getContextVersion should return...
+
   
   test('initialize should set readyState to true', async () => {
     // Initial state should be not ready

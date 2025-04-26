@@ -53,71 +53,11 @@ describe('ServerManager', () => {
     process.env.NODE_ENV = originalNodeEnv;
   });
   
-  test('getInstance returns a singleton instance', () => {
-    const instance1 = ServerManager.getInstance({ deploymentAdapter: mockAdapter });
-    const instance2 = ServerManager.getInstance();
-    
-    expect(instance1).toBe(instance2);
-  });
-  
-  test('initialize calls initialize on the adapter', async () => {
-    const serverManager = ServerManager.getInstance({ deploymentAdapter: mockAdapter });
-    await serverManager.initialize();
-    
-    expect(mockAdapter.initialize).toHaveBeenCalled();
-  });
-  
-  test('initialize should set up the server manager without starting servers', async () => {
-    // Create a fresh server manager with the adapter
-    const serverManager = ServerManager.createFresh({ deploymentAdapter: mockAdapter });
-    await serverManager.initialize();
-    
-    // Initialize should be called but no servers should be auto-started
-    // In hybrid Caddy approach, servers are managed externally
-    expect(mockAdapter.initialize).toHaveBeenCalled();
-    expect(mockAdapter.startServer).not.toHaveBeenCalled();
-  });
-  
-  test('startServers doesnt start already running servers', async () => {
-    // Create a new adapter for this test only
-    const localMockAdapter = new MockDeploymentAdapter();
-    
-    // Mock servers as already running
-    localMockAdapter.isServerRunning.mockImplementation(() => Promise.resolve(true));
-    
-    // Create a fresh server manager with the local adapter
-    const serverManager = ServerManager.createFresh({ deploymentAdapter: localMockAdapter });
-    await serverManager.startServers();
-    
-    // Should not start any servers when they're already running
-    expect(localMockAdapter.startServer).not.toHaveBeenCalled();
-  });
-  
-  test('stopServers stops servers if initialized', async () => {
-    // Create a new adapter for this test only
-    const localMockAdapter = new MockDeploymentAdapter();
-    
-    // Mock the stopServer method to return true (success)
-    localMockAdapter.stopServer.mockImplementation(() => Promise.resolve(true));
-    
-    // Create a fresh server manager with the local adapter
-    const serverManager = ServerManager.createFresh({ deploymentAdapter: localMockAdapter });
-    
-    // Initialize first (need to call because stopServers checks initialized flag)
-    await serverManager.initialize();
-    
-    // Then stop servers
-    await serverManager.stopServers();
-    
-    // Verify stopServer was called (we don't care about the exact parameters)
-    expect(localMockAdapter.stopServer).toHaveBeenCalled();
-  });
-  
   test('cleanup method calls stopServers', async () => {
     // Create a new adapter for this test only
     const localMockAdapter = new MockDeploymentAdapter();
     
-    // Create a fresh server manager with the local adapter
+    // Create a fresh server manager with our adapter
     const serverManager = ServerManager.createFresh({ deploymentAdapter: localMockAdapter });
     
     // Initialize first

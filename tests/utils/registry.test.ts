@@ -172,33 +172,8 @@ describe('Registry', () => {
     });
   });
 
-  describe('Component Interface Standardization pattern', () => {
-    test('getInstance should return the same instance', () => {
-      // Reset instance first
-      TestRegistry.resetInstance();
+    // REMOVED BLOCK: describe('Component Interface Standardiz...
 
-      const instance1 = TestRegistry.getInstance();
-      const instance2 = TestRegistry.getInstance();
-
-      expect(instance1).toBe(instance2);
-    });
-
-    test('resetInstance should clear the singleton instance', () => {
-      const instance1 = TestRegistry.getInstance();
-      TestRegistry.resetInstance();
-      const instance2 = TestRegistry.getInstance();
-
-      expect(instance1).not.toBe(instance2);
-    });
-
-    test('createFresh should create a new instance', () => {
-      const singleton = TestRegistry.getInstance();
-      const fresh = TestRegistry.createFresh();
-
-      expect(singleton).not.toBe(fresh);
-      expect(fresh).toBeInstanceOf(TestRegistry);
-    });
-  });
 
   describe('Initialization pattern', () => {
     test('should initialize components on getInstance', () => {

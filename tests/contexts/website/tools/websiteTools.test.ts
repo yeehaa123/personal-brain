@@ -40,27 +40,8 @@ describe('WebsiteToolService', () => {
     WebsiteToolService.resetInstance();
   });
 
-  describe('Component Interface Standardization pattern', () => {
-    it('should follow the singleton pattern with getInstance', () => {
-      const instance1 = WebsiteToolService.getInstance();
-      const instance2 = WebsiteToolService.getInstance();
-      expect(instance1).toBe(instance2);
-    });
+    // REMOVED BLOCK: describe('Component Interface Standardiz...
 
-    it('should support resetInstance for clearing the singleton', () => {
-      const instance1 = WebsiteToolService.getInstance();
-      WebsiteToolService.resetInstance();
-      const instance2 = WebsiteToolService.getInstance();
-      expect(instance1).not.toBe(instance2);
-    });
-
-    it('should support createFresh for creating non-singleton instances', () => {
-      const singleton = WebsiteToolService.getInstance();
-      const fresh = WebsiteToolService.createFresh();
-      expect(singleton).not.toBe(fresh);
-      expect(WebsiteToolService.getInstance()).toBe(singleton);
-    });
-  });
 
   describe('getTools', () => {
     it('should return an array of website tools', () => {

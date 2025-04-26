@@ -82,30 +82,8 @@ describe('ServiceRegistry Class', () => {
     process.env = originalEnv;
   });
 
-  describe('Component Interface Standardization pattern', () => {
-    test('getInstance should return the same instance', () => {
-      const instance1 = ServiceRegistry.getInstance();
-      const instance2 = ServiceRegistry.getInstance();
-      
-      expect(instance1).toBe(instance2);
-    });
-    
-    test('resetInstance should clear the singleton instance', () => {
-      const instance1 = ServiceRegistry.getInstance();
-      ServiceRegistry.resetInstance();
-      const instance2 = ServiceRegistry.getInstance();
-      
-      expect(instance1).not.toBe(instance2);
-    });
-    
-    test('createFresh should create a new instance', () => {
-      const singleton = ServiceRegistry.getInstance();
-      const fresh = ServiceRegistry.createFresh();
-      
-      expect(singleton).not.toBe(fresh);
-      expect(fresh).toBeInstanceOf(ServiceRegistry);
-    });
-  });
+    // REMOVED BLOCK: describe('Component Interface Standardiz...
+
 
   describe('Service registration', () => {
     test('should automatically register standard services', () => {

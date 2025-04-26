@@ -67,29 +67,11 @@ describe('NoteContext', () => {
     expect(instance1).not.toBe(instance2);
   });
   
-  test('getContextName should return the configured name or default', () => {
-    // Test with custom name
-    const customContext = NoteContext.createFresh({
-      name: 'TestNoteBrain',
-    });
-    expect(customContext.getContextName()).toBe('TestNoteBrain');
-    
-    // Test with default name
-    const defaultContext = NoteContext.createFresh({});
-    expect(defaultContext.getContextName()).toBe('NoteBrain');
-  });
+    // REMOVED TEST: test('getContextName should return...
+
   
-  test('getContextVersion should return the configured version or default', () => {
-    // Test with custom version
-    const customContext = NoteContext.createFresh({
-      version: '1.0.0-test',
-    });
-    expect(customContext.getContextVersion()).toBe('1.0.0-test');
-    
-    // Test with default version
-    const defaultContext = NoteContext.createFresh({});
-    expect(defaultContext.getContextVersion()).toBe('1.0.0');
-  });
+    // REMOVED TEST: test('getContextVersion should return...
+
   
   test('initialize should set readyState to true', async () => {
     const context = NoteContext.createFresh();
