@@ -41,8 +41,8 @@
     "website:dev": "astro dev --root ./src/website",
     "website:build": "astro build --outDir ./dist/production --root ./src/website",
     "website:build:preview": "astro build --outDir ./dist/preview --root ./src/website",
-    "website:preview": "bun run scripts/server/production-server.ts preview",
-    "website:production": "bun run scripts/server/production-server.ts production",
+    "website:preview": "bun x serve -p ${WEBSITE_PREVIEW_PORT:-4321} -s src/website/dist",
+    "website:production": "bun x serve -p ${WEBSITE_PRODUCTION_PORT:-4322} -s dist/production",
     "website:cleanup": "pm2 stop website-preview || true && pm2 delete website-preview || true && pm2 stop website-production || true && pm2 delete website-production || true",
     "prestart": "bun run website:cleanup",
     "prerestart": "bun run website:cleanup"
@@ -92,6 +92,7 @@
     "nanoid": "^5.1.4",
     "openai": "^4.89.0",
     "sanitize-html": "^2.15.0",
+    "serve": "^14.2.4",
     "winston": "^3.17.0",
     "zod": "^3.24.2"
   }
