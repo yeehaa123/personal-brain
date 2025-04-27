@@ -58,8 +58,33 @@ serve({
     
     const filePath = join(SERVER_DIR, pathname);
     
-    // Return the file
-    return new Response(Bun.file(filePath));
+    // Set correct MIME types based on file extension
+    const fileExtension = pathname.split('.').pop()?.toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'ico': 'image/x-icon',
+      'json': 'application/json',
+      'woff': 'font/woff',
+      'woff2': 'font/woff2',
+      'ttf': 'font/ttf',
+    };
+    
+    // Get the appropriate Content-Type header
+    const contentType = fileExtension && mimeTypes[fileExtension] ? mimeTypes[fileExtension] : 'application/octet-stream';
+    
+    // Return the file with the correct Content-Type header
+    return new Response(Bun.file(filePath), {
+      headers: {
+        'Content-Type': contentType
+      }
+    });
   },
   error(error) {
     // Handle errors
