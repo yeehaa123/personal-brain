@@ -195,7 +195,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
   };
   
   /**
-   * Default server scripts
+   * Default server scripts - using direct Bun HTML file serving
    */
   private readonly defaultScripts = {
     preview: 'website:preview',

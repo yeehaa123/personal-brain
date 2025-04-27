@@ -36,18 +36,18 @@ const {
   footer
 } = profile.data;
 
-// Map section names to their components for dynamic rendering
-const sectionComponents = {
-  hero: hero && <Hero hero={hero} />,
-  problemStatement: problemStatement?.enabled && <ProblemStatement problemStatement={problemStatement} />,
-  services: services && <Services services={services} />,
-  process: process?.enabled && <Process process={process} />,
-  testimonials: testimonials?.enabled && <Testimonials testimonials={testimonials} />,
-  expertise: expertise?.enabled && <Expertise expertise={expertise} />,
-  about: about?.enabled && <About about={about} />,
-  faq: faq?.enabled && <Faq faq={faq} />,
-  cta: cta?.enabled && <Cta cta={cta} />,
-  footer: footer?.enabled && <Footer footer={footer} />
+// Create a map of section names to determine which sections should be rendered
+const sectionsToRender = {
+  hero: !!hero,
+  problemStatement: problemStatement?.enabled,
+  services: !!services,
+  process: process?.enabled,
+  testimonials: testimonials?.enabled,
+  expertise: expertise?.enabled,
+  about: about?.enabled,
+  faq: faq?.enabled,
+  cta: cta?.enabled,
+  footer: footer?.enabled
 };
 
 // Font Awesome for icons
@@ -67,5 +67,30 @@ const metaDescription = description || `Professional website for ${name} - ${tag
   )}
   
   <!-- Render sections according to sectionOrder -->
-  {sectionOrder.map(section => sectionComponents[section])}
+  {sectionOrder.map(section => {
+    switch(section) {
+      case 'hero':
+        return sectionsToRender.hero && <Hero hero={hero} />;
+      case 'problemStatement':
+        return sectionsToRender.problemStatement && <ProblemStatement problemStatement={problemStatement} />;
+      case 'services':
+        return sectionsToRender.services && <Services services={services} />;
+      case 'process':
+        return sectionsToRender.process && <Process process={process} />;
+      case 'testimonials':
+        return sectionsToRender.testimonials && <Testimonials testimonials={testimonials} />;
+      case 'expertise':
+        return sectionsToRender.expertise && <Expertise expertise={expertise} />;
+      case 'about':
+        return sectionsToRender.about && <About about={about} />;
+      case 'faq':
+        return sectionsToRender.faq && <Faq faq={faq} />;
+      case 'cta':
+        return sectionsToRender.cta && <Cta cta={cta} />;
+      case 'footer':
+        return sectionsToRender.footer && <Footer footer={footer} />;
+      default:
+        return null;
+    }
+  })}
 </MainLayout>
