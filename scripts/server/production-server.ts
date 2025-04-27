@@ -46,6 +46,11 @@ serve({
     const url = new URL(request.url);
     let pathname = url.pathname;
     
+    // Debug CSS requests specifically
+    if (pathname.includes('.css')) {
+      console.log(`CSS file requested: ${pathname}`);
+    }
+    
     // Handle root path
     if (pathname === '/') {
       pathname = 'index.html';
@@ -57,6 +62,18 @@ serve({
     }
     
     const filePath = join(SERVER_DIR, pathname);
+    
+    // Debug file path for CSS files
+    if (pathname.includes('.css')) {
+      console.log(`Looking for CSS at: ${filePath}`);
+      // Check if file exists
+      try {
+        const stat = Bun.file(filePath).size;
+        console.log(`CSS file size: ${stat} bytes`);
+      } catch (e) {
+        console.error(`CSS file not found or inaccessible: ${filePath}`);
+      }
+    }
     
     // Set correct MIME types based on file extension
     const fileExtension = pathname.split('.').pop()?.toLowerCase();
@@ -79,10 +96,19 @@ serve({
     // Get the appropriate Content-Type header
     const contentType = fileExtension && mimeTypes[fileExtension] ? mimeTypes[fileExtension] : 'application/octet-stream';
     
+    if (pathname.includes('.css')) {
+      console.log(`Using content type: ${contentType} for ${pathname}`);
+    }
+    
+    // Create file reference
+    const file = Bun.file(filePath);
+    
     // Return the file with the correct Content-Type header
-    return new Response(Bun.file(filePath), {
+    return new Response(file, {
       headers: {
-        'Content-Type': contentType
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
       }
     });
   },
