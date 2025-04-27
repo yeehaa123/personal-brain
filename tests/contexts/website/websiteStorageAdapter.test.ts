@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { 
   InMemoryWebsiteStorageAdapter, 
 } from '@/contexts/website/adapters/websiteStorageAdapter';
-import type { LandingPageData } from '@/contexts/website/websiteStorage';
+import { createTestLandingPageData } from '@test/helpers';
 
 describe('WebsiteStorageAdapter', () => {
   describe('InMemoryWebsiteStorageAdapter', () => {
@@ -57,11 +57,7 @@ describe('WebsiteStorageAdapter', () => {
     });
     
     test('should save and retrieve landing page data', async () => {
-      const landingPageData: LandingPageData = {
-        name: 'Test User',
-        title: 'Test User - Personal Website',
-        tagline: 'Web Developer',
-      };
+      const landingPageData = createTestLandingPageData();
       
       await adapter.saveLandingPageData(landingPageData);
       
@@ -70,17 +66,17 @@ describe('WebsiteStorageAdapter', () => {
     });
     
     test('should overwrite existing landing page data on save', async () => {
-      const initialData: LandingPageData = {
+      const initialData = createTestLandingPageData({
         name: 'Initial User',
         title: 'Initial Title',
         tagline: 'Initial Tagline',
-      };
+      });
       
-      const updatedData: LandingPageData = {
+      const updatedData = createTestLandingPageData({
         name: 'Updated User',
         title: 'Updated Title',
         tagline: 'Updated Tagline',
-      };
+      });
       
       await adapter.saveLandingPageData(initialData);
       await adapter.saveLandingPageData(updatedData);

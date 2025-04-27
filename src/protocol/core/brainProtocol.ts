@@ -292,11 +292,11 @@ export class BrainProtocol implements IBrainProtocol {
   /**
    * Process a natural language query
    * @param query Query text
-   * @param options Query options
-   * @returns Query result
+   * @param options Query options with optional schema for structured responses
+   * @returns Query result with optional structured object
    */
-  async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
-    return this.queryProcessor.processQuery(query, options);
+  async processQuery<T = unknown>(query: string, options?: QueryOptions<T>): Promise<QueryResult<T>> {
+    return this.queryProcessor.processQuery<T>(query, options);
   }
 
   /**

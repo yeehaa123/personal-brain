@@ -4,11 +4,11 @@
  * Tests the query processing pipeline with mocked dependencies.
  */
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { z } from 'zod';
 
 import { QueryProcessor } from '@/protocol/pipeline/queryProcessor';
 import type { IContextManager } from '@/protocol/types';
-import { ClaudeModel } from '@/resources/ai/claude';
-import type { DefaultResponseType, ModelResponse } from '@/resources/ai/interfaces';
+import { ResourceRegistry } from '@/resources';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
@@ -16,6 +16,8 @@ import { createMockNote } from '@test/__mocks__/models/note';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 import { MockContextManager } from '@test/__mocks__/protocol/managers/contextManager';
 import { MockConversationManager } from '@test/__mocks__/protocol/managers/conversationManager';
+import { ClaudeModel } from '@test/__mocks__/resources/ai/claude/claude';
+import { MockResourceRegistry } from '@test/__mocks__/resources/resourceRegistry';
 
 // Sample data
 const sampleNote = createMockNote('note-1', 'Ecosystem Architecture', ['ecosystem', 'architecture']);
@@ -33,6 +35,9 @@ describe('QueryProcessor', () => {
     // Reset mocks between tests
     MockContextManager.resetInstance();
     MockConversationManager.resetInstance();
+    MockResourceRegistry.resetInstance();
+    ResourceRegistry.resetInstance();
+    ClaudeModel.resetInstance();
 
     // Reset mock note context
     MockNoteContext.resetInstance();
@@ -50,38 +55,17 @@ describe('QueryProcessor', () => {
     // Setup mock conversation context
     MockConversationContext.resetInstance();
 
-    // Mock the ClaudeModel complete method
-    spyOn(ClaudeModel.prototype, 'complete').mockImplementation(
-      function <T = DefaultResponseType>(options: { userPrompt: string }): Promise<ModelResponse<T>> {
-        const userPrompt = options.userPrompt;
-
-        let responseObject: DefaultResponseType;
-
-        if (userPrompt.includes('ecosystem')) {
-          responseObject = {
-            answer: 'Ecosystem architecture involves designing interconnected components that work together.',
-          };
-        } else if (userPrompt.includes('profile')) {
-          responseObject = {
-            answer: 'Your profile shows expertise in software development and architecture.',
-          };
-        } else {
-          responseObject = {
-            answer: 'I don\'t have specific information about that in my knowledge base.',
-          };
-        }
-
-        // For the tests we only use the default schema with { answer: string }
-        return Promise.resolve({
-          object: responseObject as unknown as T,
-          usage: userPrompt.includes('ecosystem')
-            ? { inputTokens: 100, outputTokens: 20 }
-            : userPrompt.includes('profile')
-              ? { inputTokens: 150, outputTokens: 25 }
-              : { inputTokens: 50, outputTokens: 15 },
-        });
-      },
-    );
+    // Create a real ResourceRegistry instance that we can spy on
+    const resourceRegistry = ResourceRegistry.createFresh();
+    
+    // Create a standardized mock Claude model
+    const mockClaudeModel = ClaudeModel.createFresh();
+    
+    // Mock the ResourceRegistry.getInstance to return our real instance
+    spyOn(ResourceRegistry, 'getInstance').mockReturnValue(resourceRegistry);
+    
+    // Mock the getClaudeModel method to return our mock model
+    spyOn(resourceRegistry, 'getClaudeModel').mockReturnValue(mockClaudeModel as unknown as ReturnType<typeof resourceRegistry.getClaudeModel>);
   });
 
   // Test basic query processing
@@ -167,5 +151,106 @@ describe('QueryProcessor', () => {
 
     // Assert
     expect(capturedQuery).toBe('What information do you have in this brain?');
+  });
+
+  // Test schema-based query processing
+  test('should process a query with schema and return structured data', async () => {
+    // Arrange
+    const contextManager = MockContextManager.createFresh() as unknown as IContextManager;
+    const conversationManager = MockConversationManager.createFresh();
+
+    const processor = QueryProcessor.createFresh({
+      contextManager,
+      conversationManager,
+      apiKey: 'mock-api-key',
+    });
+
+    // Define a test schema for user data
+    const UserSchema = z.object({
+      name: z.string(),
+      email: z.string().email(),
+      preferences: z.object({
+        theme: z.string(),
+        notifications: z.boolean(),
+      }),
+    });
+
+    type UserData = z.infer<typeof UserSchema>;
+
+    // Act
+    const result = await processor.processQuery<UserData>(
+      'Get user data for this profile',
+      {
+        userId: 'user-123',
+        userName: 'Test User',
+        schema: UserSchema,
+      },
+    );
+
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.object).toBeDefined();
+    expect(result.object?.name).toBe('John Doe');
+    expect(result.object?.email).toBe('john@example.com');
+    expect(result.object?.preferences.theme).toBe('dark');
+    expect(result.object?.preferences.notifications).toBe(true);
+  });
+
+  // Test landing page schema integration
+  test('should process a landing page generation request with schema', async () => {
+    // Arrange
+    const contextManager = MockContextManager.createFresh() as unknown as IContextManager;
+    const conversationManager = MockConversationManager.createFresh();
+
+    const processor = QueryProcessor.createFresh({
+      contextManager,
+      conversationManager,
+      apiKey: 'mock-api-key',
+    });
+
+    // Define a simplified version of the landing page schema for testing
+    const LandingPageSchema = z.object({
+      title: z.string(),
+      description: z.string(),
+      name: z.string(),
+      tagline: z.string(),
+      hero: z.object({
+        headline: z.string(),
+        subheading: z.string(),
+        ctaText: z.string(),
+        ctaLink: z.string(),
+      }),
+      services: z.object({
+        title: z.string(),
+        items: z.array(z.object({
+          title: z.string(),
+          description: z.string(),
+        })),
+      }),
+      sectionOrder: z.array(z.string()),
+    });
+
+    type LandingPageData = z.infer<typeof LandingPageSchema>;
+
+    // Act
+    const result = await processor.processQuery<LandingPageData>(
+      'Create a professional landing page for my profile, include sections on services',
+      {
+        userId: 'user-123',
+        userName: 'Test User',
+        schema: LandingPageSchema,
+      },
+    );
+
+    // Assert
+    expect(result).toBeDefined();
+    expect(result.object).toBeDefined();
+    expect(result.object?.title).toBe('Professional Services');
+    expect(result.object?.name).toBe('Test Professional');
+    expect(result.object?.hero.headline).toBe('Transform Your Business');
+    expect(result.object?.services.items.length).toBe(2);
+    expect(result.object?.services.items[0].title).toBe('Consulting');
+    expect(result.object?.sectionOrder).toContain('hero');
+    expect(result.object?.sectionOrder).toContain('services');
   });
 });

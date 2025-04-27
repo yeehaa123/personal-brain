@@ -6,7 +6,7 @@ import { ProfileContext } from '@/contexts/profiles';
 import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
-import type { EnhancedLandingPageData } from '@website/schemas';
+import type { LandingPageData } from '@website/schemas';
 
 import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
@@ -16,7 +16,7 @@ import { DeploymentManagerFactory } from './services/deployment';
 import type { WebsiteDeploymentManager } from './services/deployment';
 import { LandingPageGenerationService } from './services/landingPageGenerationService';
 import { WebsiteToolService } from './tools';
-import type { LandingPageData, WebsiteConfig } from './websiteStorage';
+import type { WebsiteConfig } from './websiteStorage';
 
 /**
  * Options for creating a WebsiteContext instance
@@ -536,7 +536,7 @@ export class WebsiteContext extends BaseContext<
    * Generate a landing page from profile data
    * @returns Result of the generation operation
    */
-  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: EnhancedLandingPageData }> {
+  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();

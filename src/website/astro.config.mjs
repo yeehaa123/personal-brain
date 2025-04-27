@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
@@ -8,6 +9,7 @@ export default defineConfig({
   build: {
     format: 'directory',
   },
+  integrations: [tailwind()],
   server: {
     // Allow any host including nip.io domains
     host: '0.0.0.0',

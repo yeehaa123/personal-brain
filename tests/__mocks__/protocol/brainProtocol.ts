@@ -185,11 +185,44 @@ export class MockBrainProtocol {
   /**
    * Process a query
    * Returns mock query result
+   * Supports generic types and schemas for structured responses
    */
-  async processQuery(_query: string, _options?: QueryOptions): Promise<QueryResult> {
+  async processQuery<T = unknown>(_query: string, _options?: QueryOptions<T>): Promise<QueryResult<T>> {
     // If we have a custom response configured, use it
     if (this.options.customQueryResponse) {
-      return { ...this.options.customQueryResponse };
+      return { ...this.options.customQueryResponse } as unknown as QueryResult<T>;
+    }
+    
+    // If a schema is provided, generate a structured response based on the schema
+    if (_options?.schema) {
+      // For landing page generation
+      if (_query.includes('landing page') || _query.includes('professional page')) {
+        return {
+          answer: 'Generated landing page content',
+          citations: [],
+          relatedNotes: [],
+          object: {
+            title: 'Professional Services',
+            description: 'Expert services for professionals',
+            name: 'Test Professional',
+            tagline: 'Quality expertise you can trust',
+            hero: {
+              headline: 'Transform Your Business',
+              subheading: 'Professional services tailored to your needs',
+              ctaText: 'Get Started',
+              ctaLink: '#contact',
+            },
+            services: {
+              title: 'Services',
+              items: [
+                { title: 'Consulting', description: 'Expert advice for your projects' },
+                { title: 'Development', description: 'Professional implementation services' },
+              ],
+            },
+            sectionOrder: ['hero', 'services', 'about', 'cta', 'footer'],
+          } as unknown as T,
+        };
+      }
     }
     
     // Otherwise use the default mock response
@@ -197,6 +230,6 @@ export class MockBrainProtocol {
       answer: 'Mock answer from BrainProtocol',
       citations: [],
       relatedNotes: [],
-    };
+    } as QueryResult<T>;
   }
 }

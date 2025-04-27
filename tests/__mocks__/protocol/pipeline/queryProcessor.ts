@@ -47,17 +47,64 @@ export class MockQueryProcessor {
   /**
    * Process a query
    * Returns a mock query result or the configured custom response
+   * Supports generic types and schemas for structured responses
    */
-  processQuery(_query: string, _options?: QueryOptions): Promise<QueryResult> {
+  processQuery<T = unknown>(_query: string, options?: QueryOptions<T>): Promise<QueryResult<T>> {
     if (this.customResponse) {
-      return Promise.resolve({...this.customResponse});
+      return Promise.resolve({...this.customResponse} as unknown as QueryResult<T>);
     }
     
+    // If a schema is provided, generate a structured response
+    if (options?.schema) {
+      // Check the query to determine what kind of structured data to return
+      if (_query.includes('user data')) {
+        // For user data queries
+        return Promise.resolve({
+          answer: 'Mock answer with structured user data',
+          citations: [],
+          relatedNotes: [],
+          object: {
+            name: 'Mock User',
+            email: 'mock@example.com',
+            preferences: { theme: 'light', notifications: true },
+          } as unknown as T,
+        });
+      } else if (_query.includes('landing page')) {
+        // For landing page queries
+        return Promise.resolve({
+          answer: 'Mock landing page generation response',
+          citations: [],
+          relatedNotes: [],
+          object: {
+            title: 'Mock Landing Page',
+            description: 'A mock landing page for testing',
+            name: 'Mock Professional',
+            tagline: 'Expert mock services',
+            hero: {
+              headline: 'Welcome to My Services',
+              subheading: 'Professional testing services',
+              ctaText: 'Get Started',
+              ctaLink: '#contact',
+            },
+            services: {
+              title: 'Services',
+              items: [
+                { title: 'Mock Service 1', description: 'First mock service' },
+                { title: 'Mock Service 2', description: 'Second mock service' },
+              ],
+            },
+            sectionOrder: ['hero', 'services', 'about', 'cta', 'footer'],
+          } as unknown as T,
+        });
+      }
+    }
+    
+    // Default response without structured data
     return Promise.resolve({
       answer: 'Mock answer from QueryProcessor',
       citations: [],
       relatedNotes: [],
-    });
+    } as QueryResult<T>);
   }
   
   /**

@@ -5,7 +5,7 @@ import { CLIRenderer } from '@commands/cli-renderer';
 import type { CommandResult, WebsiteCommandResult } from '@commands/core/commandTypes';
 import { createMockLogger, MockLogger } from '@test/__mocks__/core/logger';
 import { createTrackers, mockCLIInterface, restoreCLIInterface } from '@test/__mocks__/utils/cliUtils';
-import type { LandingPageData } from '@website/schemas';
+import { createTestLandingPageData } from '@test/helpers';
 
 describe('CLIRenderer - Website Commands', () => {
   let renderer: CLIRenderer;
@@ -99,11 +99,11 @@ describe('CLIRenderer - Website Commands', () => {
     });
 
     test('should render landing-page view result', () => {
-      const landingPageData: LandingPageData = {
+      const landingPageData = createTestLandingPageData({
         name: 'John Doe',
         title: 'Software Developer',
         tagline: 'Building great software',
-      };
+      });
       
       const result: WebsiteCommandResult = {
         type: 'landing-page',

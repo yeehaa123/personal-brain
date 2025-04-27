@@ -8,7 +8,7 @@ import type {
   WebsiteStatusResult, 
 } from '@/interfaces/matrix/formatters/types';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
-import type { LandingPageData } from '@website/schemas';
+import { createTestLandingPageData } from '@test/helpers';
 
 describe('Matrix Website Command Formatters', () => {
   describe('Website Command Formatting', () => {
@@ -126,11 +126,11 @@ describe('Matrix Website Command Formatters', () => {
 
     test('should format landing-page view output', () => {
       const formatter = MatrixResponseFormatter.getInstance();
-      const landingPageData: LandingPageData = {
+      const landingPageData = createTestLandingPageData({
         name: 'John Doe',
         title: 'Software Developer',
         tagline: 'Building great software',
-      };
+      });
       
       const result: WebsiteCommandResult = {
         type: 'landing-page',

@@ -1,0 +1,88 @@
+---
+// Expertise.astro - Expertise section for landing page
+interface Props {
+  expertise: {
+    title: string;
+    introduction?: string;
+    items: Array<{
+      title: string;
+      description?: string;
+    }>;
+    credentials?: Array<{
+      title: string;
+      issuer?: string;
+      year?: string;
+    }>;
+    enabled: boolean;
+  };
+}
+
+const { expertise } = Astro.props;
+
+// Don't render if section is disabled
+if (!expertise.enabled) return null;
+---
+
+<section class="py-20 px-6 md:px-10 lg:px-16 bg-white dark:bg-gray-800">
+  <div class="container mx-auto max-w-6xl">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold mb-6 text-gray-900 dark:text-white">
+        {expertise.title}
+      </h2>
+      
+      {expertise.introduction && (
+        <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          {expertise.introduction}
+        </p>
+      )}
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+      {expertise.items.map((item) => (
+        <div class="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+          <h3 class="text-xl font-semibold mb-2 text-gray-900 dark:text-white">
+            {item.title}
+          </h3>
+          
+          {item.description && (
+            <p class="text-gray-600 dark:text-gray-300">
+              {item.description}
+            </p>
+          )}
+        </div>
+      ))}
+    </div>
+    
+    {expertise.credentials && expertise.credentials.length > 0 && (
+      <div class="mt-12 border-t pt-12 border-gray-200 dark:border-gray-700">
+        <h3 class="text-2xl font-bold text-center mb-8 text-gray-900 dark:text-white">
+          Credentials & Certifications
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {expertise.credentials.map((credential) => (
+            <div class="flex space-x-4">
+              <div class="flex-none">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900 dark:text-white">{credential.title}</p>
+                {credential.issuer && credential.year && (
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{credential.issuer} • {credential.year}</p>
+                )}
+                {credential.issuer && !credential.year && (
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{credential.issuer}</p>
+                )}
+                {!credential.issuer && credential.year && (
+                  <p class="text-sm text-gray-500 dark:text-gray-400">{credential.year}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</section>

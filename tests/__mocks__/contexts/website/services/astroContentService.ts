@@ -3,6 +3,7 @@ import { mock } from 'bun:test';
 import type { AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import { MockLogger } from '@test/__mocks__/core/logger';
+import { createTestLandingPageData } from '@test/helpers';
 
 /**
  * Mock implementation of AstroContentService for tests
@@ -23,11 +24,9 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
   // Mock methods with default implementations that work well for tests
   verifyAstroProject = mock(() => Promise.resolve(true));
   writeLandingPageContent = mock<(data: LandingPageData) => Promise<boolean>>((_data: LandingPageData) => Promise.resolve(true));
-  readLandingPageContent = mock<() => Promise<LandingPageData | null>>(() => Promise.resolve({
-    name: 'Test User',
-    title: 'Test User - Personal Website',
-    tagline: 'Web Developer',
-  }));
+  readLandingPageContent = mock<() => Promise<LandingPageData | null>>(() => Promise.resolve(
+    createTestLandingPageData(),
+  ));
   runAstroCommand = mock<(command: string) => Promise<{ success: boolean; output: string }>>((command: string) => {
     return Promise.resolve({ success: true, output: `Command ${command} executed successfully` });
   });

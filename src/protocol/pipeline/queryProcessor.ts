@@ -2,6 +2,8 @@
  * Query Processor for BrainProtocol
  * Manages the query processing pipeline
  */
+import type { z } from 'zod';
+
 import { relevanceConfig } from '@/config';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
@@ -172,10 +174,10 @@ export class QueryProcessor implements IQueryProcessor {
   /**
    * Process a query through the full pipeline
    * @param query User query
-   * @param options Query options
-   * @returns Query result
+   * @param options Query options with optional schema for structured responses
+   * @returns Query result with optional structured object
    */
-  async processQuery(query: string, options?: QueryOptions): Promise<QueryResult> {
+  async processQuery<T = unknown>(query: string, options?: QueryOptions<T>): Promise<QueryResult<T>> {
     // Validate input
     if (!isNonEmptyString(query)) {
       this.logger.warn('Empty query received, using default question');
@@ -218,8 +220,12 @@ export class QueryProcessor implements IQueryProcessor {
       externalResults,
     );
     
-    // 6. Call the model
-    const modelResponse = await this.callModel(systemPrompt, userPrompt);
+    // 6. Call the model with optional schema for structured responses
+    const modelResponse = await this.callModel<T>(
+      systemPrompt, 
+      userPrompt,
+      options?.schema, // Pass the schema if provided
+    );
     
     // Extract the answer from the response
     const answer = modelResponse.object && typeof modelResponse.object === 'object' && 'answer' in modelResponse.object
@@ -245,13 +251,14 @@ export class QueryProcessor implements IQueryProcessor {
     const profileContext = this.contextManager.getProfileContext();
     const profile = includeProfileInResponse ? await profileContext.getProfile() : undefined;
     
-    // 11. Return the result
+    // 11. Return the result with the optional structured object
     return {
       answer,
       citations: context.citations,
       relatedNotes,
       profile,
       externalSources: externalCitations.length > 0 ? externalCitations : undefined,
+      object: modelResponse.object, // Include the structured object in the result
     };
   }
 
@@ -396,13 +403,19 @@ export class QueryProcessor implements IQueryProcessor {
    * Call the AI model
    * @param systemPrompt System prompt
    * @param userPrompt User prompt
+   * @param schema Optional schema for structured responses
    * @returns Model response
    */
-  private async callModel(systemPrompt: string, userPrompt: string): Promise<ModelResponse> {
+  private async callModel<T = unknown>(
+    systemPrompt: string, 
+    userPrompt: string,
+    schema?: z.ZodType<T>,
+  ): Promise<ModelResponse<T>> {
     const claude = this.resourceRegistry.getClaudeModel();
     return await claude.complete({
       systemPrompt,
       userPrompt,
+      schema,
     });
   }
 

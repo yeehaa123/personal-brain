@@ -1,19 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Basic schema for landing page data - original version
- * This is shared between the main application and the Astro website
- */
-export const LandingPageSchema = z.object({
-  name: z.string(),
-  title: z.string(),
-  tagline: z.string(),
-});
-
-export type LandingPageData = z.infer<typeof LandingPageSchema>;
-
-/**
- * Enhanced schemas for the new section-based landing page structure
+ * Section schemas for the landing page structure
  */
 
 // Hero section schema
@@ -174,8 +162,8 @@ export const FooterSectionSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-// Enhanced landing page data schema
-export const EnhancedLandingPageSchema = z.object({
+// Landing page data schema
+export const LandingPageSchema = z.object({
   // Basic information
   title: z.string(),
   description: z.string(),
@@ -211,4 +199,4 @@ export const EnhancedLandingPageSchema = z.object({
   footer: FooterSectionSchema.optional(),
 });
 
-export type EnhancedLandingPageData = z.infer<typeof EnhancedLandingPageSchema>;
+export type LandingPageData = z.infer<typeof LandingPageSchema>;

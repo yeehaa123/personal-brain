@@ -4,6 +4,7 @@
  * Tests for the refactored BrainProtocol with proper mock dependencies
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { z } from 'zod';
 
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import type { BrainProtocolDependencies } from '@/protocol/core/brainProtocol';
@@ -151,12 +152,12 @@ describe('BrainProtocol', () => {
     const notReadyQueryProcessor = MockQueryProcessor.createFresh();
     // Override processQuery to check ready state
     const originalProcessQuery = notReadyQueryProcessor.processQuery;
-    notReadyQueryProcessor.processQuery = async function(query: string, options?: QueryOptions) {
+    notReadyQueryProcessor.processQuery = (async function(this: unknown, query: string, options?: QueryOptions<unknown>) {
       if (!notReadyStatusManager.isReady()) {
         throw new Error('Cannot process query: system not ready');
       }
       return originalProcessQuery.call(this, query, options);
-    };
+    }) as typeof originalProcessQuery;
 
     // Create dependencies with not-ready status and processor that checks status
     const mockDepsNotReady = createMockDependencies({
@@ -212,6 +213,111 @@ describe('BrainProtocol', () => {
     const customOptions = { includeContext: true } as QueryOptions;
     const result2 = await brainProtocol.processQuery('test', customOptions);
     expect(result2.answer).toBe('Processed: test (with context: yes)');
+  });
+
+  test('processQuery should support schema-based structured responses', async () => {
+    // Create a fresh query processor for this test
+    const schemaQueryProcessor = MockQueryProcessor.createFresh();
+    
+    // Create mock dependencies with our query processor
+    const mockDeps = createMockDependencies({
+      QueryProcessor: {
+        getInstance: () => schemaQueryProcessor,
+      } as unknown as BrainProtocolDependencies['QueryProcessor'],
+    });
+
+    // Create brain protocol instance with our dependencies
+    const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
+
+    // Define a user data schema for testing
+    const UserSchema = z.object({
+      name: z.string(),
+      email: z.string().email(),
+      preferences: z.object({
+        theme: z.string(),
+        notifications: z.boolean(),
+      }),
+    });
+
+    type UserData = z.infer<typeof UserSchema>;
+
+    // Process a query with schema
+    const result = await brainProtocol.processQuery<UserData>(
+      'Get user data for this profile',
+      {
+        userId: 'user-123',
+        userName: 'Test User',
+        schema: UserSchema,
+      },
+    );
+
+    // Verify the structured response
+    expect(result).toBeDefined();
+    expect(result.object).toBeDefined();
+    expect(result.object?.name).toBe('Mock User');
+    expect(result.object?.email).toBe('mock@example.com');
+    expect(result.object?.preferences.theme).toBe('light');
+    expect(result.object?.preferences.notifications).toBe(true);
+  });
+
+  test('processQuery should support landing page schema', async () => {
+    // Create a fresh query processor for this test
+    const schemaQueryProcessor = MockQueryProcessor.createFresh();
+    
+    // Create mock dependencies with our query processor
+    const mockDeps = createMockDependencies({
+      QueryProcessor: {
+        getInstance: () => schemaQueryProcessor,
+      } as unknown as BrainProtocolDependencies['QueryProcessor'],
+    });
+
+    // Create brain protocol instance with our dependencies
+    const brainProtocol = BrainProtocol.createFresh({}, mockDeps);
+
+    // Define a simplified landing page schema for testing
+    const LandingPageSchema = z.object({
+      title: z.string(),
+      description: z.string(),
+      name: z.string(),
+      tagline: z.string(),
+      hero: z.object({
+        headline: z.string(),
+        subheading: z.string(),
+        ctaText: z.string(),
+        ctaLink: z.string(),
+      }),
+      services: z.object({
+        title: z.string(),
+        items: z.array(z.object({
+          title: z.string(),
+          description: z.string(),
+        })),
+      }),
+      sectionOrder: z.array(z.string()),
+    });
+
+    type LandingPageData = z.infer<typeof LandingPageSchema>;
+
+    // Process a landing page generation query with schema
+    const result = await brainProtocol.processQuery<LandingPageData>(
+      'Create a professional landing page with services',
+      {
+        userId: 'user-123',
+        userName: 'Test User',
+        schema: LandingPageSchema,
+      },
+    );
+
+    // Verify the structured landing page response
+    expect(result).toBeDefined();
+    expect(result.object).toBeDefined();
+    expect(result.object?.title).toBe('Mock Landing Page');
+    expect(result.object?.name).toBe('Mock Professional');
+    expect(result.object?.hero.headline).toBe('Welcome to My Services');
+    expect(result.object?.services.items.length).toBe(2);
+    expect(result.object?.services.items[0].title).toBe('Mock Service 1');
+    expect(result.object?.sectionOrder).toContain('hero');
+    expect(result.object?.sectionOrder).toContain('services');
   });
 });
 

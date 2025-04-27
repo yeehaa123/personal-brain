@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:
 import { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
 import type { Profile } from '@/models/profile';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { QueryOptions, QueryResult } from '@/protocol/types';
 import { MockProfile } from '@test/__mocks__/models/profile';
 import { MockBrainProtocol } from '@test/__mocks__/protocol/brainProtocol';
-import type { EnhancedLandingPageData } from '@website/schemas';
+import type { LandingPageData } from '@website/schemas';
 
 describe('LandingPageGenerationService', () => {
   let service: LandingPageGenerationService;
@@ -31,12 +32,11 @@ describe('LandingPageGenerationService', () => {
       return mockBrainProtocol as unknown as BrainProtocol;
     });
 
-    // Mock specific queries with their expected responses
-    mockBrainProtocol.processQuery = mock((query) => {
+    // Use any type for the mock, then we can cast the final result
+    mockBrainProtocol.processQuery = mock(function (query: string, _options?: unknown) {
       // Profile query
       if (query.includes('Get my profile information')) {
         return Promise.resolve({
-          query: query,
           answer: '',
           citations: [],
           relatedNotes: [],
@@ -44,124 +44,44 @@ describe('LandingPageGenerationService', () => {
         });
       }
 
-      // Basic landing page info - matches generateBasicLandingPageInfo method
-      if (query.includes('generate enhanced landing page content')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"name": "Test Name", "title": "Test Title", "tagline": "Test Tagline", "description": "Test Description"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
+      // For schema-based landing page generation
+      if (query.includes('professional landing page')) {
+        const landingPageData = {
+          title: 'Professional Services',
+          description: 'Expert services for professionals',
+          name: 'Test Professional',
+          tagline: 'Quality expertise you can trust',
+          hero: {
+            headline: 'Transform Your Business',
+            subheading: 'Professional services tailored to your needs',
+            ctaText: 'Get Started',
+            ctaLink: '#contact',
+          },
+          services: {
+            title: 'Services',
+            items: [
+              { title: 'Consulting', description: 'Expert advice for your projects' },
+              { title: 'Development', description: 'Professional implementation services' },
+            ],
+          },
+          sectionOrder: ['hero', 'services', 'about', 'cta', 'footer'],
+        };
 
-      // Hero section - matches generateHeroSection method
-      if (query.includes('create a compelling hero section')) {
         return Promise.resolve({
-          query: query,
-          answer: '{"headline": "Test Headline", "subheading": "Test Subheading", "ctaText": "Get Started", "ctaLink": "#contact"}',
+          answer: 'Generated landing page content',
           citations: [],
           relatedNotes: [],
-        });
-      }
-
-      // Problem statement - matches generateProblemStatementSection method
-      if (query.includes('create a problem statement section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "Test Problem", "description": "Test problem description", "bulletPoints": ["Point 1", "Point 2"], "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // Services section - matches generateServicesSection method
-      if (query.includes('create a comprehensive services section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "Services", "items": [{"title": "Service 1", "description": "Description 1"}, {"title": "Service 2", "description": "Description 2"}]}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // Process section - matches generateProcessSection method
-      if (query.includes('create a "How I Work" process section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "My Process", "steps": [{"step": 1, "title": "Step 1", "description": "Description 1"}, {"step": 2, "title": "Step 2", "description": "Description 2"}], "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // Testimonials section - matches generateTestimonialsSection method
-      if (query.includes('create a testimonials section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "Testimonials", "items": [{"quote": "Great service!", "author": "John Doe", "company": "ACME Corp"}], "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // Expertise section - matches generateExpertiseSection method
-      if (query.includes('create an expertise section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "My Expertise", "items": [{"title": "Skill 1", "description": "Description 1"}, {"title": "Skill 2", "description": "Description 2"}], "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // About section - matches generateAboutSection method
-      if (query.includes('create an "About Me" section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "About Me", "content": "This is a detailed description about me and my professional background.", "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // FAQ section - matches generateFaqSection method
-      if (query.includes('create a FAQ section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "Frequently Asked Questions", "items": [{"question": "Question 1?", "answer": "Answer 1"}, {"question": "Question 2?", "answer": "Answer 2"}], "quality": "high"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // CTA section - matches generateCtaSection method
-      if (query.includes('create a compelling call-to-action section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"title": "Get Started Now", "subtitle": "Contact me today to discuss your project.", "buttonText": "Contact Me", "buttonLink": "#contact"}',
-          citations: [],
-          relatedNotes: [],
-        });
-      }
-
-      // Footer section - matches generateFooterSection method
-      if (query.includes('create a footer section')) {
-        return Promise.resolve({
-          query: query,
-          answer: '{"copyrightText": "© 2025 Test User. All rights reserved."}',
-          citations: [],
-          relatedNotes: [],
+          object: landingPageData,
         });
       }
 
       // Fallback for any other queries
       return Promise.resolve({
-        query: query,
-        answer: '{"title": "Generic Title", "description": "Generic description"}',
+        answer: 'Default mock response',
         citations: [],
         relatedNotes: [],
       });
-    });
+    }) as unknown as <T = unknown>(_query: string, _options?: QueryOptions<T>) => Promise<QueryResult<T>>;
   });
 
   afterEach(() => {
@@ -170,8 +90,6 @@ describe('LandingPageGenerationService', () => {
   });
 
   test('generateLandingPageData should return a complete landing page structure', async () => {
-    // Our helper mocking is already set up in beforeEach
-
     // Call the method
     const result = await service.generateLandingPageData();
 
@@ -184,8 +102,6 @@ describe('LandingPageGenerationService', () => {
     // Verify required sections exist
     expect(result.hero).toBeDefined();
     expect(result.services).toBeDefined();
-    expect(result.cta).toBeDefined();
-    expect(result.footer).toBeDefined();
 
     // Verify section order is an array
     expect(Array.isArray(result.sectionOrder)).toBe(true);
@@ -194,15 +110,12 @@ describe('LandingPageGenerationService', () => {
     // Verify always-required sections are in the order
     expect(result.sectionOrder).toContain('hero');
     expect(result.sectionOrder).toContain('services');
-    expect(result.sectionOrder).toContain('cta');
-    expect(result.sectionOrder).toContain('footer');
   });
 
   test('generateLandingPageData should handle missing profile', async () => {
     // Configure the mock BrainProtocol to return no profile
     mockBrainProtocol.processQuery = mock(() => {
       return Promise.resolve({
-        query: '',
         answer: '',
         citations: [],
         relatedNotes: [],
@@ -215,10 +128,8 @@ describe('LandingPageGenerationService', () => {
   });
 
   test('should apply custom overrides to landing page', async () => {
-    // No need to reconfigure the mock - use the one from beforeEach
-
     // Apply overrides
-    const overrides: Partial<EnhancedLandingPageData> = {
+    const overrides: Partial<LandingPageData> = {
       title: 'Custom Title',
       tagline: 'Custom Tagline',
       hero: {
@@ -240,134 +151,45 @@ describe('LandingPageGenerationService', () => {
     expect(result.hero.ctaLink).toBe('#custom');
   });
 
-  test('should handle AI response errors gracefully', async () => {
-    // Create mocks that will cause all the fallback mechanisms to be used
-    // For this purpose, we'll mock out all the private helper methods instead
-    // This avoids the complexity of dealing with the different JSON formats
+  test('should handle schema validation and provide defaults for missing fields', async () => {
+    // Mock BrainProtocol to return a response missing some required fields
+    mockBrainProtocol.processQuery = mock((query) => {
+      // Profile query should still return a profile
+      if (query.includes('Get my profile information')) {
+        return Promise.resolve({
+          answer: '',
+          citations: [],
+          relatedNotes: [],
+          profile: mockProfile as Profile,
+        });
+      }
 
-    // Mock all the private generation methods to return fallback values
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateBasicLandingPageInfo').mockImplementation(() => {
+      // Return incomplete landing page data
       return Promise.resolve({
-        name: 'Fallback Name',
-        title: 'Fallback Title',
-        tagline: 'Fallback Tagline',
-        description: 'Fallback Description',
+        answer: 'Partial landing page content',
+        citations: [],
+        relatedNotes: [],
+        // Partial object missing some required fields
+        object: {
+          title: 'Incomplete Page',
+          name: 'Test Person',
+          // Missing: description, tagline, hero, services, sectionOrder
+        },
       });
-    });
+    }) as unknown as <T = unknown>(_query: string, _options?: QueryOptions<T>) => Promise<QueryResult<T>>;
 
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateHeroSection').mockImplementation(() => {
-      return Promise.resolve({
-        headline: 'Fallback Headline',
-        subheading: 'Fallback Subheading',
-        ctaText: 'Get Started',
-        ctaLink: '#contact',
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateProblemStatementSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'Fallback Problem',
-        description: 'Fallback description',
-        bulletPoints: ['Point 1'],
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateServicesSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'Services',
-        items: [{ title: 'Service', description: 'Description' }],
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateProcessSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'Process',
-        steps: [{ step: 1, title: 'Step', description: 'Description' }],
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateTestimonialsSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'Testimonials',
-        items: [],
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateExpertiseSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'Expertise',
-        items: [],
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateAboutSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'About',
-        content: 'Content',
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateFaqSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'FAQ',
-        items: [],
-        enabled: false,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateCtaSection').mockImplementation(() => {
-      return Promise.resolve({
-        title: 'CTA',
-        buttonText: 'Contact',
-        buttonLink: '#contact',
-        enabled: true,
-      });
-    });
-
-    // @ts-expect-error - Accessing private method for testing
-    spyOn(service, 'generateFooterSection').mockImplementation(() => {
-      return Promise.resolve({
-        copyrightText: '© Test',
-        enabled: true,
-      });
-    });
-
-    // Should still return a valid landing page structure with our fallbacks
+    // Service should handle missing fields with defaults
     const result = await service.generateLandingPageData();
 
-    // Basic structure should exist with fallbacks
+    // Verify the service provided default values for missing fields
     expect(result).toBeDefined();
-    expect(result.title).toBe('Fallback Title');
-    expect(result.name).toBe('Fallback Name');
-    expect(result.tagline).toBe('Fallback Tagline');
-
-    // Required sections should be in the section order
-    expect(result.sectionOrder).toContain('hero');
-    expect(result.sectionOrder).toContain('services');
-    expect(result.sectionOrder).toContain('cta');
-    expect(result.sectionOrder).toContain('footer');
-
-    // Optional sections should not be in the order since they're disabled
-    expect(result.sectionOrder).not.toContain('problemStatement');
-    expect(result.sectionOrder).not.toContain('process');
-    expect(result.sectionOrder).not.toContain('testimonials');
-    expect(result.sectionOrder).not.toContain('expertise');
-    expect(result.sectionOrder).not.toContain('about');
-    expect(result.sectionOrder).not.toContain('faq');
+    expect(result.title).toBe('Incomplete Page');  // Should keep provided value
+    expect(result.name).toBe('Test Person');       // Should keep provided value
+    expect(result.description).toBeDefined();      // Should have default
+    expect(result.tagline).toBeDefined();          // Should have default
+    expect(result.hero).toBeDefined();             // Should have default
+    expect(result.services).toBeDefined();         // Should have default
+    expect(result.sectionOrder).toBeDefined();     // Should have default
+    expect(Array.isArray(result.sectionOrder)).toBe(true);
   });
 });

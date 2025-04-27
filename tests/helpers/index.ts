@@ -6,3 +6,6 @@
  */
 
 // Environment utilities have been removed as part of code cleanup
+
+// Export website test helpers
+export * from './websiteTestHelpers';

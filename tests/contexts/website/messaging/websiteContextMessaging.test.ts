@@ -9,6 +9,7 @@ import { WebsiteContextMessaging } from '@/contexts/website/messaging/websiteCon
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator } from '@/protocol/messaging';
 import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextMediator';
+import { createTestLandingPageData } from '@test/helpers';
 
 // Define the return type of buildWebsite method
 type BuildWebsiteResult = { success: boolean; message: string; output?: string };
@@ -18,11 +19,11 @@ const mockWebsiteContext = /* @__PURE__ */ (({
   generateLandingPage: mock(() => Promise.resolve({
     success: true,
     message: 'Landing page generated',
-    data: { 
+    data: createTestLandingPageData({
       title: 'Test Landing Page',
       name: 'Test Name',
-      tagline: 'Test Tagline', 
-    },
+      tagline: 'Test Tagline',
+    }),
   })),
   
   buildWebsite: mock(() => Promise.resolve({
@@ -143,15 +144,13 @@ describe('WebsiteContextMessaging', () => {
         }),
       }),
     );
-    expect(result).toEqual({
-      success: true,
-      message: 'Landing page generated',
-      data: { 
-        title: 'Test Landing Page',
-        name: 'Test Name',
-        tagline: 'Test Tagline',
-      },
-    });
+    
+    // Test the essential properties without checking the full object structure
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('Landing page generated');
+    expect(result.data?.name).toBe('Test Name');
+    expect(result.data?.title).toBe('Test Landing Page');
+    expect(result.data?.tagline).toBe('Test Tagline');
   });
   
   test('should delegate buildWebsite to the original context and send notification', async () => {

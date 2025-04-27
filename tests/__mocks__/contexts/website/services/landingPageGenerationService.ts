@@ -1,6 +1,6 @@
 import { mock } from 'bun:test';
 
-import type { LandingPageData } from '@/contexts/website/websiteStorage';
+import type { LandingPageData } from '@website/schemas';
 
 /**
  * Mock implementation of LandingPageGenerationService for testing
@@ -17,6 +17,20 @@ export class MockLandingPageGenerationService {
     name: 'Test User',
     title: 'Test User - Web Developer',
     tagline: 'Building innovative web applications',
+    description: 'Professional web development services',
+    sectionOrder: ['hero', 'services', 'cta', 'footer'],
+    hero: {
+      headline: 'Test Headline',
+      subheading: 'Test Subheading',
+      ctaText: 'Get Started',
+      ctaLink: '#contact',
+    },
+    services: {
+      title: 'Services',
+      items: [
+        { title: 'Service 1', description: 'Description 1' },
+      ],
+    },
   };
   
   // Mock methods

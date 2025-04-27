@@ -3,6 +3,7 @@
  * All types are exported for use by components
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { z } from 'zod';
 
 import type { 
   ConversationContext, 
@@ -51,20 +52,24 @@ export interface BrainProtocolOptions {
 
 /**
  * Options for processing a query
+ * Generic T represents the type of structured response when using a schema
  */
-export interface QueryOptions {
+export interface QueryOptions<T = unknown> {
   /** User ID for conversation attribution */
   userId?: string;
   /** User name for conversation attribution */
   userName?: string;
   /** Room ID for the conversation */
   roomId?: string;
+  /** Schema for structured response validation - allows forcing model to return a specific structure */
+  schema?: z.ZodType<T>;
 }
 
 /**
- * Result of a query processing operation
+ * Result of a query processing operation with optional structured object response
+ * Generic T represents the optional structured object type when using a schema
  */
-export interface QueryResult {
+export interface QueryResult<T = unknown> {
   /** The answer text from the model */
   answer: string;
   /** Citations to notes used in the answer */
@@ -73,6 +78,8 @@ export interface QueryResult {
   relatedNotes: Note[];
   /** User profile if relevant to the query */
   profile?: Profile;
+  /** Structured object response when schema is provided */
+  object?: T;
   /** External source citations */
   externalSources?: ExternalCitation[];
 }
@@ -246,7 +253,7 @@ export interface IExternalSourceManager {
  * Interface for QueryProcessor
  */
 export interface IQueryProcessor {
-  processQuery(query: string, options?: QueryOptions): Promise<QueryResult>;
+  processQuery<T = unknown>(query: string, options?: QueryOptions<T>): Promise<QueryResult<T>>;
 }
 
 
@@ -282,6 +289,6 @@ export interface IBrainProtocol {
   /** Initialize asynchronous components */
   initialize(): Promise<void>;
   
-  /** Process a natural language query */
-  processQuery(query: string, options?: QueryOptions): Promise<QueryResult>;
+  /** Process a natural language query with optional schema for structured responses */
+  processQuery<T = unknown>(query: string, options?: QueryOptions<T>): Promise<QueryResult<T>>;
 }

@@ -1,214 +1,57 @@
 {
-  "title": "Jan Hein Hoogstad - Ecosystem Architect | Designing Across Space and Time",
-  "description": "Ecosystem architect helping organizations create purpose-driven, decentralized communities. Specializing in regenerative design, digital transformation, and innovative collaboration models.",
+  "title": "Jan Hein Hoogstad | Ecosystem Architect",
+  "description": "Jan Hein Hoogstad is an ecosystem architect, entrepreneur, and innovator who brings people together around common values to create effective ecosystems. Based in Taipei, Taiwan.",
   "name": "Jan Hein Hoogstad",
-  "tagline": "Building thriving communities that transcend space and time",
+  "tagline": "Ecosystem Architect | Black Ocean Navigator | Innovator",
   "sectionOrder": [
     "hero",
     "problemStatement",
     "services",
     "process",
+    "testimonials",
     "expertise",
     "about",
+    "pricing",
     "faq",
     "cta",
     "footer"
   ],
   "hero": {
-    "headline": "Architecting Ecosystems Across Space and Time",
-    "subheading": "I bring people together around shared values, discover collective visions, and translate them into thriving, decentralized ecosystems that transcend traditional organizational boundaries.",
-    "ctaText": "Transform Your Vision",
+    "headline": "Designing Thriving Ecosystems Across Space and Time",
+    "subheading": "I bring people together around common values, discover shared visions, and translate them into effective ecosystems that transcend traditional boundaries.",
+    "ctaText": "Let's Connect",
     "ctaLink": "#contact",
-    "imageUrl": "/images/ecosystem-architect.jpg"
+    "imageUrl": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
   },
   "services": {
     "title": "Ecosystem Architecture Services",
-    "introduction": "I help organizations transcend traditional boundaries by designing thriving ecosystems that operate across space and time. My approach combines decentralized thinking with regenerative practices to create value-aligned communities that scale organically.",
     "items": [
       {
-        "title": "Ecosystem Vision Design",
-        "description": "Facilitate collaborative workshops to align stakeholders around shared values and create compelling vision types that guide your ecosystem's development.",
-        "icon": "compass",
-        "details": "Using my four-movement framework (Align, Validate, Scale, Spin Out), I help you articulate a future vision that transcends traditional organizational boundaries."
+        "title": "Ecosystem Design & Strategy",
+        "description": "Creating frameworks for decentralized organizations that align values, foster collaboration, and build resilience across distributed networks.",
+        "icon": "compass"
       },
       {
-        "title": "Transformation Vessel Creation",
-        "description": "Develop and launch the initial structures that validate your ecosystem concept and demonstrate stakeholder commitment to transformation.",
-        "icon": "seedling",
-        "details": "I help you design and implement the minimum viable structures needed to test your ecosystem's viability and gather meaningful validation evidence."
+        "title": "Community Building & Alignment",
+        "description": "Bringing diverse stakeholders together around shared values and visions, facilitating the creation of purpose-driven communities.",
+        "icon": "users"
       },
       {
-        "title": "Decentralized Scaling Strategy",
-        "description": "Create iterative pathways to grow your ecosystem organically while distributing ownership and agency among participants.",
-        "icon": "network-wired",
-        "details": "I guide you through the process of scaling your ecosystem to become self-sustaining, with clear metrics for measuring health and progress."
+        "title": "Regenerative Innovation",
+        "description": "Implementing practices inspired by natural systems to create sustainable, adaptive, and self-renewing organizational structures.",
+        "icon": "leaf"
       },
       {
-        "title": "Regenerative Practice Innovation",
-        "description": "Transform waste into opportunity by implementing regenerative approaches that create sustainable value for all ecosystem participants.",
-        "icon": "recycle",
-        "details": "Moving beyond extraction mindsets, I help you design practices that continuously renew resources and create positive-sum outcomes."
+        "title": "Digital Ecosystem Navigation",
+        "description": "Guiding organizations through internet fragmentation to create meaningful connections and opportunities in our evolving digital landscape.",
+        "icon": "globe"
       },
       {
-        "title": "Community Governance Design",
-        "description": "Establish effective governance models for decentralized organizations that balance autonomy with alignment.",
-        "icon": "users-cog",
-        "details": "I help you create governance structures that enable distributed decision-making while maintaining coherence around core values."
-      }
-    ]
-  },
-  "cta": {
-    "title": "Transform Your Ecosystem, Transcend Limitations",
-    "subtitle": "Bring your vision to life with expert ecosystem architecture that aligns values, validates transformation, and scales impact across space and time.",
-    "buttonText": "Start Your Ecosystem Journey",
-    "buttonLink": "#contact",
-    "enabled": true
-  },
-  "footer": {
-    "contactDetails": {
-      "email": "jan@rizom.com",
-      "social": [
-        {
-          "platform": "LinkedIn",
-          "url": "https://linkedin.com/in/janhein"
-        }
-      ]
-    },
-    "copyrightText": "© 2025 Jan Hein Hoogstad | Ecosystem Architect | Black Ocean Navigator",
-    "links": [
-      {
-        "text": "Ecosystem Architecture",
-        "url": "/ecosystem-architecture"
-      },
-      {
-        "text": "Superconnectors Network",
-        "url": "/superconnectors"
-      },
-      {
-        "text": "Privacy Policy",
-        "url": "/privacy"
-      },
-      {
-        "text": "Terms of Service",
-        "url": "/terms"
+        "title": "Future Visioning & Implementation",
+        "description": "Developing tangible futures from community needs and creating vessels of transformation to bring these visions to life.",
+        "icon": "eye"
       }
     ],
-    "enabled": true
-  },
-  "problemStatement": {
-    "title": "Navigating Digital Ecosystem Fragmentation",
-    "description": "In today's fragmented digital landscape, organizations struggle to build meaningful connections that transcend space and time. Traditional organizational models are failing as people seek more organic, non-hierarchical structures that align with their values and vision. The challenge isn't just technological—it's about designing environments where purpose-driven collaboration can thrive.\n\nWhile many recognize the need for ecosystem thinking, few understand how to architect these complex systems in a way that balances structure with emergence. Without proper ecosystem architecture, communities remain siloed, innovation stagnates, and organizations fail to adapt to our increasingly decentralized world.",
-    "bulletPoints": [
-      "Difficulty creating cohesive communities across distributed teams and geographies",
-      "Struggling to align stakeholders around shared values and vision in virtual spaces",
-      "Inability to scale collaborative efforts beyond initial enthusiasm and momentum",
-      "Challenges in designing governance that balances structure with organic growth",
-      "Confusion about how to measure and validate ecosystem health and impact"
-    ],
-    "enabled": true
-  },
-  "process": {
-    "title": "Ecosystem Architecture: Designing Across Space and Time",
-    "introduction": "I bring people together around common values, discover shared visions, and translate these into effective ecosystems. My approach combines decentralized and regenerative design principles to create thriving communities that transcend traditional organizational boundaries.",
-    "steps": [
-      {
-        "step": 1,
-        "title": "Align Values",
-        "description": "We begin by identifying your core moral challenge and creating a vision type that documents the ideal future state of your ecosystem, aligning all stakeholders around shared values and goals."
-      },
-      {
-        "step": 2,
-        "title": "Validate Transformation",
-        "description": "Together we develop a vessel of transformation—a tangible artifact that tests stakeholder commitment and validates that participants are ready to become active co-creators of a new ecosystem."
-      },
-      {
-        "step": 3,
-        "title": "Scale Organically",
-        "description": "Through iterative alignment and validation, we scale your ecosystem by gradually transferring functionality to partners and stakeholders until it becomes a self-sustaining minimum viable ecosystem."
-      },
-      {
-        "step": 4,
-        "title": "Enable Independence",
-        "description": "The final phase involves the art of letting go, where your ecosystem thrives independently with you as one member among many, reaping the collective benefits of a well-designed regenerative system."
-      }
-    ],
-    "enabled": true
-  },
-  "expertise": {
-    "title": "Ecosystem Architecture & Transformative Design",
-    "introduction": "As an ecosystem architect, I specialize in designing decentralized, regenerative systems that transcend traditional organizational boundaries of space and time.",
-    "items": [
-      {
-        "title": "Ecosystem Architecture",
-        "description": "Creating purpose-driven communities through a four-movement approach: Align, Validate, Scale, and Spin Out."
-      },
-      {
-        "title": "Decentralized Organizations",
-        "description": "Designing and cultivating non-hierarchical structures that thrive across distributed networks and asynchronous environments."
-      },
-      {
-        "title": "Regenerative Design",
-        "description": "Implementing practices that transform waste into opportunity through bottom-up approaches rather than top-down control."
-      },
-      {
-        "title": "Digital Transformation",
-        "description": "Navigating internet fragmentation to create diverse, innovative, and resilient digital ecosystems."
-      },
-      {
-        "title": "Community Building",
-        "description": "Bringing people together around common values to discover shared visions and translate them into effective ecosystems."
-      }
-    ],
-    "credentials": [
-      {
-        "title": "PhD in Philosophy",
-        "issuer": "Utrecht University"
-      },
-      {
-        "title": "Founder, Superconnectors Network",
-        "year": "2021"
-      },
-      {
-        "title": "Founder, Offcourse"
-      }
-    ],
-    "enabled": true
-  },
-  "about": {
-    "title": "Architecting Ecosystems Across Space and Time",
-    "content": "# About Jan Hein Hoogstad\n\nI am an ecosystem architect, entrepreneur, and thinker with a passion for transforming how people connect and collaborate. With a PhD in Philosophy and experience as a coder, I bring a unique interdisciplinary perspective to the challenge of designing thriving ecosystems. My journey has taken me from traditional academic settings in Utrecht, Berlin, and Amsterdam to founding innovative ventures like Rizom, Superconnectors Network, and Offcourse—each built around the principle that meaningful transformation happens when people align around shared values.\n\nMy approach centers on the four movements of ecosystem architecture: Align, Validate, Scale, and Spin Out. Rather than imposing top-down structures, I help organizations and communities discover their own emergent patterns and design rule sets that foster innovation. Working across space and time, I specialize in creating decentralized, regenerative systems that transcend traditional organizational boundaries while remaining deeply connected to their purpose.\n\nAt the heart of my work is a commitment to challenging conventional notions about education, collaboration, and innovation. I believe that the most powerful ecosystems are those that empower every member to discover and develop their unique strengths. Whether through my Superconnectors event format that connects startups with critical resources or my writing on ecosystem architecture, my mission remains consistent: to create spaces where purpose-driven collaboration drives both positive societal transformation and sustainable success.",
-    "imageUrl": "https://example.com/jan-hein-hoogstad-ecosystem-architect.jpg",
-    "enabled": true
-  },
-  "faq": {
-    "title": "Ecosystem Architecture Services FAQ",
-    "introduction": "Answers to common questions about how I can help transform your organization through ecosystem architecture.",
-    "items": [
-      {
-        "question": "What exactly is ecosystem architecture and how is it different from traditional organizational design?",
-        "answer": "Ecosystem architecture is the practice of designing intentional communities driven by shared values that transcend traditional spatial and temporal boundaries. Unlike traditional organizational design which relies on hierarchical structures and top-down control, ecosystem architecture works bottom-up, focusing on emergent design, decentralization, and regenerative practices that allow complex systems to thrive organically while still maintaining structure and purpose."
-      },
-      {
-        "question": "How can your ecosystem architecture services benefit my organization?",
-        "answer": "My services help your organization move beyond mechanical, hierarchical structures to create vibrant ecosystems where members collaborate around shared values. Through my four-movement approach (Align, Validate, Scale, and Spin Out), I'll guide you in developing systems that foster innovation, resilience, and sustainable growth while empowering all participants to contribute meaningfully to the ecosystem's evolution."
-      },
-      {
-        "question": "What is your process for designing and implementing ecosystem architecture?",
-        "answer": "My process follows four sequential movements: Align (defining values and creating vision types), Validate (testing commitment through vessels of transformation), Scale (iterative growth toward a minimum viable ecosystem), and Spin Out (enabling the ecosystem to thrive independently). Throughout this journey, we'll continuously validate our approach, ensuring that your ecosystem develops organically while remaining aligned with your core values and objectives."
-      },
-      {
-        "question": "How do you address the challenges of internet fragmentation in your ecosystem design?",
-        "answer": "Rather than viewing internet fragmentation as a problem, I approach it as an opportunity for diversity and resilience. I incorporate decentralized and regenerative practices that thrive in fragmented environments, drawing inspiration from innovative models like Afrofuturism, Network State concepts, and Shanzhai culture. This approach allows your ecosystem to adapt to and benefit from the changing digital landscape rather than being constrained by it."
-      },
-      {
-        "question": "What makes your approach to ecosystem architecture unique?",
-        "answer": "My approach is unique in its interdisciplinary foundation, drawing from philosophy, gender studies, coding, spirituality, arts, and media theory. Having founded multiple innovative organizations including Offcourse and the Superconnectors Network, I bring practical experience in creating thriving ecosystems across different contexts. My work emphasizes both the technical aspects of ecosystem design and the human elements of community building, resulting in systems that are both functionally robust and culturally vibrant."
-      },
-      {
-        "question": "How long does it typically take to see results from ecosystem architecture implementation?",
-        "answer": "Ecosystem architecture is not a quick-fix solution but rather a transformative process that unfolds over time. While you'll begin seeing shifts in collaboration patterns and community engagement within the first few months, developing a fully functioning minimum viable ecosystem typically takes 6-12 months. The complete journey through all four movements may extend over 1-3 years, but each phase delivers its own valuable outcomes and learnings."
-      }
-    ],
-    "enabled": true
+    "introduction": "I help organizations and communities design, build, and nurture thriving ecosystems that foster collaboration, innovation, and sustainable growth."
   }
 }

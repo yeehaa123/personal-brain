@@ -5,7 +5,7 @@ import path from 'path';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { AstroContentService } from '@/contexts/website/services/astroContentService';
-import type { LandingPageData } from '@website/schemas';
+import { createTestLandingPageData } from '@test/helpers';
 
 describe('AstroContentService', () => {
   let tempDir: string;
@@ -43,11 +43,7 @@ describe('AstroContentService', () => {
   });
   
   test('writeLandingPageContent should create directory and write file', async () => {
-    const landingPageData: LandingPageData = {
-      name: 'Test User',
-      title: 'Test User - Personal Website',
-      tagline: 'Web Developer & AI Enthusiast',
-    };
+    const landingPageData = createTestLandingPageData();
     
     const success = await service.writeLandingPageContent(landingPageData);
     expect(success).toBe(true);
@@ -70,11 +66,10 @@ describe('AstroContentService', () => {
   
   test('readLandingPageContent should read and parse landing page data', async () => {
     // Set up test data
-    const landingPageData: LandingPageData = {
-      name: 'Test User',
-      title: 'Test User - Personal Website',
-      tagline: 'Web Developer & AI Enthusiast',
-    };
+    const landingPageData = createTestLandingPageData({
+      name: 'Custom User',
+      tagline: 'Custom Tagline',
+    });
     
     // Create directory and write file
     await fs.mkdir(path.join(tempDir, 'src', 'content', 'landingPage'), { recursive: true });

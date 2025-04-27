@@ -5,7 +5,6 @@ import type { ProfileContext } from '@/contexts/profiles';
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
-import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 // Import our mock implementations directly
@@ -13,6 +12,7 @@ import { MockAstroContentService } from '@test/__mocks__/contexts/website/servic
 import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment/deploymentManager';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
 import { MockProfile } from '@test/__mocks__/models/profile';
+import { createTestLandingPageData } from '@test/helpers';
 
 // Create our mock instances with proper typings
 const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
@@ -75,11 +75,7 @@ describe('WebsiteContext', () => {
     const mockStorage = MockWebsiteStorageAdapter.createFresh();
     const context = WebsiteContext.createFresh({ storage: mockStorage });
 
-    const landingPageData: LandingPageData = {
-      name: 'Test User',
-      title: 'Test User - Personal Website',
-      tagline: 'Web Developer',
-    };
+    const landingPageData = createTestLandingPageData();
 
     await context.saveLandingPageData(landingPageData);
 
@@ -88,11 +84,8 @@ describe('WebsiteContext', () => {
 
   test('getLandingPageData should retrieve landing page data', async () => {
     const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    mockStorage.setLandingPageData({
-      name: 'Test User',
-      title: 'Test User - Personal Website',
-      tagline: 'Web Developer',
-    });
+    const testData = createTestLandingPageData();
+    mockStorage.setLandingPageData(testData);
 
     const context = WebsiteContext.createFresh({ storage: mockStorage });
 

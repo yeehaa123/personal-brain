@@ -8,6 +8,7 @@ import type {
   LandingPageData,
   WebsiteConfig,
 } from '@/contexts/website/websiteStorage';
+import { createTestLandingPageData } from '@test/helpers';
 
 /**
  * Mock implementation of WebsiteStorageAdapter for testing
@@ -190,8 +191,13 @@ export class MockWebsiteStorageAdapter implements WebsiteStorageAdapter {
   
   /**
    * Set landing page data for testing
+   * @param data Landing page data or null. If not provided, uses a valid test data object
    */
-  setLandingPageData(data: LandingPageData | null): void {
-    this.landingPageData = data;
+  setLandingPageData(data?: LandingPageData | null): void {
+    if (data === undefined) {
+      this.landingPageData = createTestLandingPageData();
+    } else {
+      this.landingPageData = data;
+    }
   }
 }
