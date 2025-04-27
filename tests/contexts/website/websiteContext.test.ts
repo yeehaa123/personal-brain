@@ -171,15 +171,21 @@ describe('WebsiteContext', () => {
   });
 
   test('buildWebsite should run the build command through astro service', async () => {
-    // Create context with mocked Astro service
+    // Clear any previously called methods on the existing mock
+    MockAstroContentService.resetInstance();
+    
+    // Create a fresh mock with our standardized implementation
+    const freshMockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
+    
+    // Create context with the standardized mock
     const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
+      astroContentService: freshMockAstroContentService,
     });
 
     const result = await context.buildWebsite();
 
     expect(result.success).toBe(true);
-    expect(mockAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
+    expect(freshMockAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
   });
 
   // Tests for Caddy-based approach
