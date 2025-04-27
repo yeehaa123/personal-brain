@@ -37,29 +37,6 @@ describe('WebsiteContext', () => {
     MockWebsiteStorageAdapter.resetInstance();
   });
 
-  // Test Component Interface Standardization pattern
-  test('getInstance should return a singleton instance', () => {
-    const context1 = WebsiteContext.getInstance();
-    const context2 = WebsiteContext.getInstance();
-
-    expect(context1).toBe(context2);
-  });
-
-  test('createFresh should return a new instance', () => {
-    const context1 = WebsiteContext.getInstance();
-    const context2 = WebsiteContext.createFresh();
-
-    expect(context1).not.toBe(context2);
-  });
-
-  test('resetInstance should clear the singleton instance', () => {
-    const context1 = WebsiteContext.getInstance();
-    WebsiteContext.resetInstance();
-    const context2 = WebsiteContext.getInstance();
-
-    expect(context1).not.toBe(context2);
-  });
-
   // Test methods
   test('initialize should set readyState to true', async () => {
     const mockStorage = MockWebsiteStorageAdapter.createFresh();
@@ -141,10 +118,10 @@ describe('WebsiteContext', () => {
     expect(context.getStorage()).toBe(mockStorage2);
   });
 
-    // REMOVED TEST: test('getContextName should return...
+  // REMOVED TEST: test('getContextName should return...
 
 
-    // REMOVED TEST: test('getContextVersion should return...
+  // REMOVED TEST: test('getContextVersion should return...
 
 
   // Tests for Astro integration

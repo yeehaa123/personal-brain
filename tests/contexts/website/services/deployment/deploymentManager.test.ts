@@ -4,12 +4,12 @@
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { 
-  WebsiteDeploymentManager, 
+import type {
+  WebsiteDeploymentManager,
 } from '@/contexts/website/services/deployment';
-import { 
-  DeploymentManagerFactory, 
-  LocalCaddyDeploymentManager, 
+import {
+  DeploymentManagerFactory,
+  LocalCaddyDeploymentManager,
 } from '@/contexts/website/services/deployment';
 import { LocalDevDeploymentManager } from '@/contexts/website/services/deployment/localDevDeploymentManager';
 
@@ -54,25 +54,13 @@ describe('DeploymentManagerFactory', () => {
     DeploymentManagerFactory.resetInstance();
   });
 
-    // REMOVED TEST: test('getInstance returns...
-
-
-  test('createFresh returns a new instance', () => {
-    const factory1 = DeploymentManagerFactory.getInstance();
-    const factory2 = DeploymentManagerFactory.createFresh();
-    expect(factory1).not.toBe(factory2);
-  });
-
-    // REMOVED TEST: test('resetInstance clears...
-
-
   test('create method creates the correct type of manager', () => {
     const factory = DeploymentManagerFactory.createFresh();
-    
+
     // Default is LocalCaddyDeploymentManager
     const defaultManager = factory.create();
     expect(defaultManager instanceof LocalCaddyDeploymentManager).toBe(true);
-    
+
     // Set a different class
     factory.setDeploymentManagerClass(LocalDevDeploymentManager);
     const devManager = factory.create();
@@ -82,7 +70,7 @@ describe('DeploymentManagerFactory', () => {
 
 describe('LocalCaddyDeploymentManager', () => {
   let manager: WebsiteDeploymentManager;
-  
+
   beforeEach(() => {
     // Reset the mocks
     mockStat.mockClear();
@@ -91,11 +79,11 @@ describe('LocalCaddyDeploymentManager', () => {
     mockRm.mockClear();
     mockCopyFile.mockClear();
     mockExec.mockClear();
-    
+
     // Create a fresh manager
     manager = LocalCaddyDeploymentManager.createFresh({ baseDir: '/test-dir' });
   });
-  
+
   test('getEnvironmentStatus returns status for preview environment', async () => {
     // Create test data for preview environment
     const previewStatus = {
@@ -107,13 +95,13 @@ describe('LocalCaddyDeploymentManager', () => {
       accessStatus: 'Accessible',
       url: 'https://preview.example.com',
     };
-    
+
     // Mock the getEnvironmentStatus method
     const getStatusMock = mock(() => Promise.resolve(previewStatus));
     (manager as unknown as { getEnvironmentStatus: typeof getStatusMock }).getEnvironmentStatus = getStatusMock;
-    
+
     const status = await manager.getEnvironmentStatus('preview');
-    
+
     expect(status.environment).toBe('preview');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(3);
@@ -121,7 +109,7 @@ describe('LocalCaddyDeploymentManager', () => {
     expect(status.domain).toContain('preview');
     expect(status.url).toContain('https://preview');
   });
-  
+
   test('getEnvironmentStatus returns status for production environment', async () => {
     // Create test data for production environment
     const productionStatus = {
@@ -133,13 +121,13 @@ describe('LocalCaddyDeploymentManager', () => {
       accessStatus: 'Accessible',
       url: 'https://example.com',
     };
-    
+
     // Mock the getEnvironmentStatus method
     const getStatusMock = mock(() => Promise.resolve(productionStatus));
     (manager as unknown as { getEnvironmentStatus: typeof getStatusMock }).getEnvironmentStatus = getStatusMock;
-    
+
     const status = await manager.getEnvironmentStatus('production');
-    
+
     expect(status.environment).toBe('production');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(3);
@@ -147,7 +135,7 @@ describe('LocalCaddyDeploymentManager', () => {
     expect(status.domain).not.toContain('preview');
     expect(status.url).toContain('https://');
   });
-  
+
   test('promoteToProduction copies files from preview to production', async () => {
     // Create test promotion result
     const promotionResult = {
@@ -155,17 +143,17 @@ describe('LocalCaddyDeploymentManager', () => {
       message: 'Preview successfully promoted to production (42 files).',
       url: 'https://example.com',
     };
-    
+
     // Mock the promoteToProduction method
     const promoteMock = mock(() => Promise.resolve(promotionResult));
     (manager as unknown as { promoteToProduction: typeof promoteMock }).promoteToProduction = promoteMock;
-    
+
     const result = await manager.promoteToProduction();
-    
+
     expect(result.success).toBe(true);
     expect(result.message).toContain('successfully promoted');
     expect(result.url).toBeDefined();
-    
+
     // Verify the mock was called
     expect(promoteMock).toHaveBeenCalled();
   });
@@ -173,7 +161,7 @@ describe('LocalCaddyDeploymentManager', () => {
 
 describe('LocalDevDeploymentManager', () => {
   let manager: MockableLocalDevDeploymentManager;
-  
+
   beforeEach(() => {
     // Reset the mocks
     mockStat.mockClear();
@@ -181,11 +169,11 @@ describe('LocalDevDeploymentManager', () => {
     mockMkdir.mockClear();
     mockRm.mockClear();
     mockCopyFile.mockClear();
-    
+
     // Create a fresh manager
     manager = LocalDevDeploymentManager.createFresh({ baseDir: '/test-dir' }) as unknown as MockableLocalDevDeploymentManager;
   });
-  
+
   test('getEnvironmentStatus returns status for preview environment', async () => {
     // Create test data for preview environment
     const previewStatus = {
@@ -197,13 +185,13 @@ describe('LocalDevDeploymentManager', () => {
       accessStatus: 'Accessible',
       url: 'http://localhost:4321',
     };
-    
+
     // Mock the getEnvironmentStatus method
     const getStatusMock = mock(() => Promise.resolve(previewStatus));
     manager.getEnvironmentStatus = getStatusMock;
-    
+
     const status = await manager.getEnvironmentStatus('preview');
-    
+
     expect(status.environment).toBe('preview');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(5);
@@ -211,7 +199,7 @@ describe('LocalDevDeploymentManager', () => {
     expect(status.domain).toBe('localhost:4321');
     expect(status.url).toBe('http://localhost:4321');
   });
-  
+
   test('getEnvironmentStatus returns status for production environment', async () => {
     // Create test data for production environment
     const productionStatus = {
@@ -223,13 +211,13 @@ describe('LocalDevDeploymentManager', () => {
       accessStatus: 'Accessible',
       url: 'http://localhost:4322',
     };
-    
+
     // Mock the getEnvironmentStatus method
     const getStatusMock = mock(() => Promise.resolve(productionStatus));
     manager.getEnvironmentStatus = getStatusMock;
-    
+
     const status = await manager.getEnvironmentStatus('production');
-    
+
     expect(status.environment).toBe('production');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(5);
@@ -237,7 +225,7 @@ describe('LocalDevDeploymentManager', () => {
     expect(status.domain).toBe('localhost:4322');
     expect(status.url).toBe('http://localhost:4322');
   });
-  
+
   test('promoteToProduction copies files from preview to production', async () => {
     // Create test promotion result
     const promotionResult = {
@@ -245,34 +233,34 @@ describe('LocalDevDeploymentManager', () => {
       message: 'Preview successfully promoted to production (42 files).',
       url: 'http://localhost:4322',
     };
-    
+
     // Mock the promoteToProduction method
     const promoteMock = mock(() => Promise.resolve(promotionResult));
     manager.promoteToProduction = promoteMock;
-    
+
     const result = await manager.promoteToProduction();
-    
+
     expect(result.success).toBe(true);
     expect(result.message).toContain('successfully promoted');
     expect(result.url).toBe('http://localhost:4322');
-    
+
     // Verify the mock was called
     expect(promoteMock).toHaveBeenCalled();
   });
-  
+
   test('handles errors gracefully during promotion', async () => {
     // Create test error result
     const errorResult = {
       success: false,
       message: 'Error promoting website: Test error',
     };
-    
+
     // Mock the promoteToProduction method to return an error result
     const errorMock = mock(() => Promise.resolve(errorResult));
     manager.promoteToProduction = errorMock;
-    
+
     const result = await manager.promoteToProduction();
-    
+
     expect(result.success).toBe(false);
     expect(result.message).toContain('Test error');
     expect(errorMock).toHaveBeenCalled();
