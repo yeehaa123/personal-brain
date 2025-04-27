@@ -20,9 +20,36 @@ export class MockLandingPageGenerationService {
   };
   
   // Mock methods
-  generateLandingPageData = mock((overrides?: Partial<LandingPageData>) => {
+  generateLandingPageData = mock((overrides?: Partial<Record<string, unknown>>) => {
+    // Return an enhanced landing page data structure with all required sections
     return Promise.resolve({
       ...this.defaultLandingPageData,
+      // Add required sections for the enhanced landing page
+      sectionOrder: ['hero', 'services', 'cta', 'footer'],
+      hero: {
+        headline: 'Test Headline',
+        subheading: 'Test Subheading',
+        ctaText: 'Get Started',
+        ctaLink: '#contact',
+      },
+      services: {
+        title: 'Services',
+        items: [
+          { title: 'Service 1', description: 'Description 1' },
+          { title: 'Service 2', description: 'Description 2' },
+        ],
+      },
+      cta: {
+        title: 'Ready to Start?',
+        subtitle: 'Contact us today',
+        buttonText: 'Contact Now',
+        buttonLink: '#contact',
+        enabled: true,
+      },
+      footer: {
+        copyrightText: `© ${new Date().getFullYear()} Test User. All rights reserved.`,
+        enabled: true,
+      },
       ...overrides,
     });
   });
@@ -35,13 +62,6 @@ export class MockLandingPageGenerationService {
     return this.profileContext;
   });
   
-  mapProfileToLandingPage = mock((profile: Record<string, unknown>) => {
-    return {
-      name: profile?.['fullName'] || 'Mock User',
-      title: `${profile?.['fullName'] || 'Mock User'} - ${profile?.['occupation'] || 'Developer'}`,
-      tagline: profile?.['headline'] || 'Mock tagline',
-    };
-  });
   
   /**
    * Get the singleton instance

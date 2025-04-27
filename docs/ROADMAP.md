@@ -26,8 +26,9 @@ This document outlines the development plan for the Personal Brain project, focu
 2. **Website Integration MVP**: 
    - Currently in Phase 1 of implementation
    - Website Context architecture implemented
-   - Basic Astro integration complete
-   - Working on Command Interface Integration
+   - Basic Astro integration complete 
+   - Command Interface Integration complete
+   - Working on Landing Page Refinements
    - GitHub Pages deployment upcoming
    - See full details and current status in the [MVP Implementation Plan](/planning/mvp-implementation-plan.md)
 

@@ -8,7 +8,7 @@ describe('InMemoryStorage', () => {
   // should focus on the public API, not implementation details
   
   // Tests for the Component Interface Standardization pattern
-    // REMOVED BLOCK: describe('Component Interface Standardiz...
+  // REMOVED BLOCK: describe('Component Interface Standardiz...
 
   
   // Tests specifically for the createFresh fix to ensure complete isolation between instances

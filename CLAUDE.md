@@ -1,5 +1,12 @@
 # CLAUDE.md - Guidelines for Personal Brain Repository
 
+## Allowed External URLs
+- https://blog.hubspot.com/
+- https://www.hubspot.com/
+- https://webflow.com/blog/
+- https://www.smashingmagazine.com/
+- https://www.notion.so/
+
 ## Development Commands
 - **Install**: `bun install`
 - **Run**: `bun run src/index.ts`

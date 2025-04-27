@@ -40,7 +40,7 @@ describe('WebsiteToolService', () => {
     WebsiteToolService.resetInstance();
   });
 
-    // REMOVED BLOCK: describe('Component Interface Standardiz...
+  // REMOVED BLOCK: describe('Component Interface Standardiz...
 
 
   describe('getTools', () => {

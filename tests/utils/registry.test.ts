@@ -172,7 +172,7 @@ describe('Registry', () => {
     });
   });
 
-    // REMOVED BLOCK: describe('Component Interface Standardiz...
+  // REMOVED BLOCK: describe('Component Interface Standardiz...
 
 
   describe('Initialization pattern', () => {

@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { Logger } from '@/utils/logger';
+import type { EnhancedLandingPageData } from '@website/schemas';
 
 import type { LandingPageData } from '../websiteStorage';
 
@@ -89,8 +90,9 @@ export class AstroContentService {
   
   /**
    * Write landing page data to the content collection
+   * Supports both original and enhanced landing page data models
    */
-  async writeLandingPageContent(data: LandingPageData): Promise<boolean> {
+  async writeLandingPageContent(data: LandingPageData | EnhancedLandingPageData): Promise<boolean> {
     try {
       // Ensure landing page directory exists
       const landingPageDir = path.join(this.contentCollectionPath, 'landingPage');
@@ -109,8 +111,9 @@ export class AstroContentService {
   
   /**
    * Read landing page data from the content collection
+   * Will attempt to detect if it's the original or enhanced model
    */
-  async readLandingPageContent(): Promise<LandingPageData | null> {
+  async readLandingPageContent(): Promise<LandingPageData | EnhancedLandingPageData | null> {
     try {
       const filePath = path.join(this.contentCollectionPath, 'landingPage', 'profile.json');
       
@@ -123,11 +126,98 @@ export class AstroContentService {
       }
       
       const rawData = await fs.readFile(filePath, 'utf-8');
-      return JSON.parse(rawData) as LandingPageData;
+      const parsedData = JSON.parse(rawData);
+      
+      // Check if this is an enhanced landing page model by looking for sections
+      // that are specific to that model
+      if (
+        'hero' in parsedData || 
+        'services' in parsedData || 
+        'sectionOrder' in parsedData
+      ) {
+        return parsedData as EnhancedLandingPageData;
+      }
+      
+      // Otherwise, assume it's the original model
+      return parsedData as LandingPageData;
     } catch (error) {
       this.logger.error('Error reading landing page content', { error, context: 'AstroContentService' });
       return null;
     }
+  }
+  
+  /**
+   * Write enhanced landing page data to the content collection
+   * This method is specifically for the enhanced model
+   */
+  async writeEnhancedLandingPageContent(data: EnhancedLandingPageData): Promise<boolean> {
+    return this.writeLandingPageContent(data);
+  }
+  
+  /**
+   * Read enhanced landing page data from the content collection
+   * This will convert legacy format to enhanced format if needed
+   */
+  async readEnhancedLandingPageContent(): Promise<EnhancedLandingPageData | null> {
+    const data = await this.readLandingPageContent();
+    
+    if (!data) {
+      return null;
+    }
+    
+    // Check if this is already an enhanced model
+    if ('hero' in data) {
+      return data as EnhancedLandingPageData;
+    }
+    
+    // Convert legacy model to enhanced model
+    const legacyData = data as LandingPageData;
+    
+    // Create a minimal enhanced landing page data structure from legacy data
+    const enhancedData: EnhancedLandingPageData = {
+      title: legacyData.title,
+      description: `Website for ${legacyData.name}`,
+      name: legacyData.name,
+      tagline: legacyData.tagline,
+      sectionOrder: ['hero', 'services', 'about', 'cta', 'footer'],
+      
+      // Create a basic hero section
+      hero: {
+        headline: legacyData.title,
+        subheading: legacyData.tagline,
+        ctaText: 'Contact Me',
+        ctaLink: '#contact',
+      },
+      
+      // Create an empty services section (needs to be populated)
+      services: {
+        title: 'Services',
+        items: [],
+      },
+      
+      // Create a minimal about section
+      about: {
+        title: 'About Me',
+        content: `Learn more about ${legacyData.name}.`,
+        enabled: true,
+      },
+      
+      // Create a basic CTA
+      cta: {
+        title: 'Ready to Work Together?',
+        buttonText: 'Get in Touch',
+        buttonLink: '#contact',
+        enabled: true,
+      },
+      
+      // Create a basic footer
+      footer: {
+        copyrightText: `© ${new Date().getFullYear()} ${legacyData.name}. All rights reserved.`,
+        enabled: true,
+      },
+    };
+    
+    return enhancedData;
   }
   
   /**

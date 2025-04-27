@@ -6,6 +6,7 @@ import { ProfileContext } from '@/contexts/profiles';
 import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
+import type { EnhancedLandingPageData } from '@website/schemas';
 
 import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
@@ -524,10 +525,7 @@ export class WebsiteContext extends BaseContext<
     // Create a new service instance
     this.landingPageGenerationService = LandingPageGenerationService.getInstance();
     
-    // Set profile context for retrieving profile data
-    this.landingPageGenerationService.setProfileContext(this.getProfileContext());
-    
-    this.logger.debug('Initialized LandingPageGenerationService with profile context', {
+    this.logger.debug('Initialized LandingPageGenerationService', {
       context: 'WebsiteContext',
     });
     
@@ -538,13 +536,13 @@ export class WebsiteContext extends BaseContext<
    * Generate a landing page from profile data
    * @returns Result of the generation operation
    */
-  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: EnhancedLandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Generate data
+      // Generate landing page data
       const landingPageData = await landingPageService.generateLandingPageData();
       
       // Save to storage and Astro content
@@ -557,7 +555,7 @@ export class WebsiteContext extends BaseContext<
       
       return {
         success: true,
-        message: 'Successfully generated landing page from profile',
+        message: 'Successfully generated landing page from brain content',
         data: landingPageData,
       };
     } catch (error) {

@@ -4,7 +4,8 @@ import { WebsiteContext } from '@/contexts/website';
 import type { WebsiteContextOptions } from '@/contexts/website';
 import type { WebsiteStorageAdapter } from '@/contexts/website/adapters/websiteStorageAdapter';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
-import type { LandingPageData, WebsiteConfig } from '@/contexts/website/websiteStorage';
+import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
+import type { LandingPageData } from '@/contexts/website/websiteStorage';
 
 /**
  * Mock implementation of WebsiteContext for testing
@@ -42,8 +43,35 @@ export class MockWebsiteContext extends WebsiteContext {
       title: 'Test Page',
       name: 'Test Name',
       tagline: 'Test Tagline',
-    } as unknown as LandingPageData,
-  }));
+      description: 'Test description',
+      sectionOrder: ['hero', 'services', 'cta', 'footer'],
+      hero: {
+        headline: 'Test Headline',
+        subheading: 'Test Subheading',
+        ctaText: 'Test CTA',
+        ctaLink: '#contact',
+      },
+      services: {
+        title: 'Test Services',
+        items: [
+          {
+            title: 'Service 1',
+            description: 'Description 1',
+          },
+        ],
+      },
+      cta: {
+        title: 'Test CTA',
+        buttonText: 'Get Started',
+        buttonLink: '#contact',
+        enabled: true,
+      },
+      footer: {
+        copyrightText: 'Test Copyright',
+        enabled: true,
+      },
+    },
+  } as unknown as ReturnType<WebsiteContext['generateLandingPage']>));
   override buildWebsite = mock(() => Promise.resolve({
     success: true,
     message: 'Website built',

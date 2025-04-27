@@ -82,7 +82,7 @@ describe('ServiceRegistry Class', () => {
     process.env = originalEnv;
   });
 
-    // REMOVED BLOCK: describe('Component Interface Standardiz...
+  // REMOVED BLOCK: describe('Component Interface Standardiz...
 
 
   describe('Service registration', () => {
