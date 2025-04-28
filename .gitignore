@@ -180,3 +180,6 @@ dist
 
 # Local Netlify folder
 .netlify
+
+# Generated landing page content
+src/website/src/content/landingPage/profile.json
