@@ -50,28 +50,37 @@ $DOMAIN {
         header_up X-Real-IP {remote}
         header_up X-Forwarded-For {remote}
         header_up X-Forwarded-Proto {scheme}
+        
+        # Ensure content is properly proxied without transformation
+        header_down -Content-Security-Policy
     }
     
     # Enable compression for all files including CSS
     encode gzip
     
-    # Explicitly handle CSS files
+    # Explicitly handle CSS files with high priority
     @css_files {
         path *.css
     }
     header @css_files {
         Content-Type "text/css; charset=utf-8"
-        Cache-Control "public, max-age=3600"
+        Cache-Control "no-cache, must-revalidate"
+        X-Content-Type-Options "nosniff"
     }
     
-    # Security headers for all responses
+    # Make route for CSS files explicit
+    handle @css_files {
+        reverse_proxy localhost:$PRODUCTION_PORT
+    }
+    
+    # Security headers for all responses with relaxed CSP
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
+        # More permissive CSP for style sources
+        Content-Security-Policy "default-src 'self' *; style-src 'self' * 'unsafe-inline'; script-src 'self' * 'unsafe-inline'; img-src 'self' * data:; font-src 'self' * data:; connect-src 'self' *;"
     }
 }
 
@@ -92,28 +101,37 @@ preview.$DOMAIN {
         header_up X-Real-IP {remote}
         header_up X-Forwarded-For {remote}
         header_up X-Forwarded-Proto {scheme}
+        
+        # Ensure content is properly proxied without transformation
+        header_down -Content-Security-Policy
     }
     
     # Enable compression for all files including CSS
     encode gzip
     
-    # Explicitly handle CSS files
+    # Explicitly handle CSS files with high priority
     @css_files {
         path *.css
     }
     header @css_files {
         Content-Type "text/css; charset=utf-8"
-        Cache-Control "public, max-age=3600"
+        Cache-Control "no-cache, must-revalidate"
+        X-Content-Type-Options "nosniff"
     }
     
-    # Security headers for all responses
+    # Make route for CSS files explicit
+    handle @css_files {
+        reverse_proxy localhost:$PREVIEW_PORT
+    }
+    
+    # Security headers for all responses with relaxed CSP
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Content-Type-Options "nosniff"
         X-Frame-Options "SAMEORIGIN"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
+        # More permissive CSP for preview environment
+        Content-Security-Policy "default-src 'self' *; style-src 'self' * 'unsafe-inline'; script-src 'self' * 'unsafe-inline'; img-src 'self' * data:; font-src 'self' * data:; connect-src 'self' *;"
     }
 }
 EOF
