@@ -35,42 +35,59 @@ echo "Configuring Caddy for domain: $DOMAIN"
 cat > /tmp/Caddyfile << EOF
 # Main production domain
 $DOMAIN {
-    # Reverse proxy to PM2-managed production server
-    reverse_proxy localhost:$PRODUCTION_PORT {
-        # Add health checks to ensure the server is running
-        health_uri /
-        health_interval 30s
-        health_timeout 5s
-        health_status 200
-        
-        # Preserve original host header
-        header_up Host {host}
-        
-        # Forward the real client IP
-        header_up X-Real-IP {remote}
-        header_up X-Forwarded-For {remote}
-        header_up X-Forwarded-Proto {scheme}
-        
-        # Ensure content is properly proxied without transformation
-        header_down -Content-Security-Policy
-    }
+    # Disable compression globally to prevent content transformation issues
+    encode identity
     
-    # Enable compression for all files including CSS
-    encode gzip
-    
-    # Explicitly handle CSS files with high priority
+    # Explicitly handle CSS files with highest priority
     @css_files {
         path *.css
     }
-    header @css_files {
-        Content-Type "text/css; charset=utf-8"
-        Cache-Control "no-cache, must-revalidate"
-        X-Content-Type-Options "nosniff"
+    
+    # Special handler for CSS files - fixes MIME type and empty response issues
+    handle @css_files {
+        # Force correct Content-Type header
+        header Content-Type "text/css; charset=utf-8"
+        
+        # Other useful headers
+        header Cache-Control "no-cache, must-revalidate"
+        header X-Content-Type-Options "nosniff"
+        
+        # Remove any problematic headers that might affect content
+        header -Content-Encoding
+        header -Transfer-Encoding
+        header -Content-Length
+        
+        # Special proxy config for CSS files
+        reverse_proxy localhost:$PRODUCTION_PORT {
+            # Ensure headers are properly set for CSS
+            header_down -Content-Type
+            header_down +Content-Type "text/css; charset=utf-8"
+            header_down -Content-Encoding
+            header_down -Transfer-Encoding
+        }
     }
     
-    # Make route for CSS files explicit
-    handle @css_files {
-        reverse_proxy localhost:$PRODUCTION_PORT
+    # Handle all other requests
+    handle {
+        # Reverse proxy to PM2-managed production server
+        reverse_proxy localhost:$PRODUCTION_PORT {
+            # Add health checks to ensure the server is running
+            health_uri /
+            health_interval 30s
+            health_timeout 5s
+            health_status 200
+            
+            # Preserve original host header
+            header_up Host {host}
+            
+            # Forward the real client IP
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Ensure content is properly proxied without transformation
+            header_down -Content-Security-Policy
+        }
     }
     
     # Security headers for all responses with relaxed CSP
@@ -86,37 +103,17 @@ $DOMAIN {
 
 # Preview subdomain
 preview.$DOMAIN {
-    # Reverse proxy to PM2-managed preview server
-    reverse_proxy localhost:$PREVIEW_PORT {
-        # Add health checks to ensure the server is running
-        health_uri /
-        health_interval 30s
-        health_timeout 5s
-        health_status 200
-        
-        # Preserve original host header
-        header_up Host {host}
-        
-        # Forward the real client IP
-        header_up X-Real-IP {remote}
-        header_up X-Forwarded-For {remote}
-        header_up X-Forwarded-Proto {scheme}
-        
-        # Ensure content is properly proxied without transformation
-        header_down -Content-Security-Policy
-    }
-    
-    # Enable compression for all files including CSS
-    encode gzip
+    # Disable compression globally to prevent content transformation issues
+    encode identity
     
     # Explicitly handle CSS files with highest priority
     @css_files {
         path *.css
     }
     
-    # Special handler for CSS files - fixes MIME type issues
+    # Special handler for CSS files - fixes MIME type and empty response issues
     handle @css_files {
-        # Force correct Content-Type header (overrides upstream)
+        # Force correct Content-Type header
         header Content-Type "text/css; charset=utf-8"
         
         # Other useful headers
@@ -126,12 +123,38 @@ preview.$DOMAIN {
         # Remove any problematic headers that might affect content
         header -Content-Encoding
         header -Transfer-Encoding
+        header -Content-Length
         
         # Special proxy config for CSS files
         reverse_proxy localhost:$PREVIEW_PORT {
-            # Ensure headers are preserved
+            # Ensure headers are properly set for CSS
             header_down -Content-Type
             header_down +Content-Type "text/css; charset=utf-8"
+            header_down -Content-Encoding
+            header_down -Transfer-Encoding
+        }
+    }
+    
+    # Handle all other requests
+    handle {
+        # Reverse proxy to PM2-managed preview server
+        reverse_proxy localhost:$PREVIEW_PORT {
+            # Add health checks to ensure the server is running
+            health_uri /
+            health_interval 30s
+            health_timeout 5s
+            health_status 200
+            
+            # Preserve original host header
+            header_up Host {host}
+            
+            # Forward the real client IP
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Ensure content is properly proxied without transformation
+            header_down -Content-Security-Policy
         }
     }
     
