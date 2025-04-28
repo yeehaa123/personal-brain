@@ -41,12 +41,15 @@ $DOMAIN {
     }
     handle @css_files {
         header Content-Type "text/css; charset=utf-8"
-        header Referrer-Policy "no-referrer-when-downgrade"
+        # Explicitly remove the referrer policy for CSS files
+        header -Referrer-Policy
         reverse_proxy localhost:$PRODUCTION_PORT
     }
     
-    # Default handling
+    # Default handling with no referrer policy
     handle {
+        # Explicitly remove any referrer policy
+        header -Referrer-Policy
         reverse_proxy localhost:$PRODUCTION_PORT
     }
 }
@@ -59,12 +62,15 @@ preview.$DOMAIN {
     }
     handle @css_files {
         header Content-Type "text/css; charset=utf-8"
-        header Referrer-Policy "no-referrer-when-downgrade"
+        # Explicitly remove the referrer policy for CSS files
+        header -Referrer-Policy
         reverse_proxy localhost:$PREVIEW_PORT
     }
     
-    # Default handling
+    # Default handling with no referrer policy
     handle {
+        # Explicitly remove any referrer policy
+        header -Referrer-Policy
         reverse_proxy localhost:$PREVIEW_PORT
     }
 }
