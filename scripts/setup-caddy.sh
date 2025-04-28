@@ -109,19 +109,30 @@ preview.$DOMAIN {
     # Enable compression for all files including CSS
     encode gzip
     
-    # Explicitly handle CSS files with high priority
+    # Explicitly handle CSS files with highest priority
     @css_files {
         path *.css
     }
-    header @css_files {
-        Content-Type "text/css; charset=utf-8"
-        Cache-Control "no-cache, must-revalidate"
-        X-Content-Type-Options "nosniff"
-    }
     
-    # Make route for CSS files explicit
+    # Special handler for CSS files - fixes MIME type issues
     handle @css_files {
-        reverse_proxy localhost:$PREVIEW_PORT
+        # Force correct Content-Type header (overrides upstream)
+        header Content-Type "text/css; charset=utf-8"
+        
+        # Other useful headers
+        header Cache-Control "no-cache, must-revalidate"
+        header X-Content-Type-Options "nosniff"
+        
+        # Remove any problematic headers that might affect content
+        header -Content-Encoding
+        header -Transfer-Encoding
+        
+        # Special proxy config for CSS files
+        reverse_proxy localhost:$PREVIEW_PORT {
+            # Ensure headers are preserved
+            header_down -Content-Type
+            header_down +Content-Type "text/css; charset=utf-8"
+        }
     }
     
     # Security headers for all responses with relaxed CSP
