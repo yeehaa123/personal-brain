@@ -98,8 +98,8 @@ echo ""
 # Test direct file access
 echo "===== Direct File Access Test ====="
 # Find a CSS file to test
-preview_css=$(find /opt/personal-brain-website/preview/dist -name "*.css" 2>/dev/null | head -1)
-production_css=$(find /opt/personal-brain-website/production/dist -name "*.css" 2>/dev/null | head -1)
+preview_css=$(find $(pwd)/src/website/dist -name "*.css" 2>/dev/null | head -1)
+production_css=$(find $(pwd)/dist/production -name "*.css" 2>/dev/null | head -1)
 
 if [ -n "$preview_css" ]; then
     echo "Testing preview CSS file: $preview_css"
@@ -108,7 +108,7 @@ if [ -n "$preview_css" ]; then
     head -c 100 "$preview_css" | xxd
     
     # Extract relative path
-    rel_path=${preview_css#/opt/personal-brain-website/preview/dist/}
+    rel_path=${preview_css#$(pwd)/src/website/dist/}
     
     echo "Testing direct access to CSS through serve:"
     curl -s -I -X GET "http://localhost:$PREVIEW_PORT/$rel_path"
@@ -125,7 +125,7 @@ if [ -n "$production_css" ]; then
     head -c 100 "$production_css" | xxd
     
     # Extract relative path
-    rel_path=${production_css#/opt/personal-brain-website/production/dist/}
+    rel_path=${production_css#$(pwd)/dist/production/}
     
     echo "Testing direct access to CSS through serve:"
     curl -s -I -X GET "http://localhost:$PRODUCTION_PORT/$rel_path"
@@ -161,8 +161,8 @@ echo ""
 
 # Find HTML files and check CSS references
 echo "===== HTML File Analysis ====="
-preview_html=$(find /opt/personal-brain-website/preview/dist -name "*.html" 2>/dev/null | head -1)
-production_html=$(find /opt/personal-brain-website/production/dist -name "*.html" 2>/dev/null | head -1)
+preview_html=$(find $(pwd)/src/website/dist -name "*.html" 2>/dev/null | head -1)
+production_html=$(find $(pwd)/dist/production -name "*.html" 2>/dev/null | head -1)
 
 if [ -n "$preview_html" ]; then
     echo "Preview HTML file: $preview_html"
@@ -267,10 +267,85 @@ EOF
 echo ""
 
 echo "===== Diagnostic Complete ====="
-echo "Run this script on your server and share the results for detailed diagnosis."
 echo "Remember to check the browser's Developer Tools Network tab to see:"
 echo "1. The Content-Type header for CSS files"
 echo "2. The Content-Encoding header (should be missing or 'identity')"
 echo "3. Whether the Response size matches the actual file size"
 echo ""
 echo "Diagnostic completed at $(date)"
+
+# Generate a compact, copy-pastable summary
+echo ""
+echo "-----COPY FROM HERE-----"
+echo "## CSS DIAGNOSTIC RESULTS"
+echo "Date: $(date)"
+echo "Host: $(hostname)"
+echo ""
+echo "### Server Status"
+echo "PM2 preview server: $(pm2 list | grep "website-preview" | grep "online" > /dev/null && echo "Running" || echo "Not running")"
+echo "PM2 production server: $(pm2 list | grep "website-production" | grep "online" > /dev/null && echo "Running" || echo "Not running")"
+echo "Caddy service: $(systemctl is-active caddy 2>/dev/null || echo "Unknown")"
+echo ""
+echo "### Preview CSS Issues"
+if [ -n "$preview_css" ]; then
+    echo "CSS file: $(basename "$preview_css")"
+    echo "File size: $(du -h "$preview_css" | cut -f1)"
+    css_content=$(head -c 20 "$preview_css" | xxd -p)
+    echo "CSS begins with: $css_content"
+    
+    # Test direct serve response
+    direct_headers=$(curl -s -I -X GET "http://localhost:$PREVIEW_PORT/$rel_path")
+    direct_type=$(echo "$direct_headers" | grep -i "Content-Type" | sed 's/^.*: //')
+    direct_encoding=$(echo "$direct_headers" | grep -i "Content-Encoding" | sed 's/^.*: //')
+    echo "Serve Content-Type: $direct_type"
+    echo "Serve Content-Encoding: ${direct_encoding:-None}"
+    
+    # Get content length from direct serve
+    direct_content=$(curl -s -X GET "http://localhost:$PREVIEW_PORT/$rel_path")
+    direct_size=${#direct_content}
+    echo "Serve response size: $direct_size bytes"
+    echo "Comparison: $(if [ "$direct_size" -gt 0 ]; then echo "CSS served directly ✅"; else echo "Empty CSS from serve ❌"; fi)"
+else
+    echo "No CSS files found in preview directory ❌"
+fi
+
+echo ""
+echo "### Production CSS Issues"
+if [ -n "$production_css" ]; then
+    echo "CSS file: $(basename "$production_css")"
+    echo "File size: $(du -h "$production_css" | cut -f1)"
+    css_content=$(head -c 20 "$production_css" | xxd -p)
+    echo "CSS begins with: $css_content"
+    
+    # Test direct serve response
+    direct_headers=$(curl -s -I -X GET "http://localhost:$PRODUCTION_PORT/$rel_path")
+    direct_type=$(echo "$direct_headers" | grep -i "Content-Type" | sed 's/^.*: //')
+    direct_encoding=$(echo "$direct_headers" | grep -i "Content-Encoding" | sed 's/^.*: //')
+    echo "Serve Content-Type: $direct_type"
+    echo "Serve Content-Encoding: ${direct_encoding:-None}"
+    
+    # Get content length from direct serve
+    direct_content=$(curl -s -X GET "http://localhost:$PRODUCTION_PORT/$rel_path")
+    direct_size=${#direct_content}
+    echo "Serve response size: $direct_size bytes"
+    echo "Comparison: $(if [ "$direct_size" -gt 0 ]; then echo "CSS served directly ✅"; else echo "Empty CSS from serve ❌"; fi)"
+else
+    echo "No CSS files found in production directory ❌"
+fi
+
+echo ""
+echo "### Caddy Configuration"
+caddy_valid=$(caddy validate --config /etc/caddy/Caddyfile 2>&1 > /dev/null && echo "Valid" || echo "Invalid")
+echo "Caddyfile validation: $caddy_valid"
+css_headers=$(grep -n "@css" /etc/caddy/Caddyfile 2>/dev/null || echo "No CSS-specific rules found")
+echo "CSS handling found at lines: ${css_headers:-None}"
+
+# Extract the most relevant Caddy config
+if grep -q "@css" /etc/caddy/Caddyfile 2>/dev/null; then
+    echo "CSS handler configuration:"
+    grep -A 10 -B 2 "@css" /etc/caddy/Caddyfile | head -15
+else
+    echo "No CSS-specific handler found in Caddyfile"
+fi
+
+echo "-----COPY UNTIL HERE-----"
