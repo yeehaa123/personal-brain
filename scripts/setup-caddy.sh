@@ -69,9 +69,17 @@ else
   exit 1
 fi
 
-# Reload Caddy to apply new configuration
-echo "Reloading Caddy..."
-sudo systemctl reload caddy
+# Stop Caddy first to ensure a clean restart
+echo "Stopping Caddy..."
+sudo systemctl stop caddy
+
+# Start Caddy with the new configuration
+echo "Starting Caddy..."
+sudo systemctl start caddy
+
+# Verify Caddy is running
+echo "Checking Caddy status..."
+sudo systemctl status caddy | head -10
 
 # Create placeholder files for health checks if needed
 # These files are only used until the PM2 servers are running
