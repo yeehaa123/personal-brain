@@ -33,15 +33,20 @@ echo "Configuring Caddy for domain: $DOMAIN"
 
 # Create Caddyfile - configure as reverse proxy to PM2 servers
 cat > /tmp/Caddyfile << EOF
-# Caddy configuration with explicit protocol for nip.io domains
-# Main production domain with explicit https
-https://$DOMAIN {
+# Global settings for nip.io domains
+{
+    # Use self-signed certificates for nip.io domains
+    tls internal
+}
+
+# Main production domain
+$DOMAIN {
     # Simple reverse proxy for production
     reverse_proxy localhost:$PRODUCTION_PORT
 }
 
-# Preview subdomain with explicit https
-https://preview.$DOMAIN {
+# Preview subdomain
+preview.$DOMAIN {
     # Simple reverse proxy for preview
     reverse_proxy localhost:$PREVIEW_PORT
 }
