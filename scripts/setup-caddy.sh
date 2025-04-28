@@ -33,136 +33,16 @@ echo "Configuring Caddy for domain: $DOMAIN"
 
 # Create Caddyfile - configure as reverse proxy to PM2 servers
 cat > /tmp/Caddyfile << EOF
-# Main production domain
+# Main production domain - absolute simplest configuration
 $DOMAIN {
-    # Disable compression globally to prevent content transformation issues
-    encode identity
-    
-    # Explicitly handle CSS files with highest priority
-    @css_files {
-        path *.css
-    }
-    
-    # Special handler for CSS files - fixes MIME type and empty response issues
-    handle @css_files {
-        # Force correct Content-Type header
-        header Content-Type "text/css; charset=utf-8"
-        
-        # Other useful headers
-        header Cache-Control "no-cache, must-revalidate"
-        header X-Content-Type-Options "nosniff"
-        
-        # Remove any problematic headers that might affect content
-        header -Content-Encoding
-        header -Transfer-Encoding
-        header -Content-Length
-        
-        # Special proxy config for CSS files
-        reverse_proxy localhost:$PRODUCTION_PORT {
-            # Ensure headers are properly set for CSS
-            header_down -Content-Encoding
-            header_down -Transfer-Encoding
-        }
-    }
-    
-    # Handle all other requests
-    handle {
-        # Reverse proxy to PM2-managed production server
-        reverse_proxy localhost:$PRODUCTION_PORT {
-            # Add health checks to ensure the server is running
-            health_uri /
-            health_interval 30s
-            health_timeout 5s
-            health_status 200
-            
-            # Preserve original host header
-            header_up Host {host}
-            
-            # Forward the real client IP
-            header_up X-Real-IP {remote}
-            header_up X-Forwarded-For {remote}
-            header_up X-Forwarded-Proto {scheme}
-            
-            # Ensure content is properly proxied without transformation
-            header_down -Content-Security-Policy
-        }
-    }
-    
-    # Security headers for all responses with relaxed CSP
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        # More permissive CSP for style sources
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
-    }
+    # Simple reverse proxy for production
+    reverse_proxy localhost:$PRODUCTION_PORT
 }
 
-# Preview subdomain
+# Preview subdomain - absolute simplest configuration
 preview.$DOMAIN {
-    # Disable compression globally to prevent content transformation issues
-    encode identity
-    
-    # Explicitly handle CSS files with highest priority
-    @css_files {
-        path *.css
-    }
-    
-    # Special handler for CSS files - fixes MIME type and empty response issues
-    handle @css_files {
-        # Force correct Content-Type header
-        header Content-Type "text/css; charset=utf-8"
-        
-        # Other useful headers
-        header Cache-Control "no-cache, must-revalidate"
-        header X-Content-Type-Options "nosniff"
-        
-        # Remove any problematic headers that might affect content
-        header -Content-Encoding
-        header -Transfer-Encoding
-        header -Content-Length
-        
-        # Special proxy config for CSS files
-        reverse_proxy localhost:$PREVIEW_PORT {
-            # Ensure headers are properly set for CSS
-            header_down -Content-Encoding
-            header_down -Transfer-Encoding
-        }
-    }
-    
-    # Handle all other requests
-    handle {
-        # Reverse proxy to PM2-managed preview server
-        reverse_proxy localhost:$PREVIEW_PORT {
-            # Add health checks to ensure the server is running
-            health_uri /
-            health_interval 30s
-            health_timeout 5s
-            health_status 200
-            
-            # Preserve original host header
-            header_up Host {host}
-            
-            # Forward the real client IP
-            header_up X-Real-IP {remote}
-            header_up X-Forwarded-For {remote}
-            header_up X-Forwarded-Proto {scheme}
-            
-            # Ensure content is properly proxied without transformation
-            header_down -Content-Security-Policy
-        }
-    }
-    
-    # Security headers for all responses with relaxed CSP
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-        X-Frame-Options "SAMEORIGIN"
-        X-XSS-Protection "1; mode=block"
-        Referrer-Policy "strict-origin-when-cross-origin"
-        # More permissive CSP for preview environment
-        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
-    }
+    # Simple reverse proxy for preview
+    reverse_proxy localhost:$PREVIEW_PORT
 }
 EOF
 
