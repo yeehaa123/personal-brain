@@ -42,12 +42,29 @@ $DOMAIN {
         health_interval 30s
         health_timeout 5s
         health_status 200
+        
+        # Preserve original host header
+        header_up Host {host}
+        
+        # Forward the real client IP
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
     }
     
-    # Enable compression
+    # Enable compression for all files including CSS
     encode gzip
     
-    # Security headers
+    # Explicitly handle CSS files
+    @css_files {
+        path *.css
+    }
+    header @css_files {
+        Content-Type "text/css; charset=utf-8"
+        Cache-Control "public, max-age=3600"
+    }
+    
+    # Security headers for all responses
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
@@ -67,12 +84,29 @@ preview.$DOMAIN {
         health_interval 30s
         health_timeout 5s
         health_status 200
+        
+        # Preserve original host header
+        header_up Host {host}
+        
+        # Forward the real client IP
+        header_up X-Real-IP {remote}
+        header_up X-Forwarded-For {remote}
+        header_up X-Forwarded-Proto {scheme}
     }
     
-    # Enable compression
+    # Enable compression for all files including CSS
     encode gzip
     
-    # Security headers
+    # Explicitly handle CSS files
+    @css_files {
+        path *.css
+    }
+    header @css_files {
+        Content-Type "text/css; charset=utf-8"
+        Cache-Control "public, max-age=3600"
+    }
+    
+    # Security headers for all responses
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"

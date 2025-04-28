@@ -153,3 +153,23 @@ Environment variables and configuration that control deployment:
 - `config.deployment.type`: Configuration setting determining deployment type
 - `WEBSITE_BASE_DIR`: Base directory for file operations
 - `WEBSITE_DOMAIN`: Domain name for the website
+
+## CSS Handling
+
+To ensure proper CSS serving across environments:
+
+1. **Caddy Configuration**: 
+   - Explicit MIME type handling via path-matching directives
+   - Content-Type headers set to "text/css; charset=utf-8"
+   - Cache-Control headers optimize CSS caching
+
+2. **Static File Server**:
+   - Uses the `serve` package for reliable file serving
+   - Port configuration via environment variables
+   - Consistent behavior in preview and production
+
+3. **Troubleshooting CSS Issues**:
+   - Verify CSS files appear in the file transfer during promotion
+   - Check network requests in browser developer tools
+   - Ensure cache settings don't prevent fresh CSS loading
+   - For persistent issues, manually reload Caddy configuration
