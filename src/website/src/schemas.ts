@@ -95,6 +95,8 @@ export const AboutSectionSchema = z.object({
   title: z.string().default('About Me'),
   content: z.string(),
   imageUrl: z.string().optional(),
+  ctaText: z.string().optional(),
+  ctaLink: z.string().optional(),
   enabled: z.boolean().default(true),
 });
 

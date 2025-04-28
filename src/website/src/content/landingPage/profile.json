@@ -1,8 +1,8 @@
 {
   "title": "Jan Hein Hoogstad | Ecosystem Architect",
-  "description": "Jan Hein Hoogstad is an ecosystem architect, entrepreneur, and innovator who brings people together around common values to create effective ecosystems that transcend space and time.",
+  "description": "Jan Hein Hoogstad helps organizations build thriving, purpose-driven ecosystems that transcend traditional boundaries. Based in Taipei, Taiwan, Jan Hein brings philosophical depth and technical expertise to transform how people collaborate, learn, and innovate together.",
   "name": "Jan Hein Hoogstad",
-  "tagline": "Designing ecosystems that transcend space and time",
+  "tagline": "Designing ecosystems that thrive across space and time",
   "sectionOrder": [
     "hero",
     "problemStatement",
@@ -17,20 +17,20 @@
     "footer"
   ],
   "hero": {
-    "headline": "Building Thriving Ecosystems Across Space and Time",
-    "subheading": "I help organizations and communities design purpose-driven ecosystems that foster collaboration, innovation, and regenerative growth.",
-    "ctaText": "Let's Connect",
+    "headline": "Build Thriving Ecosystems From Fragmentation",
+    "subheading": "I help visionary organizations create resilient, value-driven communities where collaboration transcends boundaries to solve your most complex challenges.",
+    "ctaText": "Transform Your Organization",
     "ctaLink": "#contact",
-    "imageUrl": "https://images.unsplash.com/photo-1519389950473-47ba0277781c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80"
   },
   "problemStatement": {
-    "title": "The Challenge We Face",
-    "description": "Traditional organizational models are failing to meet our growing desire for organic, non-hierarchical structures. As our digital landscape fragments, we need new approaches that embrace decentralization and regenerative design.",
+    "title": "Why Traditional Organizations Fail Today",
+    "description": "In our fragmented digital landscape, conventional organizational models can't keep up. Centralized systems collapse under complexity, while disconnected teams drain resources and miss breakthrough innovation opportunities.",
     "bulletPoints": [
-      "Hierarchical systems limit innovation and collaboration",
-      "Digital fragmentation creates both challenges and opportunities",
-      "Organizations struggle to adapt to rapidly changing environments",
-      "Communities need purpose-driven ecosystems that transcend physical boundaries"
+      "Siloed teams block critical knowledge flow exactly where you need it most",
+      "Your organization struggles to adapt as technological and social shifts accelerate",
+      "Innovation efforts generate waste instead of regenerative value",
+      "Your community lacks the shared purpose needed for authentic collaboration"
     ],
     "enabled": true
   },
@@ -38,30 +38,30 @@
     "title": "Ecosystem Architecture Services",
     "items": [
       {
-        "title": "Ecosystem Design & Strategy",
-        "description": "Creating frameworks for decentralized organizations that align values, foster collaboration, and build resilience across space and time.",
+        "title": "Ecosystem Vision & Alignment",
+        "description": "Unite your community around shared values and craft a compelling vision that magnetizes the right participants and resources.",
         "icon": "compass",
-        "details": "I help organizations design ecosystems that transcend traditional boundaries, bringing together diverse stakeholders around shared values and vision. This includes developing governance models, communication frameworks, and value alignment strategies."
+        "details": "Through targeted workshops and strategic sessions, I'll help you create a 'vision type' document that becomes your ecosystem's north star. This process aligns stakeholders around core values and establishes the ethical foundation for your ecosystem's structure."
       },
       {
-        "title": "Community Cultivation",
-        "description": "Building vibrant communities where individuals discover and develop their unique strengths while contributing to collective goals.",
-        "icon": "users",
-        "details": "Through my Superconnectors methodology, I help startups and organizations connect with key stakeholders, build meaningful relationships, and create environments where purpose-driven collaboration can flourish."
+        "title": "Validation Through Transformation",
+        "description": "Test your ecosystem concept with minimal investment using 'transformation vessels' that generate authentic commitment, not just passive interest.",
+        "icon": "flask",
+        "details": "I'll design the ideal validation vehicle for your concept—whether an event series, digital platform, or community initiative. These vessels go beyond traditional MVPs by testing participants' willingness to actively drive transformation."
       },
       {
-        "title": "Regenerative Innovation",
-        "description": "Implementing practices that move beyond extraction to create systems that improve their environment in sustainable ways.",
-        "icon": "leaf",
-        "details": "Drawing from permaculture and biomimicry principles, I help organizations develop innovation approaches that work with nature rather than against it, creating sustainable value for all stakeholders."
+        "title": "Ecosystem Scaling & Development",
+        "description": "Build a self-sustaining ecosystem through iterative refinement, creating resilient structures that thrive without centralized control.",
+        "icon": "network",
+        "details": "I'll guide your ecosystem's evolution from concept to self-sustaining reality through adaptive frameworks. This includes designing governance models and participation structures that distribute ownership while maintaining alignment with core values."
       },
       {
-        "title": "Digital Ecosystem Navigation",
-        "description": "Guiding organizations through the fragmented internet landscape to create resilient digital spaces and strategies.",
-        "icon": "globe",
-        "details": "I help organizations navigate the complexities of our fragmented digital landscape, developing strategies that embrace this new reality while maintaining alignment with core values and mission."
+        "title": "Digital Future Reclamation",
+        "description": "Create alternatives to surveillance capitalism where communities control their digital destiny and resources.",
+        "icon": "shield",
+        "details": "Drawing on expertise in chronopolitics and competing futures, I'll help your organization resist 'inevitable' technological narratives and instead build regenerative alternatives based on community ownership and shared prosperity."
       }
     ],
-    "introduction": "I bring together philosophy, technology, and regenerative design to create thriving ecosystems that foster collaboration and innovation."
+    "introduction": "I blend decentralization with regenerative design to create environments where innovation emerges organically from aligned communities."
   }
 }

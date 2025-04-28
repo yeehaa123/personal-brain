@@ -4,6 +4,8 @@ import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
 import { LandingPageSchema } from '@website/schemas';
 import type { LandingPageData } from '@website/schemas';
+import landingPagePrompt from './prompts/landing-page-generation.txt';
+import contentReviewPrompt from './prompts/content-review.txt';
 
 /**
  * Service for generating landing page data from profile information
@@ -70,6 +72,7 @@ export class LandingPageGenerationService {
   
   /**
    * Generate comprehensive landing page data with all sections using AI from brain content
+   * with a two-phase approach: generation and editorial review
    * @param overrides Optional overrides to customize the data
    * @returns Generated landing page data with all sections
    */
@@ -96,38 +99,67 @@ export class LandingPageGenerationService {
       // Get BrainProtocol instance - this gives us access to brain content with schema support
       const brainProtocol = this.getBrainProtocol();
       
-      // Create a query prompt that provides clear instructions
-      const query = `Create a complete professional landing page for me based on my profile data.
+      // PHASE 1: Initial Content Generation
+      this.logger.info('PHASE 1: Initial content generation', {
+        context: 'LandingPageGenerationService'
+      });
       
-The landing page should include the following sections:
-- Hero section with headline and call-to-action
-- Services section with 3-5 key services
-- About section with professional background
-- Call-to-action section
-- Footer section
-
-Make the content professional, concise, and tailored to my expertise and background.
-Include my key skills, experience, and professional focus areas.
-Use a modern, clean style with professional language.`;
+      // Use the imported prompt for content generation
+      const generationQuery = landingPagePrompt;
       
-      // Use BrainProtocol with schema support - need to cast schema type since we're using a direct import
-      const result = await brainProtocol.processQuery(query, {
+      // Use BrainProtocol with schema support
+      const initialResult = await brainProtocol.processQuery(generationQuery, {
         userId: 'system',
         userName: 'System',
         schema: LandingPageSchema, // Pass the LandingPageSchema to ensure properly structured response
       });
       
       // Check if we received a structured object
-      if (!result.object) {
+      if (!initialResult.object) {
         throw new Error('Failed to generate structured landing page data');
       }
       
-      this.logger.debug('Generated landing page data structure', {
+      this.logger.debug('Generated initial landing page data structure', {
         context: 'LandingPageGenerationService',
-        sections: result.object?.sectionOrder,
-        hasHeroSection: !!result.object?.hero,
-        hasServicesSection: !!result.object?.services,
+        sections: initialResult.object?.sectionOrder,
+        hasHeroSection: !!initialResult.object?.hero,
+        hasServicesSection: !!initialResult.object?.services,
       });
+      
+      // PHASE 2: Editorial Review and Enhancement
+      this.logger.info('PHASE 2: Editorial review and enhancement', {
+        context: 'LandingPageGenerationService'
+      });
+      
+      // Create a review query that includes the initial data
+      const reviewQuery = `${contentReviewPrompt}\n\nCONTENT TO REVIEW:\n${JSON.stringify(initialResult.object, null, 2)}`;
+      
+      // Use the same schema for the review to ensure proper structure
+      const reviewResult = await brainProtocol.processQuery(reviewQuery, {
+        userId: 'system',
+        userName: 'System',
+        schema: LandingPageSchema, // Use the same schema for the review
+      });
+      
+      // Check if we received a structured object from the review
+      if (!reviewResult.object) {
+        this.logger.warn('Editorial review failed to return structured data, using initial content', {
+          context: 'LandingPageGenerationService'
+        });
+        // Continue with the initial result if review fails
+      } else {
+        this.logger.info('Successfully completed editorial review of landing page content', {
+          context: 'LandingPageGenerationService'
+        });
+      }
+      
+      // Use the reviewed result if available, otherwise fall back to initial result
+      const resultData = reviewResult.object ? reviewResult.object : initialResult.object;
+      
+      // Ensure result is defined (should be guaranteed by earlier checks, but TypeScript needs this)
+      if (!resultData) {
+        throw new Error('Both initial and review phases failed to return structured data');
+      }
 
       // Create default hero and services sections to ensure they meet the schema requirements
       const defaultHero = {
@@ -148,23 +180,33 @@ Use a modern, clean style with professional language.`;
       // Merge the result object with defaults for required fields
       // This approach ensures the required string fields are always present
       const resultWithDefaults = {
-        ...result.object,
-        title: result.object.title || 'Professional Services',
-        description: result.object.description || 'Professional services and expertise',
-        name: result.object.name || 'Professional',
-        tagline: result.object.tagline || 'Expert Professional Services',
+        ...resultData,
+        title: resultData.title || 'Professional Services',
+        description: resultData.description || 'Professional services and expertise',
+        name: resultData.name || 'Professional',
+        tagline: resultData.tagline || 'Expert Professional Services',
         hero: {
           ...defaultHero,
-          ...result.object.hero,
+          ...resultData.hero,
         },
         services: {
           ...defaultServices,
-          ...result.object.services,
+          ...resultData.services,
           // Ensure services.title is always defined
-          title: result.object.services?.title || defaultServices.title,
+          title: resultData.services?.title || defaultServices.title,
         },
-        sectionOrder: result.object.sectionOrder || ['hero', 'services', 'about', 'cta', 'footer'],
+        sectionOrder: resultData.sectionOrder || ['hero', 'services', 'about', 'cta', 'footer'],
       };
+      
+      // Add additional strategic CTAs throughout the page if needed
+      // For example, ensure the about section has a CTA if it exists
+      if (resultWithDefaults.about && !resultWithDefaults.about.ctaText) {
+        resultWithDefaults.about = {
+          ...resultWithDefaults.about,
+          ctaText: 'Learn More',
+          ctaLink: '#services',
+        };
+      }
       
       // Apply any overrides - using type assertion to handle conversion between similar types
       const landingPageData = {
@@ -172,9 +214,11 @@ Use a modern, clean style with professional language.`;
         ...overrides,
       } as unknown as LandingPageData;
       
-      this.logger.info('Successfully generated landing page with sections', {
+      // Log the two-phase process completion
+      this.logger.info('Successfully generated landing page with two-phase process', {
         sections: landingPageData.sectionOrder,
         context: 'LandingPageGenerationService',
+        phaseCount: reviewResult.object ? 2 : 1, // Track if both phases were completed
       });
       
       return landingPageData;

@@ -44,8 +44,8 @@ describe('LandingPageGenerationService', () => {
         });
       }
 
-      // For schema-based landing page generation
-      if (query.includes('professional landing page')) {
+      // For initial content generation (phase 1)
+      if (query.includes('compelling, outcome-focused landing page')) {
         const landingPageData = {
           title: 'Professional Services',
           description: 'Expert services for professionals',
@@ -72,6 +72,37 @@ describe('LandingPageGenerationService', () => {
           citations: [],
           relatedNotes: [],
           object: landingPageData,
+        });
+      }
+      
+      // For content review (phase 2)
+      if (query.includes('You are a professional editor for landing page content')) {
+        const improvedLandingPageData = {
+          title: 'Professional Services Enhanced',
+          description: 'Expert services for ambitious professionals',
+          name: 'Test Professional',
+          tagline: 'Quality expertise you can trust',
+          hero: {
+            headline: 'Transform Your Business Today',
+            subheading: 'Professional services precisely tailored to your needs',
+            ctaText: 'Get Started Now',
+            ctaLink: '#contact',
+          },
+          services: {
+            title: 'Services',
+            items: [
+              { title: 'Strategic Consulting', description: 'Expert guidance to accelerate your projects' },
+              { title: 'Professional Development', description: 'Implementation services with measurable results' },
+            ],
+          },
+          sectionOrder: ['hero', 'services', 'about', 'cta', 'footer'],
+        };
+
+        return Promise.resolve({
+          answer: 'Improved landing page content',
+          citations: [],
+          relatedNotes: [],
+          object: improvedLandingPageData,
         });
       }
 
@@ -149,6 +180,20 @@ describe('LandingPageGenerationService', () => {
     expect(result.hero.subheading).toBe('Custom Subheading');
     expect(result.hero.ctaText).toBe('Custom CTA');
     expect(result.hero.ctaLink).toBe('#custom');
+  });
+  
+  test('two-phase content generation should improve the initial content', async () => {
+    const result = await service.generateLandingPageData();
+    
+    // Verify the improved content from phase 2 was used
+    expect(result.title).toBe('Professional Services Enhanced');
+    expect(result.description).toBe('Expert services for ambitious professionals');
+    expect(result.hero.headline).toBe('Transform Your Business Today');
+    expect(result.hero.ctaText).toBe('Get Started Now');
+    
+    // Check that service descriptions were enhanced
+    expect(result.services.items[0].title).toBe('Strategic Consulting');
+    expect(result.services.items[0].description).toContain('accelerate');
   });
 
   test('should handle schema validation and provide defaults for missing fields', async () => {

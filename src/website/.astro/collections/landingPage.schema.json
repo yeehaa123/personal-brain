@@ -307,6 +307,12 @@
             "imageUrl": {
               "type": "string"
             },
+            "ctaText": {
+              "type": "string"
+            },
+            "ctaLink": {
+              "type": "string"
+            },
             "enabled": {
               "type": "boolean",
               "default": true
