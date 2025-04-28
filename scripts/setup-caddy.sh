@@ -60,8 +60,6 @@ $DOMAIN {
         # Special proxy config for CSS files
         reverse_proxy localhost:$PRODUCTION_PORT {
             # Ensure headers are properly set for CSS
-            header_down -Content-Type
-            header_down +Content-Type "text/css; charset=utf-8"
             header_down -Content-Encoding
             header_down -Transfer-Encoding
         }
@@ -97,7 +95,7 @@ $DOMAIN {
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
         # More permissive CSP for style sources
-        Content-Security-Policy "default-src 'self' *; style-src 'self' * 'unsafe-inline'; script-src 'self' * 'unsafe-inline'; img-src 'self' * data:; font-src 'self' * data:; connect-src 'self' *;"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
 }
 
@@ -128,8 +126,6 @@ preview.$DOMAIN {
         # Special proxy config for CSS files
         reverse_proxy localhost:$PREVIEW_PORT {
             # Ensure headers are properly set for CSS
-            header_down -Content-Type
-            header_down +Content-Type "text/css; charset=utf-8"
             header_down -Content-Encoding
             header_down -Transfer-Encoding
         }
@@ -165,7 +161,7 @@ preview.$DOMAIN {
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
         # More permissive CSP for preview environment
-        Content-Security-Policy "default-src 'self' *; style-src 'self' * 'unsafe-inline'; script-src 'self' * 'unsafe-inline'; img-src 'self' * data:; font-src 'self' * data:; connect-src 'self' *;"
+        Content-Security-Policy "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';"
     }
 }
 EOF
