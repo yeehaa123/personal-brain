@@ -33,46 +33,16 @@ echo "Configuring Caddy for domain: $DOMAIN"
 
 # Create Caddyfile - configure as reverse proxy to PM2 servers
 cat > /tmp/Caddyfile << EOF
-# Main production domain - with CSS handling and no referrer policy
+# Main production domain - absolute simplest configuration
 $DOMAIN {
-    # CSS file handling
-    @css_files {
-        path *.css
-    }
-    handle @css_files {
-        header Content-Type "text/css; charset=utf-8"
-        # Explicitly remove the referrer policy for CSS files
-        header -Referrer-Policy
-        reverse_proxy localhost:$PRODUCTION_PORT
-    }
-    
-    # Default handling with no referrer policy
-    handle {
-        # Explicitly remove any referrer policy
-        header -Referrer-Policy
-        reverse_proxy localhost:$PRODUCTION_PORT
-    }
+    # Simple reverse proxy for production
+    reverse_proxy localhost:$PRODUCTION_PORT
 }
 
-# Preview subdomain - with CSS handling and no referrer policy
+# Preview subdomain - absolute simplest configuration
 preview.$DOMAIN {
-    # CSS file handling
-    @css_files {
-        path *.css
-    }
-    handle @css_files {
-        header Content-Type "text/css; charset=utf-8"
-        # Explicitly remove the referrer policy for CSS files
-        header -Referrer-Policy
-        reverse_proxy localhost:$PREVIEW_PORT
-    }
-    
-    # Default handling with no referrer policy
-    handle {
-        # Explicitly remove any referrer policy
-        header -Referrer-Policy
-        reverse_proxy localhost:$PREVIEW_PORT
-    }
+    # Simple reverse proxy for preview
+    reverse_proxy localhost:$PREVIEW_PORT
 }
 EOF
 
