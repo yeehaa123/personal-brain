@@ -4,8 +4,9 @@ import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
 import { LandingPageSchema } from '@website/schemas';
 import type { LandingPageData } from '@website/schemas';
-import landingPagePrompt from './prompts/landing-page-generation.txt';
+
 import contentReviewPrompt from './prompts/content-review.txt';
+import landingPagePrompt from './prompts/landing-page-generation.txt';
 
 /**
  * Service for generating landing page data from profile information
@@ -101,7 +102,7 @@ export class LandingPageGenerationService {
       
       // PHASE 1: Initial Content Generation
       this.logger.info('PHASE 1: Initial content generation', {
-        context: 'LandingPageGenerationService'
+        context: 'LandingPageGenerationService',
       });
       
       // Use the imported prompt for content generation
@@ -128,7 +129,7 @@ export class LandingPageGenerationService {
       
       // PHASE 2: Editorial Review and Enhancement
       this.logger.info('PHASE 2: Editorial review and enhancement', {
-        context: 'LandingPageGenerationService'
+        context: 'LandingPageGenerationService',
       });
       
       // Create a review query that includes the initial data
@@ -144,12 +145,12 @@ export class LandingPageGenerationService {
       // Check if we received a structured object from the review
       if (!reviewResult.object) {
         this.logger.warn('Editorial review failed to return structured data, using initial content', {
-          context: 'LandingPageGenerationService'
+          context: 'LandingPageGenerationService',
         });
         // Continue with the initial result if review fails
       } else {
         this.logger.info('Successfully completed editorial review of landing page content', {
-          context: 'LandingPageGenerationService'
+          context: 'LandingPageGenerationService',
         });
       }
       

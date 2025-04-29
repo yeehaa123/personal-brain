@@ -1,0 +1,45 @@
+# Conversion Segment Generation
+
+You are generating the conversion segment for a professional landing page. This segment focuses on addressing objections, providing clear next steps, and ensuring a strong call to action.
+
+## Your task:
+
+Generate a compelling conversion segment that includes:
+1. FAQ section addressing common questions and objections
+2. A strong call-to-action section to motivate engagement
+3. A complete footer with appropriate information
+
+Use the information from my notes, articles, and profile to accurately address potential client concerns and provide a clear path forward. Focus on removing obstacles to conversion and emphasizing value.
+
+## Requirements for the conversion segment:
+
+**FAQ Section:**
+- A title for the FAQ section (e.g., "Frequently Asked Questions" or "Common Questions")
+- An optional introduction
+- 4-8 question-answer pairs addressing:
+  - Common concerns about your services
+  - Logistics and process questions
+  - Pricing or timing considerations
+  - Questions that differentiate your service from alternatives
+- Questions should be phrased as your audience would ask them
+- Answers should be clear, concise, and value-focused
+
+**Call-to-Action Section:**
+- A compelling title that motivates action (e.g., "Ready to Transform Your Organization?")
+- An optional subtitle/description that removes final objections
+- A clear, action-oriented button text (e.g., "Start the Conversation")
+- A button link target (typically contact form anchor or email)
+- Should create urgency without being pushy
+
+**Footer Section:**
+- Contact details (as applicable):
+  - Professional email address
+  - Phone number (if you take calls)
+  - Social media links with platform names
+- Optional copyright text with current year
+- Optional supplementary links for privacy policy, terms, etc.
+- Should maintain professionalism while being accessible
+
+## Response Format:
+
+Return a structured JSON object containing all required elements of the conversion segment following the schema definition. Focus on creating a seamless path from interest to action, addressing objections throughout the FAQs, and ending with a compelling reason to reach out.

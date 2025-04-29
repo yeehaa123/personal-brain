@@ -51,19 +51,21 @@ export const ProcessSectionSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-// Testimonial item schema
-export const TestimonialItemSchema = z.object({
-  quote: z.string(),
-  author: z.string(),
-  company: z.string().optional(),
+// Case study item schema
+export const CaseStudyItemSchema = z.object({
+  title: z.string(),
+  challenge: z.string(),
+  approach: z.string(),
+  results: z.string(),
+  client: z.string().optional(),
   imageUrl: z.string().optional(),
 });
 
-// Social proof section schema
-export const SocialProofSectionSchema = z.object({
-  title: z.string().default('What Clients Say'),
+// Case studies section schema
+export const CaseStudiesSectionSchema = z.object({
+  title: z.string().default('Selected Projects'),
   introduction: z.string().optional(),
-  items: z.array(TestimonialItemSchema),
+  items: z.array(CaseStudyItemSchema),
   clientLogos: z.array(z.object({
     name: z.string(),
     imageUrl: z.string().optional(),
@@ -178,7 +180,7 @@ export const LandingPageSchema = z.object({
     'problemStatement',
     'services',
     'process',
-    'testimonials',
+    'caseStudies',
     'expertise',
     'about',
     'pricing',
@@ -192,7 +194,7 @@ export const LandingPageSchema = z.object({
   problemStatement: ProblemStatementSectionSchema.optional(),
   services: ServicesSectionSchema,
   process: ProcessSectionSchema.optional(),
-  testimonials: SocialProofSectionSchema.optional(),
+  caseStudies: CaseStudiesSectionSchema.optional(),
   expertise: ExpertiseSectionSchema.optional(),
   about: AboutSectionSchema.optional(),
   pricing: PricingSectionSchema.optional(),

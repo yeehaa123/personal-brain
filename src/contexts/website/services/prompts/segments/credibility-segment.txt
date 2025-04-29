@@ -1,0 +1,51 @@
+# Credibility Segment Generation
+
+You are generating the credibility segment for a professional landing page. This segment establishes trust and authority through case studies, expertise demonstration, and personal background.
+
+## Your task:
+
+Generate a compelling credibility segment that includes:
+1. Case studies of projects/collaborations (can be synthesized based on work)
+2. Areas of expertise and specialized knowledge
+3. Personal/professional background information
+
+Use the information from my notes, articles, and profile to accurately represent my credentials, experience, and real-world impact. Focus on building trust and demonstrating value through concrete examples rather than claims.
+
+## Requirements for the credibility segment:
+
+**Case Studies Section:**
+- A title for the case studies section (e.g., "Selected Projects" or "Impact Stories")
+- An optional introduction about the impact of your work
+- 2-4 case studies with:
+  - Project/client name or descriptive title
+  - Challenge or problem statement
+  - Your approach and solution
+  - Concrete outcomes and results
+  - Optional image URL relevant to the project
+- Optional client logos section if you work with well-known organizations
+
+**Expertise Section:**
+- A title for the expertise section (e.g., "Areas of Expertise" or "Specialized Knowledge")
+- An optional introduction about your depth of knowledge
+- 4-8 expertise areas with:
+  - Clear, specific titles
+  - Optional descriptions highlighting your approach in this area
+- Optional credentials list including:
+  - Relevant education
+  - Certifications
+  - Speaking engagements
+  - Publications or recognition
+
+**About Section:**
+- A title for the about section (e.g., "About Me" or "My Journey")
+- A compelling narrative that explains:
+  - Your relevant background and experience
+  - Your philosophy, values and approach
+  - What drives you to do this work
+  - Connecting personal story to client benefit
+- Optional image URL for personal photo
+- Optional call-to-action with text and link
+
+## Response Format:
+
+Return a structured JSON object containing all required elements of the credibility segment following the schema definition. Focus on specificity, authenticity, and creating a narrative that builds trust through demonstrated expertise and real-world impact stories.

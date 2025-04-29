@@ -1,0 +1,38 @@
+# Identity Segment Generation
+
+You are generating the core identity segment for a professional landing page. This segment establishes the essential personality and value proposition of the person/organization.
+
+## Your task:
+
+Generate a compelling identity segment that includes:
+1. Professional title and tagline that captures essence
+2. A powerful hero section with headlines and subheadings
+3. A problem statement that identifies audience pain points
+
+Use the information from my notes, articles, and profile to create authentic positioning that genuinely represents my work and approach. Focus specifically on what makes my approach unique and how I help solve specific problems for clients.
+
+## Requirements for the identity segment:
+
+**Title & Description:**
+- Create a professional title that captures expertise (e.g., "Strategic Innovation Consultant" or "Ecosystem Design Specialist")
+- Write a concise yet descriptive meta description (1-2 sentences) for SEO that explains core value proposition
+
+**Tagline:**
+- Short, memorable phrase that encapsulates unique approach or philosophy
+- Should be inspiring and reflect key values/differentiators
+
+**Hero Section:**
+- Headline: Clear, compelling statement of value (ideally 5-9 words)
+- Subheading: 1-2 sentences elaborating on headline, focusing on transformation offered
+- Call-to-action text and link target that motivates immediate engagement
+- (Optional) Image URL suggestion if readily available
+
+**Problem Statement:**
+- Title that names the challenge/gap in the market
+- Description paragraph explaining the problem from audience perspective
+- 3-4 clear bullet points highlighting specific pain points experienced by ideal clients
+- Should create tension that your services will resolve
+
+## Response Format:
+
+Return a structured JSON object containing all required elements of the identity segment following the schema definition. Focus on quality over quantity - each element should be crafted for maximum impact with concise, powerful language.
