@@ -1,17 +1,18 @@
 import { z } from 'zod';
+
 import {
-  HeroSectionSchema,
-  ProblemStatementSectionSchema,
-  ServicesSectionSchema,
-  ProcessSectionSchema,
-  PricingSectionSchema,
-  CaseStudiesSectionSchema,
-  ExpertiseSectionSchema,
   AboutSectionSchema,
-  FaqSectionSchema,
+  CaseStudiesSectionSchema,
   CtaSectionSchema,
+  ExpertiseSectionSchema,
+  FaqSectionSchema,
   FooterSectionSchema,
-  LandingPageSchema
+  HeroSectionSchema,
+  LandingPageSchema,
+  PricingSectionSchema,
+  ProblemStatementSectionSchema,
+  ProcessSectionSchema,
+  ServicesSectionSchema,
 } from '../schemas';
 
 /**
@@ -40,7 +41,7 @@ export const IdentitySegmentSchema = z.object({
   // Metadata for tracking
   segmentType: z.literal('identity'),
   version: z.number().default(1),
-  generatedAt: z.string().default(() => new Date().toISOString())
+  generatedAt: z.string().default(() => new Date().toISOString()),
 });
 
 export type IdentitySegment = z.infer<typeof IdentitySegmentSchema>;
@@ -57,7 +58,7 @@ export const ServiceOfferingSegmentSchema = z.object({
   // Metadata for tracking
   segmentType: z.literal('serviceOffering'),
   version: z.number().default(1),
-  generatedAt: z.string().default(() => new Date().toISOString())
+  generatedAt: z.string().default(() => new Date().toISOString()),
 });
 
 export type ServiceOfferingSegment = z.infer<typeof ServiceOfferingSegmentSchema>;
@@ -74,7 +75,7 @@ export const CredibilitySegmentSchema = z.object({
   // Metadata for tracking
   segmentType: z.literal('credibility'),
   version: z.number().default(1),
-  generatedAt: z.string().default(() => new Date().toISOString())
+  generatedAt: z.string().default(() => new Date().toISOString()),
 });
 
 export type CredibilitySegment = z.infer<typeof CredibilitySegmentSchema>;
@@ -91,7 +92,7 @@ export const ConversionSegmentSchema = z.object({
   // Metadata for tracking
   segmentType: z.literal('conversion'),
   version: z.number().default(1),
-  generatedAt: z.string().default(() => new Date().toISOString())
+  generatedAt: z.string().default(() => new Date().toISOString()),
 });
 
 export type ConversionSegment = z.infer<typeof ConversionSegmentSchema>;
@@ -112,7 +113,7 @@ export const SegmentStoreSchema = z.object({
   identity: IdentitySegmentSchema.optional(),
   serviceOffering: ServiceOfferingSegmentSchema.optional(),
   credibility: CredibilitySegmentSchema.optional(),
-  conversion: ConversionSegmentSchema.optional()
+  conversion: ConversionSegmentSchema.optional(),
 });
 
 export type SegmentStore = z.infer<typeof SegmentStoreSchema>;
@@ -126,7 +127,7 @@ export const SegmentGenerationStatusSchema = z.object({
   credibility: z.boolean().default(false),
   conversion: z.boolean().default(false),
   combined: z.boolean().default(false),
-  reviewed: z.boolean().default(false)
+  reviewed: z.boolean().default(false),
 });
 
 export type SegmentGenerationStatus = z.infer<typeof SegmentGenerationStatusSchema>;
@@ -147,7 +148,7 @@ export const SegmentedLandingPageSchema = z.object({
   
   // Generation metadata
   generatedAt: z.string().default(() => new Date().toISOString()),
-  version: z.number().default(1)
+  version: z.number().default(1),
 });
 
 export type SegmentedLandingPageData = z.infer<typeof SegmentedLandingPageSchema>;

@@ -534,16 +534,27 @@ export class WebsiteContext extends BaseContext<
   
   /**
    * Generate a landing page from profile data
+   * @param options Configuration options for generation
+   * @param options.regenerateSegments Whether to regenerate segments that are already cached
+   * @param options.segmentsToGenerate Which segments to generate (all by default)
+   * @param options.skipReview Whether to skip the final review phase
    * @returns Result of the generation operation
    */
-  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  async generateLandingPage(options?: {
+    regenerateSegments?: boolean;
+    segmentsToGenerate?: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
+    skipReview?: boolean;
+  }): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Generate landing page data
-      const landingPageData = await landingPageService.generateLandingPageData();
+      // Generate landing page data using the segmented approach with provided options
+      const landingPageData = await landingPageService.generateLandingPageData(options);
+      
+      // Get generation status
+      const status = landingPageService.getSegmentGenerationStatus();
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);
@@ -553,9 +564,35 @@ export class WebsiteContext extends BaseContext<
         throw new Error('Failed to write landing page data to Astro content');
       }
       
+      // Create success message that reflects what was generated
+      let successMessage = 'Successfully generated landing page';
+      
+      if (options?.segmentsToGenerate) {
+        const segmentNames = options.segmentsToGenerate.map(s => {
+          switch (s) {
+          case 'identity': return 'Identity';
+          case 'serviceOffering': return 'Service Offering';
+          case 'credibility': return 'Credibility';
+          case 'conversion': return 'Conversion';
+          default: return s;
+          }
+        });
+        
+        successMessage += ` with segments: ${segmentNames.join(', ')}`;
+      } else if (options?.regenerateSegments) {
+        successMessage += ' with all segments regenerated';
+      }
+      
+      // Add review status
+      if (status.reviewed) {
+        successMessage += ' and reviewed for cohesion';
+      } else if (options?.skipReview) {
+        successMessage += ' (review phase skipped)';
+      }
+      
       return {
         success: true,
-        message: 'Successfully generated landing page from brain content',
+        message: successMessage,
         data: landingPageData,
       };
     } catch (error) {
@@ -601,8 +638,9 @@ export class WebsiteContext extends BaseContext<
             context: 'WebsiteContext',
           });
           
-          // Generate landing page data
-          const generationResult = await this.generateLandingPage();
+          // Generate landing page data with all segments
+          // Avoid regenerating if already exists - use skipReview for faster generation
+          const generationResult = await this.generateLandingPage({ skipReview: true });
           if (!generationResult.success) {
             this.logger.warn('Could not generate landing page data before build', {
               context: 'WebsiteContext',
@@ -611,6 +649,7 @@ export class WebsiteContext extends BaseContext<
           } else {
             this.logger.info('Successfully generated landing page data before build', {
               context: 'WebsiteContext',
+              message: generationResult.message,
             });
           }
         }

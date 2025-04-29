@@ -1,7 +1,9 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { SegmentCacheService } from '@/contexts/website/services/landingPage/segmentCacheService';
 import fs from 'fs';
 import path from 'path';
+
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+
+import { SegmentCacheService } from '@/contexts/website/services/landingPage/segmentCacheService';
 import { IdentitySegmentSchema } from '@website/schemas/landingPageSegmentSchemas';
 
 // Create a mock identity segment for testing
@@ -41,7 +43,7 @@ describe('SegmentCacheService', () => {
   afterEach(() => {
     // Clean up test cache directory
     const files = ['identity-segment.json', 'service-offering-segment.json', 
-                  'credibility-segment.json', 'conversion-segment.json'];
+      'credibility-segment.json', 'conversion-segment.json'];
     
     for (const file of files) {
       const filePath = path.join(TEMP_CACHE_DIR, file);

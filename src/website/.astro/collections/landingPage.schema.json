@@ -26,7 +26,7 @@
             "problemStatement",
             "services",
             "process",
-            "testimonials",
+            "caseStudies",
             "expertise",
             "about",
             "pricing",
@@ -172,12 +172,12 @@
           ],
           "additionalProperties": false
         },
-        "testimonials": {
+        "caseStudies": {
           "type": "object",
           "properties": {
             "title": {
               "type": "string",
-              "default": "What Clients Say"
+              "default": "Selected Projects"
             },
             "introduction": {
               "type": "string"
@@ -187,13 +187,19 @@
               "items": {
                 "type": "object",
                 "properties": {
-                  "quote": {
+                  "title": {
                     "type": "string"
                   },
-                  "author": {
+                  "challenge": {
                     "type": "string"
                   },
-                  "company": {
+                  "approach": {
+                    "type": "string"
+                  },
+                  "results": {
+                    "type": "string"
+                  },
+                  "client": {
                     "type": "string"
                   },
                   "imageUrl": {
@@ -201,8 +207,10 @@
                   }
                 },
                 "required": [
-                  "quote",
-                  "author"
+                  "title",
+                  "challenge",
+                  "approach",
+                  "results"
                 ],
                 "additionalProperties": false
               }

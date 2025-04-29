@@ -75,9 +75,9 @@ describe('WebsiteToolService', () => {
   describe('getToolSchema', () => {
     it('should return schema for generate_landing_page tool', () => {
       const schema = toolService.getToolSchema({ name: 'generate_landing_page' });
-      expect(schema).toHaveProperty('includeSkills');
-      expect(schema).toHaveProperty('includeProjects');
-      expect(schema).toHaveProperty('includeContact');
+      expect(schema).toHaveProperty('regenerateSegments');
+      expect(schema).toHaveProperty('segments');
+      expect(schema).toHaveProperty('skipReview');
     });
 
     it('should return schema for build_website tool', () => {
@@ -122,17 +122,50 @@ describe('WebsiteToolService', () => {
         data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
       }));
 
-      // Call the handler
+      // Call the handler with default params (no segments specified)
       if (tool) {
         const result = await tool.handler({});
         
-        // Verify context method was called
-        expect(mockContext.generateLandingPage).toHaveBeenCalled();
+        // Verify context method was called with default options
+        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({
+          regenerateSegments: false,
+          segmentsToGenerate: undefined,
+          skipReview: false,
+        });
         
         // Verify result structure
         expect(result).toHaveProperty('success', true);
         expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('data.includedSections');
+        expect(result).toHaveProperty('data');
+      }
+    });
+    
+    it('generate_landing_page should pass segment options to context', async () => {
+      // Find the tool
+      const tool = tools.find(t => t.name === 'generate_landing_page');
+      expect(tool).toBeDefined();
+
+      // Set up mock implementation for this test
+      mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
+        success: true,
+        message: 'Landing page segments generated',
+        data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
+      }));
+
+      // Call the handler with segment params
+      if (tool) {
+        await tool.handler({
+          regenerateSegments: true,
+          segments: ['identity', 'credibility'],
+          skipReview: true,
+        });
+        
+        // Verify context method was called with the specified options
+        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({
+          regenerateSegments: true,
+          segmentsToGenerate: ['identity', 'credibility'],
+          skipReview: true,
+        });
       }
     });
 

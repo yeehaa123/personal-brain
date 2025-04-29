@@ -1,13 +1,14 @@
-import type { 
-  IdentitySegment, 
-  ServiceOfferingSegment, 
-  CredibilitySegment, 
-  ConversionSegment,
-  SegmentStore
-} from '@website/schemas/landingPageSegmentSchemas';
 import fs from 'fs';
 import path from 'path';
+
 import { Logger } from '@/utils/logger';
+import type { 
+  ConversionSegment, 
+  CredibilitySegment, 
+  IdentitySegment, 
+  SegmentStore,
+  ServiceOfferingSegment,
+} from '@website/schemas/landingPageSegmentSchemas';
 
 /**
  * Service for caching landing page segments
@@ -61,14 +62,14 @@ export class SegmentCacheService {
         fs.mkdirSync(this.cachePath, { recursive: true });
         this.logger.info('Created landing page segment cache directory', {
           context: 'SegmentCacheService',
-          path: this.cachePath
+          path: this.cachePath,
         });
       }
     } catch (error) {
       this.logger.error('Failed to create cache directory', {
         context: 'SegmentCacheService',
         error,
-        path: this.cachePath
+        path: this.cachePath,
       });
     }
   }
@@ -105,12 +106,12 @@ export class SegmentCacheService {
       
       this.logger.debug('Loaded cached landing page segments', {
         context: 'SegmentCacheService',
-        segments: Object.keys(this.segmentCache).filter(key => !!this.segmentCache[key as keyof SegmentStore])
+        segments: Object.keys(this.segmentCache).filter(key => !!this.segmentCache[key as keyof SegmentStore]),
       });
     } catch (error) {
       this.logger.error('Failed to load cached segments', {
         context: 'SegmentCacheService',
-        error
+        error,
       });
       
       // Reset cache on error
@@ -130,20 +131,20 @@ export class SegmentCacheService {
       // Determine file path based on segment type
       let filePath = '';
       switch (type) {
-        case 'identity':
-          filePath = path.join(this.cachePath, 'identity-segment.json');
-          break;
-        case 'serviceOffering':
-          filePath = path.join(this.cachePath, 'service-offering-segment.json');
-          break;
-        case 'credibility':
-          filePath = path.join(this.cachePath, 'credibility-segment.json');
-          break;
-        case 'conversion':
-          filePath = path.join(this.cachePath, 'conversion-segment.json');
-          break;
-        default:
-          throw new Error(`Unknown segment type: ${type}`);
+      case 'identity':
+        filePath = path.join(this.cachePath, 'identity-segment.json');
+        break;
+      case 'serviceOffering':
+        filePath = path.join(this.cachePath, 'service-offering-segment.json');
+        break;
+      case 'credibility':
+        filePath = path.join(this.cachePath, 'credibility-segment.json');
+        break;
+      case 'conversion':
+        filePath = path.join(this.cachePath, 'conversion-segment.json');
+        break;
+      default:
+        throw new Error(`Unknown segment type: ${type}`);
       }
       
       // Write to disk
@@ -152,13 +153,13 @@ export class SegmentCacheService {
       this.logger.debug('Saved segment to cache', {
         context: 'SegmentCacheService',
         type,
-        path: filePath
+        path: filePath,
       });
     } catch (error) {
       this.logger.error('Failed to save segment to cache', {
         context: 'SegmentCacheService',
         type,
-        error
+        error,
       });
     }
   }
@@ -201,20 +202,20 @@ export class SegmentCacheService {
       // Determine file path based on segment type
       let filePath = '';
       switch (type) {
-        case 'identity':
-          filePath = path.join(this.cachePath, 'identity-segment.json');
-          break;
-        case 'serviceOffering':
-          filePath = path.join(this.cachePath, 'service-offering-segment.json');
-          break;
-        case 'credibility':
-          filePath = path.join(this.cachePath, 'credibility-segment.json');
-          break;
-        case 'conversion':
-          filePath = path.join(this.cachePath, 'conversion-segment.json');
-          break;
-        default:
-          throw new Error(`Unknown segment type: ${type}`);
+      case 'identity':
+        filePath = path.join(this.cachePath, 'identity-segment.json');
+        break;
+      case 'serviceOffering':
+        filePath = path.join(this.cachePath, 'service-offering-segment.json');
+        break;
+      case 'credibility':
+        filePath = path.join(this.cachePath, 'credibility-segment.json');
+        break;
+      case 'conversion':
+        filePath = path.join(this.cachePath, 'conversion-segment.json');
+        break;
+      default:
+        throw new Error(`Unknown segment type: ${type}`);
       }
       
       // Remove from disk if exists
@@ -224,13 +225,13 @@ export class SegmentCacheService {
       
       this.logger.debug('Cleared segment from cache', {
         context: 'SegmentCacheService',
-        type
+        type,
       });
     } catch (error) {
       this.logger.error('Failed to clear segment from cache', {
         context: 'SegmentCacheService',
         type,
-        error
+        error,
       });
     }
   }
@@ -248,7 +249,7 @@ export class SegmentCacheService {
         'identity-segment.json',
         'service-offering-segment.json',
         'credibility-segment.json',
-        'conversion-segment.json'
+        'conversion-segment.json',
       ];
       
       for (const file of files) {
@@ -259,12 +260,12 @@ export class SegmentCacheService {
       }
       
       this.logger.info('Cleared all segments from cache', {
-        context: 'SegmentCacheService'
+        context: 'SegmentCacheService',
       });
     } catch (error) {
       this.logger.error('Failed to clear all segments from cache', {
         context: 'SegmentCacheService',
-        error
+        error,
       });
     }
   }

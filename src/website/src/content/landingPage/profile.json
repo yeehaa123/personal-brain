@@ -1,67 +1,64 @@
 {
-  "title": "Jan Hein Hoogstad | Ecosystem Architect",
-  "description": "Jan Hein Hoogstad is an ecosystem architect who helps organizations build purpose-driven communities and sustainable digital ecosystems. Based in Taipei, Taiwan, Jan Hein combines philosophical insight with technical expertise to transform collaboration, learning, and innovation.",
+  "title": "Ecosystem Architecture Services",
+  "description": "Transform organizations through innovative ecosystem design",
   "name": "Jan Hein Hoogstad",
-  "tagline": "Designing thriving ecosystems across space and time",
+  "tagline": "Building thriving ecosystems across space and time",
   "sectionOrder": [
     "hero",
     "problemStatement",
     "services",
     "process",
-    "testimonials",
+    "caseStudies",
     "expertise",
-    "about",
-    "pricing",
     "faq",
-    "cta",
-    "footer"
+    "cta"
   ],
   "hero": {
-    "headline": "Build Thriving Digital Ecosystems",
-    "subheading": "I transform fragmented digital spaces into purpose-driven communities where innovation flourishes and sustainable value emerges naturally.",
-    "ctaText": "Transform Your Organization",
+    "headline": "Design Thriving Ecosystems That Transcend Space & Time",
+    "subheading": "Transform your organization with regenerative, decentralized ecosystem architecture",
+    "ctaText": "Start Your Transformation",
     "ctaLink": "#contact",
-    "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+    "imageUrl": "https://images.unsplash.com/photo-1536782376847-5c9d14d97cc0?ixlib=rb-4.0.3"
   },
   "problemStatement": {
-    "title": "Today's Digital Landscape Is Broken",
-    "description": "Organizations struggle to build meaningful connections in our fragmented digital world. Traditional approaches to community building and innovation no longer deliver lasting value.",
+    "title": "Traditional Organizations Are Failing Us",
+    "description": "Today's challenges require structures that work beyond hierarchical, mechanical models. People crave organizations that are organic, collaborative, and resilient—yet building these ecosystems doesn't happen by accident.",
     "bulletPoints": [
-      "Teams work in silos, unable to align around shared values and purpose",
-      "Digital initiatives fail to inspire genuine community participation",
-      "Innovation processes extract value rather than regenerate it",
-      "Decentralized systems create complexity that paralyzes decision-making"
+      "Centralized systems create extraction and waste rather than regeneration",
+      "Fragmented digital landscapes demand new approaches to community building",
+      "Organizations struggle to align values across distributed teams and stakeholders",
+      "Innovation suffers when practices focus on products rather than ecosystems"
     ],
     "enabled": true
   },
   "services": {
     "title": "Ecosystem Architecture Services",
+    "introduction": "I help organizations design and cultivate thriving ecosystems that work across space and time, blending decentralized approaches with regenerative principles.",
     "items": [
       {
-        "title": "Ecosystem Strategy & Design",
-        "description": "Create a blueprint that aligns stakeholders around shared values and transforms your vision into reality.",
-        "icon": "compass",
-        "details": "My four-movement approach (Align, Validate, Scale, Spin Out) helps you design ecosystems that naturally foster collaboration. We'll create a vision type capturing your ideal future and develop concrete steps to achieve it."
-      },
-      {
-        "title": "Community Cultivation",
-        "description": "Convert passive audiences into active co-creators who drive your ecosystem forward.",
-        "icon": "users",
-        "details": "I'll design incentives, governance structures, and participation models that empower members to develop their unique strengths. Together, we'll create vessels of transformation that demonstrate real commitment to change."
+        "title": "Ecosystem Design & Strategy",
+        "description": "Create the foundation for vibrant, resilient communities through value alignment and vision development",
+        "icon": "strategy",
+        "details": "Develop comprehensive ecosystem blueprints that transcend traditional organizational boundaries, establishing clear values, governance models, and growth pathways that foster collaboration across distributed networks."
       },
       {
         "title": "Regenerative Innovation",
-        "description": "Replace extractive practices with regenerative approaches that create sustainable value for all stakeholders.",
-        "icon": "leaf",
-        "details": "Learn to transform waste into opportunity and build systems that improve with use rather than deplete. I'll guide you in implementing practices that foster innovation while enhancing your ecosystem's health."
+        "description": "Transform waste into opportunity through practices that renew rather than extract",
+        "icon": "refresh",
+        "details": "Implement innovation practices that prioritize regeneration over extraction, turning challenges into opportunities while creating systems that improve their environment rather than depleting it."
       },
       {
-        "title": "Digital Ecosystem Implementation",
-        "description": "Build practical digital solutions that connect your community across space and time.",
-        "icon": "code",
-        "details": "My background in philosophy and coding bridges conceptual thinking with technical implementation. I'll help you select and implement the right tools to support your ecosystem's unique needs and values."
+        "title": "Decentralized Community Building",
+        "description": "Build resilient communities that thrive across geographic and temporal boundaries",
+        "icon": "groups",
+        "details": "Develop strategies for cultivating communities that operate effectively across distributed networks, creating alignment without centralized control through shared values and collaborative practices."
+      },
+      {
+        "title": "Ecosystem Transformation Workshops",
+        "description": "Guide your team through the four movements of ecosystem architecture",
+        "icon": "school",
+        "details": "Facilitate immersive workshops that walk teams through the align, validate, scale, and spin-out phases of ecosystem development, creating practical roadmaps for implementation."
       }
-    ],
-    "introduction": "I blend decentralization principles with regenerative design to create ecosystems where people naturally collaborate, learn, and innovate together."
+    ]
   }
 }

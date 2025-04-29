@@ -33,8 +33,53 @@ export class MockLandingPageGenerationService {
     },
   };
   
+  // Segment generation status for testing
+  private segmentGenerationStatus = {
+    identity: true,
+    serviceOffering: true,
+    credibility: true,
+    conversion: true,
+    combined: true,
+    reviewed: true,
+  };
+  
   // Mock methods
-  generateLandingPageData = mock((overrides?: Partial<Record<string, unknown>>) => {
+  generateLandingPageData = mock((options?: {
+    regenerateSegments?: boolean;
+    segmentsToGenerate?: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
+    skipReview?: boolean;
+  }, overrides?: Partial<Record<string, unknown>>) => {
+    // Update status based on options
+    if (options) {
+      if (options.skipReview) {
+        this.segmentGenerationStatus.reviewed = false;
+      }
+      
+      if (options.regenerateSegments) {
+        // Reset all segment statuses
+        this.segmentGenerationStatus = {
+          identity: false,
+          serviceOffering: false,
+          credibility: false,
+          conversion: false,
+          combined: false,
+          reviewed: false,
+        };
+      }
+      
+      if (options.segmentsToGenerate) {
+        // Only mark specified segments as generated
+        this.segmentGenerationStatus = {
+          identity: options.segmentsToGenerate.includes('identity'),
+          serviceOffering: options.segmentsToGenerate.includes('serviceOffering'),
+          credibility: options.segmentsToGenerate.includes('credibility'),
+          conversion: options.segmentsToGenerate.includes('conversion'),
+          combined: true,
+          reviewed: !options.skipReview,
+        };
+      }
+    }
+    
     // Return an enhanced landing page data structure with all required sections
     return Promise.resolve({
       ...this.defaultLandingPageData,
@@ -66,6 +111,11 @@ export class MockLandingPageGenerationService {
       },
       ...overrides,
     });
+  });
+  
+  // Mock method to get segment generation status
+  getSegmentGenerationStatus = mock(() => {
+    return {...this.segmentGenerationStatus};
   });
   
   setProfileContext = mock(() => {

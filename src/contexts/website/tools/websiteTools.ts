@@ -97,9 +97,12 @@ export class WebsiteToolService {
     switch (tool.name) {
     case 'generate_landing_page':
       return {
-        includeSkills: z.boolean().optional().describe('Whether to include skills section'),
-        includeProjects: z.boolean().optional().describe('Whether to include projects section'),
-        includeContact: z.boolean().optional().describe('Whether to include contact section'),
+        regenerateSegments: z.boolean().optional()
+          .describe('Whether to regenerate segments that already exist in cache'),
+        segments: z.array(z.enum(['identity', 'serviceOffering', 'credibility', 'conversion'])).optional()
+          .describe('Specific segments to generate, if not all'),
+        skipReview: z.boolean().optional()
+          .describe('Whether to skip the final review phase'),
       };
 
     case 'build_website':
@@ -136,13 +139,33 @@ export class WebsiteToolService {
       protocol: 'website',
       path: 'generate_landing_page',
       name: 'generate_landing_page',
-      description: 'Generates a landing page from profile data',
+      description: 'Generates a landing page from profile data with segment-based content generation',
       handler: async (params: Record<string, unknown>) => {
-        const includeSkills = params['includeSkills'] !== false; // default to true
-        const includeProjects = params['includeProjects'] !== false; // default to true
-        const includeContact = params['includeContact'] !== false; // default to true
-
-        const result = await context.generateLandingPage();
+        // Parse segmented generation parameters
+        const regenerateSegments = params['regenerateSegments'] === true;
+        const skipReview = params['skipReview'] === true;
+        
+        // Parse segments to generate (if specified)
+        let segmentsToGenerate: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[] | undefined;
+        
+        if (params['segments'] && Array.isArray(params['segments'])) {
+          // Filter to ensure we only include valid segment types
+          segmentsToGenerate = params['segments'].filter(s => 
+            ['identity', 'serviceOffering', 'credibility', 'conversion'].includes(String(s)),
+          ) as ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
+          
+          // If after filtering we have no valid segments, set to undefined to generate all
+          if (segmentsToGenerate.length === 0) {
+            segmentsToGenerate = undefined;
+          }
+        }
+        
+        // Call the context with the segmented options
+        const result = await context.generateLandingPage({
+          regenerateSegments,
+          segmentsToGenerate,
+          skipReview,
+        });
 
         if (!result.success) {
           throw new Error(`Failed to generate landing page: ${result.message}`);
@@ -151,13 +174,7 @@ export class WebsiteToolService {
         return {
           success: result.success,
           message: result.message,
-          data: {
-            includedSections: {
-              skills: includeSkills,
-              projects: includeProjects,
-              contact: includeContact,
-            },
-          },
+          data: result.data,
         };
       },
     };

@@ -1,6 +1,7 @@
-import { describe, test, expect } from 'bun:test';
 import fs from 'fs';
 import path from 'path';
+
+import { describe, expect, test } from 'bun:test';
 
 describe('Landing Page Segment Prompts', () => {
   const promptsPath = path.join(process.cwd(), 'src', 'contexts', 'website', 'services', 'prompts', 'segments');
@@ -10,7 +11,7 @@ describe('Landing Page Segment Prompts', () => {
       'identity-segment.txt',
       'service-offering-segment.txt',
       'credibility-segment.txt',
-      'conversion-segment.txt'
+      'conversion-segment.txt',
     ];
     
     for (const promptFile of expectedPrompts) {
@@ -24,7 +25,7 @@ describe('Landing Page Segment Prompts', () => {
       'identity-segment.txt',
       'service-offering-segment.txt',
       'credibility-segment.txt',
-      'conversion-segment.txt'
+      'conversion-segment.txt',
     ];
     
     for (const promptFile of promptFiles) {
