@@ -126,7 +126,8 @@ export class LandingPageGenerationService {
   }
 
   /**
-   * Generate a complete landing page
+   * Generate a complete landing page without holistic editing
+   * The editing phase has been separated for better reliability
    * 
    * @returns A complete landing page data structure with content
    */
@@ -144,9 +145,6 @@ export class LandingPageGenerationService {
       
       // Generate content for each section individually
       landingPage = await this.generateAllSections(landingPage);
-      
-      // Perform holistic editing to ensure consistency across sections
-      landingPage = await this.performHolisticEditing(landingPage);
       
       this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
@@ -180,7 +178,7 @@ export class LandingPageGenerationService {
    */
   async assessLandingPageQuality(
     landingPage: LandingPageData,
-    options: LandingPageQualityAssessmentOptions = {}
+    options: LandingPageQualityAssessmentOptions = {},
   ): Promise<{ 
     landingPage: LandingPageData; 
     assessments: Record<string, AssessedSection<unknown>>;
@@ -465,18 +463,7 @@ Return only these four fields formatted as JSON.`;
     }
   }
 
-  /**
-   * Perform holistic editing on the generated landing page to ensure consistency
-   * @param landingPage - Generated landing page data
-   */
-  private async performHolisticEditing(landingPage: LandingPageData): Promise<LandingPageData> {
-    this.logger.info('Performing holistic editing of landing page content', {
-      context: 'LandingPageGenerationService',
-    });
-    
-    // Just perform the content review without quality assessment
-    return await this.performFinalContentReview(landingPage);
-  }
+  // The performHolisticEditing method has been replaced by public editLandingPage method
 
   /**
    * Assess and improve all sections of the landing page
@@ -581,13 +568,14 @@ Return only these four fields formatted as JSON.`;
   }
 
   /**
-   * Perform a final content review for overall consistency
-   * This is part of the holistic editing phase without quality assessment
+   * Edit a landing page for consistency across sections
+   * This is a separate operation that can be run after generation
    * 
-   * @param landingPage - Generated landing page data
+   * @param landingPage - The landing page to edit
+   * @returns The edited landing page with improved consistency
    */
-  private async performFinalContentReview(landingPage: LandingPageData): Promise<LandingPageData> {
-    this.logger.debug('Performing holistic content review and editing', {
+  async editLandingPage(landingPage: LandingPageData): Promise<LandingPageData> {
+    this.logger.info('Performing holistic content review and editing', {
       context: 'LandingPageGenerationService',
     });
     

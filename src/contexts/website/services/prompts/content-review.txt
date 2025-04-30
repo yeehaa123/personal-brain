@@ -28,4 +28,11 @@ You are a professional editor for landing page content. Review the following lan
    - Note where adding subheadings would improve readability
    - Indicate where content could be broken up for better flow
 
+6. IMAGE REFERENCES
+   - For any imageUrl fields in the content, use Unsplash URLs (https://source.unsplash.com/...)
+   - For hero section, use relevant professional imagery (e.g., https://source.unsplash.com/random/1200x800/?professional,business)
+   - For about section, use professional portrait-style imagery (e.g., https://source.unsplash.com/random/800x1000/?professional,portrait)
+   - For case studies, use relevant topic-based imagery (e.g., https://source.unsplash.com/random/800x600/?project,business)
+   - Always include an appropriate alt text description in the URL for accessibility
+
 IMPORTANT: Apply these improvements while maintaining the original meaning and key points. Focus on enhancing clarity, impact, and persuasiveness without changing the core message or adding false information.

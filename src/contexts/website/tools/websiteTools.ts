@@ -80,6 +80,9 @@ export class WebsiteToolService {
       // generate_landing_page
       this.generateLandingPageTool(context),
       
+      // edit_landing_page
+      this.editLandingPageTool(context),
+      
       // assess_landing_page
       this.assessLandingPageTool(context),
       
@@ -107,6 +110,10 @@ export class WebsiteToolService {
     switch (tool.name) {
     case 'generate_landing_page':
       return LandingPageGenerationToolSchema.shape;
+      
+    case 'edit_landing_page':
+      // No parameters needed for edit_landing_page
+      return {};
 
     case 'assess_landing_page':
       return LandingPageQualityAssessmentToolSchema.shape;
@@ -134,13 +141,39 @@ export class WebsiteToolService {
       protocol: 'website',
       path: 'generate_landing_page',
       name: 'generate_landing_page',
-      description: 'Generates a landing page from profile data (without quality assessment)',
+      description: 'Generates a landing page from profile data (without holistic editing)',
       handler: async (_params: Record<string, unknown>) => {
         // Call context without options - generation is a simple process without options now
         const result = await context.generateLandingPage();
 
         if (!result.success) {
           throw new Error(`Failed to generate landing page: ${result.message}`);
+        }
+
+        return {
+          success: result.success,
+          message: result.message,
+          data: result.data,
+        };
+      },
+    };
+  }
+  
+  /**
+   * Create the edit_landing_page tool
+   */
+  private editLandingPageTool(context: WebsiteContext): ResourceDefinition {
+    return {
+      protocol: 'website',
+      path: 'edit_landing_page',
+      name: 'edit_landing_page',
+      description: 'Performs holistic editing on an existing landing page for consistency across sections',
+      handler: async (_params: Record<string, unknown>) => {
+        // Call context to edit the landing page
+        const result = await context.editLandingPage();
+
+        if (!result.success) {
+          throw new Error(`Failed to edit landing page: ${result.message}`);
         }
 
         return {

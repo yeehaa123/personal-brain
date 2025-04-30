@@ -174,37 +174,8 @@ describe('WebsiteContext', () => {
     MockLandingPageGenerationService.resetInstance();
     const freshLandingPageService = MockLandingPageGenerationService.createFresh();
 
-    // Create specific mocks for the landing page data
-    const mockLandingPageData = {
-      title: 'Test Title',
-      description: 'Test Description',
-      name: 'Test User',
-      tagline: 'Test Tagline',
-      sectionOrder: ['hero', 'services', 'cta', 'footer'],
-      hero: {
-        headline: 'Test Headline',
-        subheading: 'Test Subheading',
-        ctaText: 'Get Started',
-        ctaLink: '#contact',
-      },
-      services: {
-        title: 'Services',
-        items: [
-          { title: 'Service 1', description: 'Description 1' },
-        ],
-      },
-      cta: {
-        title: 'Ready to Get Started?',
-        subtitle: 'Contact us today',
-        buttonText: 'Contact Now',
-        buttonLink: '#contact',
-        enabled: true,
-      },
-      footer: {
-        copyrightText: `© ${new Date().getFullYear()} Test User`,
-        enabled: true,
-      },
-    };
+    // Use the test helper to create a complete landing page data object
+    const mockLandingPageData = createTestLandingPageData();
 
     // Simple implementation for generating landing page
     const generateImplementation = mock(() => Promise.resolve(mockLandingPageData));
@@ -226,6 +197,53 @@ describe('WebsiteContext', () => {
     expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
   });
 
+  test('editLandingPage should perform holistic editing on the landing page', async () => {
+    // Setup
+    const mockProfileContext = MockProfileContext.createFresh();
+    
+    // Create a fresh mock
+    MockLandingPageGenerationService.resetInstance();
+    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
+    
+    // Use the test helper to create a complete landing page data object
+    const mockLandingPageData = createTestLandingPageData();
+    
+    // Mock storage to return some landing page data
+    const mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(mockLandingPageData));
+    
+    // Mock the edit function
+    const editedLandingPage = { 
+      ...mockLandingPageData, 
+      hero: { 
+        ...mockLandingPageData.hero, 
+        headline: 'Edited: ' + mockLandingPageData.hero.headline, 
+      }, 
+    };
+    freshLandingPageService.editLandingPage = mock(() => Promise.resolve(editedLandingPage));
+    
+    // Mock the content service write function
+    mockAstroContentService.writeLandingPageContent = mock(() => Promise.resolve(true));
+    
+    // Create context with mocked services
+    const context = WebsiteContext.createFresh({
+      storage: mockStorage,
+      astroContentService: mockAstroContentService,
+      landingPageGenerationService: freshLandingPageService as unknown as LandingPageGenerationService,
+      profileContext: mockProfileContext as unknown as ProfileContext,
+    });
+    
+    // Execute the edit function
+    const result = await context.editLandingPage();
+    
+    // Assertions
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('Successfully edited landing page');
+    expect(result.data).toEqual(editedLandingPage);
+    expect(freshLandingPageService.editLandingPage).toHaveBeenCalledWith(mockLandingPageData);
+    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalledWith(editedLandingPage);
+  });
+
   test('assessLandingPage should assess landing page quality', async () => {
     // Setup
     const mockProfileContext = MockProfileContext.createFresh();
@@ -236,37 +254,8 @@ describe('WebsiteContext', () => {
     MockLandingPageGenerationService.resetInstance();
     const freshLandingPageService = MockLandingPageGenerationService.createFresh();
 
-    // Create mock landing page data
-    const mockLandingPageData = {
-      title: 'Test Title',
-      description: 'Test Description',
-      name: 'Test User',
-      tagline: 'Test Tagline',
-      sectionOrder: ['hero', 'services', 'cta', 'footer'],
-      hero: {
-        headline: 'Test Headline',
-        subheading: 'Test Subheading',
-        ctaText: 'Get Started',
-        ctaLink: '#contact',
-      },
-      services: {
-        title: 'Services',
-        items: [
-          { title: 'Service 1', description: 'Description 1' },
-        ],
-      },
-      cta: {
-        title: 'Ready to Get Started?',
-        subtitle: 'Contact us today',
-        buttonText: 'Contact Now',
-        buttonLink: '#contact',
-        enabled: true,
-      },
-      footer: {
-        copyrightText: `© ${new Date().getFullYear()} Test User`,
-        enabled: true,
-      },
-    };
+    // Use the test helper to create a complete landing page data object
+    const mockLandingPageData = createTestLandingPageData();
 
     // Mock storage to return some landing page data
     const mockStorage = MockWebsiteStorageAdapter.createFresh();
@@ -312,17 +301,19 @@ describe('WebsiteContext', () => {
       applyRecommendations: false,
     });
 
-    // Reset the writeLandingPageContent mock since it was called during initial setup
-    mockAstroContentService.writeLandingPageContent.mockClear();
+    // Create a fresh mock to reset state
+    const newWriteMock = mock(() => Promise.resolve(true));
+    mockAstroContentService.writeLandingPageContent = newWriteMock;
     
     // Assertions
     expect(result.success).toBe(true);
     expect(result.message).toContain('Successfully assessed landing page quality');
     expect(freshLandingPageService.assessLandingPageQuality).toHaveBeenCalled();
-    expect(mockAstroContentService.writeLandingPageContent).not.toHaveBeenCalled();
+    expect(newWriteMock).not.toHaveBeenCalled();
 
     // Test assessment with applying recommendations
-    mockAstroContentService.writeLandingPageContent.mockClear();
+    const anotherWriteMock = mock(() => Promise.resolve(true));
+    mockAstroContentService.writeLandingPageContent = anotherWriteMock;
     const resultWithRecommendations = await context.assessLandingPage({
       applyRecommendations: true,
     });
@@ -330,7 +321,7 @@ describe('WebsiteContext', () => {
     // Assertions
     expect(resultWithRecommendations.success).toBe(true);
     expect(resultWithRecommendations.message).toContain('applied quality recommendations');
-    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
+    expect(anotherWriteMock).toHaveBeenCalled();
   });
 
   test('buildWebsite should run the build command through astro service', async () => {

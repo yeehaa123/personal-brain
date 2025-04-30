@@ -8,7 +8,10 @@ Include:
    - Unique approach or philosophy
    - Personal touch or motivation (optional)
    - Relevant achievements (optional)
-3. **CTA** (optional):
+3. **Image URL**: Include an Unsplash image URL for a professional portrait or workspace
+   - Format: https://source.unsplash.com/random/800x1000/?professional,portrait
+   - You can customize the keywords after the question mark to better match the specific profession
+4. **CTA** (optional):
    - Optional call-to-action button text
    - Link for the button
 
@@ -17,4 +20,4 @@ Keep the content professional yet personable, and aligned with the profile:
 Name: {{name}}
 Tagline: {{tagline}}
 
-Return ONLY valid JSON with keys for: title, content (biography text), imageUrl (optional), ctaText (optional), ctaLink (optional), and enabled (set to true).
+Return ONLY valid JSON with keys for: title, content (biography text), imageUrl, ctaText (optional), ctaLink (optional), and enabled (set to true).

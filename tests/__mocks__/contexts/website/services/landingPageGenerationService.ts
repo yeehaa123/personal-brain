@@ -1,6 +1,7 @@
 import { mock } from 'bun:test';
 
-import type { LandingPageGenerationOptions } from '@/contexts/website/services/landingPageGenerationService';
+// Import direct types we need
+import type { LandingPageQualityAssessmentOptions } from '@/contexts/website/services/landingPageGenerationService';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
@@ -77,8 +78,28 @@ export class MockLandingPageGenerationService {
   };
   
   // Mock methods
-  public generateLandingPageData = mock(async (_options?: LandingPageGenerationOptions): Promise<LandingPageData> => {
+  public generateLandingPageData = mock(async (): Promise<LandingPageData> => {
     return { ...this.landingPageData };
+  });
+  
+  public editLandingPage = mock(async (landingPage: LandingPageData): Promise<LandingPageData> => {
+    // Create a copy of the landing page to simulate editing
+    const editedLandingPage = { ...landingPage };
+    // Make a simple change to indicate editing was performed
+    if (editedLandingPage.hero && editedLandingPage.hero.headline) {
+      editedLandingPage.hero.headline = `Edited: ${editedLandingPage.hero.headline}`;
+    }
+    return editedLandingPage;
+  });
+  
+  public assessLandingPageQuality = mock(async (landingPage: LandingPageData, _options?: LandingPageQualityAssessmentOptions): Promise<{ 
+    landingPage: LandingPageData; 
+    assessments: Record<string, AssessedSection<unknown>>;
+  }> => {
+    return {
+      landingPage: { ...landingPage },
+      assessments: this.getSectionQualityAssessments(),
+    };
   });
   
   public getSectionQualityAssessments = mock((): Record<string, AssessedSection<unknown>> => {

@@ -10,7 +10,6 @@ import { WebsiteToolService } from '@/contexts/website/tools';
 import type { WebsiteContext } from '@/contexts/website/websiteContext';
 import { 
   LandingPageGenerationToolSchema,
-  LandingPageQualityAssessmentToolSchema,
   WebsiteBuildToolSchema,
   WebsitePromoteToolSchema,
   WebsiteStatusToolSchema,
@@ -24,6 +23,7 @@ describe('WebsiteToolService', () => {
   // Must be manually reset before each test
   const mockContext = {
     generateLandingPage: mock(() => {}),
+    editLandingPage: mock(() => {}),
     assessLandingPage: mock(() => {}),
     handleWebsiteBuild: mock(() => {}),
     handleWebsitePromote: mock(() => {}),
@@ -36,6 +36,7 @@ describe('WebsiteToolService', () => {
     
     // Reset mocks
     mockContext.generateLandingPage.mockReset();
+    mockContext.editLandingPage.mockReset();
     mockContext.assessLandingPage.mockReset();
     mockContext.handleWebsiteBuild.mockReset();
     mockContext.handleWebsitePromote.mockReset();
@@ -75,6 +76,7 @@ describe('WebsiteToolService', () => {
       const toolNames = tools.map(tool => tool.name);
       
       expect(toolNames).toContain('generate_landing_page');
+      expect(toolNames).toContain('edit_landing_page');
       expect(toolNames).toContain('assess_landing_page');
       expect(toolNames).toContain('build_website');
       expect(toolNames).toContain('promote_website');
@@ -159,6 +161,48 @@ describe('WebsiteToolService', () => {
         expect(result).toHaveProperty('success', true);
         expect(result).toHaveProperty('message');
         expect(result).toHaveProperty('data');
+      }
+    });
+    
+    it('edit_landing_page should call context.editLandingPage without parameters', async () => {
+      // Find the tool
+      const tool = tools.find(t => t.name === 'edit_landing_page');
+      expect(tool).toBeDefined();
+
+      // Set up mock implementation for this test
+      mockContext.editLandingPage.mockImplementation(() => Promise.resolve({
+        success: true,
+        message: 'Landing page edited',
+        data: { 
+          name: 'Test',
+          title: 'Test Landing Page', 
+          tagline: 'Test Tagline',
+          hero: { headline: 'Edited: Test Headline' },
+        },
+      }));
+
+      // Call the handler
+      if (tool) {
+        const result = await tool.handler({});
+        
+        // Verify context method was called with no parameters
+        expect(mockContext.editLandingPage).toHaveBeenCalled();
+        
+        // Verify result structure
+        expect(result).toHaveProperty('success', true);
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('data');
+        
+        // Type-safe assertion
+        if (result && typeof result === 'object' && 'data' in result && result.data) {
+          const data = result.data as Record<string, unknown>;
+          if ('hero' in data && typeof data['hero'] === 'object' && data['hero']) {
+            const hero = data['hero'] as Record<string, unknown>;
+            if ('headline' in hero && hero['headline']) {
+              expect(String(hero['headline'])).toContain('Edited:');
+            }
+          }
+        }
       }
     });
     

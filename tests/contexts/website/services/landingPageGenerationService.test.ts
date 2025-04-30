@@ -194,8 +194,20 @@ describe('LandingPageGenerationService', () => {
   test('assessLandingPageQuality should handle applyRecommendations option', async () => {
     // Arrange - Generate landing page first
     const landingPage = await service.generateLandingPageData();
-    // Make sure pricing is in the landing page for the test
-    landingPage.pricing = { title: 'Pricing', enabled: true };
+    // Make sure pricing is in the landing page for the test with required tiers array
+    landingPage.pricing = { 
+      title: 'Pricing', 
+      enabled: true,
+      tiers: [{
+        name: 'Basic Plan',
+        description: 'Basic service package',
+        price: '$99',
+        ctaText: 'Get Started',
+        ctaLink: '#contact',
+        features: ['Feature 1', 'Feature 2'],
+        isFeatured: false,
+      }],
+    };
     
     // Act - Test with recommendations applied
     const result = await service.assessLandingPageQuality(landingPage, { applyRecommendations: true });

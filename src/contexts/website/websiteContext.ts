@@ -7,6 +7,7 @@ import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
 import { Registry } from '@/utils/registry';
 import type { LandingPageData } from '@website/schemas';
+import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
@@ -534,7 +535,7 @@ export class WebsiteContext extends BaseContext<
   
   /**
    * Generate a landing page from profile data
-   * This method generates content without quality assessment
+   * This method generates content without holistic editing
    * 
    * @returns Result of the generation operation
    */
@@ -544,7 +545,7 @@ export class WebsiteContext extends BaseContext<
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Generate landing page data
+      // Generate landing page data (no holistic editing)
       const landingPageData = await landingPageService.generateLandingPageData();
       
       // Save to storage and Astro content
@@ -557,7 +558,7 @@ export class WebsiteContext extends BaseContext<
       
       return {
         success: true,
-        message: 'Successfully generated landing page content',
+        message: 'Successfully generated landing page content (without editing)',
         data: landingPageData,
       };
     } catch (error) {
@@ -569,6 +570,56 @@ export class WebsiteContext extends BaseContext<
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error generating landing page',
+      };
+    }
+  }
+  
+  /**
+   * Edit a landing page for consistency across sections
+   * This is a separate step from generation for better reliability
+   * 
+   * @returns Result of the editing operation
+   */
+  async editLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+    try {
+      // Get services
+      const landingPageService = this.getLandingPageGenerationService();
+      const astroService = await this.getAstroContentService();
+      
+      // Get current landing page data
+      const currentLandingPage = await this.getLandingPageData();
+      if (!currentLandingPage) {
+        return {
+          success: false,
+          message: 'No landing page data found. Generate a landing page first.',
+        };
+      }
+      
+      // Perform holistic editing
+      const editedLandingPage = await landingPageService.editLandingPage(currentLandingPage);
+      
+      // Save edited content
+      await this.saveLandingPageData(editedLandingPage);
+      const writeSuccess = await astroService.writeLandingPageContent(editedLandingPage);
+      
+      if (!writeSuccess) {
+        throw new Error('Failed to write edited landing page data to Astro content');
+      }
+      
+      return {
+        success: true,
+        message: 'Successfully edited landing page for consistency',
+        data: editedLandingPage,
+      };
+    } catch (error) {
+      this.logger.error('Error editing landing page', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error editing landing page',
       };
     }
   }
@@ -615,7 +666,7 @@ export class WebsiteContext extends BaseContext<
         {
           qualityThresholds: options?.qualityThresholds,
           applyRecommendations: options?.applyRecommendations,
-        }
+        },
       );
       
       // If we're applying recommendations, save the updated landing page

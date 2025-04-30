@@ -10,10 +10,13 @@ Include:
    - Approach: How {{name}} tackled the challenge
    - Results: The outcomes and benefits delivered
    - Client (optional): The client name if applicable
+   - Image URL: Include an Unsplash image URL relevant to the case study
+     - Format: https://source.unsplash.com/random/800x600/?project,business
+     - Customize the keywords after the question mark to match the specific project type
 
 Keep the content professional and aligned with the profile:
 
 Name: {{name}}
 Tagline: {{tagline}}
 
-Return ONLY valid JSON with keys for: title, introduction (optional), items (array of case study objects with title, challenge, approach, results, and optional client), and enabled (set to true).
+Return ONLY valid JSON with keys for: title, introduction (optional), items (array of case study objects with title, challenge, approach, results, optional client, and imageUrl), and enabled (set to true).
