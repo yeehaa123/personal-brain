@@ -7,9 +7,10 @@ import Hero from '../components/sections/Hero.astro';
 import ProblemStatement from '../components/sections/ProblemStatement.astro';
 import Services from '../components/sections/Services.astro';
 import Process from '../components/sections/Process.astro';
-import Testimonials from '../components/sections/Testimonials.astro';
+import CaseStudies from '../components/sections/CaseStudies.astro';
 import Expertise from '../components/sections/Expertise.astro';
 import About from '../components/sections/About.astro';
+import Pricing from '../components/sections/Pricing.astro';
 import Faq from '../components/sections/Faq.astro';
 import Cta from '../components/sections/Cta.astro';
 import Footer from '../components/sections/Footer.astro';
@@ -28,27 +29,16 @@ const {
   problemStatement,
   services,
   process,
-  testimonials,
+  caseStudies,
   expertise,
   about,
+  pricing,
   faq,
   cta,
   footer
 } = profile.data;
 
-// Create a map of section names to determine which sections should be rendered
-const sectionsToRender = {
-  hero: !!hero,
-  problemStatement: problemStatement?.enabled,
-  services: !!services,
-  process: process?.enabled,
-  testimonials: testimonials?.enabled,
-  expertise: expertise?.enabled,
-  about: about?.enabled,
-  faq: faq?.enabled,
-  cta: cta?.enabled,
-  footer: footer?.enabled
-};
+// Each component will check its own enabled flag
 
 // Font Awesome for icons
 const useFontAwesome = 
@@ -70,25 +60,27 @@ const metaDescription = description || `Professional website for ${name} - ${tag
   {sectionOrder.map(section => {
     switch(section) {
       case 'hero':
-        return sectionsToRender.hero && <Hero hero={hero} />;
+        return <Hero hero={hero} />;
       case 'problemStatement':
-        return sectionsToRender.problemStatement && <ProblemStatement problemStatement={problemStatement} />;
+        return <ProblemStatement problemStatement={problemStatement} />;
       case 'services':
-        return sectionsToRender.services && <Services services={services} />;
+        return <Services services={services} />;
       case 'process':
-        return sectionsToRender.process && <Process process={process} />;
-      case 'testimonials':
-        return sectionsToRender.testimonials && <Testimonials testimonials={testimonials} />;
+        return <Process process={process} />;
+      case 'caseStudies':
+        return <CaseStudies caseStudies={caseStudies} />;
       case 'expertise':
-        return sectionsToRender.expertise && <Expertise expertise={expertise} />;
+        return <Expertise expertise={expertise} />;
       case 'about':
-        return sectionsToRender.about && <About about={about} />;
+        return <About about={about} />;
+      case 'pricing':
+        return <Pricing pricing={pricing} />;
       case 'faq':
-        return sectionsToRender.faq && <Faq faq={faq} />;
+        return <Faq faq={faq} />;
       case 'cta':
-        return sectionsToRender.cta && <Cta cta={cta} />;
+        return <Cta cta={cta} />;
       case 'footer':
-        return sectionsToRender.footer && <Footer footer={footer} />;
+        return <Footer footer={footer} />;
       default:
         return null;
     }

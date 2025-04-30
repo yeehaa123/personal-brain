@@ -15,8 +15,8 @@ interface Props {
 
 const { process } = Astro.props;
 
-// Don't render if section is disabled
-if (!process.enabled) return null;
+// Don't render if section is disabled or undefined
+if (!process || process.enabled === false) return null;
 ---
 
 <section id="process" class="py-24 px-6 md:px-10 lg:px-16 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800">
