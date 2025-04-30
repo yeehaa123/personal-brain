@@ -299,7 +299,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     else if (action === 'assess' || action === 'qa') {
       try {
         const result = await this.websiteContext.assessLandingPage({ 
-          applyRecommendations: false 
+          applyRecommendations: false, 
         });
         
         return {
@@ -322,7 +322,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     else if (action === 'apply-recommendations' || action === 'apply') {
       try {
         const result = await this.websiteContext.assessLandingPage({ 
-          applyRecommendations: true 
+          applyRecommendations: true, 
         });
         
         return {

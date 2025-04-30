@@ -962,7 +962,7 @@ export class MatrixResponseFormatter {
           
           if (result.success) {
             const actions = [
-              `Available actions:`,
+              'Available actions:',
               `- \`${this.commandPrefix} landing-page view\` - View the content`,
               `- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`,
               `- \`${this.commandPrefix} landing-page assess\` - Assess quality`,
@@ -1092,7 +1092,7 @@ export class MatrixResponseFormatter {
           
           if (result.success) {
             message.push('');
-            message.push(`Available actions:`);
+            message.push('Available actions:');
             message.push(`- \`${this.commandPrefix} landing-page view\` - View the content`);
             message.push(`- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`);
             message.push(`- \`${this.commandPrefix} landing-page assess\` - Assess quality`);
