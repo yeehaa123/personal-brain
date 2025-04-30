@@ -866,7 +866,7 @@ export class MatrixResponseFormatter {
     if (this.useBlocks) {
       const builder = new MatrixBlockBuilder();
       
-      if (result.data) {
+      if (result.data && !result.action) {
         // View mode - display landing page content
         builder.addHeader('Landing Page Content');
         
@@ -886,8 +886,74 @@ export class MatrixResponseFormatter {
             builder.addSection(items);
           }
         });
+      } else if (result.action === 'edit') {
+        // Edit mode - display edit success message
+        builder.addHeader('Landing Page Editing');
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          builder.addSection(`${icon} ${result.message}`);
+          
+          if (result.success) {
+            builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the edited content.`);
+          }
+        }
+      } else if (result.action === 'assess' && result.assessments) {
+        // Assessment mode - display quality assessment results
+        builder.addHeader('Landing Page Quality Assessment');
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          builder.addSection(`${icon} ${result.message}`);
+        }
+        
+        // Display assessment results for each section
+        builder.addSection('#### Section Assessments:');
+        
+        Object.entries(result.assessments).forEach(([section, assessment]) => {
+          const assessmentData = assessment as Record<string, unknown>;
+          if (assessmentData['assessment']) {
+            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
+            const quality = sectionAssessment['qualityScore'] || 'N/A';
+            const confidence = sectionAssessment['confidenceScore'] || 'N/A';
+            const combined = sectionAssessment['combinedScore'] || 'N/A';
+            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+            
+            let sectionText = `**${section}**: Score: ${combined}/10 (Quality: ${quality}, Confidence: ${confidence}) - ${enabled}`;
+            if (sectionAssessment['suggestedImprovements']) {
+              sectionText += `\n  _Suggestions: ${sectionAssessment['suggestedImprovements']}_`;
+            }
+            builder.addSection(sectionText);
+          }
+        });
+        
+        builder.addSection(`To apply these recommendations, use \`${this.commandPrefix} landing-page apply\``);
+      } else if (result.action === 'apply' && result.assessments) {
+        // Apply recommendations mode
+        builder.addHeader('Landing Page Quality Recommendations Applied');
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          builder.addSection(`${icon} ${result.message}`);
+        }
+        
+        // Show what was enabled/disabled
+        builder.addSection('#### Section Status After Changes:');
+        
+        const sectionStatuses: string[] = [];
+        Object.entries(result.assessments).forEach(([section, assessment]) => {
+          const assessmentData = assessment as Record<string, unknown>;
+          if (assessmentData['assessment']) {
+            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
+            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+            sectionStatuses.push(`**${section}**: ${enabled}`);
+          }
+        });
+        
+        builder.addSection(sectionStatuses.join('\n'));
+        builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
       } else {
-        // Generate mode - display success/failure message
+        // Generate mode or other - display success/failure message
         builder.addHeader('Landing Page');
         
         if (result.success !== undefined && result.message !== undefined) {
@@ -895,7 +961,13 @@ export class MatrixResponseFormatter {
           builder.addSection(`${icon} ${result.message}`);
           
           if (result.success) {
-            builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the generated content.`);
+            const actions = [
+              `Available actions:`,
+              `- \`${this.commandPrefix} landing-page view\` - View the content`,
+              `- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`,
+              `- \`${this.commandPrefix} landing-page assess\` - Assess quality`,
+            ].join('\n');
+            builder.addSection(actions);
           }
         }
       }
@@ -904,7 +976,7 @@ export class MatrixResponseFormatter {
     } else {
       let message: string[];
       
-      if (result.data) {
+      if (result.data && !result.action) {
         // View mode - display landing page content
         message = [
           '### Landing Page Content',
@@ -929,8 +1001,86 @@ export class MatrixResponseFormatter {
           
           message.push('');
         });
+      } else if (result.action === 'edit') {
+        // Edit mode - display edit success message
+        message = [
+          '### Landing Page Editing',
+          '',
+        ];
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          message.push(`${icon} ${result.message}`);
+          
+          if (result.success) {
+            message.push('', `Use \`${this.commandPrefix} landing-page view\` to view the edited content.`);
+          }
+        }
+      } else if (result.action === 'assess' && result.assessments) {
+        // Assessment mode - display quality assessment results
+        message = [
+          '### Landing Page Quality Assessment',
+          '',
+        ];
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          message.push(`${icon} ${result.message}`);
+          message.push('');
+        }
+        
+        // Display assessment results for each section
+        message.push('#### Section Assessments:');
+        message.push('');
+        
+        Object.entries(result.assessments).forEach(([section, assessment]) => {
+          const assessmentData = assessment as Record<string, unknown>;
+          if (assessmentData['assessment']) {
+            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
+            const quality = sectionAssessment['qualityScore'] || 'N/A';
+            const confidence = sectionAssessment['confidenceScore'] || 'N/A';
+            const combined = sectionAssessment['combinedScore'] || 'N/A';
+            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+            
+            message.push(`**${section}**: Score: ${combined}/10 (Quality: ${quality}, Confidence: ${confidence}) - ${enabled}`);
+            if (sectionAssessment['suggestedImprovements']) {
+              message.push(`  _Suggestions: ${sectionAssessment['suggestedImprovements']}_`);
+            }
+            message.push('');
+          }
+        });
+        
+        message.push(`To apply these recommendations, use \`${this.commandPrefix} landing-page apply\``);
+      } else if (result.action === 'apply' && result.assessments) {
+        // Apply recommendations mode
+        message = [
+          '### Landing Page Quality Recommendations Applied',
+          '',
+        ];
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          message.push(`${icon} ${result.message}`);
+          message.push('');
+        }
+        
+        // Show what was enabled/disabled
+        message.push('#### Section Status After Changes:');
+        message.push('');
+        
+        Object.entries(result.assessments).forEach(([section, assessment]) => {
+          const assessmentData = assessment as Record<string, unknown>;
+          if (assessmentData['assessment']) {
+            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
+            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+            message.push(`**${section}**: ${enabled}`);
+          }
+        });
+        
+        message.push('');
+        message.push(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
       } else {
-        // Generate mode - display success/failure message
+        // Generate mode or other - display success/failure message
         message = [
           '### Landing Page',
           '',
@@ -941,7 +1091,11 @@ export class MatrixResponseFormatter {
           message.push(`${icon} ${result.message}`);
           
           if (result.success) {
-            message.push('', `Use \`${this.commandPrefix} landing-page view\` to view the generated content.`);
+            message.push('');
+            message.push(`Available actions:`);
+            message.push(`- \`${this.commandPrefix} landing-page view\` - View the content`);
+            message.push(`- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`);
+            message.push(`- \`${this.commandPrefix} landing-page assess\` - Assess quality`);
           }
         }
       }

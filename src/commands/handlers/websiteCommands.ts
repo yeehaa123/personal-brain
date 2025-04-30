@@ -81,9 +81,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       },
       {
         command: 'landing-page',
-        description: 'Generate or view landing page content',
-        usage: 'landing-page [generate|view]',
-        examples: ['landing-page generate', 'landing-page view'],
+        description: 'Manage landing page content (generate, edit, assess quality, or view)',
+        usage: 'landing-page [generate|edit|assess|apply|view]',
+        examples: ['landing-page generate', 'landing-page edit', 'landing-page assess', 'landing-page apply', 'landing-page view'],
       },
       {
         command: 'website-build',
@@ -275,6 +275,72 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
     } 
+    // Edit landing page content
+    else if (action === 'edit') {
+      try {
+        const result = await this.websiteContext.editLandingPage();
+        
+        return {
+          type: 'landing-page',
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          action: 'edit',
+        };
+      } catch (error) {
+        this.logger.error(`Error editing landing page: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to edit landing page: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    // Assess landing page quality
+    else if (action === 'assess' || action === 'qa') {
+      try {
+        const result = await this.websiteContext.assessLandingPage({ 
+          applyRecommendations: false 
+        });
+        
+        return {
+          type: 'landing-page',
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          assessments: result.assessments,
+          action: 'assess',
+        };
+      } catch (error) {
+        this.logger.error(`Error assessing landing page quality: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to assess landing page quality: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    // Apply quality assessment recommendations
+    else if (action === 'apply-recommendations' || action === 'apply') {
+      try {
+        const result = await this.websiteContext.assessLandingPage({ 
+          applyRecommendations: true 
+        });
+        
+        return {
+          type: 'landing-page',
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          assessments: result.assessments,
+          action: 'apply',
+        };
+      } catch (error) {
+        this.logger.error(`Error applying quality recommendations: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to apply quality recommendations: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
     // View landing page content
     else if (action === 'view' || !action) {
       try {
@@ -297,7 +363,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     
     return {
       type: 'error',
-      message: 'Invalid action. Use "landing-page generate" or "landing-page view".',
+      message: 'Invalid action. Use "landing-page generate", "landing-page edit", "landing-page assess", "landing-page apply", or "landing-page view".',
     };
   }
   

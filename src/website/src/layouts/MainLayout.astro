@@ -40,7 +40,7 @@ const {
       <slot />
     </main>
     
-    <!-- Simple smooth scroll animation -->
+    <!-- Smooth scroll animation -->
     <script>
       document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
@@ -52,6 +52,71 @@ const {
             });
           }
         });
+      });
+    </script>
+    
+    <!-- Scroll reveal animations -->
+    <script>
+      // Handle scroll animations
+      document.addEventListener('DOMContentLoaded', () => {
+        const scrollElements = document.querySelectorAll(
+          '.reveal-on-scroll, .reveal-on-scroll-right, .reveal-on-scroll-left, .reveal-on-scroll-scale'
+        );
+        
+        const elementInView = (el, scrollOffset = 100) => {
+          const elementTop = el.getBoundingClientRect().top;
+          return (
+            elementTop <= 
+            (window.innerHeight || document.documentElement.clientHeight) - scrollOffset
+          );
+        };
+        
+        const displayScrollElement = (element) => {
+          element.classList.add('is-visible');
+        };
+        
+        const hideScrollElement = (element) => {
+          element.classList.remove('is-visible');
+        };
+        
+        const handleScrollAnimation = () => {
+          scrollElements.forEach((el) => {
+            if (elementInView(el, 100)) {
+              displayScrollElement(el);
+            } else {
+              // Only hide elements if they're meant to repeat the animation
+              if (el.dataset.animateOnce !== 'true') {
+                hideScrollElement(el);
+              }
+            }
+          });
+        };
+        
+        // Initialize elements that are already in view
+        handleScrollAnimation();
+        
+        // Add scroll event listener
+        window.addEventListener('scroll', () => {
+          handleScrollAnimation();
+        });
+        
+        // Also trigger on resize for responsive layouts
+        window.addEventListener('resize', () => {
+          handleScrollAnimation();
+        });
+      });
+      
+      // Trigger animations on viewable elements on load
+      window.addEventListener('load', () => {
+        // Add small delay for elements to paint before animation
+        setTimeout(() => {
+          document.querySelectorAll('.reveal-on-scroll, .reveal-on-scroll-right, .reveal-on-scroll-left, .reveal-on-scroll-scale').forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight) {
+              el.classList.add('is-visible');
+            }
+          });
+        }, 100);
       });
     </script>
   </body>

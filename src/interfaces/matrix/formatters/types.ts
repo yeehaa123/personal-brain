@@ -119,6 +119,8 @@ export interface LandingPageResult {
   success?: boolean;
   message?: string;
   data?: LandingPageData;
+  assessments?: Record<string, unknown>;
+  action?: 'generate' | 'edit' | 'assess' | 'apply' | 'view';
 }
 
 /**
