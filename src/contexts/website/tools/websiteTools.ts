@@ -15,6 +15,7 @@ import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { Logger } from '@/utils/logger';
 import { 
   LandingPageGenerationToolSchema,
+  LandingPageQualityAssessmentToolSchema,
   WebsiteBuildToolSchema, 
   WebsitePromoteToolSchema,
   WebsiteStatusToolSchema, 
@@ -79,6 +80,9 @@ export class WebsiteToolService {
       // generate_landing_page
       this.generateLandingPageTool(context),
       
+      // assess_landing_page
+      this.assessLandingPageTool(context),
+      
       // build_website
       this.buildWebsiteTool(context),
       
@@ -104,6 +108,9 @@ export class WebsiteToolService {
     case 'generate_landing_page':
       return LandingPageGenerationToolSchema.shape;
 
+    case 'assess_landing_page':
+      return LandingPageQualityAssessmentToolSchema.shape;
+
     case 'build_website':
       return WebsiteBuildToolSchema.shape;
 
@@ -127,49 +134,10 @@ export class WebsiteToolService {
       protocol: 'website',
       path: 'generate_landing_page',
       name: 'generate_landing_page',
-      description: 'Generates a landing page from profile data with quality assessment',
-      handler: async (params: Record<string, unknown>) => {
-        // Parse landing page generation parameters
-        const skipReview = params['skipReview'] === true;
-        
-        // Parse quality thresholds if provided
-        let qualityThresholds: {
-          minCombinedScore?: number;
-          minQualityScore?: number;
-          minConfidenceScore?: number;
-        } | undefined;
-        
-        if (params['qualityThresholds'] && typeof params['qualityThresholds'] === 'object') {
-          const thresholds = params['qualityThresholds'] as Record<string, unknown>;
-          qualityThresholds = {
-            minCombinedScore: typeof thresholds['minCombinedScore'] === 'number' ? thresholds['minCombinedScore'] as number : undefined,
-            minQualityScore: typeof thresholds['minQualityScore'] === 'number' ? thresholds['minQualityScore'] as number : undefined,
-            minConfidenceScore: typeof thresholds['minConfidenceScore'] === 'number' ? thresholds['minConfidenceScore'] as number : undefined,
-          };
-        }
-        
-        // Create options object with supported parameters
-        const options: { 
-          skipReview?: boolean;
-          qualityThresholds?: {
-            minCombinedScore?: number;
-            minQualityScore?: number;
-            minConfidenceScore?: number;
-          };
-        } = {};
-        
-        // Set skipReview if defined
-        if (skipReview !== undefined) {
-          options.skipReview = skipReview;
-        }
-        
-        // Set quality thresholds if defined
-        if (qualityThresholds !== undefined) {
-          options.qualityThresholds = qualityThresholds;
-        }
-        
-        // Call context with valid options
-        const result = await context.generateLandingPage(options);
+      description: 'Generates a landing page from profile data (without quality assessment)',
+      handler: async (_params: Record<string, unknown>) => {
+        // Call context without options - generation is a simple process without options now
+        const result = await context.generateLandingPage();
 
         if (!result.success) {
           throw new Error(`Failed to generate landing page: ${result.message}`);
@@ -184,6 +152,43 @@ export class WebsiteToolService {
     };
   }
 
+  /**
+   * Create the assess_landing_page tool
+   */
+  private assessLandingPageTool(context: WebsiteContext): ResourceDefinition {
+    return {
+      protocol: 'website',
+      path: 'assess_landing_page',
+      name: 'assess_landing_page',
+      description: 'Assesses the quality of an existing landing page and optionally applies recommendations',
+      handler: async (params: Record<string, unknown>) => {
+        // Parse parameters using Zod for safe validation
+        const validatedParams = LandingPageQualityAssessmentToolSchema.safeParse(params);
+        
+        if (!validatedParams.success) {
+          throw new Error(`Invalid parameters: ${validatedParams.error.message}`);
+        }
+        
+        // Extract validated options
+        const options = validatedParams.data;
+        
+        // Call context with validated options
+        const result = await context.assessLandingPage(options);
+
+        if (!result.success) {
+          throw new Error(`Failed to assess landing page: ${result.message}`);
+        }
+
+        return {
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          assessments: result.assessments,
+        };
+      },
+    };
+  }
+  
   /**
    * Create the build_website tool
    */

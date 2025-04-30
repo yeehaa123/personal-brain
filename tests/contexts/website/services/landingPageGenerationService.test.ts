@@ -148,16 +148,9 @@ describe('LandingPageGenerationService', () => {
     expect(mockProcessQuery.mock.calls.length).toBeGreaterThan(0);
   });
   
-  test('generateLandingPageData with skipReview should skip quality assessment', async () => {
-    // Act
-    const result = await service.generateLandingPageData({ skipReview: true });
-    
-    // Assert
-    expect(result).toBeDefined();
-    expect(mockProcessSectionWithQualityAssessment.mock.calls.length).toBe(0);
-  });
+  // No longer need to test skipReview, as quality assessment is now a separate step
   
-  test('generateLandingPageData should apply quality thresholds when provided', async () => {
+  test('assessLandingPageQuality should apply quality thresholds when provided', async () => {
     // Arrange
     const mockSetQualityThresholds = mock();
     // @ts-expect-error - We're mocking a private method
@@ -166,6 +159,9 @@ describe('LandingPageGenerationService', () => {
       processSectionWithQualityAssessment: mockProcessSectionWithQualityAssessment,
     };
     
+    // Generate a landing page first
+    const landingPage = await service.generateLandingPageData();
+    
     // Act
     const qualityThresholds = {
       minCombinedScore: 7.5,
@@ -173,16 +169,19 @@ describe('LandingPageGenerationService', () => {
       minConfidenceScore: 7,
     };
     
-    await service.generateLandingPageData({ qualityThresholds });
+    const result = await service.assessLandingPageQuality(landingPage, { qualityThresholds });
     
     // Assert
     expect(mockSetQualityThresholds.mock.calls.length).toBe(1);
     expect(mockSetQualityThresholds.mock.calls[0][0]).toEqual(qualityThresholds);
+    expect(result.landingPage).toBeDefined();
+    expect(result.assessments).toBeDefined();
   });
   
   test('getSectionQualityAssessments should return assessment results', async () => {
-    // Arrange - Generate landing page with quality assessment
-    await service.generateLandingPageData();
+    // Arrange - Generate landing page and assess quality
+    const landingPage = await service.generateLandingPageData();
+    await service.assessLandingPageQuality(landingPage);
     
     // Act
     const assessments = service.getSectionQualityAssessments();
@@ -190,6 +189,22 @@ describe('LandingPageGenerationService', () => {
     // Assert
     expect(assessments).toBeDefined();
     expect(Object.keys(assessments).length).toBeGreaterThan(0);
+  });
+
+  test('assessLandingPageQuality should handle applyRecommendations option', async () => {
+    // Arrange - Generate landing page first
+    const landingPage = await service.generateLandingPageData();
+    // Make sure pricing is in the landing page for the test
+    landingPage.pricing = { title: 'Pricing', enabled: true };
+    
+    // Act - Test with recommendations applied
+    const result = await service.assessLandingPageQuality(landingPage, { applyRecommendations: true });
+    
+    // Assert
+    expect(result.landingPage).toBeDefined();
+    expect(result.assessments).toBeDefined();
+    // We can only check that pricing exists in the result, not its enabled state, since we're using mocks
+    expect(result.landingPage.pricing).toBeDefined();
   });
   
   test('setBrainProtocol should set a custom protocol instance', () => {

@@ -1,14 +1,14 @@
 {
-  "title": "Jan Hein Hoogstad | Ecosystem Architect",
-  "description": "Jan Hein Hoogstad is an Ecosystem Architect, entrepreneur, and innovator based in Taipei, Taiwan. Specializing in bringing people together around common values to create effective ecosystems.",
-  "name": "Jan Hein Hoogstad",
-  "tagline": "Designing thriving ecosystems across space and time",
+  "title": "Professional Services",
+  "description": "Professional expertise and services",
+  "name": "Professional Expert",
+  "tagline": "Expert services for your needs",
   "sectionOrder": [
     "hero",
     "problemStatement",
     "services",
     "process",
-    "testimonials",
+    "caseStudies",
     "expertise",
     "about",
     "pricing",
@@ -17,51 +17,297 @@
     "footer"
   ],
   "hero": {
-    "headline": "Ecosystem Architecture for a Fragmented World",
-    "subheading": "I bring people together around common values, discover shared visions, and translate them into effective ecosystems that transcend space and time.",
-    "ctaText": "Start Your Ecosystem Journey",
+    "headline": "Designing Thriving Ecosystems Across Space and Time",
+    "subheading": "I bring people together around shared values to create resilient, decentralized communities that transcend traditional boundaries. As an ecosystem architect, I translate vision into effective, regenerative systems.",
+    "ctaText": "Let's Build Your Ecosystem",
     "ctaLink": "#contact",
-    "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80"
+    "imageUrl": "/images/ecosystem-architecture.jpg"
   },
   "problemStatement": {
-    "title": "The Challenge We Face",
-    "description": "Traditional organizational models are failing us in a world that's increasingly fragmented and complex. People desire structures that work in less mechanical, less hierarchical, and less instrumental ways.",
+    "title": "Navigating Fragmented Digital Landscapes",
+    "description": "In today's increasingly complex digital world, organizations struggle to build meaningful connections across fragmented spaces. Traditional organizational models are failing to adapt to decentralized environments, while the pressure to innovate often leads to extractive practices that deplete resources and human potential. As an Ecosystem Architect, I help transform these challenges into opportunities for regenerative growth.",
     "bulletPoints": [
-      "Conventional business frameworks fail to meet our growing desire for organic, non-hierarchical structures",
-      "The internet has enabled distributed networks but also led to fragmentation and exploitation",
-      "Without new models, we risk surrendering our digital future to surveillance capitalism",
-      "Organizations struggle to foster true collaboration across space and time"
+      "Disconnected communities lacking shared values and vision",
+      "Hierarchical structures that stifle innovation and collaboration",
+      "Digital fragmentation that isolates rather than connects",
+      "Unsustainable innovation practices that generate waste instead of value"
     ],
     "enabled": true
   },
   "services": {
-    "title": "Services",
+    "title": "Ecosystem Design Services",
+    "introduction": "As an Ecosystem Architect, I help organizations and communities design thriving, interconnected systems that transcend traditional boundaries. Drawing from principles of decentralization and regenerative design, I create environments where collaboration flourishes across space and time.",
     "items": [
       {
-        "title": "Ecosystem Design & Strategy",
-        "description": "Creating comprehensive ecosystem architectures that align values, vision, and practice for organizations seeking to build resilient communities.",
-        "icon": "compass",
-        "details": "I help you map out the four movements of ecosystem architecture: Align, Validate, Scale, and Spin Out. Together we'll create vision types and vessels of transformation that set your ecosystem on a path to success."
+        "title": "Ecosystem Architecture",
+        "description": "Design and implementation of resilient organizational ecosystems that align values, validate transformation, scale effectively, and ultimately become self-sustaining. I help you create structures that work in less mechanical, less hierarchical, and more organic ways.",
+        "icon": "network"
       },
       {
-        "title": "Decentralized Organization Development",
-        "description": "Building organizational structures that transcend traditional hierarchies and enable purpose-driven collaboration across distributed teams.",
-        "icon": "network",
-        "details": "Drawing from both regenerative design principles and digital innovation, I help you create organizational models that foster autonomy, resilience, and meaningful connection among members."
+        "title": "Regenerative Innovation",
+        "description": "Transform waste into opportunity through practice-based innovation approaches. I guide organizations to move beyond extraction mindsets toward regenerative systems that revitalize communities and environments.",
+        "icon": "refresh"
       },
       {
-        "title": "Community Cultivation",
-        "description": "Nurturing vibrant communities around shared values and vision, with practical tools for sustainable growth and engagement.",
-        "icon": "users",
-        "details": "Using the Superconnectors methodology I developed, I help you identify and connect the right people to solve critical challenges and build thriving communities."
+        "title": "Community Alignment",
+        "description": "Facilitate the creation of vision types and vessels of transformation that bring stakeholders together around common values. I help you build intentional communities that transcend spatial and temporal limitations.",
+        "icon": "people"
       },
       {
-        "title": "Regenerative Innovation Workshops",
-        "description": "Facilitating workshops that blend biomimicry, permaculture principles, and ecosystem thinking to solve complex challenges.",
-        "icon": "leaf",
-        "details": "These immersive sessions help teams move beyond extraction mindsets toward regenerative approaches that create value for all stakeholders."
+        "title": "Decentralized Organization Design",
+        "description": "Develop governance models and practical tools for community building across fragmented landscapes. I assist in creating minimum viable ecosystems that thrive through distributed leadership and shared ownership.",
+        "icon": "connection"
+      }
+    ]
+  },
+  "process": {
+    "title": "How I Work",
+    "introduction": "As an Ecosystem Architect, I help organizations and communities design thriving systems that transcend traditional boundaries of space and time. My approach blends decentralized and regenerative design principles to create resilient, collaborative ecosystems.",
+    "steps": [
+      {
+        "step": 1,
+        "title": "Align",
+        "description": "We begin by defining your ecosystem's values and vision. Through deep questioning and collaborative exploration, we create a vision type that captures your ideal future state and addresses core challenges."
+      },
+      {
+        "step": 2,
+        "title": "Validate",
+        "description": "We test your vision by creating a vessel of transformation - a tangible artifact that demonstrates commitment from key stakeholders. This validation process ensures we're building something people truly want to participate in."
+      },
+      {
+        "step": 3,
+        "title": "Scale",
+        "description": "Through iterative alignment and validation cycles, we grow your ecosystem to become self-sustaining. The goal is to develop a minimum viable ecosystem where functionality is gradually taken over by partners and stakeholders."
+      },
+      {
+        "step": 4,
+        "title": "Spin Out",
+        "description": "The final phase involves letting go and allowing the ecosystem to thrive independently. Like a farmer who plants seeds and nurtures them to harvest, we step back so the ecosystem can flourish on its own terms."
       }
     ],
-    "introduction": "I offer specialized services to help organizations and communities design, build, and nurture thriving ecosystems that foster collaboration and innovation."
+    "enabled": true
+  },
+  "caseStudies": {
+    "title": "Selected Projects",
+    "introduction": "As an Ecosystem Architect, I've helped organizations and communities design thriving, decentralized systems that transcend traditional boundaries. Here are some examples of my work creating resilient ecosystems across fragmented landscapes.",
+    "items": [
+      {
+        "title": "Superconnectors Network",
+        "challenge": "Dutch startups were struggling to find the right connections to solve their critical challenges, leading to stagnation in the tech ecosystem and missed opportunities for innovation.",
+        "approach": "Created an event format that brings startups together with the best-connected people in the Dutch tech ecosystem, enabling them to present their 'critical ask' and receive targeted support.",
+        "results": "Established a thriving community of innovators and connectors that has accelerated growth for numerous startups, creating a self-sustaining ecosystem of collaboration that continues to evolve.",
+        "client": "The Dutch Tech Ecosystem"
+      },
+      {
+        "title": "Offcourse Learning Platform",
+        "challenge": "Traditional education systems were failing to adapt to modern learning needs, with too much focus on credentials rather than actual knowledge sharing.",
+        "approach": "Designed and built an open source platform focused on transparent knowledge sharing, challenging preconceived notions about education through a decentralized approach.",
+        "results": "Created an ecosystem of people and tools that prioritizes open learning over credentials and intellectual property, empowering learners to discover and develop their unique strengths.",
+        "client": "Offcourse Studio"
+      },
+      {
+        "title": "Rizom Community Development",
+        "challenge": "Individuals were struggling to find purpose-driven collaboration that could drive both positive societal transformation and sustainable financial success.",
+        "approach": "Established a community framework where members are empowered to explore their passions and develop their unique strengths, fostering aligned collaboration across traditional boundaries.",
+        "results": "Built a resilient ecosystem that transcends geographical limitations, creating a model for how distributed communities can thrive through shared values and regenerative design principles.",
+        "client": "Rizom"
+      }
+    ],
+    "clientLogos": [
+      {
+        "name": "Superconnectors Network",
+        "imageUrl": "images/superconnectors-logo.png"
+      },
+      {
+        "name": "Offcourse Studio",
+        "imageUrl": "images/offcourse-logo.png"
+      },
+      {
+        "name": "Rizom",
+        "imageUrl": "images/rizom-logo.png"
+      }
+    ],
+    "enabled": true
+  },
+  "expertise": {
+    "title": "Expertise",
+    "introduction": "As an Ecosystem Architect, I bring together people, values, and vision to create effective, resilient systems that transcend traditional organizational boundaries. My approach combines decentralized and regenerative design principles to foster communities that thrive across space and time.",
+    "items": [
+      {
+        "title": "Ecosystem Architecture",
+        "description": "Designing intentional communities and systems that align values, validate transformation, scale effectively, and ultimately become self-sustaining. I specialize in creating environments where innovation emerges organically through collaboration."
+      },
+      {
+        "title": "Decentralized Organization Design",
+        "description": "Building organizational structures that transcend traditional hierarchies and spatial limitations, enabling distributed teams to collaborate effectively across geographical and temporal boundaries."
+      },
+      {
+        "title": "Regenerative Innovation",
+        "description": "Implementing practices that go beyond sustainability to actively restore and revitalize systems and communities, transforming waste into opportunity and fostering long-term resilience."
+      },
+      {
+        "title": "Community Building & Facilitation",
+        "description": "Creating spaces where individuals discover their unique strengths and passions, fostering purpose-driven collaboration that drives positive societal transformation and sustainable success."
+      },
+      {
+        "title": "Strategic Ecosystem Development",
+        "description": "Connecting startups and organizations with critical resources, knowledge, and networks to help them thrive in fragmented digital landscapes."
+      }
+    ],
+    "credentials": [
+      {
+        "title": "PhD in Philosophy",
+        "issuer": "Utrecht University",
+        "year": "2010"
+      },
+      {
+        "title": "Computer Programming",
+        "issuer": "Dev Bootcamp",
+        "year": "2015"
+      },
+      {
+        "title": "Founder of Superconnectors Network",
+        "issuer": "The Netherlands",
+        "year": "2021"
+      }
+    ],
+    "enabled": true
+  },
+  "about": {
+    "title": "About Me",
+    "content": "I am an ecosystem architect, entrepreneur, thinker, and coder with a passion for bringing people together around common values to create effective ecosystems. My work focuses on designing decentralized and regenerative systems that transcend traditional organizational models.\n\nWith a PhD in Philosophy from Utrecht University, I've worked as a researcher and teacher at several institutions including Utrecht, Berlin, Amsterdam, and Minneapolis. My journey has led me from traditional academia to founding multiple innovative ventures including Rizom, Superconnectors Network, and previously Offcourse.\n\nMy approach combines philosophical depth with practical implementation, focusing on four key movements: Align, Validate, Scale, and Spin Out. I believe in creating systems that work in less mechanical, less hierarchical ways - fostering collaboration over competition.\n\nCurrently based in Taipei, Taiwan, I continue to challenge preconceived notions about education, technology, and community building. My greatest passion has always been changing the way people learn and creating ecosystems that focus on open knowledge sharing rather than credentials and intellectual property.",
+    "ctaText": "Connect With Me",
+    "ctaLink": "https://www.example.com/connect",
+    "enabled": true
+  },
+  "pricing": {
+    "title": "Ecosystem Architecture Services & Pricing",
+    "introduction": "As an Ecosystem Architect, I offer tailored services to help organizations build resilient, decentralized systems that thrive across space and time. My pricing reflects the depth of engagement and value delivered through each package.",
+    "tiers": [
+      {
+        "name": "Ecosystem Assessment",
+        "price": "Starting at $2,500",
+        "description": "A comprehensive analysis of your current organizational ecosystem with actionable recommendations for improvement.",
+        "features": [
+          "In-depth ecosystem mapping and analysis",
+          "Identification of key stakeholders and relationships",
+          "Assessment of current alignment with values",
+          "Detailed report with strategic recommendations",
+          "One follow-up consultation session"
+        ],
+        "isFeatured": false,
+        "ctaText": "Schedule Assessment",
+        "ctaLink": "#contact"
+      },
+      {
+        "name": "Transformation Design",
+        "price": "Starting at $5,000",
+        "description": "A collaborative process to design your minimum viable ecosystem and create vessels of transformation to validate your approach.",
+        "features": [
+          "Vision type development workshop",
+          "Stakeholder alignment sessions",
+          "Creation of validation framework",
+          "Design of transformation vessels",
+          "Implementation roadmap",
+          "Three months of advisory support"
+        ],
+        "isFeatured": true,
+        "ctaText": "Start Transformation",
+        "ctaLink": "#contact"
+      },
+      {
+        "name": "Full Ecosystem Architecture",
+        "price": "Custom pricing",
+        "description": "End-to-end ecosystem architecture services from initial alignment through scaling and eventual spin-out of your self-sustaining ecosystem.",
+        "features": [
+          "Complete alignment and vision type development",
+          "Vessel of transformation design and implementation",
+          "Scaling strategy and execution support",
+          "Governance model development",
+          "Transition planning for ecosystem independence",
+          "Ongoing advisory throughout the process"
+        ],
+        "isFeatured": false,
+        "ctaText": "Request Proposal",
+        "ctaLink": "#contact"
+      }
+    ],
+    "enabled": true
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "introduction": "Here are answers to some common questions about my ecosystem architecture services. If you have additional questions, please don't hesitate to reach out.",
+    "items": [
+      {
+        "question": "What exactly is ecosystem architecture?",
+        "answer": "Ecosystem architecture is the practice of designing virtual spaces where people can come together around shared values. Unlike traditional organizational design, ecosystem architecture works bottom-up rather than top-down, focusing on creating environments where complex systems can emerge and thrive across space and time. I help organizations build decentralized, regenerative ecosystems that transcend traditional spatial and temporal boundaries."
+      },
+      {
+        "question": "How does your ecosystem architecture process work?",
+        "answer": "My process follows four key movements: 1) Align - defining values and creating a vision type, 2) Validate - testing commitment through vessels of transformation, 3) Scale - iteratively growing toward a minimum viable ecosystem, and 4) Spin Out - letting the ecosystem thrive independently. Throughout this process, we'll work collaboratively to ensure your ecosystem reflects your unique values and goals."
+      },
+      {
+        "question": "How long does it typically take to develop an ecosystem?",
+        "answer": "Ecosystem development is not a linear process with a fixed timeline. Unlike traditional projects, ecosystems emerge and evolve organically. That said, we typically see meaningful progress through the alignment and validation phases within 3-6 months. Building toward a minimum viable ecosystem often takes 1-2 years, depending on complexity and scale. I'll work with you to establish realistic milestones while maintaining the flexibility needed for organic growth."
+      },
+      {
+        "question": "What types of organizations benefit most from ecosystem architecture?",
+        "answer": "Organizations that thrive with ecosystem architecture are those looking to move beyond hierarchical structures toward more organic, decentralized models. This approach is particularly valuable for innovation communities, educational initiatives, tech platforms seeking to build genuine communities, and organizations navigating fragmented digital landscapes. If you're seeking to create lasting transformation rather than just building products or services, ecosystem architecture may be right for you."
+      },
+      {
+        "question": "What makes your approach to ecosystem architecture unique?",
+        "answer": "My approach draws from diverse disciplines including philosophy, coding, media theory, and regenerative design. With experience founding multiple ecosystem-based initiatives like Rizom and the Superconnectors Network, I bring both theoretical understanding and practical implementation skills. I'm particularly focused on helping organizations navigate our fragmented internet landscape while building resilient, purpose-driven communities that can transcend traditional spatial and temporal limitations."
+      },
+      {
+        "question": "Do you offer consulting or implementation services?",
+        "answer": "I offer both strategic consulting and hands-on implementation support. Some clients prefer guidance as they implement ecosystem architecture principles themselves, while others want more direct involvement in building their ecosystem. We can discuss your specific needs and create a customized engagement that provides the right level of support for your organization."
+      }
+    ],
+    "enabled": true
+  },
+  "cta": {
+    "title": "Ready to Get Started?",
+    "subtitle": "Transform your ecosystem with expert architecture and design principles",
+    "buttonText": "Contact Me",
+    "buttonLink": "#contact",
+    "enabled": true
+  },
+  "footer": {
+    "contactDetails": {
+      "email": "info@professionalexpert.com",
+      "phone": "+1 (555) 123-4567",
+      "social": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://linkedin.com/in/professionalexpert",
+          "icon": "linkedin"
+        },
+        {
+          "platform": "Twitter",
+          "url": "https://twitter.com/profexpert",
+          "icon": "twitter"
+        }
+      ]
+    },
+    "copyrightText": "© 2023 Professional Expert. All rights reserved.",
+    "links": [
+      {
+        "text": "Home",
+        "url": "/"
+      },
+      {
+        "text": "Services",
+        "url": "/services"
+      },
+      {
+        "text": "About",
+        "url": "/about"
+      },
+      {
+        "text": "Contact",
+        "url": "/contact"
+      }
+    ],
+    "enabled": true
   }
 }

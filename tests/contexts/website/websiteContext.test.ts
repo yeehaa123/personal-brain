@@ -164,7 +164,7 @@ describe('WebsiteContext', () => {
     expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
   });
 
-  test('generateLandingPage should support quality assessment options', async () => {
+  test('generateLandingPage should generate landing page without quality assessment', async () => {
     // Setup
     const mockProfileContext = MockProfileContext.createFresh();
     const mockProfileObj = MockProfile.createDefault();
@@ -174,13 +174,13 @@ describe('WebsiteContext', () => {
     MockLandingPageGenerationService.resetInstance();
     const freshLandingPageService = MockLandingPageGenerationService.createFresh();
 
-    // Create specific mocks for the success responses with complete data structure
+    // Create specific mocks for the landing page data
     const mockLandingPageData = {
       title: 'Test Title',
       description: 'Test Description',
       name: 'Test User',
       tagline: 'Test Tagline',
-      sectionOrder: ['hero', 'services'],
+      sectionOrder: ['hero', 'services', 'cta', 'footer'],
       hero: {
         headline: 'Test Headline',
         subheading: 'Test Subheading',
@@ -206,47 +206,9 @@ describe('WebsiteContext', () => {
       },
     };
 
-    // Create implementation for default options
-    const defaultImplementation = mock((_options?: {
-      skipReview?: boolean;
-      qualityThresholds?: {
-        minCombinedScore?: number;
-        minQualityScore?: number;
-        minConfidenceScore?: number;
-      };
-    }) => Promise.resolve({
-      success: true,
-      message: 'Successfully generated landing page',
-      data: mockLandingPageData,
-    }));
-
-    // Create implementation for skipReview option
-    const skipReviewImplementation = mock((_options?: {
-      skipReview?: boolean;
-      qualityThresholds?: {
-        minCombinedScore?: number;
-        minQualityScore?: number;
-        minConfidenceScore?: number;
-      };
-    }) => Promise.resolve({
-      success: true,
-      message: 'Successfully generated landing page (review phase skipped)',
-      data: mockLandingPageData,
-    }));
-
-    // Create implementation for custom quality thresholds
-    const qualityThresholdsImplementation = mock((_options?: {
-      skipReview?: boolean;
-      qualityThresholds?: {
-        minCombinedScore?: number;
-        minQualityScore?: number;
-        minConfidenceScore?: number;
-      };
-    }) => Promise.resolve({
-      success: true,
-      message: 'Successfully generated landing page with custom quality thresholds',
-      data: mockLandingPageData,
-    }));
+    // Simple implementation for generating landing page
+    const generateImplementation = mock(() => Promise.resolve(mockLandingPageData));
+    freshLandingPageService.generateLandingPageData = generateImplementation;
 
     // Create context with mocked services
     const context = WebsiteContext.createFresh({
@@ -255,43 +217,120 @@ describe('WebsiteContext', () => {
       profileContext: mockProfileContext as unknown as ProfileContext,
     });
 
-    // Test with default options
-    (freshLandingPageService.generateLandingPageData as unknown) = defaultImplementation;
-    const defaultResult = await context.generateLandingPage({});
+    // Test basic generation
+    const result = await context.generateLandingPage();
 
     // Assertions
-    expect(defaultResult.success).toBe(true);
-    expect(defaultImplementation).toHaveBeenCalledWith({});
+    expect(result.success).toBe(true);
+    expect(generateImplementation).toHaveBeenCalled();
+    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
+  });
 
-    // Test with skipReview option
-    (freshLandingPageService.generateLandingPageData as unknown) = skipReviewImplementation;
-    const skipReviewResult = await context.generateLandingPage({
-      skipReview: true,
-    });
+  test('assessLandingPage should assess landing page quality', async () => {
+    // Setup
+    const mockProfileContext = MockProfileContext.createFresh();
+    const mockProfileObj = MockProfile.createDefault();
+    mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfileObj));
 
-    // Assertions
-    expect(skipReviewResult.success).toBe(true);
-    expect(skipReviewImplementation).toHaveBeenCalledWith({
-      skipReview: true,
-    });
+    // Create a fresh mock with our standardized implementation
+    MockLandingPageGenerationService.resetInstance();
+    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
 
-    // Test with quality thresholds
-    (freshLandingPageService.generateLandingPageData as unknown) = qualityThresholdsImplementation;
-    const qualityThresholds = {
-      minCombinedScore: 0.8,
-      minQualityScore: 0.7,
-      minConfidenceScore: 0.6,
+    // Create mock landing page data
+    const mockLandingPageData = {
+      title: 'Test Title',
+      description: 'Test Description',
+      name: 'Test User',
+      tagline: 'Test Tagline',
+      sectionOrder: ['hero', 'services', 'cta', 'footer'],
+      hero: {
+        headline: 'Test Headline',
+        subheading: 'Test Subheading',
+        ctaText: 'Get Started',
+        ctaLink: '#contact',
+      },
+      services: {
+        title: 'Services',
+        items: [
+          { title: 'Service 1', description: 'Description 1' },
+        ],
+      },
+      cta: {
+        title: 'Ready to Get Started?',
+        subtitle: 'Contact us today',
+        buttonText: 'Contact Now',
+        buttonLink: '#contact',
+        enabled: true,
+      },
+      footer: {
+        copyrightText: `© ${new Date().getFullYear()} Test User`,
+        enabled: true,
+      },
     };
 
-    const qualityResult = await context.generateLandingPage({
-      qualityThresholds,
+    // Mock storage to return some landing page data
+    const mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(mockLandingPageData));
+
+    // Mock the assessment function
+    const assessmentResult = {
+      landingPage: { ...mockLandingPageData },
+      assessments: {
+        hero: {
+          content: mockLandingPageData.hero,
+          assessment: {
+            qualityScore: 8,
+            qualityJustification: 'Good quality hero section',
+            confidenceScore: 9,
+            confidenceJustification: 'High confidence in hero section',
+            combinedScore: 8.5,
+            enabled: true,
+            suggestedImprovements: 'Could add a better headline',
+            improvementsApplied: false,
+          },
+          isRequired: true,
+        },
+      },
+    };
+    freshLandingPageService.assessLandingPageQuality = mock(() => Promise.resolve(assessmentResult));
+
+    // Create context with mocked services
+    const context = WebsiteContext.createFresh({
+      storage: mockStorage,
+      astroContentService: mockAstroContentService,
+      landingPageGenerationService: freshLandingPageService as unknown as LandingPageGenerationService,
+      profileContext: mockProfileContext as unknown as ProfileContext,
+    });
+
+    // Test assessment without applying recommendations
+    const result = await context.assessLandingPage({
+      qualityThresholds: {
+        minCombinedScore: 7,
+        minQualityScore: 6,
+        minConfidenceScore: 6,
+      },
+      applyRecommendations: false,
+    });
+
+    // Reset the writeLandingPageContent mock since it was called during initial setup
+    mockAstroContentService.writeLandingPageContent.mockClear();
+    
+    // Assertions
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('Successfully assessed landing page quality');
+    expect(freshLandingPageService.assessLandingPageQuality).toHaveBeenCalled();
+    expect(mockAstroContentService.writeLandingPageContent).not.toHaveBeenCalled();
+
+    // Test assessment with applying recommendations
+    mockAstroContentService.writeLandingPageContent.mockClear();
+    const resultWithRecommendations = await context.assessLandingPage({
+      applyRecommendations: true,
     });
 
     // Assertions
-    expect(qualityResult.success).toBe(true);
-    expect(qualityThresholdsImplementation).toHaveBeenCalledWith({
-      qualityThresholds,
-    });
+    expect(resultWithRecommendations.success).toBe(true);
+    expect(resultWithRecommendations.message).toContain('applied quality recommendations');
+    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
   });
 
   test('buildWebsite should run the build command through astro service', async () => {

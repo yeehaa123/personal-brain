@@ -35,17 +35,20 @@ import processPrompt from './prompts/sections/process.txt';
 import servicesPrompt from './prompts/sections/services.txt';
 
 /**
- * Options for landing page generation
+ * Options for landing page quality assessment
  */
-export interface LandingPageGenerationOptions {
-  /** Skip the review phase */
-  skipReview?: boolean;
+export interface LandingPageQualityAssessmentOptions {
   /** Custom thresholds for section quality assessment */
   qualityThresholds?: {
     minCombinedScore?: number;
     minQualityScore?: number;
     minConfidenceScore?: number;
   };
+  /** 
+   * Whether to apply the enablement recommendations immediately
+   * If false, only returns the recommendations without modifying the landing page
+   */
+  applyRecommendations?: boolean;
 }
 
 /**
@@ -125,22 +128,15 @@ export class LandingPageGenerationService {
   /**
    * Generate a complete landing page
    * 
-   * @param options - Generation options
    * @returns A complete landing page data structure with content
    */
-  async generateLandingPageData(options: LandingPageGenerationOptions = {}): Promise<LandingPageData> {
+  async generateLandingPageData(): Promise<LandingPageData> {
     this.logger.info('Starting landing page generation', {
       context: 'LandingPageGenerationService',
-      skipReview: options.skipReview,
     });
     
     // Clear any previous assessment data
     this.assessedSections = {};
-    
-    // Set custom quality thresholds if provided
-    if (options.qualityThresholds) {
-      this.sectionQualityService.setQualityThresholds(options.qualityThresholds);
-    }
     
     try {
       // Create the basic structure for the landing page
@@ -149,10 +145,8 @@ export class LandingPageGenerationService {
       // Generate content for each section individually
       landingPage = await this.generateAllSections(landingPage);
       
-      // If review is enabled, perform quality assessment
-      if (!options.skipReview) {
-        landingPage = await this.reviewLandingPage(landingPage);
-      }
+      // Perform holistic editing to ensure consistency across sections
+      landingPage = await this.performHolisticEditing(landingPage);
       
       this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
@@ -174,6 +168,63 @@ export class LandingPageGenerationService {
    */
   getSectionQualityAssessments(): Record<string, AssessedSection<unknown>> {
     return { ...this.assessedSections };
+  }
+  
+  /**
+   * Assess the quality of a landing page and return recommendations
+   * This is a separate step from generation that can be run on demand
+   * 
+   * @param landingPage - The landing page to assess
+   * @param options - Options for quality assessment
+   * @returns The assessed landing page with quality data and optional enablement applied
+   */
+  async assessLandingPageQuality(
+    landingPage: LandingPageData,
+    options: LandingPageQualityAssessmentOptions = {}
+  ): Promise<{ 
+    landingPage: LandingPageData; 
+    assessments: Record<string, AssessedSection<unknown>>;
+  }> {
+    this.logger.info('Starting landing page quality assessment', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    // Clear any previous assessment data
+    this.assessedSections = {};
+    
+    // Set custom quality thresholds if provided
+    if (options.qualityThresholds) {
+      this.sectionQualityService.setQualityThresholds(options.qualityThresholds);
+    }
+    
+    try {
+      // Create a copy of the landing page to avoid modifying the original
+      let assessedLandingPage = { ...landingPage };
+      
+      // Process sections with quality assessment
+      assessedLandingPage = await this.assessAndImproveSections(assessedLandingPage);
+      
+      // If requested, apply the enablement recommendations
+      if (options.applyRecommendations) {
+        // Update section order based on enabled sections
+        assessedLandingPage.sectionOrder = this.buildSectionOrderFromEnabledSections(assessedLandingPage);
+      }
+      
+      this.logger.info('Completed landing page quality assessment', {
+        context: 'LandingPageGenerationService',
+      });
+      
+      return {
+        landingPage: assessedLandingPage,
+        assessments: { ...this.assessedSections },
+      };
+    } catch (error) {
+      this.logger.error('Error during landing page quality assessment', {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'LandingPageGenerationService',
+      });
+      throw error;
+    }
   }
 
   /**
@@ -415,23 +466,16 @@ Return only these four fields formatted as JSON.`;
   }
 
   /**
-   * Perform quality assessment and review on the generated landing page
+   * Perform holistic editing on the generated landing page to ensure consistency
    * @param landingPage - Generated landing page data
    */
-  private async reviewLandingPage(landingPage: LandingPageData): Promise<LandingPageData> {
-    this.logger.info('Reviewing landing page content with quality assessment', {
+  private async performHolisticEditing(landingPage: LandingPageData): Promise<LandingPageData> {
+    this.logger.info('Performing holistic editing of landing page content', {
       context: 'LandingPageGenerationService',
     });
     
-    // Apply assessment and improvement to each section
-    const assessedLandingPage = await this.assessAndImproveSections(landingPage);
-    
-    // For preview, we keep all sections visible
-    // For the final landing page, we would filter based on enabled status
-    assessedLandingPage.sectionOrder = this.buildSectionOrderFromEnabledSections(assessedLandingPage);
-    
-    // Perform a final content review
-    return await this.performFinalContentReview(assessedLandingPage);
+    // Just perform the content review without quality assessment
+    return await this.performFinalContentReview(landingPage);
   }
 
   /**
@@ -538,10 +582,12 @@ Return only these four fields formatted as JSON.`;
 
   /**
    * Perform a final content review for overall consistency
-   * @param landingPage - Assessed landing page data
+   * This is part of the holistic editing phase without quality assessment
+   * 
+   * @param landingPage - Generated landing page data
    */
   private async performFinalContentReview(landingPage: LandingPageData): Promise<LandingPageData> {
-    this.logger.debug('Performing final content review', {
+    this.logger.debug('Performing holistic content review and editing', {
       context: 'LandingPageGenerationService',
     });
     
@@ -566,7 +612,7 @@ Return only these four fields formatted as JSON.`;
       // If no object is returned, return the original
       return landingPage;
     } catch (error) {
-      this.logger.error('Error during final content review', {
+      this.logger.error('Error during holistic content review', {
         error: error instanceof Error ? error.message : String(error),
         context: 'LandingPageGenerationService',
       });

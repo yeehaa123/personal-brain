@@ -534,26 +534,18 @@ export class WebsiteContext extends BaseContext<
   
   /**
    * Generate a landing page from profile data
-   * @param options Configuration options for generation
-   * @param options.skipReview Whether to skip the quality assessment phase
-   * @param options.qualityThresholds Custom thresholds for quality assessment
+   * This method generates content without quality assessment
+   * 
    * @returns Result of the generation operation
    */
-  async generateLandingPage(options?: {
-    skipReview?: boolean;
-    qualityThresholds?: {
-      minCombinedScore?: number;
-      minQualityScore?: number;
-      minConfidenceScore?: number;
-    };
-  }): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Generate landing page data with provided options
-      const landingPageData = await landingPageService.generateLandingPageData(options);
+      // Generate landing page data
+      const landingPageData = await landingPageService.generateLandingPageData();
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);
@@ -563,19 +555,9 @@ export class WebsiteContext extends BaseContext<
         throw new Error('Failed to write landing page data to Astro content');
       }
       
-      // Create success message that reflects what was generated
-      let successMessage = 'Successfully generated landing page';
-      
-      // Add review status
-      if (options?.skipReview) {
-        successMessage += ' (review phase skipped)';
-      } else {
-        successMessage += ' with quality assessment';
-      }
-      
       return {
         success: true,
-        message: successMessage,
+        message: 'Successfully generated landing page content',
         data: landingPageData,
       };
     } catch (error) {
@@ -587,6 +569,82 @@ export class WebsiteContext extends BaseContext<
       return {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error generating landing page',
+      };
+    }
+  }
+  
+  /**
+   * Assess the quality of an existing landing page
+   * This is a separate step from generation that can be run on demand
+   * 
+   * @param options Configuration options for quality assessment
+   * @param options.qualityThresholds Custom thresholds for quality assessment
+   * @param options.applyRecommendations Whether to apply quality recommendations (enable/disable sections)
+   * @returns Result of the quality assessment operation
+   */
+  async assessLandingPage(options?: {
+    qualityThresholds?: {
+      minCombinedScore?: number;
+      minQualityScore?: number;
+      minConfidenceScore?: number;
+    };
+    applyRecommendations?: boolean;
+  }): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data?: LandingPageData; 
+    assessments?: Record<string, AssessedSection<unknown>>;
+  }> {
+    try {
+      // Get services
+      const landingPageService = this.getLandingPageGenerationService();
+      const astroService = await this.getAstroContentService();
+      
+      // Get current landing page data
+      const currentLandingPage = await this.getLandingPageData();
+      if (!currentLandingPage) {
+        return {
+          success: false,
+          message: 'No landing page data found. Generate a landing page first.',
+        };
+      }
+      
+      // Assess quality
+      const { landingPage, assessments } = await landingPageService.assessLandingPageQuality(
+        currentLandingPage,
+        {
+          qualityThresholds: options?.qualityThresholds,
+          applyRecommendations: options?.applyRecommendations,
+        }
+      );
+      
+      // If we're applying recommendations, save the updated landing page
+      if (options?.applyRecommendations) {
+        await this.saveLandingPageData(landingPage);
+        const writeSuccess = await astroService.writeLandingPageContent(landingPage);
+        
+        if (!writeSuccess) {
+          throw new Error('Failed to write updated landing page data to Astro content');
+        }
+      }
+      
+      return {
+        success: true,
+        message: options?.applyRecommendations 
+          ? 'Successfully assessed landing page and applied quality recommendations'
+          : 'Successfully assessed landing page quality',
+        data: landingPage,
+        assessments,
+      };
+    } catch (error) {
+      this.logger.error('Error assessing landing page quality', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error assessing landing page quality',
       };
     }
   }
@@ -622,8 +680,8 @@ export class WebsiteContext extends BaseContext<
           });
           
           // Generate landing page data with all sections
-          // Avoid regenerating if already exists - use skipReview for faster generation
-          const generationResult = await this.generateLandingPage({ skipReview: true });
+          // No quality assessment is done during generation
+          const generationResult = await this.generateLandingPage();
           if (!generationResult.success) {
             this.logger.warn('Could not generate landing page data before build', {
               context: 'WebsiteContext',

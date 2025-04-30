@@ -9,7 +9,8 @@ import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { WebsiteToolService } from '@/contexts/website/tools';
 import type { WebsiteContext } from '@/contexts/website/websiteContext';
 import { 
-  LandingPageGenerationToolSchema, 
+  LandingPageGenerationToolSchema,
+  LandingPageQualityAssessmentToolSchema,
   WebsiteBuildToolSchema,
   WebsitePromoteToolSchema,
   WebsiteStatusToolSchema,
@@ -23,6 +24,7 @@ describe('WebsiteToolService', () => {
   // Must be manually reset before each test
   const mockContext = {
     generateLandingPage: mock(() => {}),
+    assessLandingPage: mock(() => {}),
     handleWebsiteBuild: mock(() => {}),
     handleWebsitePromote: mock(() => {}),
     handleWebsiteStatus: mock(() => {}),
@@ -34,6 +36,7 @@ describe('WebsiteToolService', () => {
     
     // Reset mocks
     mockContext.generateLandingPage.mockReset();
+    mockContext.assessLandingPage.mockReset();
     mockContext.handleWebsiteBuild.mockReset();
     mockContext.handleWebsitePromote.mockReset();
     mockContext.handleWebsiteStatus.mockReset();
@@ -72,6 +75,7 @@ describe('WebsiteToolService', () => {
       const toolNames = tools.map(tool => tool.name);
       
       expect(toolNames).toContain('generate_landing_page');
+      expect(toolNames).toContain('assess_landing_page');
       expect(toolNames).toContain('build_website');
       expect(toolNames).toContain('promote_website');
       expect(toolNames).toContain('get_website_status');
@@ -85,6 +89,13 @@ describe('WebsiteToolService', () => {
       Object.keys(LandingPageGenerationToolSchema.shape).forEach(key => {
         expect(schema).toHaveProperty(key);
       });
+    });
+    
+    it('should return schema for assess_landing_page tool', () => {
+      const schema = toolService.getToolSchema({ name: 'assess_landing_page' });
+      // The schema should have qualityThresholds and applyRecommendations properties
+      expect(schema).toHaveProperty('qualityThresholds');
+      expect(schema).toHaveProperty('applyRecommendations');
     });
 
     it('should return schema for build_website tool', () => {
@@ -125,7 +136,7 @@ describe('WebsiteToolService', () => {
       tools = toolService.getTools(mockContext as unknown as WebsiteContext);
     });
 
-    it('generate_landing_page should call context.generateLandingPage with default options', async () => {
+    it('generate_landing_page should call context.generateLandingPage without options', async () => {
       // Find the tool
       const tool = tools.find(t => t.name === 'generate_landing_page');
       expect(tool).toBeDefined();
@@ -141,8 +152,8 @@ describe('WebsiteToolService', () => {
       if (tool) {
         const result = await tool.handler({});
         
-        // Check that options were passed with skipReview: false
-        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({ skipReview: false });
+        // With our new architecture, generateLandingPage doesn't take parameters
+        expect(mockContext.generateLandingPage).toHaveBeenCalled();
         
         // Verify result structure
         expect(result).toHaveProperty('success', true);
@@ -151,38 +162,51 @@ describe('WebsiteToolService', () => {
       }
     });
     
-    it('generate_landing_page should pass quality options to context', async () => {
+    it('should provide assess_landing_page tool for quality assessment', () => {
+      // Find the tools
+      const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
+      const assessTool = tools.find(t => t.name === 'assess_landing_page');
+      
+      // Verify assess_landing_page tool exists
+      expect(assessTool).toBeDefined();
+      expect(assessTool?.description).toContain('quality');
+    });
+    
+    it('assess_landing_page tool should call context.assessLandingPage with options', async () => {
       // Find the tool
-      const tool = tools.find(t => t.name === 'generate_landing_page');
+      const tool = tools.find(t => t.name === 'assess_landing_page');
       expect(tool).toBeDefined();
 
       // Set up mock implementation for this test
-      mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
+      mockContext.assessLandingPage.mockImplementation(() => Promise.resolve({
         success: true,
-        message: 'Landing page with quality options generated',
-        data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
+        message: 'Landing page quality assessed',
+        data: { title: 'Test Landing Page' },
+        assessments: { hero: { qualityScore: 8 } },
       }));
+
+      // Quality assessment options
+      const options = {
+        qualityThresholds: {
+          minCombinedScore: 7,
+          minQualityScore: 6,
+          minConfidenceScore: 6,
+        },
+        applyRecommendations: true,
+      };
 
       // Call the handler with quality params
       if (tool) {
-        await tool.handler({
-          skipReview: true,
-          qualityThresholds: {
-            minCombinedScore: 0.8,
-            minQualityScore: 0.7,
-            minConfidenceScore: 0.6,
-          },
-        });
+        const result = await tool.handler(options);
         
         // Verify context method was called with the specified options
-        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({
-          skipReview: true,
-          qualityThresholds: {
-            minCombinedScore: 0.8,
-            minQualityScore: 0.7,
-            minConfidenceScore: 0.6,
-          },
-        });
+        expect(mockContext.assessLandingPage).toHaveBeenCalledWith(options);
+        
+        // Verify result structure
+        expect(result).toHaveProperty('success', true);
+        expect(result).toHaveProperty('message');
+        expect(result).toHaveProperty('data');
+        expect(result).toHaveProperty('assessments');
       }
     });
 
