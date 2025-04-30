@@ -1,0 +1,17 @@
+Generate a footer section for a professional website. This section should provide essential information and navigation at the bottom of the site.
+
+Include:
+
+1. **Contact Details** (optional):
+   - Email (optional)
+   - Phone (optional)
+   - Social media links (optional): 1-3 platforms with URLs
+2. **Copyright Text**: A standard copyright notice
+3. **Links** (optional): 2-4 important page links with text and URL
+
+Keep the content professional and aligned with the profile:
+
+Name: {{name}}
+Tagline: {{tagline}}
+
+Return ONLY valid JSON with keys for: contactDetails (optional object with email, phone, and social array), copyrightText (with current year), links (optional array of link objects with text and url), and enabled (set to true).

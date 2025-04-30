@@ -13,6 +13,12 @@ import { z } from 'zod';
 import type { WebsiteContext } from '@/contexts';
 import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { Logger } from '@/utils/logger';
+import { 
+  LandingPageGenerationToolSchema,
+  WebsiteBuildToolSchema, 
+  WebsitePromoteToolSchema,
+  WebsiteStatusToolSchema 
+} from '@website/schemas/websiteToolSchemas';
 
 /**
  * Service responsible for providing MCP tools for website management
@@ -96,34 +102,16 @@ export class WebsiteToolService {
     // Return appropriate Zod schema based on tool name
     switch (tool.name) {
     case 'generate_landing_page':
-      return {
-        regenerateSegments: z.boolean().optional()
-          .describe('Whether to regenerate segments that already exist in cache'),
-        segments: z.array(z.enum(['identity', 'serviceOffering', 'credibility', 'conversion'])).optional()
-          .describe('Specific segments to generate, if not all'),
-        skipReview: z.boolean().optional()
-          .describe('Whether to skip the final review phase'),
-      };
+      return LandingPageGenerationToolSchema.shape;
 
     case 'build_website':
-      return {
-        environment: z.enum(['preview', 'production']).optional()
-          .describe('Environment to build for (default: preview)'),
-        generateBeforeBuild: z.boolean().optional()
-          .describe('Whether to generate landing page before building (default: true)'),
-      };
+      return WebsiteBuildToolSchema.shape;
 
     case 'promote_website':
-      return {
-        skipConfirmation: z.boolean().optional()
-          .describe('Whether to skip confirmation prompt'),
-      };
+      return WebsitePromoteToolSchema.shape;
 
     case 'get_website_status':
-      return {
-        environment: z.enum(['preview', 'production']).optional()
-          .describe('Environment to check status for (default: preview)'),
-      };
+      return WebsiteStatusToolSchema.shape;
 
     default:
       // For unknown tools, return an empty schema
@@ -139,33 +127,49 @@ export class WebsiteToolService {
       protocol: 'website',
       path: 'generate_landing_page',
       name: 'generate_landing_page',
-      description: 'Generates a landing page from profile data with segment-based content generation',
+      description: 'Generates a landing page from profile data with quality assessment',
       handler: async (params: Record<string, unknown>) => {
-        // Parse segmented generation parameters
-        const regenerateSegments = params['regenerateSegments'] === true;
+        // Parse landing page generation parameters
         const skipReview = params['skipReview'] === true;
         
-        // Parse segments to generate (if specified)
-        let segmentsToGenerate: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[] | undefined;
+        // Parse quality thresholds if provided
+        let qualityThresholds: {
+          minCombinedScore?: number;
+          minQualityScore?: number;
+          minConfidenceScore?: number;
+        } | undefined;
         
-        if (params['segments'] && Array.isArray(params['segments'])) {
-          // Filter to ensure we only include valid segment types
-          segmentsToGenerate = params['segments'].filter(s => 
-            ['identity', 'serviceOffering', 'credibility', 'conversion'].includes(String(s)),
-          ) as ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
-          
-          // If after filtering we have no valid segments, set to undefined to generate all
-          if (segmentsToGenerate.length === 0) {
-            segmentsToGenerate = undefined;
-          }
+        if (params['qualityThresholds'] && typeof params['qualityThresholds'] === 'object') {
+          const thresholds = params['qualityThresholds'] as Record<string, unknown>;
+          qualityThresholds = {
+            minCombinedScore: typeof thresholds['minCombinedScore'] === 'number' ? thresholds['minCombinedScore'] as number : undefined,
+            minQualityScore: typeof thresholds['minQualityScore'] === 'number' ? thresholds['minQualityScore'] as number : undefined,
+            minConfidenceScore: typeof thresholds['minConfidenceScore'] === 'number' ? thresholds['minConfidenceScore'] as number : undefined,
+          };
         }
         
-        // Call the context with the segmented options
-        const result = await context.generateLandingPage({
-          regenerateSegments,
-          segmentsToGenerate,
-          skipReview,
-        });
+        // Create options object with supported parameters
+        const options: { 
+          skipReview?: boolean;
+          qualityThresholds?: {
+            minCombinedScore?: number;
+            minQualityScore?: number;
+            minConfidenceScore?: number;
+          };
+        } = {};
+        
+        // Set skipReview if defined
+        if (skipReview !== undefined) {
+          options.skipReview = skipReview;
+        }
+        
+        // Set quality thresholds if defined
+        if (qualityThresholds !== undefined) {
+          options.qualityThresholds = qualityThresholds;
+        }
+        
+        // Call context with valid options
+        const result = await context.generateLandingPage(options);
 
         if (!result.success) {
           throw new Error(`Failed to generate landing page: ${result.message}`);

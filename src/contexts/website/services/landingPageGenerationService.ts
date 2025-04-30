@@ -1,61 +1,102 @@
-
-import type { Profile } from '@/models/profile';
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
-import { LandingPageSchema } from '@website/schemas';
-import type { LandingPageData } from '@website/schemas';
-import type { 
-  ConversionSegment, 
-  CredibilitySegment, 
-  IdentitySegment, 
-  SegmentGenerationStatus,
-  SegmentStore,
-  ServiceOfferingSegment,
-} from '@website/schemas/landingPageSegmentSchemas';
+import { z } from 'zod';
 import { 
-  ConversionSegmentSchema, 
-  CredibilitySegmentSchema,
-  IdentitySegmentSchema,
-  ServiceOfferingSegmentSchema,
-} from '@website/schemas/landingPageSegmentSchemas';
+  AboutSectionSchema,
+  CaseStudiesSectionSchema,
+  CtaSectionSchema,
+  ExpertiseSectionSchema,
+  FaqSectionSchema,
+  FooterSectionSchema,
+  HeroSectionSchema, 
+  LandingPageSchema, 
+  PricingSectionSchema,
+  ProblemStatementSectionSchema,
+  ProcessSectionSchema,
+  ServicesSectionSchema,
+} from '@website/schemas';
+import type { LandingPageData } from '@website/schemas';
+import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
+import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
 
-import { SegmentCacheService } from './landingPage/segmentCacheService';
+import { SectionQualityService } from './landingPage/sectionQualityService';
 import contentReviewPrompt from './prompts/content-review.txt';
-import conversionSegmentPrompt from './prompts/segments/conversion-segment.txt';
-import credibilitySegmentPrompt from './prompts/segments/credibility-segment.txt';
-import identitySegmentPrompt from './prompts/segments/identity-segment.txt';
-import serviceOfferingSegmentPrompt from './prompts/segments/service-offering-segment.txt';
-
-// Keep the original prompt for backward compatibility
+import heroSectionPrompt from './prompts/sections/hero-section.txt';
+import problemStatementPrompt from './prompts/sections/problem-statement.txt';
+import servicesPrompt from './prompts/sections/services.txt';
+import processPrompt from './prompts/sections/process.txt';
+import caseStudiesPrompt from './prompts/sections/case-studies.txt';
+import expertisePrompt from './prompts/sections/expertise.txt';
+import aboutPrompt from './prompts/sections/about.txt';
+import pricingPrompt from './prompts/sections/pricing.txt';
+import faqPrompt from './prompts/sections/faq.txt';
+import ctaPrompt from './prompts/sections/cta.txt';
+import footerPrompt from './prompts/sections/footer.txt';
 
 /**
- * Service for generating landing page data from profile information
- * and the entire personal brain content
- * 
+ * Options for landing page generation
+ */
+export interface LandingPageGenerationOptions {
+  /** Skip the review phase */
+  skipReview?: boolean;
+  /** Custom thresholds for section quality assessment */
+  qualityThresholds?: {
+    minCombinedScore?: number;
+    minQualityScore?: number;
+    minConfidenceScore?: number;
+  };
+}
+
+/**
+ * Service for generating landing page content
  * Implements the Component Interface Standardization pattern
  */
 export class LandingPageGenerationService {
   private static instance: LandingPageGenerationService | null = null;
   private brainProtocol: BrainProtocol | null = null;
   private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-  private segmentCache: SegmentCacheService;
-  private segmentGenerationStatus: SegmentGenerationStatus = {
-    identity: false,
-    serviceOffering: false,
-    credibility: false,
-    conversion: false,
-    combined: false,
-    reviewed: false,
+  private sectionQualityService: SectionQualityService;
+  
+  // Record to store section quality assessments
+  private assessedSections: Record<string, AssessedSection<unknown>> = {};
+  
+  // Section schemas keyed by section type
+  private sectionSchemas: Record<string, z.ZodSchema> = {
+    hero: HeroSectionSchema,
+    problemStatement: ProblemStatementSectionSchema,
+    services: ServicesSectionSchema,
+    process: ProcessSectionSchema,
+    caseStudies: CaseStudiesSectionSchema,
+    expertise: ExpertiseSectionSchema,
+    about: AboutSectionSchema,
+    pricing: PricingSectionSchema,
+    faq: FaqSectionSchema,
+    cta: CtaSectionSchema,
+    footer: FooterSectionSchema,
   };
   
+  // Map of section types to their corresponding prompts
+  private sectionPrompts: Record<string, string> = {
+    hero: heroSectionPrompt,
+    problemStatement: problemStatementPrompt,
+    services: servicesPrompt,
+    process: processPrompt,
+    caseStudies: caseStudiesPrompt,
+    expertise: expertisePrompt,
+    about: aboutPrompt,
+    pricing: pricingPrompt,
+    faq: faqPrompt,
+    cta: ctaPrompt,
+    footer: footerPrompt,
+  };
+
   /**
    * Private constructor initializes dependencies
    */
   private constructor() {
-    // Initialize segment cache service
-    this.segmentCache = SegmentCacheService.getInstance();
+    this.sectionQualityService = SectionQualityService.getInstance();
   }
-  
+
   /**
    * Get singleton instance of LandingPageGenerationService
    */
@@ -65,871 +106,475 @@ export class LandingPageGenerationService {
     }
     return LandingPageGenerationService.instance;
   }
-  
+
   /**
    * Reset the singleton instance (primarily for testing)
    */
   static resetInstance(): void {
     LandingPageGenerationService.instance = null;
   }
-  
+
   /**
    * Create a fresh instance (primarily for testing)
    */
   static createFresh(): LandingPageGenerationService {
     return new LandingPageGenerationService();
   }
-  
-  /**
-   * Get current segment generation status
-   * @returns The current status of segment generation
-   */
-  getSegmentGenerationStatus(): SegmentGenerationStatus {
-    return { ...this.segmentGenerationStatus };
-  }
-  
-  /**
-   * Get loaded segments from cache
-   * @returns The cached segments
-   */
-  getCachedSegments(): SegmentStore {
-    return this.segmentCache.getAllSegments();
-  }
-  
-  /**
-   * Get profile data using the brain protocol
-   * This eliminates the direct dependency on ProfileContext
-   */
-  private async getProfileData(): Promise<Profile | null> {
-    try {
-      const brainProtocol = this.getBrainProtocol();
-      const response = await brainProtocol.processQuery('Get my profile information', {
-        userId: 'system',
-        userName: 'System',
-      });
-      
-      // Extract profile data from response
-      if (response.profile) {
-        return response.profile;
-      }
-      
-      return null;
-    } catch (error) {
-      this.logger.error('Error fetching profile data', {
-        error,
-        context: 'LandingPageGenerationService',
-      });
-      
-      return null;
-    }
-  }
-  
-  /**
-   * Generate the identity segment (core brand elements)
-   * @returns The generated identity segment
-   */
-  async generateIdentitySegment(): Promise<IdentitySegment> {
-    try {
-      this.logger.info('Generating identity segment', {
-        context: 'LandingPageGenerationService',
-      });
-      
-      // Check if we have a cached segment
-      if (this.segmentCache.hasSegment('identity')) {
-        this.logger.info('Using cached identity segment', {
-          context: 'LandingPageGenerationService',
-        });
-        
-        // Get the cached segment (we know it exists from the check above)
-        const cachedSegment = this.segmentCache.getSegment('identity');
-        if (cachedSegment) {
-          this.segmentGenerationStatus.identity = true;
-          return cachedSegment;
-        }
-      }
-      
-      // Get BrainProtocol instance
-      const brainProtocol = this.getBrainProtocol();
-      
-      // Generate the identity segment using the dedicated prompt
-      const result = await brainProtocol.processQuery(identitySegmentPrompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: IdentitySegmentSchema,
-      });
-      
-      // Check if we received a structured object
-      if (!result.object) {
-        throw new Error('Failed to generate structured identity segment');
-      }
-      
-      // Prepare base segment with required fields
-      const baseSegment = {
-        ...result.object,
-        segmentType: 'identity' as const,
-        version: 1,
-        generatedAt: new Date().toISOString(),
-        // Ensure hero has required ctaLink field
-        hero: {
-          ...result.object.hero,
-          ctaLink: result.object.hero?.ctaLink || '#contact',
-        },
-      };
-      
-      // Prepare problemStatement with required fields if it exists
-      let problemStatement = undefined;
-      if (result.object.problemStatement) {
-        problemStatement = {
-          ...result.object.problemStatement,
-          // enabled is required to be a boolean, not optional
-          enabled: result.object.problemStatement.enabled !== undefined 
-            ? result.object.problemStatement.enabled 
-            : true,
-        };
-      }
-      
-      // Create the final segment with proper typing
-      const identitySegment = {
-        ...baseSegment,
-        ...(problemStatement ? { problemStatement } : {}),
-      } as IdentitySegment;
-      
-      // Store in cache
-      this.segmentCache.saveSegment('identity', identitySegment);
-      
-      // Update status
-      this.segmentGenerationStatus.identity = true;
-      
-      this.logger.debug('Generated identity segment', {
-        context: 'LandingPageGenerationService',
-        hasHero: !!identitySegment.hero,
-        hasProblemStatement: !!identitySegment.problemStatement,
-      });
-      
-      return identitySegment;
-    } catch (error) {
-      this.logger.error('Error generating identity segment', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      throw error;
-    }
-  }
-  
-  /**
-   * Generate the service offering segment (services, process, pricing)
-   * @returns The generated service offering segment
-   */
-  async generateServiceOfferingSegment(): Promise<ServiceOfferingSegment> {
-    try {
-      this.logger.info('Generating service offering segment', {
-        context: 'LandingPageGenerationService',
-      });
-      
-      // Check if we have a cached segment
-      if (this.segmentCache.hasSegment('serviceOffering')) {
-        this.logger.info('Using cached service offering segment', {
-          context: 'LandingPageGenerationService',
-        });
-        
-        // Get the cached segment (we know it exists from the check above)
-        const cachedSegment = this.segmentCache.getSegment('serviceOffering');
-        if (cachedSegment) {
-          this.segmentGenerationStatus.serviceOffering = true;
-          return cachedSegment;
-        }
-      }
-      
-      // Get BrainProtocol instance
-      const brainProtocol = this.getBrainProtocol();
-      
-      // Generate the service offering segment using the dedicated prompt
-      const result = await brainProtocol.processQuery(serviceOfferingSegmentPrompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: ServiceOfferingSegmentSchema,
-      });
-      
-      // Check if we received a structured object
-      if (!result.object) {
-        throw new Error('Failed to generate structured service offering segment');
-      }
-      
-      // Prepare base segment with required fields
-      const baseSegment = {
-        ...result.object,
-        segmentType: 'serviceOffering' as const,
-        version: 1,
-        generatedAt: new Date().toISOString(),
-        // Ensure services has required title field
-        services: {
-          ...result.object.services,
-          title: result.object.services?.title || 'Services',
-        },
-      };
 
-      // Prepare process with required fields if it exists
-      let process = undefined;
-      if (result.object.process) {
-        process = {
-          ...result.object.process,
-          // Ensure title is a non-optional string
-          title: result.object.process.title !== undefined 
-            ? result.object.process.title 
-            : 'How I Work',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.process.enabled !== undefined 
-            ? result.object.process.enabled 
-            : true,
-        };
-      }
-
-      // Prepare pricing with required fields if it exists
-      let pricing = undefined;
-      if (result.object.pricing) {
-        // Process pricing tiers to ensure required fields in each tier
-        const processedTiers = (result.object.pricing.tiers || []).map(tier => ({
-          ...tier,
-          ctaText: tier.ctaText || 'Contact Me',
-          ctaLink: tier.ctaLink || '#contact',
-          isFeatured: tier.isFeatured !== undefined ? tier.isFeatured : false,
-        }));
-        
-        // Create pricing object with all required fields
-        pricing = {
-          ...result.object.pricing,
-          title: result.object.pricing.title || 'Packages & Pricing',
-          enabled: result.object.pricing.enabled !== undefined 
-            ? result.object.pricing.enabled 
-            : false,
-          tiers: processedTiers,
-        };
-      }
-      
-      // Create the final segment with proper typing
-      const serviceOfferingSegment = {
-        ...baseSegment,
-        ...(process ? { process } : {}),
-        ...(pricing ? { pricing } : {}),
-      } as ServiceOfferingSegment;
-      
-      // Store in cache
-      this.segmentCache.saveSegment('serviceOffering', serviceOfferingSegment);
-      
-      // Update status
-      this.segmentGenerationStatus.serviceOffering = true;
-      
-      this.logger.debug('Generated service offering segment', {
-        context: 'LandingPageGenerationService',
-        hasServices: !!serviceOfferingSegment.services,
-        hasProcess: !!serviceOfferingSegment.process,
-        hasPricing: !!serviceOfferingSegment.pricing,
-      });
-      
-      return serviceOfferingSegment;
-    } catch (error) {
-      this.logger.error('Error generating service offering segment', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      throw error;
-    }
-  }
-  
   /**
-   * Generate the credibility segment (case studies, expertise, about)
-   * @returns The generated credibility segment
+   * Generate a complete landing page
+   * 
+   * @param options - Generation options
+   * @returns A complete landing page data structure with content
    */
-  async generateCredibilitySegment(): Promise<CredibilitySegment> {
-    try {
-      this.logger.info('Generating credibility segment', {
-        context: 'LandingPageGenerationService',
-      });
-      
-      // Check if we have a cached segment
-      if (this.segmentCache.hasSegment('credibility')) {
-        this.logger.info('Using cached credibility segment', {
-          context: 'LandingPageGenerationService',
-        });
-        
-        // Get the cached segment (we know it exists from the check above)
-        const cachedSegment = this.segmentCache.getSegment('credibility');
-        if (cachedSegment) {
-          this.segmentGenerationStatus.credibility = true;
-          return cachedSegment;
-        }
-      }
-      
-      // Get BrainProtocol instance
-      const brainProtocol = this.getBrainProtocol();
-      
-      // Generate the credibility segment using the dedicated prompt
-      const result = await brainProtocol.processQuery(credibilitySegmentPrompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: CredibilitySegmentSchema,
-      });
-      
-      // Check if we received a structured object
-      if (!result.object) {
-        throw new Error('Failed to generate structured credibility segment');
-      }
-      
-      // Prepare base segment with required fields
-      const baseSegment = {
-        ...result.object,
-        segmentType: 'credibility' as const,
-        version: 1,
-        generatedAt: new Date().toISOString(),
-      };
-      
-      // Prepare caseStudies with required fields if it exists
-      let caseStudies = undefined;
-      if (result.object.caseStudies) {
-        caseStudies = {
-          ...result.object.caseStudies,
-          // Ensure title is a non-optional string
-          title: result.object.caseStudies.title !== undefined 
-            ? result.object.caseStudies.title 
-            : 'Case Studies',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.caseStudies.enabled !== undefined 
-            ? result.object.caseStudies.enabled 
-            : true,
-        };
-      }
-      
-      // Prepare expertise with required fields if it exists
-      let expertise = undefined;
-      if (result.object.expertise) {
-        expertise = {
-          ...result.object.expertise,
-          // Ensure title is a non-optional string
-          title: result.object.expertise.title !== undefined 
-            ? result.object.expertise.title 
-            : 'Expertise',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.expertise.enabled !== undefined 
-            ? result.object.expertise.enabled 
-            : true,
-        };
-      }
-      
-      // Prepare about with required fields if it exists
-      let about = undefined;
-      if (result.object.about) {
-        about = {
-          ...result.object.about,
-          // Ensure title is a non-optional string
-          title: result.object.about.title !== undefined 
-            ? result.object.about.title 
-            : 'About Me',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.about.enabled !== undefined 
-            ? result.object.about.enabled 
-            : true,
-        };
-      }
-      
-      // Create the final segment with proper typing
-      const credibilitySegment = {
-        ...baseSegment,
-        ...(caseStudies ? { caseStudies } : {}),
-        ...(expertise ? { expertise } : {}),
-        ...(about ? { about } : {}),
-      } as CredibilitySegment;
-      
-      // Store in cache
-      this.segmentCache.saveSegment('credibility', credibilitySegment);
-      
-      // Update status
-      this.segmentGenerationStatus.credibility = true;
-      
-      this.logger.debug('Generated credibility segment', {
-        context: 'LandingPageGenerationService',
-        hasCaseStudies: !!credibilitySegment.caseStudies,
-        hasExpertise: !!credibilitySegment.expertise,
-        hasAbout: !!credibilitySegment.about,
-      });
-      
-      return credibilitySegment;
-    } catch (error) {
-      this.logger.error('Error generating credibility segment', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      throw error;
+  async generateLandingPageData(options: LandingPageGenerationOptions = {}): Promise<LandingPageData> {
+    this.logger.info('Starting landing page generation', {
+      context: 'LandingPageGenerationService',
+      skipReview: options.skipReview,
+    });
+    
+    // Clear any previous assessment data
+    this.assessedSections = {};
+    
+    // Set custom quality thresholds if provided
+    if (options.qualityThresholds) {
+      this.sectionQualityService.setQualityThresholds(options.qualityThresholds);
     }
-  }
-  
-  /**
-   * Generate the conversion segment (FAQ, CTA, footer)
-   * @returns The generated conversion segment
-   */
-  async generateConversionSegment(): Promise<ConversionSegment> {
+    
     try {
-      this.logger.info('Generating conversion segment', {
-        context: 'LandingPageGenerationService',
-      });
+      // Create the basic structure for the landing page
+      let landingPage = this.createBasicLandingPage();
       
-      // Check if we have a cached segment
-      if (this.segmentCache.hasSegment('conversion')) {
-        this.logger.info('Using cached conversion segment', {
-          context: 'LandingPageGenerationService',
-        });
-        
-        // Get the cached segment (we know it exists from the check above)
-        const cachedSegment = this.segmentCache.getSegment('conversion');
-        if (cachedSegment) {
-          this.segmentGenerationStatus.conversion = true;
-          return cachedSegment;
-        }
-      }
+      // Generate content for each section individually
+      landingPage = await this.generateAllSections(landingPage);
       
-      // Get BrainProtocol instance
-      const brainProtocol = this.getBrainProtocol();
-      
-      // Generate the conversion segment using the dedicated prompt
-      const result = await brainProtocol.processQuery(conversionSegmentPrompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: ConversionSegmentSchema,
-      });
-      
-      // Check if we received a structured object
-      if (!result.object) {
-        throw new Error('Failed to generate structured conversion segment');
-      }
-      
-      // Prepare base segment with required fields
-      const baseSegment = {
-        ...result.object,
-        segmentType: 'conversion' as const,
-        version: 1,
-        generatedAt: new Date().toISOString(),
-      };
-      
-      // Prepare faq with required fields if it exists
-      let faq = undefined;
-      if (result.object.faq) {
-        faq = {
-          ...result.object.faq,
-          // Ensure title is a non-optional string
-          title: result.object.faq.title !== undefined 
-            ? result.object.faq.title 
-            : 'Frequently Asked Questions',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.faq.enabled !== undefined 
-            ? result.object.faq.enabled 
-            : true,
-        };
-      }
-      
-      // Prepare cta with required fields if it exists
-      let cta = undefined;
-      if (result.object.cta) {
-        cta = {
-          ...result.object.cta,
-          // Ensure title is a non-optional string
-          title: result.object.cta.title !== undefined 
-            ? result.object.cta.title 
-            : 'Ready to Get Started?',
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.cta.enabled !== undefined 
-            ? result.object.cta.enabled 
-            : true,
-          // Ensure buttonText is a non-optional string
-          buttonText: result.object.cta.buttonText !== undefined
-            ? result.object.cta.buttonText
-            : 'Contact Me',
-          // Ensure buttonLink is a non-optional string
-          buttonLink: result.object.cta.buttonLink !== undefined
-            ? result.object.cta.buttonLink
-            : '#contact',
-        };
-      }
-      
-      // Prepare footer with required fields if it exists
-      let footer = undefined;
-      if (result.object.footer) {
-        footer = {
-          ...result.object.footer,
-          // Ensure enabled is a non-optional boolean
-          enabled: result.object.footer.enabled !== undefined 
-            ? result.object.footer.enabled 
-            : true,
-        };
-      }
-      
-      // Create the final segment with proper typing
-      const conversionSegment = {
-        ...baseSegment,
-        ...(faq ? { faq } : {}),
-        ...(cta ? { cta } : {}),
-        ...(footer ? { footer } : {}),
-      } as ConversionSegment;
-      
-      // Store in cache
-      this.segmentCache.saveSegment('conversion', conversionSegment);
-      
-      // Update status
-      this.segmentGenerationStatus.conversion = true;
-      
-      this.logger.debug('Generated conversion segment', {
-        context: 'LandingPageGenerationService',
-        hasFaq: !!conversionSegment.faq,
-        hasCta: !!conversionSegment.cta,
-        hasFooter: !!conversionSegment.footer,
-      });
-      
-      return conversionSegment;
-    } catch (error) {
-      this.logger.error('Error generating conversion segment', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      throw error;
-    }
-  }
-  
-  /**
-   * Combine all segments into a complete landing page
-   * @param segments The segments to combine
-   * @returns The combined landing page data
-   */
-  combineLandingPage(segments: SegmentStore): LandingPageData {
-    try {
-      this.logger.info('Combining segments into complete landing page', {
-        context: 'LandingPageGenerationService',
-        segments: Object.keys(segments),
-      });
-      
-      // Check if we have the required segments (identity and services at minimum)
-      if (!segments.identity || !segments.serviceOffering) {
-        throw new Error('Missing required segments (identity and serviceOffering are required)');
-      }
-      
-      // Create object with basic metadata from identity segment
-      const landingPage: Partial<LandingPageData> = {
-        title: segments.identity.title,
-        description: segments.identity.description,
-        name: segments.identity.name,
-        tagline: segments.identity.tagline,
-        sectionOrder: [],
-        hero: segments.identity.hero,
-      };
-      
-      // Add problem statement if available
-      if (segments.identity.problemStatement) {
-        landingPage.problemStatement = segments.identity.problemStatement;
-      }
-      
-      // Add service offerings
-      landingPage.services = segments.serviceOffering.services;
-      
-      // Add process if available
-      if (segments.serviceOffering.process) {
-        landingPage.process = segments.serviceOffering.process;
-      }
-      
-      // Add pricing if available
-      if (segments.serviceOffering.pricing) {
-        landingPage.pricing = segments.serviceOffering.pricing;
-      }
-      
-      // Add credibility sections if available
-      if (segments.credibility) {
-        if (segments.credibility.caseStudies) {
-          landingPage.caseStudies = segments.credibility.caseStudies;
-        }
-        
-        if (segments.credibility.expertise) {
-          landingPage.expertise = segments.credibility.expertise;
-        }
-        
-        if (segments.credibility.about) {
-          landingPage.about = segments.credibility.about;
-        }
-      }
-      
-      // Add conversion sections if available
-      if (segments.conversion) {
-        if (segments.conversion.faq) {
-          landingPage.faq = segments.conversion.faq;
-        }
-        
-        if (segments.conversion.cta) {
-          landingPage.cta = segments.conversion.cta;
-        }
-        
-        if (segments.conversion.footer) {
-          landingPage.footer = segments.conversion.footer;
-        }
-      }
-      
-      // Build section order based on what sections are available
-      const sectionOrder: string[] = [];
-      
-      // Core sections (always present)
-      sectionOrder.push('hero');
-      
-      // Problem statement (if available)
-      if (landingPage.problemStatement) {
-        sectionOrder.push('problemStatement');
-      }
-      
-      // Service-related sections
-      sectionOrder.push('services');
-      
-      // Process (if available)
-      if (landingPage.process) {
-        sectionOrder.push('process');
-      }
-      
-      // Case studies (if available)
-      if (landingPage.caseStudies) {
-        sectionOrder.push('caseStudies');
-      }
-      
-      // Expertise (if available)
-      if (landingPage.expertise) {
-        sectionOrder.push('expertise');
-      }
-      
-      // About (if available)
-      if (landingPage.about) {
-        sectionOrder.push('about');
-      }
-      
-      // Pricing (if available)
-      if (landingPage.pricing) {
-        sectionOrder.push('pricing');
-      }
-      
-      // FAQ (if available)
-      if (landingPage.faq) {
-        sectionOrder.push('faq');
-      }
-      
-      // CTA (if available)
-      if (landingPage.cta) {
-        sectionOrder.push('cta');
-      }
-      
-      // Footer (if available)
-      if (landingPage.footer) {
-        sectionOrder.push('footer');
-      }
-      
-      // Set the section order
-      landingPage.sectionOrder = sectionOrder;
-      
-      // Update status
-      this.segmentGenerationStatus.combined = true;
-      
-      this.logger.info('Successfully combined segments into landing page', {
-        context: 'LandingPageGenerationService',
-        sectionCount: sectionOrder.length,
-        sections: sectionOrder,
-      });
-      
-      return landingPage as LandingPageData;
-    } catch (error) {
-      this.logger.error('Error combining segments into landing page', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      throw error;
-    }
-  }
-  
-  /**
-   * Generate comprehensive landing page data with all sections using a segmented approach
-   * @param options Configuration options for generation
-   * @param options.regenerateSegments Whether to regenerate segments that are already cached
-   * @param options.segmentsToGenerate Which segments to generate (all by default)
-   * @param options.skipReview Whether to skip the final review phase
-   * @param overrides Optional overrides to customize the data
-   * @returns Generated landing page data with all sections
-   */
-  async generateLandingPageData(
-    options?: {
-      regenerateSegments?: boolean;
-      segmentsToGenerate?: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
-      skipReview?: boolean;
-    },
-    overrides?: Partial<LandingPageData>,
-  ): Promise<LandingPageData> {
-    try {
-      // Get profile data using the messaging system
-      const profile = await this.getProfileData();
-      
-      if (!profile) {
-        throw new Error('No profile found');
-      }
-      
-      this.logger.info('Generating landing page data with segmented approach', {
-        context: 'LandingPageGenerationService',
-        profileName: profile.fullName,
-        regenerateSegments: options?.regenerateSegments,
-        segmentsToGenerate: options?.segmentsToGenerate,
-      });
-      
-      // Reset segment status if regenerating all
-      if (options?.regenerateSegments) {
-        this.segmentGenerationStatus = {
-          identity: false,
-          serviceOffering: false,
-          credibility: false,
-          conversion: false,
-          combined: false,
-          reviewed: false,
-        };
-        
-        // Clear cache if regenerating
-        this.segmentCache.clearAllSegments();
-      }
-      
-      // Determine which segments to generate
-      const segmentsToGenerate = options?.segmentsToGenerate || [
-        'identity',
-        'serviceOffering',
-        'credibility',
-        'conversion',
-      ];
-      
-      // Generate selected segments
-      const segments: SegmentStore = {};
-      
-      // Generate each segment in sequence (this could be parallelized in future)
-      if (segmentsToGenerate.includes('identity') || !this.segmentCache.hasSegment('identity')) {
-        segments.identity = await this.generateIdentitySegment();
-      } else {
-        // Get cached segment
-        const cachedSegment = this.segmentCache.getSegment('identity');
-        if (cachedSegment) {
-          segments.identity = cachedSegment;
-          this.segmentGenerationStatus.identity = true;
-        }
-      }
-      
-      if (segmentsToGenerate.includes('serviceOffering') || !this.segmentCache.hasSegment('serviceOffering')) {
-        segments.serviceOffering = await this.generateServiceOfferingSegment();
-      } else {
-        // Get cached segment
-        const cachedSegment = this.segmentCache.getSegment('serviceOffering');
-        if (cachedSegment) {
-          segments.serviceOffering = cachedSegment;
-          this.segmentGenerationStatus.serviceOffering = true;
-        }
-      }
-      
-      if (segmentsToGenerate.includes('credibility') || !this.segmentCache.hasSegment('credibility')) {
-        segments.credibility = await this.generateCredibilitySegment();
-      } else {
-        // Get cached segment
-        const cachedSegment = this.segmentCache.getSegment('credibility');
-        if (cachedSegment) {
-          segments.credibility = cachedSegment;
-          this.segmentGenerationStatus.credibility = true;
-        }
-      }
-      
-      if (segmentsToGenerate.includes('conversion') || !this.segmentCache.hasSegment('conversion')) {
-        segments.conversion = await this.generateConversionSegment();
-      } else {
-        // Get cached segment
-        const cachedSegment = this.segmentCache.getSegment('conversion');
-        if (cachedSegment) {
-          segments.conversion = cachedSegment;
-          this.segmentGenerationStatus.conversion = true;
-        }
-      }
-      
-      // Combine segments
-      let landingPage = this.combineLandingPage(segments);
-      
-      // Optionally perform a final review phase
-      if (!options?.skipReview) {
+      // If review is enabled, perform quality assessment
+      if (!options.skipReview) {
         landingPage = await this.reviewLandingPage(landingPage);
-        this.segmentGenerationStatus.reviewed = true;
       }
       
-      // Apply any overrides
-      if (overrides) {
-        landingPage = {
-          ...landingPage,
-          ...overrides,
-        };
-      }
-      
-      this.logger.info('Successfully generated landing page with segmented approach', {
-        sections: landingPage.sectionOrder,
+      this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
       });
       
       return landingPage;
     } catch (error) {
-      this.logger.error('Error generating landing page data', {
+      this.logger.error('Error generating landing page', {
         error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : 'No stack trace',
         context: 'LandingPageGenerationService',
       });
       throw error;
     }
   }
-  
+
   /**
-   * Perform a final review of the combined landing page
-   * @param landingPage The landing page to review
-   * @returns The reviewed landing page
+   * Get the quality assessment results for all sections
+   * @returns Record of section assessments
+   */
+  getSectionQualityAssessments(): Record<string, AssessedSection<unknown>> {
+    return { ...this.assessedSections };
+  }
+
+  /**
+   * Create the basic structure for a landing page
+   */
+  private createBasicLandingPage(): LandingPageData {
+    // Basic landing page with empty sections
+    const currentYear = new Date().getFullYear();
+    
+    const baseLandingPage = {
+      title: 'Professional Services',
+      description: 'Professional expertise and services',
+      name: 'Professional Expert',
+      tagline: 'Expert services for your needs',
+      
+      // Default section order
+      sectionOrder: [
+        'hero',
+        'problemStatement',
+        'services',
+        'process',
+        'caseStudies',
+        'expertise',
+        'about',
+        'pricing',
+        'faq',
+        'cta',
+        'footer',
+      ],
+      
+      // Initialize sections with minimal required content
+      hero: {
+        headline: 'Professional Services',
+        subheading: 'Expert solutions for your needs',
+        ctaText: 'Get in Touch',
+        ctaLink: '#contact',
+      },
+      problemStatement: {
+        title: 'Challenges We Solve',
+        description: 'Addressing common problems in the industry',
+        enabled: true,
+      },
+      services: {
+        title: 'Services',
+        items: [{ title: 'Professional Service', description: 'High-quality professional service' }],
+      },
+      process: {
+        title: 'How I Work',
+        steps: [{ step: 1, title: 'Initial Consultation', description: 'Understanding your needs' }],
+        enabled: true,
+      },
+      caseStudies: {
+        title: 'Selected Projects',
+        items: [],
+        enabled: true,
+      },
+      expertise: {
+        title: 'Expertise',
+        items: [{ title: 'Professional Expertise', description: 'Years of industry experience' }],
+        enabled: true,
+      },
+      about: {
+        title: 'About Me',
+        content: 'Professional with expertise in the field.',
+        enabled: true,
+      },
+      pricing: {
+        title: 'Packages & Pricing',
+        tiers: [],
+        enabled: false, // Disabled by default
+      },
+      faq: {
+        title: 'Frequently Asked Questions',
+        items: [{ question: 'What services do you offer?', answer: 'Professional services tailored to your needs.' }],
+        enabled: true,
+      },
+      cta: {
+        title: 'Ready to Get Started?',
+        buttonText: 'Contact Me',
+        buttonLink: '#contact',
+        enabled: true,
+      },
+      footer: {
+        copyrightText: `© ${currentYear} Professional Expert`,
+        enabled: true,
+      },
+    };
+    
+    // Validate and parse using the schema to ensure correct structure with defaults
+    return LandingPageSchema.parse(baseLandingPage);
+  }
+
+  /**
+   * Generate content for all sections
+   * @param landingPage - Basic landing page structure
+   */
+  private async generateAllSections(landingPage: LandingPageData): Promise<LandingPageData> {
+    this.logger.info('Generating content for each section', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    const updatedLandingPage = { ...landingPage };
+    
+    // Generate identity information first (title, description, name, tagline)
+    await this.generateIdentityInfo(updatedLandingPage);
+    
+    // Generate each section one by one
+    for (const sectionType of updatedLandingPage.sectionOrder) {
+      if (this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas]) {
+        await this.generateSectionContent(updatedLandingPage, sectionType);
+      }
+    }
+    
+    return updatedLandingPage;
+  }
+
+  /**
+   * Generate identity information for the landing page
+   * @param landingPage - Landing page to update
+   */
+  private async generateIdentityInfo(landingPage: LandingPageData): Promise<void> {
+    this.logger.debug('Generating identity information', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    const prompt = `Generate basic identity information for a professional landing page.
+Include:
+1. Page title (for browser tab)
+2. Meta description (for search engines)
+3. Professional's name
+4. Tagline (short phrase describing the professional's value proposition)
+
+Return only these four fields formatted as JSON.`;
+    
+    try {
+      const result = await this.getBrainProtocol().processQuery(prompt, {
+        userId: 'system',
+        userName: 'System',
+      });
+      
+      if (result.object) {
+        const identityInfo = result.object as Partial<LandingPageData>;
+        
+        // Update fields with type checking
+        if (typeof identityInfo.title === 'string') landingPage.title = identityInfo.title;
+        if (typeof identityInfo.description === 'string') landingPage.description = identityInfo.description;
+        if (typeof identityInfo.name === 'string') landingPage.name = identityInfo.name;
+        if (typeof identityInfo.tagline === 'string') landingPage.tagline = identityInfo.tagline;
+        
+        this.logger.debug('Generated identity information', {
+          context: 'LandingPageGenerationService',
+          name: landingPage.name,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error generating identity information', {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'LandingPageGenerationService',
+      });
+      // Continue with default values if generation fails
+    }
+  }
+
+  /**
+   * Generate content for a specific section
+   * @param landingPage - Landing page to update
+   * @param sectionType - Type of section to generate
+   */
+  private async generateSectionContent(landingPage: LandingPageData, sectionType: string): Promise<void> {
+    this.logger.debug(`Generating content for section: ${sectionType}`, {
+      context: 'LandingPageGenerationService',
+    });
+    
+    // Skip if no prompt template exists for this section
+    if (!this.sectionPrompts[sectionType]) {
+      this.logger.warn(`No prompt template found for section: ${sectionType}`, {
+        context: 'LandingPageGenerationService',
+      });
+      return;
+    }
+    
+    // Get the schema for this section
+    const schema = this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas];
+    if (!schema) {
+      this.logger.warn(`No schema found for section: ${sectionType}`, {
+        context: 'LandingPageGenerationService',
+      });
+      return;
+    }
+    
+    try {
+      // Get the prompt template for this section
+      const promptTemplate = this.sectionPrompts[sectionType];
+      
+      // Replace placeholders in the prompt
+      const prompt = promptTemplate
+        .replace(/\{\{name\}\}/g, landingPage.name)
+        .replace(/\{\{tagline\}\}/g, landingPage.tagline);
+      
+      // Generate content for this section using the appropriate schema
+      const result = await this.getBrainProtocol().processQuery(prompt, {
+        userId: 'system',
+        userName: 'System',
+        schema: schema,
+      });
+      
+      if (result.object) {
+        // Get the current section
+        const sectionKey = sectionType as keyof LandingPageData;
+        const currentSection = landingPage[sectionKey];
+        
+        if (currentSection) {
+          // Parse the generated content with the section schema
+          // Convert to objects before spreading to satisfy TypeScript
+          const currentSectionObj = typeof currentSection === 'object' && currentSection !== null ? currentSection : {};
+          const resultObj = typeof result.object === 'object' && result.object !== null ? result.object : {};
+          
+          const validatedContent = schema.parse({
+            ...currentSectionObj,
+            ...resultObj,
+          });
+          
+          // Update the landing page with the validated content
+          landingPage[sectionKey] = validatedContent as any;
+          
+          this.logger.debug(`Generated content for section: ${sectionType}`, {
+            context: 'LandingPageGenerationService',
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error generating content for section: ${sectionType}`, {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'LandingPageGenerationService',
+      });
+      // Continue with other sections even if one fails
+    }
+  }
+
+  /**
+   * Perform quality assessment and review on the generated landing page
+   * @param landingPage - Generated landing page data
    */
   private async reviewLandingPage(landingPage: LandingPageData): Promise<LandingPageData> {
-    try {
-      this.logger.info('Performing final review of combined landing page', {
+    this.logger.info('Reviewing landing page content with quality assessment', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    // Apply assessment and improvement to each section
+    const assessedLandingPage = await this.assessAndImproveSections(landingPage);
+    
+    // For preview, we keep all sections visible
+    // For the final landing page, we would filter based on enabled status
+    assessedLandingPage.sectionOrder = this.buildSectionOrderFromEnabledSections(assessedLandingPage);
+    
+    // Perform a final content review
+    return await this.performFinalContentReview(assessedLandingPage);
+  }
+
+  /**
+   * Assess and improve all sections of the landing page
+   * @param landingPage - Generated landing page data
+   */
+  private async assessAndImproveSections(landingPage: LandingPageData): Promise<LandingPageData> {
+    this.logger.debug('Starting section quality assessment', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    const assessedLandingPage = { ...landingPage };
+    
+    // Process each section with quality assessment
+    for (const sectionType of Object.keys(landingPage)) {
+      // Skip non-section properties
+      if (['title', 'description', 'name', 'tagline', 'sectionOrder'].includes(sectionType)) {
+        continue;
+      }
+      
+      // Get the section content
+      const sectionKey = sectionType as keyof LandingPageData;
+      const section = landingPage[sectionKey];
+      
+      // Skip if section doesn't exist
+      if (!section) {
+        continue;
+      }
+      
+      const schema = this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas];
+      if (!schema) {
+        continue;
+      }
+      
+      this.logger.debug(`Processing section with quality assessment: ${sectionType}`, {
         context: 'LandingPageGenerationService',
       });
       
-      // Get BrainProtocol instance
-      const brainProtocol = this.getBrainProtocol();
+      try {
+        // Process the section with quality assessment
+        const assessedSection = await this.sectionQualityService.processSectionWithQualityAssessment(
+          sectionType,
+          section,
+        );
+        
+        // Store the assessed section for later use
+        this.assessedSections[sectionType] = assessedSection;
+        
+        if (assessedSection.content) {
+          // Validate the improved content with the section schema
+          const validatedContent = schema.parse(assessedSection.content);
+          
+          // Update the landing page with the validated content
+          assessedLandingPage[sectionKey] = validatedContent as any;
+          
+          // Update the enabled status based on the assessment
+          if (assessedSection.assessment && 'enabled' in validatedContent) {
+            (validatedContent as any).enabled = assessedSection.assessment.enabled;
+          }
+        }
+      } catch (error) {
+        this.logger.error(`Error assessing section: ${sectionType}`, {
+          error: error instanceof Error ? error.message : String(error),
+          context: 'LandingPageGenerationService',
+        });
+        // Continue with other sections even if one fails
+      }
+    }
+    
+    return assessedLandingPage;
+  }
+
+  /**
+   * Build section order based on enabled sections
+   * @param landingPage - Assessed landing page data
+   */
+  private buildSectionOrderFromEnabledSections(landingPage: LandingPageData): string[] {
+    // Start with the original section order
+    const newSectionOrder: string[] = [];
+    
+    // Include only sections that are enabled or required
+    for (const sectionType of landingPage.sectionOrder) {
+      const sectionKey = sectionType as keyof LandingPageData;
+      const section = landingPage[sectionKey];
       
-      // Create a review query that includes the combined data
-      const reviewQuery = `${contentReviewPrompt}\n\nCONTENT TO REVIEW:\n${JSON.stringify(landingPage, null, 2)}`;
+      if (!section) {
+        continue;
+      }
       
-      // Use LandingPageSchema for the review
-      const reviewResult = await brainProtocol.processQuery(reviewQuery, {
+      const isRequired = REQUIRED_SECTION_TYPES.includes(sectionType);
+      // Check if section is an object and has enabled property
+      const sectionEnabled = (typeof section === 'object' && section !== null && 'enabled' in section) 
+        ? (section as any).enabled === true 
+        : true;
+      
+      if (isRequired || sectionEnabled) {
+        newSectionOrder.push(sectionType);
+      }
+    }
+    
+    return newSectionOrder;
+  }
+
+  /**
+   * Perform a final content review for overall consistency
+   * @param landingPage - Assessed landing page data
+   */
+  private async performFinalContentReview(landingPage: LandingPageData): Promise<LandingPageData> {
+    this.logger.debug('Performing final content review', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    try {
+      // Create a prompt with the current landing page content
+      const prompt = contentReviewPrompt
+        .replace('{{CONTENT_TO_REVIEW}}', JSON.stringify(landingPage, null, 2));
+      
+      // Process the review
+      const result = await this.getBrainProtocol().processQuery(prompt, {
         userId: 'system',
         userName: 'System',
         schema: LandingPageSchema,
       });
       
-      // Check if we received a structured object from the review
-      if (!reviewResult.object) {
-        this.logger.warn('Final review failed to return structured data, using unreviewed version', {
-          context: 'LandingPageGenerationService',
-        });
-        return landingPage;
+      // Return the reviewed landing page if successful
+      if (result.object) {
+        // Validate with the schema
+        return LandingPageSchema.parse(result.object);
       }
       
-      this.logger.info('Successfully completed final review of landing page', {
-        context: 'LandingPageGenerationService',
-      });
-      
-      return reviewResult.object as LandingPageData;
+      // If no object is returned, return the original
+      return landingPage;
     } catch (error) {
-      this.logger.error('Error reviewing landing page', {
+      this.logger.error('Error during final content review', {
         error: error instanceof Error ? error.message : String(error),
         context: 'LandingPageGenerationService',
       });
       
-      // If review fails, return the original unreviewed landing page
+      // Return the original if there's an error
       return landingPage;
     }
   }
-  
+
   /**
    * Get the Brain Protocol instance used for AI operations
-   * @public Exposed for testing purposes
    */
   public getBrainProtocol(): BrainProtocol {
     if (!this.brainProtocol) {
@@ -938,7 +583,7 @@ export class LandingPageGenerationService {
     }
     return this.brainProtocol;
   }
-  
+
   /**
    * Set the Brain Protocol instance
    * @param protocol The brain protocol instance to use

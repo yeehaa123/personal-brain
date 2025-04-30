@@ -16,6 +16,7 @@ import { createTestLandingPageData } from '@test/helpers';
 
 // Create our mock instances with proper typings
 const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
+// Use type assertion since our mock doesn't implement the full interface
 const mockLandingPageGenerationService = MockLandingPageGenerationService.createFresh() as unknown as LandingPageGenerationService;
 const mockDeploymentManager = MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager;
 describe('WebsiteContext', () => {
@@ -162,8 +163,8 @@ describe('WebsiteContext', () => {
     expect(mockLandingPageGenerationService.generateLandingPageData).toHaveBeenCalled();
     expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
   });
-  
-  test('generateLandingPage should support segmented regeneration', async () => {
+
+  test('generateLandingPage should support quality assessment options', async () => {
     // Setup
     const mockProfileContext = MockProfileContext.createFresh();
     const mockProfileObj = MockProfile.createDefault();
@@ -172,7 +173,7 @@ describe('WebsiteContext', () => {
     // Create a fresh mock with our standardized implementation
     MockLandingPageGenerationService.resetInstance();
     const freshLandingPageService = MockLandingPageGenerationService.createFresh();
-    
+
     // Create specific mocks for the success responses with complete data structure
     const mockLandingPageData = {
       title: 'Test Title',
@@ -204,22 +205,46 @@ describe('WebsiteContext', () => {
         enabled: true,
       },
     };
-    
-    const regenerateImplementation = mock((_options?: { regenerateSegments?: boolean; segmentsToGenerate?: string[]; skipReview?: boolean }) => Promise.resolve({
+
+    // Create implementation for default options
+    const defaultImplementation = mock((_options?: {
+      skipReview?: boolean;
+      qualityThresholds?: {
+        minCombinedScore?: number;
+        minQualityScore?: number;
+        minConfidenceScore?: number;
+      };
+    }) => Promise.resolve({
       success: true,
-      message: 'Successfully generated landing page with all segments regenerated',
+      message: 'Successfully generated landing page',
       data: mockLandingPageData,
     }));
-    
-    const segmentImplementation = mock((_options?: { regenerateSegments?: boolean; segmentsToGenerate?: string[]; skipReview?: boolean }) => Promise.resolve({
-      success: true,
-      message: 'Successfully generated landing page with segments: Identity, Credibility',
-      data: mockLandingPageData,
-    }));
-    
-    const skipReviewImplementation = mock((_options?: { regenerateSegments?: boolean; segmentsToGenerate?: string[]; skipReview?: boolean }) => Promise.resolve({
+
+    // Create implementation for skipReview option
+    const skipReviewImplementation = mock((_options?: {
+      skipReview?: boolean;
+      qualityThresholds?: {
+        minCombinedScore?: number;
+        minQualityScore?: number;
+        minConfidenceScore?: number;
+      };
+    }) => Promise.resolve({
       success: true,
       message: 'Successfully generated landing page (review phase skipped)',
+      data: mockLandingPageData,
+    }));
+
+    // Create implementation for custom quality thresholds
+    const qualityThresholdsImplementation = mock((_options?: {
+      skipReview?: boolean;
+      qualityThresholds?: {
+        minCombinedScore?: number;
+        minQualityScore?: number;
+        minConfidenceScore?: number;
+      };
+    }) => Promise.resolve({
+      success: true,
+      message: 'Successfully generated landing page with custom quality thresholds',
       data: mockLandingPageData,
     }));
 
@@ -230,59 +255,52 @@ describe('WebsiteContext', () => {
       profileContext: mockProfileContext as unknown as ProfileContext,
     });
 
-    // Test with regenerateSegments option - use specific mock for this test
-    // Type assertion for the mock implementation
-    (freshLandingPageService.generateLandingPageData as unknown) = regenerateImplementation;
-    const regenerateResult = await context.generateLandingPage({ 
-      regenerateSegments: true, 
-    });
+    // Test with default options
+    (freshLandingPageService.generateLandingPageData as unknown) = defaultImplementation;
+    const defaultResult = await context.generateLandingPage({});
 
     // Assertions
-    expect(regenerateResult.success).toBe(true);
-    // Don't validate the specific message content as it comes from WebsiteContext
-    // Just verify the mock was called with the right parameters
-    expect(regenerateImplementation).toHaveBeenCalledWith({ 
-      regenerateSegments: true, 
-    });
+    expect(defaultResult.success).toBe(true);
+    expect(defaultImplementation).toHaveBeenCalledWith({});
 
-    // Test with specific segments - use specific mock for this test
-    // Type assertion for the mock implementation
-    (freshLandingPageService.generateLandingPageData as unknown) = segmentImplementation;
-    const segmentResult = await context.generateLandingPage({ 
-      segmentsToGenerate: ['identity', 'credibility'], 
-    });
-
-    // Assertions
-    expect(segmentResult.success).toBe(true);
-    // Don't validate the specific message content as it comes from WebsiteContext
-    // Just verify the mock was called with the right parameters
-    expect(segmentImplementation).toHaveBeenCalledWith({ 
-      segmentsToGenerate: ['identity', 'credibility'], 
-    });
-
-    // Test with skipReview option - use specific mock for this test
-    // Type assertion for the mock implementation
+    // Test with skipReview option
     (freshLandingPageService.generateLandingPageData as unknown) = skipReviewImplementation;
-    const skipReviewResult = await context.generateLandingPage({ 
-      skipReview: true, 
+    const skipReviewResult = await context.generateLandingPage({
+      skipReview: true,
     });
 
     // Assertions
     expect(skipReviewResult.success).toBe(true);
-    // Don't validate the specific message content as it comes from WebsiteContext
-    // Just verify the mock was called with the right parameters
-    expect(skipReviewImplementation).toHaveBeenCalledWith({ 
-      skipReview: true, 
+    expect(skipReviewImplementation).toHaveBeenCalledWith({
+      skipReview: true,
+    });
+
+    // Test with quality thresholds
+    (freshLandingPageService.generateLandingPageData as unknown) = qualityThresholdsImplementation;
+    const qualityThresholds = {
+      minCombinedScore: 0.8,
+      minQualityScore: 0.7,
+      minConfidenceScore: 0.6,
+    };
+
+    const qualityResult = await context.generateLandingPage({
+      qualityThresholds,
+    });
+
+    // Assertions
+    expect(qualityResult.success).toBe(true);
+    expect(qualityThresholdsImplementation).toHaveBeenCalledWith({
+      qualityThresholds,
     });
   });
 
   test('buildWebsite should run the build command through astro service', async () => {
     // Clear any previously called methods on the existing mock
     MockAstroContentService.resetInstance();
-    
+
     // Create a fresh mock with our standardized implementation
     const freshMockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
-    
+
     // Create context with the standardized mock
     const context = WebsiteContext.createFresh({
       astroContentService: freshMockAstroContentService,

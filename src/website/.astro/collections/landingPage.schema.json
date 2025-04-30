@@ -533,7 +533,16 @@
         "name",
         "tagline",
         "hero",
-        "services"
+        "problemStatement",
+        "services",
+        "process",
+        "caseStudies",
+        "expertise",
+        "about",
+        "pricing",
+        "faq",
+        "cta",
+        "footer"
       ],
       "additionalProperties": false
     }

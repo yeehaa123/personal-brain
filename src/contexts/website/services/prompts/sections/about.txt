@@ -1,0 +1,20 @@
+Generate an about section for a professional website. This section should provide a personal introduction to {{name}} and their background.
+
+Include:
+
+1. **Title**: A clear title for this section (e.g., "About Me", "About {{name}}")
+2. **Content**: A brief professional biography that covers:
+   - Professional background and experience
+   - Unique approach or philosophy
+   - Personal touch or motivation (optional)
+   - Relevant achievements (optional)
+3. **CTA** (optional):
+   - Optional call-to-action button text
+   - Link for the button
+
+Keep the content professional yet personable, and aligned with the profile:
+
+Name: {{name}}
+Tagline: {{tagline}}
+
+Return ONLY valid JSON with keys for: title, content (biography text), imageUrl (optional), ctaText (optional), ctaLink (optional), and enabled (set to true).

@@ -535,26 +535,25 @@ export class WebsiteContext extends BaseContext<
   /**
    * Generate a landing page from profile data
    * @param options Configuration options for generation
-   * @param options.regenerateSegments Whether to regenerate segments that are already cached
-   * @param options.segmentsToGenerate Which segments to generate (all by default)
-   * @param options.skipReview Whether to skip the final review phase
+   * @param options.skipReview Whether to skip the quality assessment phase
+   * @param options.qualityThresholds Custom thresholds for quality assessment
    * @returns Result of the generation operation
    */
   async generateLandingPage(options?: {
-    regenerateSegments?: boolean;
-    segmentsToGenerate?: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
     skipReview?: boolean;
+    qualityThresholds?: {
+      minCombinedScore?: number;
+      minQualityScore?: number;
+      minConfidenceScore?: number;
+    };
   }): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Generate landing page data using the segmented approach with provided options
+      // Generate landing page data with provided options
       const landingPageData = await landingPageService.generateLandingPageData(options);
-      
-      // Get generation status
-      const status = landingPageService.getSegmentGenerationStatus();
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);
@@ -567,27 +566,11 @@ export class WebsiteContext extends BaseContext<
       // Create success message that reflects what was generated
       let successMessage = 'Successfully generated landing page';
       
-      if (options?.segmentsToGenerate) {
-        const segmentNames = options.segmentsToGenerate.map(s => {
-          switch (s) {
-          case 'identity': return 'Identity';
-          case 'serviceOffering': return 'Service Offering';
-          case 'credibility': return 'Credibility';
-          case 'conversion': return 'Conversion';
-          default: return s;
-          }
-        });
-        
-        successMessage += ` with segments: ${segmentNames.join(', ')}`;
-      } else if (options?.regenerateSegments) {
-        successMessage += ' with all segments regenerated';
-      }
-      
       // Add review status
-      if (status.reviewed) {
-        successMessage += ' and reviewed for cohesion';
-      } else if (options?.skipReview) {
+      if (options?.skipReview) {
         successMessage += ' (review phase skipped)';
+      } else {
+        successMessage += ' with quality assessment';
       }
       
       return {

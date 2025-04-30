@@ -189,18 +189,18 @@ export const LandingPageSchema = z.object({
     'footer',
   ]),
   
-  // Sections
+  // Sections - all required but can be disabled with the 'enabled' property
   hero: HeroSectionSchema,
-  problemStatement: ProblemStatementSectionSchema.optional(),
+  problemStatement: ProblemStatementSectionSchema,
   services: ServicesSectionSchema,
-  process: ProcessSectionSchema.optional(),
-  caseStudies: CaseStudiesSectionSchema.optional(),
-  expertise: ExpertiseSectionSchema.optional(),
-  about: AboutSectionSchema.optional(),
-  pricing: PricingSectionSchema.optional(),
-  faq: FaqSectionSchema.optional(),
-  cta: CtaSectionSchema.optional(),
-  footer: FooterSectionSchema.optional(),
+  process: ProcessSectionSchema,
+  caseStudies: CaseStudiesSectionSchema,
+  expertise: ExpertiseSectionSchema,
+  about: AboutSectionSchema,
+  pricing: PricingSectionSchema,
+  faq: FaqSectionSchema,
+  cta: CtaSectionSchema,
+  footer: FooterSectionSchema,
 });
 
 export type LandingPageData = z.infer<typeof LandingPageSchema>;

@@ -8,6 +8,12 @@ import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { WebsiteToolService } from '@/contexts/website/tools';
 import type { WebsiteContext } from '@/contexts/website/websiteContext';
+import { 
+  LandingPageGenerationToolSchema, 
+  WebsiteBuildToolSchema,
+  WebsitePromoteToolSchema,
+  WebsiteStatusToolSchema
+} from '@website/schemas/websiteToolSchemas';
 
 describe('WebsiteToolService', () => {
   let toolService: WebsiteToolService;
@@ -75,25 +81,34 @@ describe('WebsiteToolService', () => {
   describe('getToolSchema', () => {
     it('should return schema for generate_landing_page tool', () => {
       const schema = toolService.getToolSchema({ name: 'generate_landing_page' });
-      expect(schema).toHaveProperty('regenerateSegments');
-      expect(schema).toHaveProperty('segments');
-      expect(schema).toHaveProperty('skipReview');
+      // Check that the schema has the same keys as the defined schema
+      Object.keys(LandingPageGenerationToolSchema.shape).forEach(key => {
+        expect(schema).toHaveProperty(key);
+      });
     });
 
     it('should return schema for build_website tool', () => {
       const schema = toolService.getToolSchema({ name: 'build_website' });
-      expect(schema).toHaveProperty('environment');
-      expect(schema).toHaveProperty('generateBeforeBuild');
+      // Check that the schema has the same keys as the defined schema
+      Object.keys(WebsiteBuildToolSchema.shape).forEach(key => {
+        expect(schema).toHaveProperty(key);
+      });
     });
 
     it('should return schema for promote_website tool', () => {
       const schema = toolService.getToolSchema({ name: 'promote_website' });
-      expect(schema).toHaveProperty('skipConfirmation');
+      // Check that the schema has the same keys as the defined schema
+      Object.keys(WebsitePromoteToolSchema.shape).forEach(key => {
+        expect(schema).toHaveProperty(key);
+      });
     });
 
     it('should return schema for get_website_status tool', () => {
       const schema = toolService.getToolSchema({ name: 'get_website_status' });
-      expect(schema).toHaveProperty('environment');
+      // Check that the schema has the same keys as the defined schema
+      Object.keys(WebsiteStatusToolSchema.shape).forEach(key => {
+        expect(schema).toHaveProperty(key);
+      });
     });
 
     it('should return empty schema for unknown tool', () => {
@@ -110,7 +125,7 @@ describe('WebsiteToolService', () => {
       tools = toolService.getTools(mockContext as unknown as WebsiteContext);
     });
 
-    it('generate_landing_page should call context.generateLandingPage', async () => {
+    it('generate_landing_page should call context.generateLandingPage with default options', async () => {
       // Find the tool
       const tool = tools.find(t => t.name === 'generate_landing_page');
       expect(tool).toBeDefined();
@@ -122,16 +137,12 @@ describe('WebsiteToolService', () => {
         data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
       }));
 
-      // Call the handler with default params (no segments specified)
+      // Call the handler with default params
       if (tool) {
         const result = await tool.handler({});
         
-        // Verify context method was called with default options
-        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({
-          regenerateSegments: false,
-          segmentsToGenerate: undefined,
-          skipReview: false,
-        });
+        // Check that options were passed with skipReview: false
+        expect(mockContext.generateLandingPage).toHaveBeenCalledWith({ skipReview: false });
         
         // Verify result structure
         expect(result).toHaveProperty('success', true);
@@ -140,7 +151,7 @@ describe('WebsiteToolService', () => {
       }
     });
     
-    it('generate_landing_page should pass segment options to context', async () => {
+    it('generate_landing_page should pass quality options to context', async () => {
       // Find the tool
       const tool = tools.find(t => t.name === 'generate_landing_page');
       expect(tool).toBeDefined();
@@ -148,23 +159,29 @@ describe('WebsiteToolService', () => {
       // Set up mock implementation for this test
       mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
         success: true,
-        message: 'Landing page segments generated',
+        message: 'Landing page with quality options generated',
         data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
       }));
 
-      // Call the handler with segment params
+      // Call the handler with quality params
       if (tool) {
         await tool.handler({
-          regenerateSegments: true,
-          segments: ['identity', 'credibility'],
           skipReview: true,
+          qualityThresholds: {
+            minCombinedScore: 0.8,
+            minQualityScore: 0.7,
+            minConfidenceScore: 0.6,
+          },
         });
         
         // Verify context method was called with the specified options
         expect(mockContext.generateLandingPage).toHaveBeenCalledWith({
-          regenerateSegments: true,
-          segmentsToGenerate: ['identity', 'credibility'],
           skipReview: true,
+          qualityThresholds: {
+            minCombinedScore: 0.8,
+            minQualityScore: 0.7,
+            minConfidenceScore: 0.6,
+          },
         });
       }
     });

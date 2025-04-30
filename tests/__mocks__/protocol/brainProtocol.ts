@@ -190,7 +190,17 @@ export class MockBrainProtocol {
   async processQuery<T = unknown>(_query: string, _options?: QueryOptions<T>): Promise<QueryResult<T>> {
     // If we have a custom response configured, use it
     if (this.options.customQueryResponse) {
-      return { ...this.options.customQueryResponse } as unknown as QueryResult<T>;
+      // Ensure response has the minimal required fields
+      const baseResponse: QueryResult<T> = {
+        answer: '',
+        citations: [],
+        relatedNotes: [],
+      };
+      
+      return { 
+        ...baseResponse,
+        ...this.options.customQueryResponse, 
+      } as QueryResult<T>;
     }
     
     // If a schema is provided, generate a structured response based on the schema

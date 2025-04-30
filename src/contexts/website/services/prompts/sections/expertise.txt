@@ -1,0 +1,20 @@
+Generate an expertise section for a professional website. This section should highlight the key areas of expertise and credentials that {{name}} possesses.
+
+Include:
+
+1. **Title**: A clear title for this section (e.g., "Expertise", "Skills & Specialties")
+2. **Introduction** (optional): A brief overview of expertise background
+3. **Expertise Items**: 3-6 specific areas of expertise, each with:
+   - Title: The name of the skill or specialty area
+   - Description (optional): A brief explanation of experience or approach in this area
+4. **Credentials** (optional): 1-3 relevant qualifications or credentials, each with:
+   - Title: Degree, certification, or achievement
+   - Issuer (optional): Institution or organization that granted it
+   - Year (optional): When it was obtained
+
+Keep the content professional and aligned with the profile:
+
+Name: {{name}}
+Tagline: {{tagline}}
+
+Return ONLY valid JSON with keys for: title, introduction (optional), items (array of expertise objects with title and optional description), credentials (optional array of credential objects), and enabled (set to true).

@@ -1,134 +1,135 @@
 import { mock } from 'bun:test';
-
 import type { LandingPageData } from '@website/schemas';
+import type { LandingPageGenerationOptions } from '@/contexts/website/services/landingPageGenerationService';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 /**
- * Mock implementation of LandingPageGenerationService for testing
+ * Mock implementation of LandingPageGenerationService
+ * Follows the Component Interface Standardization pattern
  */
 export class MockLandingPageGenerationService {
   private static instance: MockLandingPageGenerationService | null = null;
   
-  // Add properties required by the interface
-  private profileContext = null;
-  logger = { info: () => {}, error: () => {}, warn: () => {} };
-  
-  // Mock state
-  private defaultLandingPageData: LandingPageData = {
-    name: 'Test User',
-    title: 'Test User - Web Developer',
-    tagline: 'Building innovative web applications',
-    description: 'Professional web development services',
-    sectionOrder: ['hero', 'services', 'cta', 'footer'],
+  // Mock landing page data
+  private landingPageData: LandingPageData = {
+    title: 'Test Landing Page',
+    description: 'Test description',
+    name: 'Test Name',
+    tagline: 'Test Tagline',
+    sectionOrder: ['hero', 'services', 'about', 'footer'],
     hero: {
       headline: 'Test Headline',
       subheading: 'Test Subheading',
       ctaText: 'Get Started',
       ctaLink: '#contact',
     },
+    problemStatement: {
+      title: 'Test Problem Statement',
+      description: 'Test problem description',
+      enabled: true,
+    },
     services: {
-      title: 'Services',
-      items: [
-        { title: 'Service 1', description: 'Description 1' },
-      ],
+      title: 'Test Services',
+      items: [{ title: 'Service 1', description: 'Description 1' }],
+    },
+    process: {
+      title: 'How We Work',
+      steps: [{ step: 1, title: 'Step 1', description: 'Description' }],
+      enabled: true,
+    },
+    caseStudies: {
+      title: 'Case Studies',
+      items: [],
+      enabled: true,
+    },
+    expertise: {
+      title: 'Expertise',
+      items: [{ title: 'Expertise 1', description: 'Description 1' }],
+      enabled: true,
+    },
+    about: {
+      title: 'About Me',
+      content: 'Test about content',
+      enabled: true,
+    },
+    pricing: {
+      title: 'Pricing',
+      tiers: [],
+      enabled: false,
+    },
+    faq: {
+      title: 'FAQ',
+      items: [{ question: 'Question 1', answer: 'Answer 1' }],
+      enabled: true,
+    },
+    cta: {
+      title: 'Get Started',
+      buttonText: 'Contact Us',
+      buttonLink: '#contact',
+      enabled: true,
+    },
+    footer: {
+      copyrightText: '© 2023 Test Company',
+      enabled: true,
     },
   };
   
-  // Segment generation status for testing
-  private segmentGenerationStatus = {
-    identity: true,
-    serviceOffering: true,
-    credibility: true,
-    conversion: true,
-    combined: true,
-    reviewed: true,
-  };
-  
   // Mock methods
-  generateLandingPageData = mock((options?: {
-    regenerateSegments?: boolean;
-    segmentsToGenerate?: ('identity' | 'serviceOffering' | 'credibility' | 'conversion')[];
-    skipReview?: boolean;
-  }, overrides?: Partial<Record<string, unknown>>) => {
-    // Update status based on options
-    if (options) {
-      if (options.skipReview) {
-        this.segmentGenerationStatus.reviewed = false;
-      }
-      
-      if (options.regenerateSegments) {
-        // Reset all segment statuses
-        this.segmentGenerationStatus = {
-          identity: false,
-          serviceOffering: false,
-          credibility: false,
-          conversion: false,
-          combined: false,
-          reviewed: false,
-        };
-      }
-      
-      if (options.segmentsToGenerate) {
-        // Only mark specified segments as generated
-        this.segmentGenerationStatus = {
-          identity: options.segmentsToGenerate.includes('identity'),
-          serviceOffering: options.segmentsToGenerate.includes('serviceOffering'),
-          credibility: options.segmentsToGenerate.includes('credibility'),
-          conversion: options.segmentsToGenerate.includes('conversion'),
-          combined: true,
-          reviewed: !options.skipReview,
-        };
-      }
-    }
-    
-    // Return an enhanced landing page data structure with all required sections
-    return Promise.resolve({
-      ...this.defaultLandingPageData,
-      // Add required sections for the enhanced landing page
-      sectionOrder: ['hero', 'services', 'cta', 'footer'],
+  public generateLandingPageData = mock(async (_options?: LandingPageGenerationOptions): Promise<LandingPageData> => {
+    return { ...this.landingPageData };
+  });
+  
+  public getSectionQualityAssessments = mock((): Record<string, AssessedSection<unknown>> => {
+    return {
       hero: {
-        headline: 'Test Headline',
-        subheading: 'Test Subheading',
-        ctaText: 'Get Started',
-        ctaLink: '#contact',
+        content: this.landingPageData.hero,
+        assessment: {
+          qualityScore: 8,
+          qualityJustification: 'Good hero section',
+          confidenceScore: 9,
+          confidenceJustification: 'Very confident',
+          combinedScore: 8.5,
+          enabled: true,
+          suggestedImprovements: 'Minor improvements',
+          improvementsApplied: false,
+        },
+        isRequired: true,
       },
-      services: {
-        title: 'Services',
-        items: [
-          { title: 'Service 1', description: 'Description 1' },
-          { title: 'Service 2', description: 'Description 2' },
-        ],
+      about: {
+        content: this.landingPageData.about,
+        assessment: {
+          qualityScore: 7,
+          qualityJustification: 'Good about section',
+          confidenceScore: 8,
+          confidenceJustification: 'Confident',
+          combinedScore: 7.5,
+          enabled: true,
+          suggestedImprovements: 'Add more details',
+          improvementsApplied: false,
+        },
+        isRequired: false,
       },
-      cta: {
-        title: 'Ready to Start?',
-        subtitle: 'Contact us today',
-        buttonText: 'Contact Now',
-        buttonLink: '#contact',
-        enabled: true,
-      },
-      footer: {
-        copyrightText: `© ${new Date().getFullYear()} Test User. All rights reserved.`,
-        enabled: true,
-      },
-      ...overrides,
-    });
+    };
   });
   
-  // Mock method to get segment generation status
-  getSegmentGenerationStatus = mock(() => {
-    return {...this.segmentGenerationStatus};
+  public getBrainProtocol = mock((): BrainProtocol => {
+    return {} as BrainProtocol;
   });
   
-  setProfileContext = mock(() => {
-    // No-op in mock
+  public setBrainProtocol = mock((_protocol: BrainProtocol): void => {
+    // Mock implementation
   });
-  
-  getProfileContext = mock(() => {
-    return this.profileContext;
-  });
-  
   
   /**
-   * Get the singleton instance
+   * Set landing page data for testing
+   */
+  setLandingPageData(data: LandingPageData): void {
+    this.landingPageData = data;
+  }
+  
+  /**
+   * Get singleton instance
    */
   static getInstance(): MockLandingPageGenerationService {
     if (!MockLandingPageGenerationService.instance) {
@@ -138,27 +139,18 @@ export class MockLandingPageGenerationService {
   }
   
   /**
-   * Reset the singleton instance (for test isolation)
+   * Reset singleton instance
    */
   static resetInstance(): void {
-    if (MockLandingPageGenerationService.instance) {
-      MockLandingPageGenerationService.instance.generateLandingPageData.mockClear();
-      MockLandingPageGenerationService.instance.setProfileContext.mockClear();
-    }
     MockLandingPageGenerationService.instance = null;
   }
   
   /**
-   * Create a fresh instance (for test isolation)
+   * Create fresh instance
    */
   static createFresh(): MockLandingPageGenerationService {
     return new MockLandingPageGenerationService();
   }
-  
-  /**
-   * Set custom landing page data for testing
-   */
-  setDefaultLandingPageData(data: LandingPageData): void {
-    this.defaultLandingPageData = data;
-  }
 }
+
+export default MockLandingPageGenerationService;
