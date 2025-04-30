@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import type { WebsiteContext } from '@/contexts';
 import type { ResourceDefinition } from '@/contexts/contextInterface';
@@ -17,7 +17,7 @@ import {
   LandingPageGenerationToolSchema,
   WebsiteBuildToolSchema, 
   WebsitePromoteToolSchema,
-  WebsiteStatusToolSchema 
+  WebsiteStatusToolSchema, 
 } from '@website/schemas/websiteToolSchemas';
 
 /**

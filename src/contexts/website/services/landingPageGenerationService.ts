@@ -1,6 +1,7 @@
+import type { z } from 'zod';
+
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
-import { z } from 'zod';
 import { 
   AboutSectionSchema,
   CaseStudiesSectionSchema,
@@ -21,17 +22,17 @@ import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
 
 import { SectionQualityService } from './landingPage/sectionQualityService';
 import contentReviewPrompt from './prompts/content-review.txt';
-import heroSectionPrompt from './prompts/sections/hero-section.txt';
-import problemStatementPrompt from './prompts/sections/problem-statement.txt';
-import servicesPrompt from './prompts/sections/services.txt';
-import processPrompt from './prompts/sections/process.txt';
-import caseStudiesPrompt from './prompts/sections/case-studies.txt';
-import expertisePrompt from './prompts/sections/expertise.txt';
 import aboutPrompt from './prompts/sections/about.txt';
-import pricingPrompt from './prompts/sections/pricing.txt';
-import faqPrompt from './prompts/sections/faq.txt';
+import caseStudiesPrompt from './prompts/sections/case-studies.txt';
 import ctaPrompt from './prompts/sections/cta.txt';
+import expertisePrompt from './prompts/sections/expertise.txt';
+import faqPrompt from './prompts/sections/faq.txt';
 import footerPrompt from './prompts/sections/footer.txt';
+import heroSectionPrompt from './prompts/sections/hero-section.txt';
+import pricingPrompt from './prompts/sections/pricing.txt';
+import problemStatementPrompt from './prompts/sections/problem-statement.txt';
+import processPrompt from './prompts/sections/process.txt';
+import servicesPrompt from './prompts/sections/services.txt';
 
 /**
  * Options for landing page generation
@@ -396,7 +397,8 @@ Return only these four fields formatted as JSON.`;
           });
           
           // Update the landing page with the validated content
-          landingPage[sectionKey] = validatedContent as any;
+          // Use a type assertion to treat the validated content as part of the landing page
+          (landingPage as Partial<LandingPageData>)[sectionKey] = validatedContent;
           
           this.logger.debug(`Generated content for section: ${sectionType}`, {
             context: 'LandingPageGenerationService',
@@ -483,11 +485,12 @@ Return only these four fields formatted as JSON.`;
           const validatedContent = schema.parse(assessedSection.content);
           
           // Update the landing page with the validated content
-          assessedLandingPage[sectionKey] = validatedContent as any;
+          // Use a type assertion to treat the validated content as part of the landing page
+          (assessedLandingPage as Partial<LandingPageData>)[sectionKey] = validatedContent;
           
           // Update the enabled status based on the assessment
           if (assessedSection.assessment && 'enabled' in validatedContent) {
-            (validatedContent as any).enabled = assessedSection.assessment.enabled;
+            (validatedContent as unknown as { enabled: boolean }).enabled = assessedSection.assessment.enabled;
           }
         }
       } catch (error) {
@@ -522,7 +525,7 @@ Return only these four fields formatted as JSON.`;
       const isRequired = REQUIRED_SECTION_TYPES.includes(sectionType);
       // Check if section is an object and has enabled property
       const sectionEnabled = (typeof section === 'object' && section !== null && 'enabled' in section) 
-        ? (section as any).enabled === true 
+        ? (section as unknown as { enabled: boolean }).enabled === true 
         : true;
       
       if (isRequired || sectionEnabled) {

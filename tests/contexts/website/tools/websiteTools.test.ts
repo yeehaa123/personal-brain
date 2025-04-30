@@ -12,7 +12,7 @@ import {
   LandingPageGenerationToolSchema, 
   WebsiteBuildToolSchema,
   WebsitePromoteToolSchema,
-  WebsiteStatusToolSchema
+  WebsiteStatusToolSchema,
 } from '@website/schemas/websiteToolSchemas';
 
 describe('WebsiteToolService', () => {

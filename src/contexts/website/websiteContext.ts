@@ -621,7 +621,7 @@ export class WebsiteContext extends BaseContext<
             context: 'WebsiteContext',
           });
           
-          // Generate landing page data with all segments
+          // Generate landing page data with all sections
           // Avoid regenerating if already exists - use skipReview for faster generation
           const generationResult = await this.generateLandingPage({ skipReview: true });
           if (!generationResult.success) {

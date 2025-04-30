@@ -1,7 +1,8 @@
 import { mock } from 'bun:test';
-import type { LandingPageData } from '@website/schemas';
+
 import type { LandingPageGenerationOptions } from '@/contexts/website/services/landingPageGenerationService';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 /**
