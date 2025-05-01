@@ -149,7 +149,9 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       
       // Get domain based on environment
       const domain = this.getDomainForEnvironment(environment);
-      const url = `https://${domain}`;
+      // Use HTTP for localhost, HTTPS for real domains
+      const protocol = domain.includes('localhost') ? 'http' : 'https';
+      const url = `${protocol}://${domain}`;
       
       // Check build status
       let buildStatus: 'Built' | 'Not Built' | 'Empty' = 'Not Built';
@@ -253,14 +255,18 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       });
       
       // Return a default error status
+      const domain = this.getDomainForEnvironment(environment);
+      // Use HTTP for localhost, HTTPS for real domains
+      const protocol = domain.includes('localhost') ? 'http' : 'https';
+      
       return {
         environment,
         buildStatus: 'Not Built',
         fileCount: 0,
         serverStatus: 'Unknown',
-        domain: this.getDomainForEnvironment(environment),
+        domain,
         accessStatus: 'Error',
-        url: `https://${this.getDomainForEnvironment(environment)}`,
+        url: `${protocol}://${domain}`,
       };
     }
   }
@@ -484,10 +490,13 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
           });
         }
         
+        // Use HTTP for localhost, HTTPS for real domains
+        const protocol = productionDomain.includes('localhost') ? 'http' : 'https';
+        
         return {
           success: true,
           message: `Preview successfully promoted to production (${productionFiles.length} files).`,
-          url: `https://${productionDomain}`,
+          url: `${protocol}://${productionDomain}`,
         };
       } catch (fsError) {
         throw new Error(`File system error during promotion: ${fsError instanceof Error ? fsError.message : String(fsError)}`);
