@@ -173,7 +173,7 @@ export const LandingPageSchema = z.object({
   description: z.string(),
   name: z.string(),
   tagline: z.string(),
-  
+
   // Section order - defines which sections appear and in what order
   sectionOrder: z.array(z.string()).default([
     'hero',
@@ -188,7 +188,7 @@ export const LandingPageSchema = z.object({
     'cta',
     'footer',
   ]),
-  
+
   // Sections - all required but can be disabled with the 'enabled' property
   hero: HeroSectionSchema,
   problemStatement: ProblemStatementSectionSchema,

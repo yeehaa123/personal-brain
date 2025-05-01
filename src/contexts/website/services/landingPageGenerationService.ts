@@ -307,6 +307,38 @@ export class LandingPageGenerationService {
       },
       footer: {
         copyrightText: `© ${currentYear} Professional Expert`,
+        contactDetails: {
+          email: "contact@example.com",
+          phone: "+1 (123) 456-7890",
+          social: [
+            {
+              platform: "twitter",
+              url: "https://twitter.com/example"
+            },
+            {
+              platform: "linkedin",
+              url: "https://linkedin.com/in/example"
+            }
+          ]
+        },
+        links: [
+          {
+            text: "Home",
+            url: "/"
+          },
+          {
+            text: "Services",
+            url: "#services"
+          },
+          {
+            text: "About",
+            url: "#about"
+          },
+          {
+            text: "Contact",
+            url: "#contact"
+          }
+        ],
         enabled: true,
       },
     };
