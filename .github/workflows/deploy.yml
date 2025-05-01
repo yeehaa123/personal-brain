@@ -39,6 +39,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WEBSITE_DOMAIN: ${{ github.event.inputs.domain || secrets.WEBSITE_DOMAIN || 'example.com' }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          WEBSITE_DEPLOYMENT_TYPE: ${{ secrets.WEBSITE_DEPLOYMENT_TYPE || 'caddy' }}
         run: |
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }} "
             export MATRIX_HOMESERVER_URL=\"${MATRIX_HOMESERVER_URL}\"
@@ -50,6 +51,7 @@ jobs:
             export ANTHROPIC_API_KEY=\"${ANTHROPIC_API_KEY}\"
             export WEBSITE_DOMAIN=\"${WEBSITE_DOMAIN}\"
             export GITHUB_REPOSITORY=\"${GITHUB_REPOSITORY}\"
+            export WEBSITE_DEPLOYMENT_TYPE=\"${WEBSITE_DEPLOYMENT_TYPE}\"
             
             # Make the scripts executable
             chmod +x ~/deploy-bot.sh
