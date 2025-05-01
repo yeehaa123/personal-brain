@@ -156,7 +156,7 @@ export const websiteConfig = {
     previewDir: getEnv('WEBSITE_PREVIEW_DIR', '/opt/personal-brain-website/preview'),
     productionDir: getEnv('WEBSITE_PRODUCTION_DIR', '/opt/personal-brain-website/production'),
     
-    // Port settings (for local development)
+    // Port settings (for server)
     previewPort: getEnvAsInt('WEBSITE_PREVIEW_PORT', 4321),
     productionPort: getEnvAsInt('WEBSITE_PRODUCTION_PORT', 4322),
     

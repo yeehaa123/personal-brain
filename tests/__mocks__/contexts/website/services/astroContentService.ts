@@ -30,6 +30,7 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
   runAstroCommand = mock<(command: string) => Promise<{ success: boolean; output: string }>>((command: string) => {
     return Promise.resolve({ success: true, output: `Command ${command} executed successfully` });
   });
+  getBuildDir = mock(() => '/mock/astro/path/dist');
   killProcess = mock(() => Promise.resolve(true));
   
   // PM2 methods
@@ -62,6 +63,7 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
       MockAstroContentService.instance.writeLandingPageContent.mockClear();
       MockAstroContentService.instance.readLandingPageContent.mockClear();
       MockAstroContentService.instance.runAstroCommand.mockClear();
+      MockAstroContentService.instance.getBuildDir.mockClear();
       MockAstroContentService.instance.killProcess.mockClear();
       MockAstroContentService.instance.startDevServer.mockClear();
       MockAstroContentService.instance.stopDevServer.mockClear();

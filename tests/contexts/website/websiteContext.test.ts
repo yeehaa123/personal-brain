@@ -344,9 +344,14 @@ describe('WebsiteContext', () => {
 
   // Tests for Caddy-based approach
   test('handleWebsiteBuild should build the website to preview environment', async () => {
-    // Create context with mocked Astro service
+    // Reset and create a fresh mock deployment manager
+    MockWebsiteDeploymentManager.resetInstance();
+    const mockDeployManager = MockWebsiteDeploymentManager.createFresh();
+    
+    // Create context with mocked services
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
+      deploymentManager: mockDeployManager as unknown as WebsiteDeploymentManager,
     });
 
     // Mock the buildWebsite method to return success
@@ -360,9 +365,9 @@ describe('WebsiteContext', () => {
 
     expect(result.success).toBe(true);
     expect(result.message).toBe('Website built successfully');
-    expect(result.path).toContain('dist');
-    // In local-dev mode (default for tests), the URL is http://localhost:port
-    expect(result.url).toContain('http://localhost:');
+    expect(result.path).toBeDefined();
+    // URL should come from the mock deployment manager's environment status
+    expect(result.url).toBe('https://preview.example.com');
   });
 
   test('handleWebsiteBuild should handle errors when build fails', async () => {

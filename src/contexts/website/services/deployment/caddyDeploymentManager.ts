@@ -284,7 +284,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       const util = await import('util');
       
       // Define directory paths
-      // The preview site is built to src/website/dist by Astro
+      // The preview site is built to src/website/dist by Astro build
       const previewDir = path.join(process.cwd(), 'src', 'website', 'dist');
       // The production server looks for files in dist/production, not baseDir/production/dist
       const productionDir = path.join(process.cwd(), 'dist', 'production');

@@ -272,8 +272,9 @@ export class WebsiteContext extends BaseContext<
     const rootDir = process.cwd();
     
     if (environment === 'preview') {
-      // For preview, use the astroProjectPath/dist
-      return path.join(config.astroProjectPath, 'dist');
+      // For preview, use the build output directory
+      const astroContentService = await this.getAstroContentService();
+      return astroContentService.getBuildDir();
     } else {
       // For production, use the standard production directory
       return path.join(rootDir, 'dist', 'production');

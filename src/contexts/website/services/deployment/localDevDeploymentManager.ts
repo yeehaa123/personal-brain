@@ -296,8 +296,8 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       
       // Define target directory for this environment
       const rootDir = process.cwd();
-      // For preview, we use src/website/dist because that's where Astro builds to
-      // For production, we use dist/production
+      // For preview, use Astro's build output (src/website/dist)
+      // For production, use dist/production
       const targetDir = environment === 'preview' 
         ? path.join(rootDir, 'src', 'website', 'dist')
         : path.join(rootDir, 'dist', 'production');
@@ -422,7 +422,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       
       // Define paths for local development - make sure we're using the correct paths
       const rootDir = process.cwd();
-      // The preview site is built to src/website/dist by Astro
+      // The preview site is built to src/website/dist by Astro build
       const previewDir = path.join(rootDir, 'src', 'website', 'dist');
       const productionDir = path.join(rootDir, 'dist', 'production');
       

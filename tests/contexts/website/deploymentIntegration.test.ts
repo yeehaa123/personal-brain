@@ -92,20 +92,33 @@ describe('Website Deployment Integration', () => {
     // Set up the environment for testing
     process.env['NODE_ENV'] = 'test';
     
-    // Build the website
-    const buildResult = await websiteContext.handleWebsiteBuild();
-    expect(buildResult.success).toBe(true);
-    expect(buildResult.message).toBe('Website built successfully');
+    // Reset and create mockDeploymentManager with direct control
+    const mockDeploymentManager = new LocalDevDeploymentManager();
     
-    // Get the deployment manager that was created
-    const deploymentManager = await websiteContext.getDeploymentManager();
+    // Override needed methods for test
+    mockDeploymentManager.getEnvironmentStatus = mock(() => Promise.resolve({
+      environment: 'preview',
+      buildStatus: 'Built',
+      fileCount: 42,
+      serverStatus: 'Running',
+      domain: 'localhost:4321',
+      accessStatus: 'Accessible',
+      url: 'http://localhost:4321'
+    }));
     
-    // Mock the promotion operation
-    deploymentManager.promoteToProduction = mock(() => Promise.resolve({
+    mockDeploymentManager.promoteToProduction = mock(() => Promise.resolve({
       success: true,
       message: 'Promotion succeeded',
       url: 'http://localhost:4322',
     }));
+    
+    // Set the deployment manager directly for testing
+    websiteContext.setDeploymentManagerForTesting(mockDeploymentManager);
+    
+    // Build the website
+    const buildResult = await websiteContext.handleWebsiteBuild();
+    expect(buildResult.success).toBe(true);
+    expect(buildResult.message).toBe('Website built successfully');
     
     // Promote to production
     const promoteResult = await websiteContext.handleWebsitePromote();
@@ -114,7 +127,7 @@ describe('Website Deployment Integration', () => {
     expect(promoteResult.url).toBe('http://localhost:4322');
     
     // Verify the deployment manager was called
-    expect(deploymentManager.promoteToProduction).toHaveBeenCalled();
+    expect(mockDeploymentManager.promoteToProduction).toHaveBeenCalled();
   });
   
   test('should handle build failure correctly', async () => {
