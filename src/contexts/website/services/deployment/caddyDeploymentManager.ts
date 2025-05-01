@@ -492,17 +492,23 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         
         // Use HTTP for localhost, HTTPS for real domains
         const protocol = productionDomain.includes('localhost') ? 'http' : 'https';
+        const siteUrl = `${protocol}://${productionDomain}`;
+        
+        // Determine if we're in dev mode for messaging
+        const isDevMode = productionDomain.includes('localhost');
         
         return {
           success: true,
-          message: `Preview successfully promoted to production (${productionFiles.length} files).`,
-          url: `${protocol}://${productionDomain}`,
+          message: isDevMode
+            ? `Preview successfully promoted to live site (${productionFiles.length} files). Available at ${siteUrl} (development mode)`
+            : `Preview successfully promoted to production (${productionFiles.length} files).`,
+          url: siteUrl,
         };
       } catch (fsError) {
         throw new Error(`File system error during promotion: ${fsError instanceof Error ? fsError.message : String(fsError)}`);
       }
     } catch (error) {
-      this.logger.error('Error promoting website', {
+      this.logger.error('Error promoting website to production', {
         error,
         context: 'CaddyDeploymentManager',
       });

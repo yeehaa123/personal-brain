@@ -17,6 +17,12 @@ export type SpawnFunction = (options: {
   stderr: ReadableStream<Uint8Array>;
 };
 
+// Test helper methods - will only be implemented in the mock
+export interface AstroContentServiceTestHelpers {
+  // For testing only
+  setLandingPageData(data: LandingPageData | null): void;
+}
+
 /**
  * Service for managing Astro project and content collections
  */

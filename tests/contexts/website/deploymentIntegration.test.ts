@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { WebsiteContext } from '@/contexts';
 import type { AstroContentService } from '@/contexts/website/services/astroContentService';
 import { 
-  DeploymentManagerFactory, 
+  DeploymentManagerFactory,
+  type WebsiteDeploymentManager,
 } from '@/contexts/website/services/deployment';
 import { LocalDevDeploymentManager } from '@/contexts/website/services/deployment/localDevDeploymentManager';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
@@ -92,25 +93,24 @@ describe('Website Deployment Integration', () => {
     // Set up the environment for testing
     process.env['NODE_ENV'] = 'test';
     
-    // Reset and create mockDeploymentManager with direct control
-    const mockDeploymentManager = new LocalDevDeploymentManager();
-    
-    // Override needed methods for test
-    mockDeploymentManager.getEnvironmentStatus = mock(() => Promise.resolve({
-      environment: 'preview',
-      buildStatus: 'Built',
-      fileCount: 42,
-      serverStatus: 'Running',
-      domain: 'localhost:4321',
-      accessStatus: 'Accessible',
-      url: 'http://localhost:4321'
-    }));
-    
-    mockDeploymentManager.promoteToProduction = mock(() => Promise.resolve({
-      success: true,
-      message: 'Promotion succeeded',
-      url: 'http://localhost:4322',
-    }));
+    // Create a mock deployment manager as a WebsiteDeploymentManager
+    const mockDeploymentManager: WebsiteDeploymentManager = {
+      getEnvironmentStatus: mock(() => Promise.resolve({
+        environment: 'preview' as const,
+        buildStatus: 'Built' as const,
+        fileCount: 42,
+        serverStatus: 'Running' as const,
+        domain: 'localhost:4321',
+        accessStatus: 'Accessible',
+        url: 'http://localhost:4321',
+      })),
+      
+      promoteToProduction: mock(() => Promise.resolve({
+        success: true,
+        message: 'Promotion succeeded',
+        url: 'http://localhost:4322',
+      })),
+    };
     
     // Set the deployment manager directly for testing
     websiteContext.setDeploymentManagerForTesting(mockDeploymentManager);

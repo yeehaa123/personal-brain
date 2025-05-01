@@ -267,7 +267,6 @@ export class WebsiteContext extends BaseContext<
    * @returns The absolute path for the environment
    */
   private async getEnvironmentPath(environment: 'preview' | 'production'): Promise<string> {
-    const config = await this.getConfig();
     const path = await import('path');
     const rootDir = process.cwd();
     
@@ -846,9 +845,14 @@ export class WebsiteContext extends BaseContext<
         path,
       });
       
+      // Determine if we're in dev mode
+      const isDevMode = status.url.includes('localhost');
+      
       return {
         success: true,
-        message: 'Website built successfully',
+        message: isDevMode 
+          ? `Website built successfully. Available at ${status.url} (development mode)`
+          : 'Website built successfully',
         path,
         url: status.url,
       };

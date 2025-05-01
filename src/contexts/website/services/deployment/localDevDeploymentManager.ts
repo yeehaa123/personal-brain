@@ -536,14 +536,14 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
         
         return {
           success: true,
-          message: `Preview successfully promoted to production (${productionFileCount} files). To serve the production site, run: npx serve ${productionDir} -p ${this.productionPort}`,
+          message: `Preview successfully promoted to live site (${productionFileCount} files). Available at http://localhost:${this.productionPort}`,
           url: `http://localhost:${this.productionPort}`, // Use configured production port
         };
       } catch (fsError) {
         throw new Error(`File system error during promotion: ${fsError instanceof Error ? fsError.message : String(fsError)}`);
       }
     } catch (error) {
-      this.logger.error('Error promoting website in development mode', {
+      this.logger.error('Error promoting website to live site in development mode', {
         error,
         context: 'LocalDevDeploymentManager',
       });
