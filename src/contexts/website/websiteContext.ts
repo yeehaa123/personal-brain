@@ -438,8 +438,7 @@ export class WebsiteContext extends BaseContext<
         context: 'WebsiteContext',
       });
       
-      // Always use LocalDevDeploymentManager for local-dev deployment type
-      // or when explicitly configured with WEBSITE_DEPLOYMENT_TYPE=local-dev
+      // Set the deployment manager based on configuration
       if (config.deployment.type === 'local-dev' || 
           process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev') {
         
@@ -450,6 +449,15 @@ export class WebsiteContext extends BaseContext<
         // Import the local development manager
         const { LocalDevDeploymentManager } = await import('./services/deployment/localDevDeploymentManager');
         factory.setDeploymentManagerClass(LocalDevDeploymentManager);
+      } else {
+        // Explicitly set the Caddy deployment manager for server environments
+        this.logger.info('Using LocalCaddyDeploymentManager', {
+          context: 'WebsiteContext',
+        });
+        
+        // Import the local caddy deployment manager
+        const { LocalCaddyDeploymentManager } = await import('./services/deployment/deploymentManager');
+        factory.setDeploymentManagerClass(LocalCaddyDeploymentManager);
       }
       
       // Create the deployment manager with appropriate configuration
@@ -459,6 +467,14 @@ export class WebsiteContext extends BaseContext<
           previewPort: config.deployment.previewPort,
           productionPort: config.deployment.productionPort,
         },
+      });
+      
+      // Log the type of deployment manager that was created
+      this.logger.info('Created deployment manager', {
+        context: 'WebsiteContext',
+        managerType: this.deploymentManager.constructor.name,
+        isLocalDev: config.deployment.type === 'local-dev',
+        envType: process.env['WEBSITE_DEPLOYMENT_TYPE'],
       });
     }
     
@@ -917,8 +933,14 @@ export class WebsiteContext extends BaseContext<
       // Get environment status using the deployment manager
       const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
       
-      // Create a comprehensive status message (the deployment manager handles PM2 status checks now)
-      const statusMessage = `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
+      // Create a comprehensive status message but only show the domain URL for production setups
+      const isProductionSetup = process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'caddy' || 
+                               !status.domain.includes('localhost');
+      
+      // Format message appropriately based on environment
+      const statusMessage = isProductionSetup
+        ? `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, URL: ${status.url}`
+        : `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
       
       // Return the status data
       return {
