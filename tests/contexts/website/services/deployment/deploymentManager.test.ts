@@ -9,7 +9,7 @@ import type {
 } from '@/contexts/website/services/deployment';
 import {
   DeploymentManagerFactory,
-  LocalCaddyDeploymentManager,
+  CaddyDeploymentManager,
 } from '@/contexts/website/services/deployment';
 import { LocalDevDeploymentManager } from '@/contexts/website/services/deployment/localDevDeploymentManager';
 
@@ -57,9 +57,9 @@ describe('DeploymentManagerFactory', () => {
   test('create method creates the correct type of manager', () => {
     const factory = DeploymentManagerFactory.createFresh();
 
-    // Default is LocalCaddyDeploymentManager
+    // Default is CaddyDeploymentManager
     const defaultManager = factory.create();
-    expect(defaultManager instanceof LocalCaddyDeploymentManager).toBe(true);
+    expect(defaultManager instanceof CaddyDeploymentManager).toBe(true);
 
     // Set a different class
     factory.setDeploymentManagerClass(LocalDevDeploymentManager);
@@ -68,7 +68,7 @@ describe('DeploymentManagerFactory', () => {
   });
 });
 
-describe('LocalCaddyDeploymentManager', () => {
+describe('CaddyDeploymentManager', () => {
   let manager: WebsiteDeploymentManager;
 
   beforeEach(() => {
@@ -81,7 +81,7 @@ describe('LocalCaddyDeploymentManager', () => {
     mockExec.mockClear();
 
     // Create a fresh manager
-    manager = LocalCaddyDeploymentManager.createFresh({ baseDir: '/test-dir' });
+    manager = CaddyDeploymentManager.createFresh({ baseDir: '/test-dir' });
   });
 
   test('getEnvironmentStatus returns status for preview environment', async () => {
