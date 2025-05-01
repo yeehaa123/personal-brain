@@ -360,7 +360,7 @@ describe('WebsiteContext', () => {
 
     expect(result.success).toBe(true);
     expect(result.message).toBe('Website built successfully');
-    expect(result.path).toContain('dist/preview');
+    expect(result.path).toContain('dist');
     // In local-dev mode (default for tests), the URL is http://localhost:port
     expect(result.url).toContain('http://localhost:');
   });

@@ -262,6 +262,35 @@ export class WebsiteContext extends BaseContext<
   }
   
   /**
+   * Get the path for a specific environment
+   * @param environment The environment to get the path for
+   * @returns The absolute path for the environment
+   */
+  private async getEnvironmentPath(environment: 'preview' | 'production'): Promise<string> {
+    const config = await this.getConfig();
+    const path = await import('path');
+    const rootDir = process.cwd();
+    
+    if (environment === 'preview') {
+      // For preview, use the astroProjectPath/dist
+      return path.join(config.astroProjectPath, 'dist');
+    } else {
+      // For production, use the standard production directory
+      return path.join(rootDir, 'dist', 'production');
+    }
+  }
+  
+  /**
+   * Get the template path for the default HTML file
+   * @returns The path to the template HTML file
+   */
+  private async getTemplatePath(): Promise<string> {
+    const path = await import('path');
+    const rootDir = process.cwd();
+    return path.join(rootDir, 'src', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+  }
+  
+  /**
    * Ensure the production directory exists and has at least a basic HTML file
    * This prevents errors when starting the production server before promotion
    */
@@ -270,9 +299,8 @@ export class WebsiteContext extends BaseContext<
       const fs = await import('fs/promises');
       const path = await import('path');
       
-      // Define the production directory
-      const rootDir = process.cwd();
-      const productionDir = path.join(rootDir, 'dist', 'production');
+      // Get the production directory path
+      const productionDir = await this.getEnvironmentPath('production');
       
       this.logger.info(`Ensuring production directory exists: ${productionDir}`, {
         context: 'WebsiteContext',
@@ -297,7 +325,7 @@ export class WebsiteContext extends BaseContext<
         });
         
         // Path to the template file
-        const templatePath = path.join(rootDir, 'src', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+        const templatePath = await this.getTemplatePath();
         
         // Read the template file and write it to the production directory
         const template = await fs.readFile(templatePath, 'utf-8');
@@ -321,6 +349,24 @@ export class WebsiteContext extends BaseContext<
    */
   setReadyState(ready: boolean): void {
     this.readyState = ready;
+  }
+  
+  /**
+   * Standardized error handler for website operations
+   * @param error The error that occurred
+   * @param operation The operation that failed
+   * @returns A standardized error response
+   */
+  private handleError(error: unknown, operation: string): { success: false; message: string } {
+    this.logger.error(`Error ${operation}`, {
+      error,
+      context: 'WebsiteContext',
+    });
+    
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : `Unknown error ${operation}`,
+    };
   }
   
   /**
@@ -429,22 +475,9 @@ export class WebsiteContext extends BaseContext<
     if (!this.deploymentManager) {
       // Get the configuration
       const config = await this.getConfig();
-      
-      // Check environment and configuration to determine which manager to use
       const factory = DeploymentManagerFactory.getInstance();
       
-      this.logger.info('Initializing deployment manager', {
-        deploymentType: config.deployment.type,
-        context: 'WebsiteContext',
-      });
-      
-      // Log the deployment configuration for debugging
-      this.logger.info('Deployment configuration', {
-        deploymentType: config.deployment.type,
-        context: 'WebsiteContext',
-      });
-      
-      // Create the deployment manager with appropriate configuration
+      // Create deployment manager using the factory
       this.deploymentManager = factory.create({
         baseDir: config.astroProjectPath,
         deploymentType: config.deployment.type,
@@ -454,11 +487,9 @@ export class WebsiteContext extends BaseContext<
         },
       });
       
-      // Log the type of deployment manager that was created
       this.logger.info('Created deployment manager', {
         context: 'WebsiteContext',
-        managerType: this.deploymentManager.constructor.name,
-        deploymentType: config.deployment.type,
+        type: config.deployment.type,
       });
     }
     
@@ -494,6 +525,7 @@ export class WebsiteContext extends BaseContext<
         error,
         context: 'WebsiteContext',
       });
+      // Re-throw this error as it's a critical dependency
       throw error;
     }
     
@@ -722,35 +754,29 @@ export class WebsiteContext extends BaseContext<
         };
       }
 
-      // Check if landing page data exists, and generate if not
+      // Check if landing page data exists, but don't auto-generate
       try {
         const landingPageData = await astroService.readLandingPageContent();
         if (!landingPageData) {
-          this.logger.info('No landing page data found, generating it before build', {
+          this.logger.warn('No landing page data found', {
             context: 'WebsiteContext',
           });
           
-          // Generate landing page data with all sections
-          // No quality assessment is done during generation
-          const generationResult = await this.generateLandingPage();
-          if (!generationResult.success) {
-            this.logger.warn('Could not generate landing page data before build', {
-              context: 'WebsiteContext',
-              message: generationResult.message,
-            });
-          } else {
-            this.logger.info('Successfully generated landing page data before build', {
-              context: 'WebsiteContext',
-              message: generationResult.message,
-            });
-          }
+          return {
+            success: false,
+            message: 'No landing page data found. Please run "website landing-page generate" first.',
+          };
         }
       } catch (contentError) {
-        this.logger.warn('Error checking landing page content before build', {
+        this.logger.error('Error checking landing page content before build', {
           error: contentError,
           context: 'WebsiteContext',
         });
-        // Continue with build even if this fails
+        
+        return {
+          success: false,
+          message: 'Error checking landing page content. Please make sure landing page data exists.',
+        };
       }
       
       // Build the website
@@ -779,15 +805,7 @@ export class WebsiteContext extends BaseContext<
         output: result.output,
       };
     } catch (error) {
-      this.logger.error('Error building website', {
-        error,
-        context: 'WebsiteContext',
-      });
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error building website',
-      };
+      return this.handleError(error, 'building website');
     }
   }
   
@@ -811,33 +829,30 @@ export class WebsiteContext extends BaseContext<
         };
       }
       
-      // Get the deployment manager - this ensures we use consistent URL logic
+      // Get the deployment manager for URL generation
       const deploymentManager = await this.getDeploymentManager();
       
-      // Get environment status to get the correct URL
+      // Get environment status for preview
       const status = await deploymentManager.getEnvironmentStatus('preview');
       
-      // Use the path based on the environment status
-      const path = status.domain.includes('localhost')
-        ? `${(await this.getConfig()).astroProjectPath}/dist/preview`
-        : `${(await this.getConfig()).deployment.previewDir || '/opt/personal-brain-website/preview'}/dist`;
+      // Get the build path
+      const path = await this.getEnvironmentPath('preview');
+      
+      this.logger.info('Website build completed', {
+        context: 'WebsiteContext',
+        environment: 'preview',
+        url: status.url,
+        path,
+      });
       
       return {
         success: true,
         message: 'Website built successfully',
         path,
-        url: status.url, // Use URL from deployment manager for consistency
+        url: status.url,
       };
     } catch (error) {
-      this.logger.error('Error in direct website build', {
-        error,
-        context: 'WebsiteContext',
-      });
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error building website',
-      };
+      return this.handleError(error, 'building website');
     }
   }
   
@@ -847,36 +862,19 @@ export class WebsiteContext extends BaseContext<
    */
   async handleWebsitePromote(): Promise<{ success: boolean; message: string; url?: string }> {
     try {
-      // Get the deployment manager
       const deploymentManager = await this.getDeploymentManager();
-      
-      // Promote to production using the deployment manager
       const result = await deploymentManager.promoteToProduction();
       
-      // Log the result
-      if (result.success) {
-        this.logger.info('Website promotion completed successfully', {
-          url: result.url,
-          context: 'WebsiteContext',
-        });
-      } else {
-        this.logger.error('Website promotion failed', {
-          message: result.message,
-          context: 'WebsiteContext',
-        });
-      }
-      
-      return result;
-    } catch (error) {
-      this.logger.error('Error promoting website', {
-        error,
+      // Just log and return the result directly
+      this.logger.info(result.success ? 'Website promotion completed' : 'Website promotion failed', {
+        success: result.success,
+        url: result.url,
         context: 'WebsiteContext',
       });
       
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error promoting website',
-      };
+      return result;
+    } catch (error) {
+      return this.handleError(error, 'promoting website');
     }
   }
   
@@ -908,45 +906,21 @@ export class WebsiteContext extends BaseContext<
     }
   }> {
     try {
-      // Get the deployment manager - all status logic is now delegated here
+      // Use the deployment manager for status
       const deploymentManager = await this.getDeploymentManager();
+      const typedEnv = environment as 'preview' | 'production';
+      const status = await deploymentManager.getEnvironmentStatus(typedEnv);
       
-      // Get environment status using the deployment manager
-      const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
+      // Create simple status message
+      const statusMessage = `${environment} website: ${status.buildStatus}, Server: ${status.serverStatus}, URL: ${status.url}`;
       
-      // Create a comprehensive status message but only show the domain URL for production setups
-      const isProductionSetup = process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'caddy' || 
-                               !status.domain.includes('localhost');
-      
-      // Format message appropriately based on environment
-      const statusMessage = isProductionSetup
-        ? `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, URL: ${status.url}`
-        : `${environment} website status: ${status.buildStatus}, Server: ${status.serverStatus}, Files: ${status.fileCount}, Access: ${status.accessStatus}`;
-      
-      // Return the status data
       return {
         success: true,
         message: statusMessage,
-        data: {
-          environment: status.environment,
-          buildStatus: status.buildStatus,
-          fileCount: status.fileCount,
-          serverStatus: status.serverStatus,
-          domain: status.domain,
-          accessStatus: status.accessStatus,
-          url: status.url,
-        },
+        data: status,
       };
     } catch (error) {
-      this.logger.error('Error checking website status', {
-        error,
-        context: 'WebsiteContext',
-      });
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error checking website status',
-      };
+      return this.handleError(error, 'checking website status');
     }
   }
 
