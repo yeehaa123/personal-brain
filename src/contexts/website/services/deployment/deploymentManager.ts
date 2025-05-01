@@ -6,8 +6,8 @@
 
 import { Logger } from '@/utils/logger';
 
-import { LocalDevDeploymentManager } from './localDevDeploymentManager';
 import { CaddyDeploymentManager } from './caddyDeploymentManager';
+import { LocalDevDeploymentManager } from './localDevDeploymentManager';
 
 /**
  * Deployment environment type

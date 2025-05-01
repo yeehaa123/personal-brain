@@ -5,6 +5,7 @@
  * Handles deployment to production servers with Caddy
  */
 
+import config from '@/config';
 import { Logger } from '@/utils/logger';
 
 import type { DeploymentEnvironment, EnvironmentStatus, PromotionResult, WebsiteDeploymentManager } from './deploymentManager';
@@ -510,10 +511,17 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    * @returns The domain name
    */
   private getDomainForEnvironment(environment: DeploymentEnvironment): string {
-    // In a real implementation, this would come from configuration
-    // For now, we'll use a placeholder domain
-    const baseDomain = process.env['WEBSITE_DOMAIN'] || 'example.com';
+    // Use the configuration from the imported config object
+    const baseDomain = config.website.deployment.domain;
     
+    // Use actual hostname with port for local development environments
+    if (baseDomain === 'localhost' || baseDomain === 'example.com') {
+      return environment === 'production'
+        ? `localhost:${config.website.deployment.productionPort}`
+        : `localhost:${config.website.deployment.previewPort}`;
+    }
+    
+    // For real domains, use subdomain for preview
     return environment === 'production' 
       ? baseDomain
       : `preview.${baseDomain}`;
