@@ -5,6 +5,7 @@
  */
 
 import { Logger } from '@/utils/logger';
+import { LocalDevDeploymentManager } from './localDevDeploymentManager';
 
 /**
  * Deployment environment type
@@ -578,6 +579,7 @@ export class LocalCaddyDeploymentManager implements WebsiteDeploymentManager {
  */
 export interface DeploymentManagerOptions {
   baseDir?: string;
+  deploymentType?: string;
   deploymentConfig?: {
     previewPort?: number;
     productionPort?: number;
@@ -642,11 +644,42 @@ export class DeploymentManagerFactory {
   }
   
   /**
+   * Determine the appropriate deployment manager based on deployment type
+   * @param deploymentType The deployment type from configuration
+   * @returns The deployment manager class to use
+   */
+  selectDeploymentManager(deploymentType: string): DeploymentManager {
+    const logger = Logger.getInstance();
+    
+    logger.info('Selecting deployment manager', {
+      deploymentType,
+      context: 'DeploymentManagerFactory',
+    });
+    
+    if (deploymentType === 'local-dev') {
+      logger.info('Selected LocalDevDeploymentManager', {
+        context: 'DeploymentManagerFactory',
+      });
+      return LocalDevDeploymentManager;
+    } else {
+      logger.info('Selected LocalCaddyDeploymentManager', {
+        context: 'DeploymentManagerFactory',
+      });
+      return LocalCaddyDeploymentManager;
+    }
+  }
+  
+  /**
    * Create a deployment manager instance
    * @param options Configuration options
    * @returns A WebsiteDeploymentManager implementation
    */
   create(options?: DeploymentManagerOptions): WebsiteDeploymentManager {
+    // If deploymentType is provided, determine the appropriate manager class
+    if (options?.deploymentType) {
+      this.deploymentManagerClass = this.selectDeploymentManager(options.deploymentType);
+    }
+    
     // Create an instance of the configured deployment manager class using the standardized pattern
     return this.deploymentManagerClass.getInstance(options);
   }

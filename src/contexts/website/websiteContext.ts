@@ -438,31 +438,16 @@ export class WebsiteContext extends BaseContext<
         context: 'WebsiteContext',
       });
       
-      // Set the deployment manager based on configuration
-      if (config.deployment.type === 'local-dev' || 
-          process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'local-dev') {
-        
-        this.logger.info('Using LocalDevDeploymentManager', {
-          context: 'WebsiteContext',
-        });
-        
-        // Import the local development manager
-        const { LocalDevDeploymentManager } = await import('./services/deployment/localDevDeploymentManager');
-        factory.setDeploymentManagerClass(LocalDevDeploymentManager);
-      } else {
-        // Explicitly set the Caddy deployment manager for server environments
-        this.logger.info('Using LocalCaddyDeploymentManager', {
-          context: 'WebsiteContext',
-        });
-        
-        // Import the local caddy deployment manager
-        const { LocalCaddyDeploymentManager } = await import('./services/deployment/deploymentManager');
-        factory.setDeploymentManagerClass(LocalCaddyDeploymentManager);
-      }
+      // Log the deployment configuration for debugging
+      this.logger.info('Deployment configuration', {
+        deploymentType: config.deployment.type,
+        context: 'WebsiteContext',
+      });
       
       // Create the deployment manager with appropriate configuration
       this.deploymentManager = factory.create({
         baseDir: config.astroProjectPath,
+        deploymentType: config.deployment.type,
         deploymentConfig: {
           previewPort: config.deployment.previewPort,
           productionPort: config.deployment.productionPort,
@@ -473,8 +458,7 @@ export class WebsiteContext extends BaseContext<
       this.logger.info('Created deployment manager', {
         context: 'WebsiteContext',
         managerType: this.deploymentManager.constructor.name,
-        isLocalDev: config.deployment.type === 'local-dev',
-        envType: process.env['WEBSITE_DEPLOYMENT_TYPE'],
+        deploymentType: config.deployment.type,
       });
     }
     

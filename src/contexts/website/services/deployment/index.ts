@@ -6,3 +6,4 @@
 
 export type { WebsiteDeploymentManager } from './deploymentManager';
 export { DeploymentManagerFactory, LocalCaddyDeploymentManager } from './deploymentManager';
+export { LocalDevDeploymentManager } from './localDevDeploymentManager';
