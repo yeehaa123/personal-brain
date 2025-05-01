@@ -813,7 +813,11 @@ export class WebsiteContext extends BaseContext<
    */
   async handleWebsiteBuild(): Promise<{ success: boolean; message: string; path?: string; url?: string }> {
     try {
-      // Build the website first
+      this.logger.info('Starting website build process', {
+        context: 'WebsiteContext',
+      });
+      
+      // Build the website
       const buildResult = await this.buildWebsite();
       
       if (!buildResult.success) {
@@ -841,9 +845,11 @@ export class WebsiteContext extends BaseContext<
         path = `${config.deployment.previewDir || '/opt/personal-brain-website/preview'}/dist`;
       }
       
+      // Still include the URL in the result for the status command to use,
+      // but the command handler will not show it in the immediate response
       return {
         success: true,
-        message: `Website built successfully to preview environment. Available at ${url}`,
+        message: 'Website built successfully',
         path,
         url,
       };

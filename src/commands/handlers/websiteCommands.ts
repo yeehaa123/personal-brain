@@ -384,15 +384,21 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
+      // Provide a clear initial message without the URL
+      this.logger.info('Website build starting - check status when complete');
+      
       // Delegate to WebsiteContext implementation
       const result = await this.websiteContext.handleWebsiteBuild();
       
+      // Return a modified message that encourages checking status
       return {
         type: 'website-build',
         success: result.success,
-        message: result.message,
-        url: result.url,
+        message: result.success 
+          ? 'Website built successfully. Run "website-status" to view access URL.' 
+          : `Failed to build website: ${result.message}`,
         path: result.path,
+        // Don't include the URL in the initial response
       };
     } catch (error) {
       this.logger.error(`Error in website build command: ${error}`);
