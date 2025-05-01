@@ -359,7 +359,7 @@ describe('WebsiteContext', () => {
     const result = await context.handleWebsiteBuild();
 
     expect(result.success).toBe(true);
-    expect(result.message).toContain('preview environment');
+    expect(result.message).toBe('Website built successfully');
     expect(result.path).toContain('dist/preview');
     // In local-dev mode (default for tests), the URL is http://localhost:port
     expect(result.url).toContain('http://localhost:');

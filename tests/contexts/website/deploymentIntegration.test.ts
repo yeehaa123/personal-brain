@@ -95,7 +95,7 @@ describe('Website Deployment Integration', () => {
     // Build the website
     const buildResult = await websiteContext.handleWebsiteBuild();
     expect(buildResult.success).toBe(true);
-    expect(buildResult.message).toContain('preview environment');
+    expect(buildResult.message).toBe('Website built successfully');
     
     // Get the deployment manager that was created
     const deploymentManager = await websiteContext.getDeploymentManager();

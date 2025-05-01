@@ -827,31 +827,22 @@ export class WebsiteContext extends BaseContext<
         };
       }
       
-      // Get current configuration for domain info
-      const config = await this.getConfig();
+      // Get the deployment manager - this ensures we use consistent URL logic
+      const deploymentManager = await this.getDeploymentManager();
       
-      // URL based on deployment type
-      let url: string;
-      let path: string;
+      // Get environment status to get the correct URL
+      const status = await deploymentManager.getEnvironmentStatus('preview');
       
-      if (config.deployment.type === 'local-dev') {
-        // For local development, use localhost with configured port
-        url = `http://localhost:${config.deployment.previewPort}`;
-        path = `${config.astroProjectPath}/dist/preview`;
-      } else {
-        // For Caddy-based hosting, use the configured domain
-        const domain = config.deployment.domain || new URL(config.baseUrl).hostname;
-        url = `https://preview.${domain}`;
-        path = `${config.deployment.previewDir || '/opt/personal-brain-website/preview'}/dist`;
-      }
+      // Use the path based on the environment status
+      const path = status.domain.includes('localhost')
+        ? `${(await this.getConfig()).astroProjectPath}/dist/preview`
+        : `${(await this.getConfig()).deployment.previewDir || '/opt/personal-brain-website/preview'}/dist`;
       
-      // Still include the URL in the result for the status command to use,
-      // but the command handler will not show it in the immediate response
       return {
         success: true,
         message: 'Website built successfully',
         path,
-        url,
+        url: status.url, // Use URL from deployment manager for consistency
       };
     } catch (error) {
       this.logger.error('Error in direct website build', {

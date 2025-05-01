@@ -159,7 +159,7 @@ describe('WebsiteCommandHandler', () => {
     // Setup mock for the new function
     mockWebsiteContext.handleWebsiteBuild = mock(() => Promise.resolve({
       success: true,
-      message: 'Website built successfully for preview',
+      message: 'Website built successfully',
       path: '/dist/preview',
       url: 'https://preview.example.com',
     }));
@@ -170,7 +170,7 @@ describe('WebsiteCommandHandler', () => {
     expect(result.type).toBe('website-build');
     const buildResult = result as Extract<WebsiteCommandResult, { type: 'website-build' }>;
     expect(buildResult.success).toBe(true);
-    expect(buildResult.message).toContain('preview');
+    expect(buildResult.message).toContain('Run "website-status"');
     expect(mockWebsiteContext.handleWebsiteBuild).toHaveBeenCalled();
   });
 
