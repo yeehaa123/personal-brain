@@ -42,8 +42,7 @@
     "website:preview": "bun run scripts/server/production-server.ts preview",
     "website:live": "bun run scripts/server/production-server.ts live",
     "website:cleanup": "pm2 stop website-preview || true && pm2 delete website-preview || true && pm2 stop website-live || true && pm2 delete website-live || true",
-    "prestart": "bun run website:cleanup",
-    "prerestart": "bun run website:cleanup"
+    "prestart": "bun run website:cleanup"
   },
   "devDependencies": {
     "@astrojs/check": "0.9.4",

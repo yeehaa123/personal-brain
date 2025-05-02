@@ -42,7 +42,6 @@ OPENAI_API_KEY=${OPENAI_API_KEY}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN}
 WEBSITE_DEPLOYMENT_TYPE=${WEBSITE_DEPLOYMENT_TYPE}
-# Using BRAIN_ENV instead of NODE_ENV to avoid causing issues with libraries
 BRAIN_ENV=production
 EOF
 
@@ -52,10 +51,6 @@ echo "Verifying .env file was created with $(wc -l < .env) lines"
 # Set up database if needed
 bun run db:generate
 bun run db:migrate
-
-# Generate embeddings for all notes
-echo "Generating embeddings for all notes..."
-bun run db:embeddings 
 
 # Print working directory for debugging
 echo "Working directory: $(pwd)"
