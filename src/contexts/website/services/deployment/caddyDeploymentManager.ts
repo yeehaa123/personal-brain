@@ -116,8 +116,6 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
   }
   
   private readonly logger = Logger.getInstance();
-  private readonly baseDir: string;
-  private readonly liveDir: string;
   
   /**
    * Create a new CaddyDeploymentManager
@@ -127,9 +125,8 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    * 
    * @param options Configuration options
    */
-  private constructor(options?: CaddyDeploymentManagerOptions) {
-    this.baseDir = options?.baseDir || process.env['WEBSITE_BASE_DIR'] || '/opt/personal-brain-website';
-    this.liveDir = `${this.baseDir}/live/dist`;
+  private constructor(_options?: CaddyDeploymentManagerOptions) {
+    // No need to store options as we use standard directories
   }
   
   /**
@@ -144,10 +141,14 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       const path = await import('path');
       const childProcess = await import('child_process');
       const util = await import('util');
-      const https = await import('https');
+      const http = await import('http');
       
-      // Define directory path
-      const targetDir = path.join(this.baseDir, environment, 'dist');
+      // Define directory path for the actual files
+      // In production, files are in dist/live (not baseDir/live/dist)
+      const rootDir = process.cwd();
+      const targetDir = environment === 'preview'
+        ? path.join(rootDir, 'src', 'website', 'dist')
+        : path.join(rootDir, 'dist', 'live');
       
       // Get domain based on environment
       const domain = this.getDomainForEnvironment(environment);
@@ -155,14 +156,14 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       const protocol = domain.includes('localhost') ? 'http' : 'https';
       const url = `${protocol}://${domain}`;
       
-      // Check build status
+      // Check build status - look at the actual files in dist/live
       let buildStatus: 'Built' | 'Not Built' | 'Empty' = 'Not Built';
       let fileCount = 0;
       
       try {
         const stats = await fs.stat(targetDir);
         if (stats.isDirectory()) {
-          const files = await fs.readdir(targetDir, { recursive: true });
+          const files = await fs.readdir(targetDir);
           fileCount = files.length;
           buildStatus = fileCount > 0 ? 'Built' : 'Empty';
         }
@@ -175,32 +176,33 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         });
       }
       
-      // Check Caddy status
+      // Check Caddy status - simplified to just check if running
       let serverStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown' = 'Unknown';
       try {
         const execPromise = util.promisify(childProcess.exec);
         await execPromise('systemctl is-active --quiet caddy');
         serverStatus = 'Running';
-      } catch (caddyError) {
-        const error = caddyError as { code?: number };
-        if (error.code === 3) { // systemctl exit code 3 means service is not active
-          serverStatus = 'Not Running';
-        } else if (error.code === 127) { // command not found
-          serverStatus = 'Not Found';
-        } else {
-          serverStatus = 'Error';
-        }
+      } catch (error) {
+        serverStatus = 'Not Running';
       }
       
-      // Check if site is accessible
+      // Basic HTTP check to see if the site is accessible through the proxy
       let accessStatus = 'Unknown';
       
-      const checkAccess = () => {
-        return new Promise<string>((resolve) => {
-          const req = https.get(url, { 
+      try {
+        // Simple check to see if the site responds to HTTP requests
+        const checkUrl = new URL(url);
+        
+        const checkAccess = () => new Promise<string>((resolve) => {
+          const options = {
+            hostname: checkUrl.hostname,
+            port: checkUrl.port || (protocol === 'https' ? 443 : 80),
+            path: '/',
+            method: 'HEAD',
             timeout: 3000,
-            rejectUnauthorized: false, // Accept self-signed certs for testing
-          }, (res) => {
+          };
+          
+          const req = http.request(options, (res) => {
             if (res.statusCode && res.statusCode >= 200 && res.statusCode < 400) {
               resolve('Accessible');
             } else {
@@ -217,19 +219,12 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
             resolve('Timeout');
           });
           
-          // Ensure the request is ended
           req.end();
         });
-      };
-      
-      try {
+        
         accessStatus = await checkAccess();
-      } catch (accessError) {
+      } catch {
         accessStatus = 'Error Checking';
-        this.logger.warn(`Error checking access for ${url}`, {
-          error: accessError,
-          context: 'CaddyDeploymentManager',
-        });
       }
       
       this.logger.info(`Website status check completed for ${environment}`, {
@@ -274,236 +269,101 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
   }
   
   /**
-   * Promote website from preview to production
+   * Promote website from preview to live
    * @returns Result of the promotion operation
    */
   async promoteToLive(): Promise<PromotionResult> {
     try {
-      // Import the fs and path modules for file operations
+      // Import the necessary modules
       const fs = await import('fs/promises');
       const path = await import('path');
       const childProcess = await import('child_process');
       const util = await import('util');
       
-      // Define directory paths
-      // The preview site is built to src/website/dist by Astro build
-      const previewDir = path.join(process.cwd(), 'src', 'website', 'dist');
-      // The live server looks for files in dist/live, not baseDir/live/dist
-      const liveDir = path.join(process.cwd(), 'dist', 'live');
+      // Define directory paths - use the standard application directories
+      const rootDir = process.cwd();
+      const previewDir = path.join(rootDir, 'src', 'website', 'dist');
+      const liveDir = path.join(rootDir, 'dist', 'live');
       
       // Get domain for live environment
       const liveDomain = this.getDomainForEnvironment('live');
+      const protocol = liveDomain.includes('localhost') ? 'http' : 'https';
       
-      // Check if preview directory exists and has files
+      // Verify the preview directory exists and has content
       try {
-        const previewStats = await fs.stat(previewDir);
-        if (!previewStats.isDirectory()) {
+        const stats = await fs.stat(previewDir);
+        if (!stats.isDirectory()) {
           throw new Error(`Preview directory ${previewDir} is not a directory`);
         }
         
-        // List files in preview directory to verify it has content
-        const previewFiles = await fs.readdir(previewDir);
-        if (previewFiles.length === 0) {
+        // Check if it has files
+        const files = await fs.readdir(previewDir);
+        if (files.length === 0) {
           throw new Error('Preview directory is empty. Please build the website first.');
         }
         
-        this.logger.info('Promoting website from preview to live', {
-          previewDir,
-          liveDir,
-          fileCount: previewFiles.length,
-          context: 'CaddyDeploymentManager',
-        });
-        
-        // Ensure live directory exists
+        // Ensure the live directory exists
         await fs.mkdir(path.dirname(liveDir), { recursive: true });
         
-        // Check if live directory already exists
+        // Remove existing live directory if it exists
         try {
-          const liveStats = await fs.stat(liveDir);
-          if (liveStats.isDirectory()) {
-            // Remove existing live directory
-            this.logger.info('Removing existing live directory', {
-              liveDir,
-              context: 'CaddyDeploymentManager',
-            });
-            
-            await fs.rm(liveDir, { recursive: true, force: true });
-          }
+          await fs.rm(liveDir, { recursive: true, force: true });
         } catch (_err) {
           // Directory doesn't exist, which is fine
         }
         
-        // Create live directory
+        // Create the live directory
         await fs.mkdir(liveDir, { recursive: true });
         
-        // Copy all files from preview to production
+        // Use a single shell command for recursive directory copy
         const execPromise = util.promisify(childProcess.exec);
         
-        this.logger.info('Copying files from preview to live', {
-          sourceDir: previewDir,
-          destDir: liveDir,
-          context: 'CaddyDeploymentManager',
-        });
+        // Simple command to copy all files and directories
+        await execPromise(`cp -R ${previewDir}/* ${liveDir}/`);
         
-        // Make sure the preview directory has files to copy
-        const previewContents = await fs.readdir(previewDir);
-        this.logger.info('Preview directory contents:', {
-          fileCount: previewContents.length,
-          fileList: previewContents.join(', '),
-          context: 'CaddyDeploymentManager',
-        });
+        // Verify the copy worked
+        const liveFiles = await fs.readdir(liveDir);
         
-        if (previewContents.length === 0) {
-          throw new Error(`Preview directory exists but is empty: ${previewDir}`);
-        }
-        
-        // Verify index.html exists in preview
-        const indexExists = await fs.stat(path.join(previewDir, 'index.html'))
+        // Check if index.html exists in the live directory
+        const indexExists = await fs.stat(path.join(liveDir, 'index.html'))
           .then(stats => stats.isFile())
           .catch(() => false);
           
         if (!indexExists) {
-          this.logger.error('index.html missing from preview directory', {
-            previewDir,
-            context: 'CaddyDeploymentManager',
-          });
-          throw new Error('index.html not found in preview directory');
-        }
-        
-        // Copy each file individually to ensure everything transfers correctly
-        await fs.mkdir(liveDir, { recursive: true });
-        
-        // First copy index.html explicitly
-        await fs.copyFile(
-          path.join(previewDir, 'index.html'),
-          path.join(liveDir, 'index.html'),
-        );
-        
-        this.logger.info('index.html copied successfully', {
-          source: path.join(previewDir, 'index.html'),
-          destination: path.join(liveDir, 'index.html'),
-          context: 'CaddyDeploymentManager',
-        });
-        
-        // Then copy the rest
-        for (const file of previewContents) {
-          if (file === 'index.html') continue; // Already copied
-          
-          const sourcePath = path.join(previewDir, file);
-          const destPath = path.join(liveDir, file);
-          
-          try {
-            const fileStats = await fs.stat(sourcePath);
-            
-            if (fileStats.isDirectory()) {
-              // Use shell command for recursive directory copy
-              await execPromise(`cp -R "${sourcePath}" "${destPath}"`);
-              this.logger.info(`Copied directory: ${file}`, {
-                context: 'CaddyDeploymentManager',
-              });
-            } else {
-              // Direct file copy
-              await fs.copyFile(sourcePath, destPath);
-              this.logger.info(`Copied file: ${file}`, {
-                context: 'CaddyDeploymentManager',
-              });
-            }
-          } catch (copyError) {
-            this.logger.error(`Error copying ${file}`, {
-              error: copyError,
-              context: 'CaddyDeploymentManager',
-            });
-            // Continue with other files even if one fails
-          }
-        }
-        
-        // Verify the live directory has the copied files
-        const liveContents = await fs.readdir(liveDir);
-        this.logger.info('Live directory contents after copy:', {
-          fileCount: liveContents.length,
-          fileList: liveContents.join(', '),
-          context: 'CaddyDeploymentManager',
-        });
-        
-        // Verify index.html exists in live directory
-        const liveIndexExists = await fs.stat(path.join(liveDir, 'index.html'))
-          .then(stats => stats.isFile())
-          .catch(() => false);
-          
-        if (!liveIndexExists) {
-          this.logger.error('index.html missing from live directory after copy', {
-            liveDir,
-            context: 'CaddyDeploymentManager',
-          });
           throw new Error('index.html not found in live directory after copy');
         }
         
-        // Force Caddy to fully restart to clear any caches
+        // Restart Caddy to pick up changes (only if running)
         try {
-          // First try to restart Caddy completely instead of just reloading
-          this.logger.info('Attempting to restart Caddy server completely', {
-            context: 'CaddyDeploymentManager',
-          });
-          
-          try {
-            // Try restart first (preserves state but more thorough than reload)
-            await execPromise('systemctl is-active --quiet caddy && systemctl restart caddy');
+          // Check if Caddy is running
+          const isCaddyRunning = await execPromise('systemctl is-active --quiet caddy')
+            .then(() => true)
+            .catch(() => false);
+            
+          if (isCaddyRunning) {
+            // Try to restart Caddy
+            await execPromise('systemctl restart caddy');
             this.logger.info('Restarted Caddy server', {
               context: 'CaddyDeploymentManager',
             });
-          } catch (restartError) {
-            // If restart fails, try reload as fallback
-            this.logger.warn('Could not restart Caddy, trying reload instead', {
-              error: restartError,
-              context: 'CaddyDeploymentManager',
-            });
-            
-            await execPromise('systemctl is-active --quiet caddy && systemctl reload caddy');
-            this.logger.info('Reloaded Caddy server', {
-              context: 'CaddyDeploymentManager',
-            });
           }
-          
-          // Add a short delay to ensure Caddy is fully restarted before returning
-          await new Promise(resolve => global.setTimeout(resolve, 1000));
-          
         } catch (caddyError) {
-          this.logger.warn('Could not refresh Caddy server, but files were copied successfully', {
+          this.logger.warn('Could not restart Caddy, but files were copied successfully', {
             error: caddyError,
             context: 'CaddyDeploymentManager',
           });
-          // Continue even if Caddy operations fail - it might not be managed by systemd
+          // Continue even if Caddy operations fail
         }
         
-        // Verify the files were copied
-        await fs.readdir(this.liveDir);
-        
-        // Use the PM2 restart command to restart the production server
-        // This will force a clean restart with the new files
-        try {
-          this.logger.info('Restarting production server to load new files', {
-            context: 'CaddyDeploymentManager',
-          });
-          await execPromise('bun run pm2 restart website-production || true');
-        } catch (restartError) {
-          this.logger.warn('Failed to restart production server', {
-            error: restartError,
-            context: 'CaddyDeploymentManager',
-          });
-        }
-        
-        // Use HTTP for localhost, HTTPS for real domains
-        const protocol = liveDomain.includes('localhost') ? 'http' : 'https';
-        const siteUrl = `${protocol}://${liveDomain}`;
-        
-        // Determine if we're in dev mode for messaging
+        // Return success result
         const isDevMode = liveDomain.includes('localhost');
+        const siteUrl = `${protocol}://${liveDomain}`;
         
         return {
           success: true,
           message: isDevMode
-            ? `Preview successfully promoted to live site (${liveContents.length} files). Available at ${siteUrl} (development mode)`
-            : `Preview successfully promoted to live site (${liveContents.length} files).`,
+            ? `Preview successfully promoted to live site (${liveFiles.length} files). Available at ${siteUrl} (development mode)`
+            : `Preview successfully promoted to live site (${liveFiles.length} files).`,
           url: siteUrl,
         };
       } catch (fsError) {
