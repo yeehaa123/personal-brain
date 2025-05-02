@@ -98,8 +98,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       {
         command: 'website-status',
         description: 'Check status of website environments',
-        usage: 'website-status [preview|production]',
-        examples: ['website-status', 'website-status production'],
+        usage: 'website-status [preview|live]',
+        examples: ['website-status', 'website-status live'],
       },
     ];
   }
@@ -451,8 +451,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
    */
   private async handleWebsiteStatus(args: string = ''): Promise<CommandResult> {
     try {
-      // Parse environment from args
-      const environment = args.trim().toLowerCase() === 'production' ? 'production' : 'preview';
+      // Parse environment from args - support both "production" and "live" for backward compatibility
+      const environment = args.trim().toLowerCase() === 'production' || args.trim().toLowerCase() === 'live' ? 'live' : 'preview';
       this.logger.info(`Checking status of ${environment} environment`);
       
       if (!this.websiteContext) {
