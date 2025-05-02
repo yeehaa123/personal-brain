@@ -1,15 +1,16 @@
 import { serve } from 'bun';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
+import config from '../../src/config';
 
 // Get server type from command line args (preview or live)
 const SERVER_TYPE = process.argv[2] || 'live';
 const IS_PREVIEW = SERVER_TYPE === 'preview';
 
-// Get port number from environment or use default
+// Get port number from configuration
 const PORT = IS_PREVIEW 
-  ? (process.env['WEBSITE_PREVIEW_PORT'] ? parseInt(process.env['WEBSITE_PREVIEW_PORT']) : 4321)
-  : (process.env['WEBSITE_PRODUCTION_PORT'] ? parseInt(process.env['WEBSITE_PRODUCTION_PORT']) : 4322);
+  ? config.website.deployment.previewPort
+  : config.website.deployment.livePort;
 
 // Set directory based on server type
 const SERVER_DIR = SERVER_TYPE === 'preview' 
