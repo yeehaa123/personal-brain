@@ -42,7 +42,8 @@ OPENAI_API_KEY=${OPENAI_API_KEY}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN}
 WEBSITE_DEPLOYMENT_TYPE=${WEBSITE_DEPLOYMENT_TYPE}
-NODE_ENV=production
+# Using BRAIN_ENV instead of NODE_ENV to avoid causing issues with libraries
+BRAIN_ENV=production
 EOF
 
 # Print number of lines in .env to verify
