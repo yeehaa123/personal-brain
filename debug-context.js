@@ -1,1 +1,0 @@
-import { WebsiteContext } from "./src/contexts/website/websiteContext"; const context = WebsiteContext.getInstance(); async function test() { const deploymentManager = await context.getDeploymentManager(); console.log("Deployment manager type:", deploymentManager.constructor.name); } test();

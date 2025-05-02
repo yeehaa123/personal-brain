@@ -1,1 +1,0 @@
-import { DeploymentManagerFactory } from "./src/contexts/website/services/deployment/deploymentManager.ts"; const factory = DeploymentManagerFactory.getInstance(); console.log("Selected deployment manager type for local-dev:", factory.selectDeploymentManager("local-dev").name);
