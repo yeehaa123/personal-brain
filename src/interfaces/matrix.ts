@@ -136,11 +136,11 @@ export class MatrixBrainInterface {
 
     // Log configuration in non-production environments
     if (getEnv('BRAIN_ENV') !== 'production') {
-      Logger.getInstance().debug(`MATRIX_HOMESERVER_URL: ${homeserverUrl}`);
-      Logger.getInstance().debug(`MATRIX_USER_ID: ${userId}`);
-      Logger.getInstance().debug(`MATRIX_ACCESS_TOKEN: ${accessToken ? 'Set (hidden)' : 'Not set'}`);
-      Logger.getInstance().debug(`MATRIX_ROOM_IDS: ${roomIds.join(', ')}`);
-      Logger.getInstance().debug(`COMMAND_PREFIX: ${commandPrefix}`);
+      Logger.getInstance().info(`MATRIX_HOMESERVER_URL: ${homeserverUrl}`);
+      Logger.getInstance().info(`MATRIX_USER_ID: ${userId}`);
+      Logger.getInstance().info(`MATRIX_ACCESS_TOKEN: ${accessToken ? 'Set (hidden)' : 'Not set'}`);
+      Logger.getInstance().info(`MATRIX_ROOM_IDS: ${roomIds.join(', ')}`);
+      Logger.getInstance().info(`COMMAND_PREFIX: ${commandPrefix}`);
     }
 
     // Validate required fields
