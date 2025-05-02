@@ -42,7 +42,8 @@ OPENAI_API_KEY=${OPENAI_API_KEY}
 ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
 WEBSITE_DOMAIN=${WEBSITE_DOMAIN}
 WEBSITE_DEPLOYMENT_TYPE=${WEBSITE_DEPLOYMENT_TYPE:-caddy}
-NODE_ENV=production
+# Temporarily commented out while debugging PM2 issue
+# NODE_ENV=production
 EOF
 
 # Print number of lines in .env to verify
