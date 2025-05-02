@@ -15,7 +15,7 @@ import { Logger } from '@/utils/logger';
 import type { DeploymentAdapter } from '../../adapters/deploymentAdapter';
 import { getDeploymentAdapter } from '../../adapters/deploymentAdapter';
 
-import type { DeploymentEnvironment, EnvironmentStatus, PromotionResult, WebsiteDeploymentManager } from './deploymentManager';
+import type { EnvironmentStatus, PromotionResult, SiteEnvironment, WebsiteDeploymentManager } from './deploymentManager';
 
 /**
  * Configuration options for LocalDevDeploymentManager
@@ -23,10 +23,10 @@ import type { DeploymentEnvironment, EnvironmentStatus, PromotionResult, Website
 export interface LocalDevDeploymentManagerOptions {
   baseDir?: string;
   previewPort?: number;
-  productionPort?: number;
+  livePort?: number;
   deploymentConfig?: {
     previewPort?: number;
-    productionPort?: number;
+    livePort?: number;
   };
   deploymentAdapter?: DeploymentAdapter;
 }
@@ -125,10 +125,10 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
         deploymentAdapter?: DeploymentAdapter;
         baseDir?: string;
         previewPort?: number;
-        productionPort?: number;
+        livePort?: number;
         deploymentConfig?: {
           previewPort?: number;
-          productionPort?: number;
+          livePort?: number;
         };
       };
       
@@ -137,7 +137,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
         deploymentAdapter: dependencies.deploymentAdapter,
         baseDir: dependencies.baseDir,
         previewPort: dependencies.previewPort,
-        productionPort: dependencies.productionPort,
+        livePort: dependencies.livePort,
         deploymentConfig: dependencies.deploymentConfig,
       });
     }
@@ -147,10 +147,10 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
     const options: LocalDevDeploymentManagerOptions = {
       baseDir: configOrDependencies['baseDir'] as string,
       previewPort: configOrDependencies['previewPort'] as number,
-      productionPort: configOrDependencies['productionPort'] as number,
+      livePort: configOrDependencies['livePort'] as number,
       deploymentConfig: configOrDependencies['deploymentConfig'] as {
         previewPort?: number;
-        productionPort?: number;
+        livePort?: number;
       },
     };
     
@@ -161,7 +161,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
   private readonly baseDir: string;
   private readonly deploymentAdapter: DeploymentAdapter;
   private readonly previewPort: number;
-  private readonly productionPort: number;
+  private readonly livePort: number;
 
   /**
    * Create a new LocalDevDeploymentManager
@@ -175,7 +175,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
     this.baseDir = options?.baseDir || process.cwd();
     // Prefer deploymentConfig properties if provided, fall back to direct options for backward compatibility
     this.previewPort = options?.deploymentConfig?.previewPort || options?.previewPort || 4321;
-    this.productionPort = options?.deploymentConfig?.productionPort || options?.productionPort || 4322;
+    this.livePort = options?.deploymentConfig?.livePort || options?.livePort || 4322;
     
     // Use provided adapter or get a new one
     this.deploymentAdapter = options?.deploymentAdapter || getDeploymentAdapter();
@@ -195,32 +195,32 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       
       // Define paths
       const rootDir = path.resolve(process.cwd());
-      const productionDir = path.join(rootDir, 'dist', 'production');
+      const liveDir = path.join(rootDir, 'dist', 'live');
       
-      // Ensure production directory exists
-      await fs.mkdir(productionDir, { recursive: true });
+      // Ensure live directory exists
+      await fs.mkdir(liveDir, { recursive: true });
       
-      // If no files exist in production, create a placeholder using the template
+      // If no files exist in live site, create a placeholder using the template
       let hasFiles = false;
       try {
-        const files = await fs.readdir(productionDir);
+        const files = await fs.readdir(liveDir);
         hasFiles = files.length > 0;
       } catch (_error) {
         hasFiles = false;
       }
       
       if (!hasFiles) {
-        this.logger.info('Creating placeholder in production directory', {
+        this.logger.info('Creating placeholder in live site directory', {
           context: 'LocalDevDeploymentManager',
         });
         
         try {
           // Read the template file directly
-          const templatePath = path.join(rootDir, 'src', 'mcp', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+          const templatePath = path.join(rootDir, 'src', 'contexts', 'website', 'services', 'deployment', 'liveTemplate.html');
           const template = await fs.readFile(templatePath, 'utf-8');
           
-          // Write the template to the production directory
-          await fs.writeFile(path.join(productionDir, 'index.html'), template);
+          // Write the template to the live directory
+          await fs.writeFile(path.join(liveDir, 'index.html'), template);
         } catch (templateError) {
           this.logger.error('Error reading or writing template file', {
             error: templateError,
@@ -228,8 +228,8 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
           });
           // Create a basic HTML file as fallback
           await fs.writeFile(
-            path.join(productionDir, 'index.html'), 
-            '<html><body><h1>Production Site</h1><p>This is a placeholder. Your production site will appear here after promotion.</p></body></html>',
+            path.join(liveDir, 'index.html'), 
+            '<html><body><h1>Live Site</h1><p>This is a placeholder. Your live site will appear here after promotion.</p></body></html>',
           );
         }
       }
@@ -244,14 +244,14 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
         path.join(this.baseDir, 'src', 'website'),
       );
       
-      // Start the production server
-      const productionSuccess = await this.deploymentAdapter.startServer(
-        'production',
-        this.productionPort,
-        productionDir,
+      // Start the live server
+      const liveSuccess = await this.deploymentAdapter.startServer(
+        'live',
+        this.livePort,
+        liveDir,
       );
       
-      return previewSuccess && productionSuccess;
+      return previewSuccess && liveSuccess;
     } catch (error) {
       this.logger.error('Error starting local development servers', {
         error,
@@ -275,7 +275,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       
       // Stop both servers
       await this.deploymentAdapter.stopServer('preview');
-      await this.deploymentAdapter.stopServer('production');
+      await this.deploymentAdapter.stopServer('live');
     } catch (error) {
       this.logger.error('Error stopping servers', {
         error,
@@ -289,7 +289,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
    * @param environment The environment to check
    * @returns Status information for the environment
    */
-  async getEnvironmentStatus(environment: DeploymentEnvironment): Promise<EnvironmentStatus> {
+  async getEnvironmentStatus(environment: SiteEnvironment): Promise<EnvironmentStatus> {
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
@@ -297,10 +297,10 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       // Define target directory for this environment
       const rootDir = process.cwd();
       // For preview, use Astro's build output (src/website/dist)
-      // For production, use dist/production
+      // For live, use dist/live
       const targetDir = environment === 'preview' 
         ? path.join(rootDir, 'src', 'website', 'dist')
-        : path.join(rootDir, 'dist', 'production');
+        : path.join(rootDir, 'dist', 'live');
       
       // Check if directory exists and count files
       let buildStatus: 'Built' | 'Not Built' | 'Empty' = 'Not Built';
@@ -320,7 +320,7 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       }
       
       // Development server info
-      const port = environment === 'preview' ? this.previewPort : this.productionPort;
+      const port = environment === 'preview' ? this.previewPort : this.livePort;
       const domain = `localhost:${port}`;
       
       // Check server status using the deployment adapter
@@ -404,18 +404,18 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
         buildStatus: 'Not Built',
         fileCount: 0,
         serverStatus: 'Unknown',
-        domain: `localhost:${environment === 'preview' ? this.previewPort : this.productionPort}`,
+        domain: `localhost:${environment === 'preview' ? this.previewPort : this.livePort}`,
         accessStatus: 'Unknown',
-        url: `http://localhost:${environment === 'preview' ? this.previewPort : this.productionPort}`,
+        url: `http://localhost:${environment === 'preview' ? this.previewPort : this.livePort}`,
       };
     }
   }
   
   /**
-   * Promote website from preview to production
+   * Promote website from preview to live
    * @returns Result of the promotion operation
    */
-  async promoteToProduction(): Promise<PromotionResult> {
+  async promoteToLive(): Promise<PromotionResult> {
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
@@ -424,12 +424,12 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       const rootDir = process.cwd();
       // The preview site is built to src/website/dist by Astro build
       const previewDir = path.join(rootDir, 'src', 'website', 'dist');
-      const productionDir = path.join(rootDir, 'dist', 'production');
+      const liveDir = path.join(rootDir, 'dist', 'live');
       
       // Log the paths we're using
       this.logger.info('Promotion paths', {
         previewDir,
-        productionDir,
+        liveDir,
         rootDir,
         context: 'LocalDevDeploymentManager',
       });
@@ -447,44 +447,44 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
           throw new Error('Preview directory is empty. Please build the website first.');
         }
         
-        this.logger.info('Promoting website from preview to production in development mode', {
+        this.logger.info('Promoting website from preview to live site', {
           previewDir,
-          productionDir,
+          liveDir,
           fileCount,
           context: 'LocalDevDeploymentManager',
         });
         
-        // Ensure parent directories for production exist
-        const prodParentDir = path.dirname(productionDir);
-        this.logger.info(`Creating parent directory: ${prodParentDir}`, {
+        // Ensure parent directories for live site exist
+        const liveParentDir = path.dirname(liveDir);
+        this.logger.info(`Creating parent directory: ${liveParentDir}`, {
           context: 'LocalDevDeploymentManager',
         });
-        await fs.mkdir(prodParentDir, { recursive: true });
+        await fs.mkdir(liveParentDir, { recursive: true });
         
-        // Check if production directory already exists
+        // Check if live directory already exists
         try {
-          const prodStats = await fs.stat(productionDir);
-          if (prodStats.isDirectory()) {
-            // Remove existing production directory
-            this.logger.info('Removing existing production directory', {
-              productionDir,
+          const liveStats = await fs.stat(liveDir);
+          if (liveStats.isDirectory()) {
+            // Remove existing live directory
+            this.logger.info('Removing existing live directory', {
+              liveDir,
               context: 'LocalDevDeploymentManager',
             });
             
-            await fs.rm(productionDir, { recursive: true, force: true });
+            await fs.rm(liveDir, { recursive: true, force: true });
           }
         } catch (_err) {
           // Directory doesn't exist, which is fine
-          this.logger.info('Production directory does not exist yet (this is normal)', {
+          this.logger.info('Live directory does not exist yet (this is normal)', {
             context: 'LocalDevDeploymentManager',
           });
         }
         
-        // Create production directory
-        this.logger.info(`Creating production directory: ${productionDir}`, {
+        // Create live directory
+        this.logger.info(`Creating live directory: ${liveDir}`, {
           context: 'LocalDevDeploymentManager',
         });
-        await fs.mkdir(productionDir, { recursive: true });
+        await fs.mkdir(liveDir, { recursive: true });
         
         // Copy files using a shell command for better reliability
         const cp = await import('child_process');
@@ -506,14 +506,14 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
           context: 'LocalDevDeploymentManager',
         });
         
-        // Use cp -r command with explicit paths - but excluding the 'production' subdirectory
-        const cpCommand = `find "${previewDir}" -maxdepth 1 -not -name production -not -path "${previewDir}" -exec cp -r {} "${productionDir}/" \\;`;
+        // Use cp -r command with explicit paths - but excluding the 'live' subdirectory
+        const cpCommand = `find "${previewDir}" -maxdepth 1 -not -name live -not -path "${previewDir}" -exec cp -r {} "${liveDir}/" \\;`;
         this.logger.info(`Copying files using shell command: ${cpCommand}`, {
           context: 'LocalDevDeploymentManager',
         });
         
         try {
-          // Execute the copy command using find to exclude the production directory
+          // Execute the copy command using find to exclude the live directory
           await exec(cpCommand);
           this.logger.info('Files copied successfully using shell command', {
             context: 'LocalDevDeploymentManager',
@@ -528,16 +528,16 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
           this.logger.info('Falling back to recursive copy method', {
             context: 'LocalDevDeploymentManager',
           });
-          await this.copyDirectory(previewDir, productionDir);
+          await this.copyDirectory(previewDir, liveDir);
         }
         
         // Verify the files were copied
-        const productionFileCount = await this.countFiles(productionDir);
+        const liveFileCount = await this.countFiles(liveDir);
         
         return {
           success: true,
-          message: `Preview successfully promoted to live site (${productionFileCount} files). Available at http://localhost:${this.productionPort}`,
-          url: `http://localhost:${this.productionPort}`, // Use configured production port
+          message: `Preview successfully promoted to live site (${liveFileCount} files). Available at http://localhost:${this.livePort}`,
+          url: `http://localhost:${this.livePort}`,
         };
       } catch (fsError) {
         throw new Error(`File system error during promotion: ${fsError instanceof Error ? fsError.message : String(fsError)}`);
@@ -582,9 +582,9 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
           const srcPath = path.join(source, entry.name);
           const destPath = path.join(destination, entry.name);
           
-          // Skip production directory to avoid infinite recursion
-          if (entry.isDirectory() && entry.name === 'production') {
-            this.logger.info('Skipping production directory to avoid recursion', {
+          // Skip live directory to avoid infinite recursion
+          if (entry.isDirectory() && entry.name === 'live') {
+            this.logger.info('Skipping live directory to avoid recursion', {
               context: 'LocalDevDeploymentManager',
             });
             continue;
@@ -634,8 +634,8 @@ export class LocalDevDeploymentManager implements WebsiteDeploymentManager {
       
       // Count each entry
       for (const entry of entries) {
-        // Skip production directory to avoid recursion issues
-        if (entry.isDirectory() && entry.name === 'production') {
+        // Skip live directory to avoid recursion issues
+        if (entry.isDirectory() && entry.name === 'live') {
           continue;
         }
         

@@ -265,6 +265,6 @@ export class WebsiteContextMessaging {
     accessStatus: string;
   }> {
     const deploymentManager = await this.websiteContext.getDeploymentManager();
-    return deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
+    return deploymentManager.getEnvironmentStatus(environment as 'preview' | 'live');
   }
 }

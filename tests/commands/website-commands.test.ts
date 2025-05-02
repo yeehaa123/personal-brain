@@ -94,7 +94,7 @@ describe('WebsiteCommandHandler', () => {
       deployment: {
         type: 'local-dev',
         previewPort: 4321,
-        productionPort: 4322,
+        livePort: 4322,
       },
     }));
 
@@ -107,7 +107,7 @@ describe('WebsiteCommandHandler', () => {
       deployment: {
         type: 'local-dev',
         previewPort: 4321,
-        productionPort: 4322,
+        livePort: 4322,
       },
     }));
 

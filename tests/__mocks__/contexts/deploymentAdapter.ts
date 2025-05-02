@@ -11,7 +11,7 @@ export class MockDeploymentAdapter implements IDeploymentAdapter {
   // Mock state
   private runningServers: Record<string, boolean> = {
     preview: false,
-    production: false,
+    live: false,
   };
   
   // Configuration
@@ -19,7 +19,7 @@ export class MockDeploymentAdapter implements IDeploymentAdapter {
     type: 'local-dev',
     useReverseProxy: false,
     previewPort: 4321,
-    productionPort: 4322,
+    livePort: 4322,
     domain: 'localhost',
   };
   
@@ -29,23 +29,23 @@ export class MockDeploymentAdapter implements IDeploymentAdapter {
   });
   
    
-  startServer = mock((environment: 'preview' | 'production', _port: number, _directory: string) => {
+  startServer = mock((environment: 'preview' | 'live', _port: number, _directory: string) => {
     this.runningServers[environment] = true;
     return Promise.resolve(true);
   });
   
-  stopServer = mock((environment: 'preview' | 'production') => {
+  stopServer = mock((environment: 'preview' | 'live') => {
     this.runningServers[environment] = false;
     return Promise.resolve(true);
   });
   
-  isServerRunning = mock((environment: 'preview' | 'production') => {
+  isServerRunning = mock((environment: 'preview' | 'live') => {
     return Promise.resolve(this.runningServers[environment]);
   });
   
   cleanup = mock(() => {
     this.runningServers['preview'] = false;
-    this.runningServers['production'] = false;
+    this.runningServers['live'] = false;
     return Promise.resolve();
   });
   

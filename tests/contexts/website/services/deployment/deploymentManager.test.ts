@@ -111,9 +111,9 @@ describe('CaddyDeploymentManager', () => {
   });
 
   test('getEnvironmentStatus returns status for production environment', async () => {
-    // Create test data for production environment
-    const productionStatus = {
-      environment: 'production' as const,
+    // Create test data for live environment
+    const liveStatus = {
+      environment: 'live' as const,
       buildStatus: 'Built' as const,
       fileCount: 3,
       serverStatus: 'Running' as const,
@@ -123,12 +123,12 @@ describe('CaddyDeploymentManager', () => {
     };
 
     // Mock the getEnvironmentStatus method
-    const getStatusMock = mock(() => Promise.resolve(productionStatus));
+    const getStatusMock = mock(() => Promise.resolve(liveStatus));
     (manager as unknown as { getEnvironmentStatus: typeof getStatusMock }).getEnvironmentStatus = getStatusMock;
 
-    const status = await manager.getEnvironmentStatus('production');
+    const status = await manager.getEnvironmentStatus('live');
 
-    expect(status.environment).toBe('production');
+    expect(status.environment).toBe('live');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(3);
     expect(status.serverStatus).toBe('Running');
@@ -136,19 +136,19 @@ describe('CaddyDeploymentManager', () => {
     expect(status.url).toContain('https://');
   });
 
-  test('promoteToProduction copies files from preview to production', async () => {
+  test('promoteToLive copies files from preview to live', async () => {
     // Create test promotion result
     const promotionResult = {
       success: true,
-      message: 'Preview successfully promoted to production (42 files).',
+      message: 'Preview successfully promoted to live (42 files).',
       url: 'https://example.com',
     };
 
-    // Mock the promoteToProduction method
+    // Mock the promoteToLive method
     const promoteMock = mock(() => Promise.resolve(promotionResult));
-    (manager as unknown as { promoteToProduction: typeof promoteMock }).promoteToProduction = promoteMock;
+    (manager as unknown as { promoteToLive: typeof promoteMock }).promoteToLive = promoteMock;
 
-    const result = await manager.promoteToProduction();
+    const result = await manager.promoteToLive();
 
     expect(result.success).toBe(true);
     expect(result.message).toContain('successfully promoted');
@@ -200,10 +200,10 @@ describe('LocalDevDeploymentManager', () => {
     expect(status.url).toBe('http://localhost:4321');
   });
 
-  test('getEnvironmentStatus returns status for production environment', async () => {
-    // Create test data for production environment
-    const productionStatus = {
-      environment: 'production' as const,
+  test('getEnvironmentStatus returns status for live environment', async () => {
+    // Create test data for live environment
+    const liveStatus = {
+      environment: 'live' as const,
       buildStatus: 'Built' as const,
       fileCount: 5,
       serverStatus: 'Running' as const,
@@ -213,12 +213,12 @@ describe('LocalDevDeploymentManager', () => {
     };
 
     // Mock the getEnvironmentStatus method
-    const getStatusMock = mock(() => Promise.resolve(productionStatus));
+    const getStatusMock = mock(() => Promise.resolve(liveStatus));
     manager.getEnvironmentStatus = getStatusMock;
 
-    const status = await manager.getEnvironmentStatus('production');
+    const status = await manager.getEnvironmentStatus('live');
 
-    expect(status.environment).toBe('production');
+    expect(status.environment).toBe('live');
     expect(status.buildStatus).toBe('Built');
     expect(status.fileCount).toBe(5);
     expect(status.serverStatus).toBe('Running');
@@ -226,19 +226,19 @@ describe('LocalDevDeploymentManager', () => {
     expect(status.url).toBe('http://localhost:4322');
   });
 
-  test('promoteToProduction copies files from preview to production', async () => {
+  test('promoteToLive copies files from preview to live', async () => {
     // Create test promotion result
     const promotionResult = {
       success: true,
-      message: 'Preview successfully promoted to production (42 files).',
+      message: 'Preview successfully promoted to live (42 files).',
       url: 'http://localhost:4322',
     };
 
-    // Mock the promoteToProduction method
+    // Mock the promoteToLive method
     const promoteMock = mock(() => Promise.resolve(promotionResult));
-    manager.promoteToProduction = promoteMock;
+    manager.promoteToLive = promoteMock;
 
-    const result = await manager.promoteToProduction();
+    const result = await manager.promoteToLive();
 
     expect(result.success).toBe(true);
     expect(result.message).toContain('successfully promoted');
@@ -255,11 +255,11 @@ describe('LocalDevDeploymentManager', () => {
       message: 'Error promoting website: Test error',
     };
 
-    // Mock the promoteToProduction method to return an error result
+    // Mock the promoteToLive method to return an error result
     const errorMock = mock(() => Promise.resolve(errorResult));
-    manager.promoteToProduction = errorMock;
+    manager.promoteToLive = errorMock;
 
-    const result = await manager.promoteToProduction();
+    const result = await manager.promoteToLive();
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('Test error');

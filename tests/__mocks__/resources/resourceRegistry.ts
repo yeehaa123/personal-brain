@@ -22,7 +22,7 @@ export class MockResourceRegistry {
 
   // Mock response to return from language model
   public mockModelResponse: ModelResponse<unknown> = {
-    object: { answer: 'This is a mock response' },
+    object: { answer: 'This is a mock response', tags: ['ecosystem-architecture', 'regenerative-systems', 'decentralized', 'collaboration', 'interconnected-communities'] },
     usage: { inputTokens: 10, outputTokens: 20 },
   };
 
@@ -61,12 +61,26 @@ export class MockResourceRegistry {
   /**
    * Get the singleton instance
    */
-  public static getInstance(_options?: Record<string, unknown>): MockResourceRegistry {
+  public static getInstance(options?: Record<string, unknown>): MockResourceRegistry {
     if (!MockResourceRegistry.instance) {
       MockResourceRegistry.instance = new MockResourceRegistry();
+      
+      // Store API keys if provided in options
+      if (options && typeof options === 'object') {
+        if (options['anthropicApiKey']) {
+          MockResourceRegistry.instance.anthropicApiKey = options['anthropicApiKey'] as string;
+        }
+        if (options['openAiApiKey']) {
+          MockResourceRegistry.instance.openAiApiKey = options['openAiApiKey'] as string;
+        }
+      }
     }
     return MockResourceRegistry.instance;
   }
+  
+  // Mock API keys for testing
+  private anthropicApiKey: string = 'mock-anthropic-api-key';
+  private openAiApiKey: string = 'mock-openai-api-key';
 
   /**
    * Reset the singleton instance
@@ -127,5 +141,16 @@ export class MockResourceRegistry {
    */
   public initialize(): boolean {
     return true;
+  }
+  
+  /**
+   * Mock API key validation that always succeeds
+   * This is critical to prevent tests from requiring actual API keys
+   * @param keyType Type of API key (anthropic or openai)
+   * @returns The mock API key
+   */
+  public validateApiKey(keyType: 'anthropic' | 'openai'): string {
+    // Return the appropriate mock API key based on type
+    return keyType === 'anthropic' ? this.anthropicApiKey : this.openAiApiKey;
   }
 }

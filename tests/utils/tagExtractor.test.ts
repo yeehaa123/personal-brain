@@ -48,8 +48,8 @@ describe('TagExtractor', () => {
     communities and systems that are regenerative and decentralized. It focuses on collaboration
     instead of competition and aims to create healthy relationships between participants.`;
 
-    // Extract tags
-    const tags = await tagExtractor.extractTags(content, [], 5);
+    // Extract tags with a mock API key
+    const tags = await tagExtractor.extractTags(content, [], 5, 'mock-api-key');
 
     // Check tags are returned and match our mock response
     expect(tags).toBeDefined();
@@ -93,8 +93,8 @@ describe('TagExtractor', () => {
     memorization of facts. Modern educational paradigms need to evolve to meet the challenges of
     a rapidly changing world. Learning how to learn is more important than specific knowledge domains.`;
 
-    // Extract tags
-    const tags = await tagExtractor.extractTags(content, [], 5);
+    // Extract tags with a mock API key
+    const tags = await tagExtractor.extractTags(content, [], 5, 'mock-api-key');
 
     expect(tags).toBeDefined();
     expect(Array.isArray(tags)).toBe(true);
@@ -138,8 +138,8 @@ describe('TagExtractor', () => {
     const content = 'Technology is rapidly evolving and changing how we live and work.';
     const existingTags = ['innovation', 'future'];
 
-    // Extract tags
-    const tags = await tagExtractor.extractTags(content, existingTags, 5);
+    // Extract tags with a mock API key
+    const tags = await tagExtractor.extractTags(content, existingTags, 5, 'mock-api-key');
 
     expect(tags).toBeDefined();
     expect(Array.isArray(tags)).toBe(true);
@@ -184,7 +184,7 @@ describe('TagExtractor', () => {
     const maxTags = 3;
 
     // The mock will return exactly 3 tags
-    const tags = await tagExtractor.extractTags(content, [], maxTags);
+    const tags = await tagExtractor.extractTags(content, [], maxTags, 'mock-api-key');
 
     expect(tags).toBeDefined();
     expect(Array.isArray(tags)).toBe(true);

@@ -25,15 +25,15 @@ WebsiteDeploymentManager (interface)
 The system uses a hybrid approach for server management:
 
 1. **Always-Running Servers**: With the hybrid Caddy approach, servers are always started at application startup regardless of environment.
-2. **External Management**: Caddy manages the HTTP servers in production environments.
-3. **Consistent Server Lifecycle**: Servers follow the same lifecycle in all environments (development, test, production).
+2. **External Management**: Caddy manages the HTTP servers in server environments.
+3. **Consistent Server Lifecycle**: Servers follow the same lifecycle in all environments (development, test, server).
 
-## Deployment Environments
+## Site Environments
 
-The system supports two deployment environments:
+The system supports two site environments:
 
 1. **Preview Environment**: For staging and testing changes before they go live
-2. **Production Environment**: For hosting the public-facing website
+2. **Live Environment**: For hosting the public-facing website
 
 ## Components
 
@@ -55,19 +55,19 @@ The factory creates the appropriate deployment manager based on:
 
 Defines the contract for all deployment managers:
 - `getEnvironmentStatus(environment)`: Gets information about a specific environment
-- `promoteToProduction()`: Promotes preview content to production
+- `promoteToLive()`: Promotes preview content to the live site
 
-### 4. LocalCaddyDeploymentManager
+### 4. CaddyDeploymentManager
 
-The production implementation that works with Caddy web server:
-- Manages files at `/opt/personal-brain-website/{preview,production}/dist`
+The server implementation that works with Caddy web server:
+- Manages files at `/opt/personal-brain-website/{preview,live}/dist`
 - Handles Caddy server interactions (status checks, reloading)
 - Implements file operations for promotion
 
 ### 5. LocalDevDeploymentManager
 
 The development implementation for local testing:
-- Manages files at `./dist/{preview,production}`
+- Manages files at `./dist/{preview,live}`
 - Simulates deployment without needing a real web server
 - Uses the same interface for command compatibility
 
@@ -105,7 +105,7 @@ Dedicated server management component with responsibilities:
       │ website-promote   │                     │          
       │─────────────────>│                     │          
       │                   │                     │          
-      │                   │ promoteToProduction │          
+      │                   │ promoteToLive        │          
       │                   │────────────────────>│          
       │                   │                     │          
       │                   │<────────────────────│          
@@ -122,20 +122,20 @@ The system selects the appropriate deployment manager:
 
 ## Directory Structure
 
-### Production Environment
+### Server Environment
 ```
 /opt/personal-brain-website/
   ├── preview/
   │   └── dist/        # Preview environment
-  └── production/
-      └── dist/        # Production environment
+  └── live/
+      └── dist/        # Live environment
 ```
 
 ### Development Environment
 ```
 ./dist/
   ├── preview/         # Preview environment
-  └── production/      # Production environment
+  └── live/            # Live environment
 ```
 
 ## Testing
@@ -166,7 +166,7 @@ To ensure proper CSS serving across environments:
 2. **Static File Server**:
    - Uses the `serve` package for reliable file serving
    - Port configuration via environment variables
-   - Consistent behavior in preview and production
+   - Consistent behavior in preview and live environments
 
 3. **Troubleshooting CSS Issues**:
    - Verify CSS files appear in the file transfer during promotion

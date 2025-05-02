@@ -128,10 +128,10 @@ describe('LocalDevDeploymentManager', () => {
     const promoteSpy = mock(() => Promise.resolve(testResult));
     
     // Override the method on the manager
-    manager.promoteToProduction = promoteSpy;
+    manager.promoteToLive = promoteSpy;
     
     // Call the method
-    const result = await manager.promoteToProduction();
+    const result = await manager.promoteToLive();
     
     // Verify the result
     expect(result.success).toBe(true);
@@ -140,7 +140,7 @@ describe('LocalDevDeploymentManager', () => {
     expect(promoteSpy).toHaveBeenCalled();
   });
   
-  test('promoteToProduction handles case when preview directory is empty', async () => {
+  test('promoteToLive handles case when preview directory is empty', async () => {
     // Create a test error
     const emptyError = new Error('Preview directory is empty. Please build the website first.');
     
@@ -148,14 +148,14 @@ describe('LocalDevDeploymentManager', () => {
     const promoteSpy = mock(() => Promise.reject(emptyError));
     
     // Override the method on the manager
-    manager.promoteToProduction = promoteSpy;
+    manager.promoteToLive = promoteSpy;
     
     // Call the method and expect it to reject
-    await expect(manager.promoteToProduction()).rejects.toThrow('Preview directory is empty');
+    await expect(manager.promoteToLive()).rejects.toThrow('Preview directory is empty');
     expect(promoteSpy).toHaveBeenCalled();
   });
   
-  test('promoteToProduction handles case when preview directory does not exist', async () => {
+  test('promoteToLive handles case when preview directory does not exist', async () => {
     // Create a test error
     const fsError = new Error('File system error during promotion: ENOENT');
     
@@ -163,10 +163,10 @@ describe('LocalDevDeploymentManager', () => {
     const promoteSpy = mock(() => Promise.reject(fsError));
     
     // Override the method on the manager
-    manager.promoteToProduction = promoteSpy;
+    manager.promoteToLive = promoteSpy;
     
     // Call the method and expect it to reject
-    await expect(manager.promoteToProduction()).rejects.toThrow('File system error');
+    await expect(manager.promoteToLive()).rejects.toThrow('File system error');
     expect(promoteSpy).toHaveBeenCalled();
   });
   

@@ -14,13 +14,13 @@ export class MockDeploymentAdapter implements DeploymentAdapter {
 
   // Mock methods
   initialize = mock<() => Promise<boolean>>(() => Promise.resolve(true));
-  startServer = mock<(environment: 'preview' | 'production', port: number, directory: string, serverScript?: string) => Promise<boolean>>(
+  startServer = mock<(environment: 'preview' | 'live', port: number, directory: string, serverScript?: string) => Promise<boolean>>(
     () => Promise.resolve(true),
   );
-  stopServer = mock<(environment: 'preview' | 'production') => Promise<boolean>>(
+  stopServer = mock<(environment: 'preview' | 'live') => Promise<boolean>>(
     () => Promise.resolve(true),
   );
-  isServerRunning = mock<(environment: 'preview' | 'production') => Promise<boolean>>(
+  isServerRunning = mock<(environment: 'preview' | 'live') => Promise<boolean>>(
     () => Promise.resolve(true),
   );
   cleanup = mock<() => Promise<void>>(() => Promise.resolve());
@@ -28,13 +28,13 @@ export class MockDeploymentAdapter implements DeploymentAdapter {
     type: string;
     useReverseProxy: boolean;
     previewPort: number;
-    productionPort: number;
+    livePort: number;
     domain: string;
   }>(() => ({
       type: 'local-dev',
       useReverseProxy: false,
       previewPort: 4321,
-      productionPort: 4322,
+      livePort: 4322,
       domain: 'example.com',
     }));
     
@@ -42,28 +42,28 @@ export class MockDeploymentAdapter implements DeploymentAdapter {
   // This is used for reference and documentation purposes
   readonly defaultScripts = {
     preview: 'website:preview',
-    production: 'website:production',
+    live: 'website:live',
   };
 
   // Server running status flags
   private previewRunning = true;
-  private productionRunning = true;
+  private liveRunning = true;
 
   /**
    * Set server running status
    * @param environment The environment to set status for
    * @param isRunning Whether the server is running
    */
-  setServerRunning(environment: 'preview' | 'production', isRunning: boolean): void {
+  setServerRunning(environment: 'preview' | 'live', isRunning: boolean): void {
     if (environment === 'preview') {
       this.previewRunning = isRunning;
     } else {
-      this.productionRunning = isRunning;
+      this.liveRunning = isRunning;
     }
 
     // Update the isServerRunning mock
-    this.isServerRunning = mock<(env: 'preview' | 'production') => Promise<boolean>>(
-      (env) => Promise.resolve(env === 'preview' ? this.previewRunning : this.productionRunning),
+    this.isServerRunning = mock<(env: 'preview' | 'live') => Promise<boolean>>(
+      (env) => Promise.resolve(env === 'preview' ? this.previewRunning : this.liveRunning),
     );
   }
 

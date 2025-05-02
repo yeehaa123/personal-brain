@@ -15,13 +15,13 @@ class MockDeploymentAdapter implements DeploymentAdapter {
   initialize = mock(() => Promise.resolve(true));
   startServer = mock(() => Promise.resolve(true));
   stopServer = mock(() => Promise.resolve(true));
-  isServerRunning = mock((_env?: 'preview' | 'production') => Promise.resolve(false)); // Default to not running
+  isServerRunning = mock((_env?: 'preview' | 'live') => Promise.resolve(false)); // Default to not running
   cleanup = mock(() => Promise.resolve());
   getDeploymentConfig = mock(() => ({
     type: 'local-dev',
     useReverseProxy: false,
     previewPort: 4321,
-    productionPort: 4322,
+    livePort: 4322,
     domain: 'example.com',
   }));
 }
@@ -75,7 +75,7 @@ describe('ServerManager', () => {
     const localMockAdapter = new MockDeploymentAdapter();
     
     // Mock different status for each environment
-    localMockAdapter.isServerRunning.mockImplementation((env?: 'preview' | 'production') => {
+    localMockAdapter.isServerRunning.mockImplementation((env?: 'preview' | 'live') => {
       // Default to false if env is undefined
       return Promise.resolve(env === 'preview');
     });
@@ -85,18 +85,18 @@ describe('ServerManager', () => {
     const status = await serverManager.areServersRunning();
     
     // Should return the correct status for each environment
-    expect(status).toEqual({ preview: true, production: false });
+    expect(status).toEqual({ preview: true, live: false });
   });
   
-  test('initialize ensures production directory exists with template', async () => {
+  test('initialize ensures live directory exists with template', async () => {
     // Import necessary modules
     fs = await import('fs/promises');
     path = await import('path');
     
-    // Clean up any existing test production directory
-    const testProdDir = path.join(process.cwd(), 'dist', 'test-production');
+    // Clean up any existing test live directory
+    const testLiveDir = path.join(process.cwd(), 'dist', 'test-live');
     try {
-      await fs.rm(testProdDir, { recursive: true, force: true });
+      await fs.rm(testLiveDir, { recursive: true, force: true });
     } catch (_error) {
       // Directory might not exist, which is fine
     }
@@ -104,19 +104,19 @@ describe('ServerManager', () => {
     // Create a server manager that will use our test directory
     const serverManager = ServerManager.createFresh({ deploymentAdapter: mockAdapter });
     
-    // Call the private ensureProductionDirectory method using a workaround
+    // Call the private ensureLiveDirectory method using a workaround
     // @ts-expect-error - accessing private method for testing
-    await serverManager.ensureProductionDirectory(testProdDir);
+    await serverManager.ensureLiveDirectory(testLiveDir);
     
     // Check that the directory was created
-    const dirExists = await fs.stat(testProdDir).then(stats => stats.isDirectory()).catch(() => false);
+    const dirExists = await fs.stat(testLiveDir).then(stats => stats.isDirectory()).catch(() => false);
     expect(dirExists).toBe(true);
     
     // Check that index.html was created
-    const indexExists = await fs.stat(path.join(testProdDir, 'index.html')).then(() => true).catch(() => false);
+    const indexExists = await fs.stat(path.join(testLiveDir, 'index.html')).then(() => true).catch(() => false);
     expect(indexExists).toBe(true);
     
     // Clean up
-    await fs.rm(testProdDir, { recursive: true, force: true });
+    await fs.rm(testLiveDir, { recursive: true, force: true });
   });
 });

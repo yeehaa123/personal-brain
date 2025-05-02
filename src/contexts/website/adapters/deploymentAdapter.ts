@@ -16,13 +16,13 @@ export interface DeploymentAdapter {
   
   /**
    * Start servers for the given environment
-   * @param environment The environment to start servers for (preview or production)
+   * @param environment The environment to start servers for (preview or live)
    * @param port The port to use for the server
    * @param directory The directory to serve
    * @param serverScript Optional script to use for the server
    */
   startServer(
-    environment: 'preview' | 'production', 
+    environment: 'preview' | 'live', 
     port: number, 
     directory: string,
     serverScript?: string
@@ -30,16 +30,16 @@ export interface DeploymentAdapter {
   
   /**
    * Stop servers for the given environment
-   * @param environment The environment to stop servers for (preview or production)
+   * @param environment The environment to stop servers for (preview or live)
    */
-  stopServer(environment: 'preview' | 'production'): Promise<boolean>;
+  stopServer(environment: 'preview' | 'live'): Promise<boolean>;
   
   /**
    * Check if a server is running for the given environment
    * @param environment The environment to check
    * @returns true if the server is running, false otherwise
    */
-  isServerRunning(environment: 'preview' | 'production'): Promise<boolean>;
+  isServerRunning(environment: 'preview' | 'live'): Promise<boolean>;
   
   /**
    * Clean up all resources
@@ -54,7 +54,7 @@ export interface DeploymentAdapter {
     type: string;
     useReverseProxy: boolean;
     previewPort: number;
-    productionPort: number;
+    livePort: number;
     domain: string;
   };
 }
@@ -65,17 +65,17 @@ export interface DeploymentAdapter {
 export interface PM2DeploymentAdapterOptions {
   serverNames?: {
     preview: string;
-    production: string;
+    live: string;
   };
   defaultScripts?: {
     preview: string;
-    production: string;
+    live: string;
   };
   config?: {
     type: string;
     useReverseProxy: boolean;
     previewPort: number;
-    productionPort: number;
+    livePort: number;
     domain: string;
   };
 }
@@ -191,7 +191,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
    */
   private readonly serverNames = {
     preview: 'website-preview',
-    production: 'website-production',
+    live: 'website-live',
   };
   
   /**
@@ -199,7 +199,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
    */
   private readonly defaultScripts = {
     preview: 'website:preview',
-    production: 'website:production',
+    live: 'website:live',
   };
   
   /**
@@ -209,7 +209,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
     type: process.env['WEBSITE_DEPLOYMENT_TYPE'] || 'local-dev',
     useReverseProxy: process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'caddy',
     previewPort: Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321,
-    productionPort: Number(process.env['WEBSITE_PRODUCTION_PORT']) || 4322,
+    livePort: Number(process.env['WEBSITE_LIVE_PORT']) || 4322,
     domain: process.env['WEBSITE_DOMAIN'] || 'example.com',
   };
   
@@ -267,7 +267,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
    * Start a server for the given environment
    */
   async startServer(
-    environment: 'preview' | 'production', 
+    environment: 'preview' | 'live', 
     port: number, 
     directory: string,
     serverScript?: string,
@@ -295,8 +295,8 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
         // For preview, pass WEBSITE_PREVIEW_PORT environment variable to match what the script looks for
         command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_PREVIEW_PORT=${port}`;
       } else {
-        // For production, pass WEBSITE_PRODUCTION_PORT environment variable to match what the script looks for
-        command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_PRODUCTION_PORT=${port}`;
+        // For live, pass WEBSITE_LIVE_PORT environment variable to match what the script looks for
+        command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_LIVE_PORT=${port}`;
       }
       
       this.logger.info(`Starting ${environment} server on port ${port}`, {
@@ -319,7 +319,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
   /**
    * Stop a server for the given environment
    */
-  async stopServer(environment: 'preview' | 'production'): Promise<boolean> {
+  async stopServer(environment: 'preview' | 'live'): Promise<boolean> {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -366,7 +366,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
   /**
    * Check if a server is running for the given environment
    */
-  async isServerRunning(environment: 'preview' | 'production'): Promise<boolean> {
+  async isServerRunning(environment: 'preview' | 'live'): Promise<boolean> {
     if (!this.initialized) {
       await this.initialize();
     }
@@ -407,7 +407,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
       
       // Stop all servers
       await this.stopServer('preview');
-      await this.stopServer('production');
+      await this.stopServer('live');
       
       this.logger.info('All servers cleaned up', {
         context: 'PM2DeploymentAdapter',
@@ -426,7 +426,7 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
     type: string;
     useReverseProxy: boolean;
     previewPort: number;
-    productionPort: number;
+    livePort: number;
     domain: string;
     } {
     return this.config;

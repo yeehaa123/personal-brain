@@ -5,9 +5,9 @@
 import { mock } from 'bun:test';
 
 import type {
-  DeploymentEnvironment,
   EnvironmentStatus,
   PromotionResult,
+  SiteEnvironment,
   WebsiteDeploymentManager,
 } from '@/contexts/website/services/deployment/deploymentManager';
 import { MockLogger } from '@test/__mocks__/core/logger';
@@ -30,8 +30,8 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
     url: 'https://preview.example.com',
   };
 
-  private productionStatus: EnvironmentStatus = {
-    environment: 'production',
+  private liveStatus: EnvironmentStatus = {
+    environment: 'live',
     buildStatus: 'Built' as const,
     fileCount: 42,
     serverStatus: 'Running' as const,
@@ -43,16 +43,16 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
   // Mock promotion result
   private promotionResult: PromotionResult = {
     success: true,
-    message: 'Preview successfully promoted to production (42 files).',
+    message: 'Preview successfully promoted to live site (42 files).',
     url: 'https://example.com',
   };
 
   // Mock methods that can be spied on
-  getEnvironmentStatus = mock((environment: DeploymentEnvironment): Promise<EnvironmentStatus> => {
-    return Promise.resolve(environment === 'preview' ? this.previewStatus : this.productionStatus);
+  getEnvironmentStatus = mock((environment: SiteEnvironment): Promise<EnvironmentStatus> => {
+    return Promise.resolve(environment === 'preview' ? this.previewStatus : this.liveStatus);
   });
 
-  promoteToProduction = mock((): Promise<PromotionResult> => {
+  promoteToLive = mock((): Promise<PromotionResult> => {
     return Promise.resolve(this.promotionResult);
   });
 
@@ -91,11 +91,11 @@ export class MockWebsiteDeploymentManager implements WebsiteDeploymentManager {
    * @param environment The environment to set status for
    * @param status The status to set
    */
-  setEnvironmentStatus(environment: DeploymentEnvironment, status: Partial<EnvironmentStatus>): void {
+  setEnvironmentStatus(environment: SiteEnvironment, status: Partial<EnvironmentStatus>): void {
     if (environment === 'preview') {
       this.previewStatus = { ...this.previewStatus, ...status };
     } else {
-      this.productionStatus = { ...this.productionStatus, ...status };
+      this.liveStatus = { ...this.liveStatus, ...status };
     }
   }
 

@@ -191,10 +191,8 @@ export class WebsiteContext extends BaseContext<
       astroProjectPath: config.website.astroProjectPath,
       deployment: {
         type: config.website.deployment.type as 'local-dev' | 'caddy',
-        previewDir: config.website.deployment.previewDir,
-        productionDir: config.website.deployment.productionDir,
         previewPort: config.website.deployment.previewPort,
-        productionPort: config.website.deployment.productionPort,
+        livePort: config.website.deployment.livePort,
         domain: config.website.deployment.domain,
       },
     };
@@ -218,8 +216,7 @@ export class WebsiteContext extends BaseContext<
     const formatter = WebsiteFormatter.getInstance();
     
     // Create AstroContentService - doesn't use getInstance pattern, so create directly
-    const websiteRoot = process.env['WEBSITE_ROOT'] || './src/website';
-    const astroContentService = new AstroContentService(websiteRoot);
+    const astroContentService = new AstroContentService(websiteConfig.astroProjectPath);
     
     // Create LandingPageGenerationService
     const landingPageGenerationService = LandingPageGenerationService.getInstance();
@@ -227,11 +224,16 @@ export class WebsiteContext extends BaseContext<
     // Get ProfileContext - optional dependency
     const profileContext = ProfileContext.getInstance();
     
-    // Create DeploymentManager
-    const deploymentManager = DeploymentManagerFactory.getInstance()
-      .create({
-        baseDir: process.env['WEBSITE_ROOT'] || './src/website',
-      });
+    // Create DeploymentManager with a fresh factory to ensure it respects current config
+    const factory = DeploymentManagerFactory.createFresh();
+    const deploymentManager = factory.create({
+      baseDir: websiteConfig.astroProjectPath,
+      deploymentType: websiteConfig.deployment.type,
+      deploymentConfig: {
+        previewPort: websiteConfig.deployment.previewPort,
+        livePort: websiteConfig.deployment.livePort,
+      },
+    });
     
     // Create context with all dependencies
     return new WebsiteContext({
@@ -254,8 +256,8 @@ export class WebsiteContext extends BaseContext<
       context: 'WebsiteContext',
     });
     
-    // Ensure production directory exists with default template
-    await this.ensureProductionDirectory();
+    // Ensure live site directory exists with default template
+    // No need to call ensureLiveDirectory - ServerManager handles this now
     
     this.setReadyState(true);
     return true;
@@ -266,7 +268,7 @@ export class WebsiteContext extends BaseContext<
    * @param environment The environment to get the path for
    * @returns The absolute path for the environment
    */
-  private async getEnvironmentPath(environment: 'preview' | 'production'): Promise<string> {
+  private async getEnvironmentPath(environment: 'preview' | 'live'): Promise<string> {
     const path = await import('path');
     const rootDir = process.cwd();
     
@@ -275,74 +277,12 @@ export class WebsiteContext extends BaseContext<
       const astroContentService = await this.getAstroContentService();
       return astroContentService.getBuildDir();
     } else {
-      // For production, use the standard production directory
-      return path.join(rootDir, 'dist', 'production');
+      // For live, use the standard live directory
+      return path.join(rootDir, 'dist', 'live');
     }
   }
   
-  /**
-   * Get the template path for the default HTML file
-   * @returns The path to the template HTML file
-   */
-  private async getTemplatePath(): Promise<string> {
-    const path = await import('path');
-    const rootDir = process.cwd();
-    return path.join(rootDir, 'src', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
-  }
   
-  /**
-   * Ensure the production directory exists and has at least a basic HTML file
-   * This prevents errors when starting the production server before promotion
-   */
-  private async ensureProductionDirectory(): Promise<void> {
-    try {
-      const fs = await import('fs/promises');
-      const path = await import('path');
-      
-      // Get the production directory path
-      const productionDir = await this.getEnvironmentPath('production');
-      
-      this.logger.info(`Ensuring production directory exists: ${productionDir}`, {
-        context: 'WebsiteContext',
-      });
-      
-      // Create the directory if it doesn't exist
-      await fs.mkdir(productionDir, { recursive: true });
-      
-      // Check if index.html exists in the directory
-      let hasIndex = false;
-      try {
-        const files = await fs.readdir(productionDir);
-        hasIndex = files.includes('index.html') && files.length > 0;
-      } catch (_error) {
-        hasIndex = false;
-      }
-      
-      // Create a default index.html file if it doesn't exist
-      if (!hasIndex) {
-        this.logger.info('Creating default index.html in production directory', {
-          context: 'WebsiteContext',
-        });
-        
-        // Path to the template file
-        const templatePath = await this.getTemplatePath();
-        
-        // Read the template file and write it to the production directory
-        const template = await fs.readFile(templatePath, 'utf-8');
-        await fs.writeFile(path.join(productionDir, 'index.html'), template);
-        
-        this.logger.info('Default index.html created from template file', {
-          context: 'WebsiteContext',
-        });
-      }
-    } catch (error) {
-      this.logger.error('Error ensuring production directory exists', {
-        error,
-        context: 'WebsiteContext',
-      });
-      // Continue even if this fails - the system will still function
-    }
-  }
   
   /**
    * Set the ready state
@@ -472,22 +412,27 @@ export class WebsiteContext extends BaseContext<
    * @returns The deployment manager instance
    */
   async getDeploymentManager(): Promise<WebsiteDeploymentManager> {
+    // Simply return the existing deployment manager that was created during initialization
     if (!this.deploymentManager) {
-      // Get the configuration
-      const config = await this.getConfig();
-      const factory = DeploymentManagerFactory.getInstance();
+      this.logger.warn('No deployment manager found. This should not happen if context was properly initialized.', {
+        context: 'WebsiteContext',
+      });
       
-      // Create deployment manager using the factory
+      // If somehow we don't have a deployment manager, get the config and create one
+      const config = await this.getConfig();
+      
+      // Create with a fresh factory
+      const factory = DeploymentManagerFactory.createFresh();
       this.deploymentManager = factory.create({
         baseDir: config.astroProjectPath,
         deploymentType: config.deployment.type,
         deploymentConfig: {
           previewPort: config.deployment.previewPort,
-          productionPort: config.deployment.productionPort,
+          livePort: config.deployment.livePort,
         },
       });
       
-      this.logger.info('Created deployment manager', {
+      this.logger.info('Created missing deployment manager', {
         context: 'WebsiteContext',
         type: config.deployment.type,
       });
@@ -862,13 +807,13 @@ export class WebsiteContext extends BaseContext<
   }
   
   /**
-   * Promote preview to production (for Caddy-based hosting)
+   * Promote preview to live site
    * @returns Result of the promotion operation
    */
   async handleWebsitePromote(): Promise<{ success: boolean; message: string; url?: string }> {
     try {
       const deploymentManager = await this.getDeploymentManager();
-      const result = await deploymentManager.promoteToProduction();
+      const result = await deploymentManager.promoteToLive();
       
       // Just log and return the result directly
       this.logger.info(result.success ? 'Website promotion completed' : 'Website promotion failed', {
@@ -894,7 +839,7 @@ export class WebsiteContext extends BaseContext<
 
   /**
    * Get website environment status (for local development or Caddy-based hosting)
-   * @param environment The environment to check (preview or production)
+   * @param environment The environment to check (preview or live)
    * @returns Status information for the specified environment
    */
   async handleWebsiteStatus(environment: string = 'preview'): Promise<{ 
@@ -913,7 +858,7 @@ export class WebsiteContext extends BaseContext<
     try {
       // Use the deployment manager for status
       const deploymentManager = await this.getDeploymentManager();
-      const typedEnv = environment as 'preview' | 'production';
+      const typedEnv = environment as 'preview' | 'live';
       const status = await deploymentManager.getEnvironmentStatus(typedEnv);
       
       // Create simple status message

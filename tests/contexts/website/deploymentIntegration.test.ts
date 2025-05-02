@@ -60,9 +60,9 @@ describe('Website Deployment Integration', () => {
     expect(deploymentManager instanceof LocalDevDeploymentManager).toBe(true);
   });
   
-  test('should use default deployment manager in production environment', async () => {
+  test('should use default deployment manager in server environment', async () => {
     // Set up the environment
-    process.env['NODE_ENV'] = 'production';
+    process.env['NODE_ENV'] = 'server';
     delete process.env['WEBSITE_DEPLOYMENT_TYPE'];
     
     // Override the websiteContext configuration
@@ -79,13 +79,13 @@ describe('Website Deployment Integration', () => {
   
   test('should respect WEBSITE_DEPLOYMENT_TYPE environment variable', async () => {
     // Set up the environment
-    process.env['NODE_ENV'] = 'production';
+    process.env['NODE_ENV'] = 'server';
     process.env['WEBSITE_DEPLOYMENT_TYPE'] = 'local-dev';
     
     // Get the deployment manager
     const deploymentManager = await websiteContext.getDeploymentManager();
     
-    // Should be an instance of LocalDevDeploymentManager despite being in production
+    // Should be an instance of LocalDevDeploymentManager despite being in server environment
     expect(deploymentManager instanceof LocalDevDeploymentManager).toBe(true);
   });
   
@@ -105,9 +105,9 @@ describe('Website Deployment Integration', () => {
         url: 'http://localhost:4321',
       })),
       
-      promoteToProduction: mock(() => Promise.resolve({
+      promoteToLive: mock(() => Promise.resolve({
         success: true,
-        message: 'Promotion succeeded',
+        message: 'Preview successfully promoted to live site (42 files). Available at http://localhost:4322 (development mode)',
         url: 'http://localhost:4322',
       })),
     };
@@ -118,16 +118,16 @@ describe('Website Deployment Integration', () => {
     // Build the website
     const buildResult = await websiteContext.handleWebsiteBuild();
     expect(buildResult.success).toBe(true);
-    expect(buildResult.message).toBe('Website built successfully');
+    expect(buildResult.message).toBe('Website built successfully. Available at http://localhost:4321 (development mode)');
     
     // Promote to production
     const promoteResult = await websiteContext.handleWebsitePromote();
     expect(promoteResult.success).toBe(true);
-    expect(promoteResult.message).toBe('Promotion succeeded');
+    expect(promoteResult.message).toContain('successfully promoted to live site');
     expect(promoteResult.url).toBe('http://localhost:4322');
     
     // Verify the deployment manager was called
-    expect(mockDeploymentManager.promoteToProduction).toHaveBeenCalled();
+    expect(mockDeploymentManager.promoteToLive).toHaveBeenCalled();
   });
   
   test('should handle build failure correctly', async () => {
@@ -151,7 +151,7 @@ describe('Website Deployment Integration', () => {
     const deploymentManager = await websiteContext.getDeploymentManager();
     
     // Mock a promotion failure
-    deploymentManager.promoteToProduction = mock(() => Promise.resolve({
+    deploymentManager.promoteToLive = mock(() => Promise.resolve({
       success: false,
       message: 'Promotion failed: No files to promote',
     }));
@@ -169,7 +169,7 @@ describe('Website Deployment Integration', () => {
     const deploymentManager = await websiteContext.getDeploymentManager();
     
     // Mock environment status
-    deploymentManager.getEnvironmentStatus = mock((env: 'preview' | 'production') => {
+    deploymentManager.getEnvironmentStatus = mock((env: 'preview' | 'live') => {
       if (env === 'preview') {
         return Promise.resolve({
           environment: env,
@@ -200,11 +200,11 @@ describe('Website Deployment Integration', () => {
     expect(previewStatus.data?.buildStatus).toBe('Built');
     expect(previewStatus.data?.fileCount).toBe(42);
     
-    // Check production status
-    const productionStatus = await websiteContext.handleWebsiteStatus('production');
-    expect(productionStatus.success).toBe(true);
-    expect(productionStatus.data?.environment).toBe('production');
-    expect(productionStatus.data?.buildStatus).toBe('Not Built');
-    expect(productionStatus.data?.fileCount).toBe(0);
+    // Check live status
+    const liveStatus = await websiteContext.handleWebsiteStatus('live');
+    expect(liveStatus.success).toBe(true);
+    expect(liveStatus.data?.environment).toBe('live');
+    expect(liveStatus.data?.buildStatus).toBe('Not Built');
+    expect(liveStatus.data?.fileCount).toBe(0);
   });
 });

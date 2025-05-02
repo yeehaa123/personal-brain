@@ -8,7 +8,7 @@
 import config from '@/config';
 import { Logger } from '@/utils/logger';
 
-import type { DeploymentEnvironment, EnvironmentStatus, PromotionResult, WebsiteDeploymentManager } from './deploymentManager';
+import type { EnvironmentStatus, PromotionResult, SiteEnvironment, WebsiteDeploymentManager } from './deploymentManager';
 
 /**
  * Configuration options for CaddyDeploymentManager
@@ -117,6 +117,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
   
   private readonly logger = Logger.getInstance();
   private readonly baseDir: string;
+  private readonly liveDir: string;
   
   /**
    * Create a new CaddyDeploymentManager
@@ -128,6 +129,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    */
   private constructor(options?: CaddyDeploymentManagerOptions) {
     this.baseDir = options?.baseDir || process.env['WEBSITE_BASE_DIR'] || '/opt/personal-brain-website';
+    this.liveDir = `${this.baseDir}/live/dist`;
   }
   
   /**
@@ -135,7 +137,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    * @param environment The environment to check
    * @returns Status information for the environment
    */
-  async getEnvironmentStatus(environment: DeploymentEnvironment): Promise<EnvironmentStatus> {
+  async getEnvironmentStatus(environment: SiteEnvironment): Promise<EnvironmentStatus> {
     try {
       // Import necessary modules
       const fs = await import('fs/promises');
@@ -275,7 +277,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    * Promote website from preview to production
    * @returns Result of the promotion operation
    */
-  async promoteToProduction(): Promise<PromotionResult> {
+  async promoteToLive(): Promise<PromotionResult> {
     try {
       // Import the fs and path modules for file operations
       const fs = await import('fs/promises');
@@ -286,11 +288,11 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
       // Define directory paths
       // The preview site is built to src/website/dist by Astro build
       const previewDir = path.join(process.cwd(), 'src', 'website', 'dist');
-      // The production server looks for files in dist/production, not baseDir/production/dist
-      const productionDir = path.join(process.cwd(), 'dist', 'production');
+      // The live server looks for files in dist/live, not baseDir/live/dist
+      const liveDir = path.join(process.cwd(), 'dist', 'live');
       
-      // Get domain for production environment
-      const productionDomain = this.getDomainForEnvironment('production');
+      // Get domain for live environment
+      const liveDomain = this.getDomainForEnvironment('live');
       
       // Check if preview directory exists and has files
       try {
@@ -305,41 +307,41 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
           throw new Error('Preview directory is empty. Please build the website first.');
         }
         
-        this.logger.info('Promoting website from preview to production', {
+        this.logger.info('Promoting website from preview to live', {
           previewDir,
-          productionDir,
+          liveDir,
           fileCount: previewFiles.length,
           context: 'CaddyDeploymentManager',
         });
         
-        // Ensure production directory exists
-        await fs.mkdir(path.dirname(productionDir), { recursive: true });
+        // Ensure live directory exists
+        await fs.mkdir(path.dirname(liveDir), { recursive: true });
         
-        // Check if production directory already exists
+        // Check if live directory already exists
         try {
-          const prodStats = await fs.stat(productionDir);
-          if (prodStats.isDirectory()) {
-            // Remove existing production directory
-            this.logger.info('Removing existing production directory', {
-              productionDir,
+          const liveStats = await fs.stat(liveDir);
+          if (liveStats.isDirectory()) {
+            // Remove existing live directory
+            this.logger.info('Removing existing live directory', {
+              liveDir,
               context: 'CaddyDeploymentManager',
             });
             
-            await fs.rm(productionDir, { recursive: true, force: true });
+            await fs.rm(liveDir, { recursive: true, force: true });
           }
         } catch (_err) {
           // Directory doesn't exist, which is fine
         }
         
-        // Create production directory
-        await fs.mkdir(productionDir, { recursive: true });
+        // Create live directory
+        await fs.mkdir(liveDir, { recursive: true });
         
         // Copy all files from preview to production
         const execPromise = util.promisify(childProcess.exec);
         
-        this.logger.info('Copying files from preview to production', {
+        this.logger.info('Copying files from preview to live', {
           sourceDir: previewDir,
-          destDir: productionDir,
+          destDir: liveDir,
           context: 'CaddyDeploymentManager',
         });
         
@@ -369,17 +371,17 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         }
         
         // Copy each file individually to ensure everything transfers correctly
-        await fs.mkdir(productionDir, { recursive: true });
+        await fs.mkdir(liveDir, { recursive: true });
         
         // First copy index.html explicitly
         await fs.copyFile(
           path.join(previewDir, 'index.html'),
-          path.join(productionDir, 'index.html'),
+          path.join(liveDir, 'index.html'),
         );
         
         this.logger.info('index.html copied successfully', {
           source: path.join(previewDir, 'index.html'),
-          destination: path.join(productionDir, 'index.html'),
+          destination: path.join(liveDir, 'index.html'),
           context: 'CaddyDeploymentManager',
         });
         
@@ -388,7 +390,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
           if (file === 'index.html') continue; // Already copied
           
           const sourcePath = path.join(previewDir, file);
-          const destPath = path.join(productionDir, file);
+          const destPath = path.join(liveDir, file);
           
           try {
             const fileStats = await fs.stat(sourcePath);
@@ -415,25 +417,25 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
           }
         }
         
-        // Verify the production directory has the copied files
-        const productionContents = await fs.readdir(productionDir);
-        this.logger.info('Production directory contents after copy:', {
-          fileCount: productionContents.length,
-          fileList: productionContents.join(', '),
+        // Verify the live directory has the copied files
+        const liveContents = await fs.readdir(liveDir);
+        this.logger.info('Live directory contents after copy:', {
+          fileCount: liveContents.length,
+          fileList: liveContents.join(', '),
           context: 'CaddyDeploymentManager',
         });
         
-        // Verify index.html exists in production
-        const prodIndexExists = await fs.stat(path.join(productionDir, 'index.html'))
+        // Verify index.html exists in live directory
+        const liveIndexExists = await fs.stat(path.join(liveDir, 'index.html'))
           .then(stats => stats.isFile())
           .catch(() => false);
           
-        if (!prodIndexExists) {
-          this.logger.error('index.html missing from production directory after copy', {
-            productionDir,
+        if (!liveIndexExists) {
+          this.logger.error('index.html missing from live directory after copy', {
+            liveDir,
             context: 'CaddyDeploymentManager',
           });
-          throw new Error('index.html not found in production directory after copy');
+          throw new Error('index.html not found in live directory after copy');
         }
         
         // Force Caddy to fully restart to clear any caches
@@ -474,7 +476,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         }
         
         // Verify the files were copied
-        const productionFiles = await fs.readdir(productionDir);
+        await fs.readdir(this.liveDir);
         
         // Use the PM2 restart command to restart the production server
         // This will force a clean restart with the new files
@@ -491,17 +493,17 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         }
         
         // Use HTTP for localhost, HTTPS for real domains
-        const protocol = productionDomain.includes('localhost') ? 'http' : 'https';
-        const siteUrl = `${protocol}://${productionDomain}`;
+        const protocol = liveDomain.includes('localhost') ? 'http' : 'https';
+        const siteUrl = `${protocol}://${liveDomain}`;
         
         // Determine if we're in dev mode for messaging
-        const isDevMode = productionDomain.includes('localhost');
+        const isDevMode = liveDomain.includes('localhost');
         
         return {
           success: true,
           message: isDevMode
-            ? `Preview successfully promoted to live site (${productionFiles.length} files). Available at ${siteUrl} (development mode)`
-            : `Preview successfully promoted to production (${productionFiles.length} files).`,
+            ? `Preview successfully promoted to live site (${liveContents.length} files). Available at ${siteUrl} (development mode)`
+            : `Preview successfully promoted to live site (${liveContents.length} files).`,
           url: siteUrl,
         };
       } catch (fsError) {
@@ -525,19 +527,19 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
    * @param environment The environment to get the domain for
    * @returns The domain name
    */
-  private getDomainForEnvironment(environment: DeploymentEnvironment): string {
+  private getDomainForEnvironment(environment: SiteEnvironment): string {
     // Use the configuration from the imported config object
     const baseDomain = config.website.deployment.domain;
     
     // Use actual hostname with port for local development environments
     if (baseDomain === 'localhost' || baseDomain === 'example.com') {
-      return environment === 'production'
-        ? `localhost:${config.website.deployment.productionPort}`
+      return environment === 'live'
+        ? `localhost:${config.website.deployment.livePort}`
         : `localhost:${config.website.deployment.previewPort}`;
     }
     
     // For real domains, use subdomain for preview
-    return environment === 'production' 
+    return environment === 'live' 
       ? baseDomain
       : `preview.${baseDomain}`;
   }

@@ -10,15 +10,15 @@ import { CaddyDeploymentManager } from './caddyDeploymentManager';
 import { LocalDevDeploymentManager } from './localDevDeploymentManager';
 
 /**
- * Deployment environment type
+ * Site environment type
  */
-export type DeploymentEnvironment = 'preview' | 'production';
+export type SiteEnvironment = 'preview' | 'live';
 
 /**
  * Status response for website environments
  */
 export interface EnvironmentStatus {
-  environment: DeploymentEnvironment;
+  environment: SiteEnvironment;
   buildStatus: 'Built' | 'Not Built' | 'Empty';
   fileCount: number;
   serverStatus: 'Running' | 'Not Running' | 'Not Found' | 'Error' | 'Unknown';
@@ -45,22 +45,22 @@ export interface WebsiteDeploymentManager {
    * @param environment The environment to check
    * @returns Status information for the environment
    */
-  getEnvironmentStatus(environment: DeploymentEnvironment): Promise<EnvironmentStatus>;
+  getEnvironmentStatus(environment: SiteEnvironment): Promise<EnvironmentStatus>;
   
   /**
-   * Promote website from preview to production
+   * Promote website from preview to live
    * @returns Result of the promotion operation
    */
-  promoteToProduction(): Promise<PromotionResult>;
+  promoteToLive(): Promise<PromotionResult>;
   
   /**
-   * Start preview and production servers
+   * Start website servers
    * @returns Promise indicating success
    */
   startServers?(): Promise<boolean>;
   
   /**
-   * Stop preview and production servers
+   * Stop website servers
    */
   stopServers?(): Promise<void>;
 }
@@ -73,7 +73,7 @@ export interface DeploymentManagerOptions {
   deploymentType?: string;
   deploymentConfig?: {
     previewPort?: number;
-    productionPort?: number;
+    livePort?: number;
   };
 }
 
@@ -174,7 +174,7 @@ export class DeploymentManagerFactory {
       this.deploymentManagerClass = this.selectDeploymentManager(options.deploymentType);
     }
     
-    // Create an instance of the configured deployment manager class using the standardized pattern
-    return this.deploymentManagerClass.getInstance(options);
+    // Create a fresh instance of the configured deployment manager class to avoid issues with cached state
+    return this.deploymentManagerClass.createFresh(options);
   }
 }

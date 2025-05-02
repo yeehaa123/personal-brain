@@ -118,8 +118,8 @@ export class ServerManager {
         
         await execPromise('bun run pm2 stop website-preview || true');
         await execPromise('bun run pm2 delete website-preview || true');
-        await execPromise('bun run pm2 stop website-production || true');
-        await execPromise('bun run pm2 delete website-production || true');
+        await execPromise('bun run pm2 stop website-live || true');
+        await execPromise('bun run pm2 delete website-live || true');
         
         // Reset active server count as we've forcefully stopped everything
         this.activeServerCount = 0;
@@ -163,12 +163,12 @@ export class ServerManager {
       
       this.initialized = true;
       
-      // Define the production directory path
-      const productionDir = `${process.cwd()}/dist/production`;
+      // Define the live site directory path
+      const liveDir = `${process.cwd()}/dist/live`;
       
-      // Always ensure the production directory exists with a default HTML file
-      // This ensures the production server can start properly in any environment
-      await this.ensureProductionDirectory(productionDir);
+      // Always ensure the live site directory exists with a default HTML file
+      // This ensures the live server can start properly in any environment
+      await this.ensureLiveDirectory(liveDir);
       
       return true;
     } catch (error) {
@@ -202,11 +202,11 @@ export class ServerManager {
       
       // First check if servers are already running
       let previewRunning = false;
-      let productionRunning = false;
+      let liveRunning = false;
       
       try {
         previewRunning = await this.deploymentAdapter.isServerRunning('preview');
-        productionRunning = await this.deploymentAdapter.isServerRunning('production');
+        liveRunning = await this.deploymentAdapter.isServerRunning('live');
       } catch (checkError) {
         this.logger.warn('Error checking server status, assuming servers are not running', {
           error: checkError,
@@ -216,7 +216,7 @@ export class ServerManager {
       }
       
       // Skip starting if already running
-      if (previewRunning && productionRunning) {
+      if (previewRunning && liveRunning) {
         this.logger.info('Website servers are already running', {
           context: 'ServerManager',
         });
@@ -225,7 +225,7 @@ export class ServerManager {
       
       // Default ports from configuration
       const previewPort = Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321;
-      const productionPort = Number(process.env['WEBSITE_PRODUCTION_PORT']) || 4322;
+      const livePort = Number(process.env['WEBSITE_LIVE_PORT']) || 4322;
       
       // Start the preview server if not running
       if (!previewRunning) {
@@ -259,48 +259,48 @@ export class ServerManager {
         this.activeServerCount++;
       }
       
-      // Start the production server if not running
-      if (!productionRunning) {
-        // Define the production directory
-        const productionDir = `${process.cwd()}/dist/production`;
+      // Start the live server if not running
+      if (!liveRunning) {
+        // Define the live directory
+        const liveDir = `${process.cwd()}/dist/live`;
         
         try {
-          const productionSuccess = await this.deploymentAdapter.startServer(
-            'production',
-            productionPort,
-            productionDir,
+          const liveSuccess = await this.deploymentAdapter.startServer(
+            'live',
+            livePort,
+            liveDir,
           );
           
-          if (!productionSuccess) {
-            this.logger.error('Failed to start production server', {
+          if (!liveSuccess) {
+            this.logger.error('Failed to start live server', {
               context: 'ServerManager',
             });
           } else {
             // Track that we've started a server
             this.activeServerCount++;
-            this.logger.info('Production server started successfully', {
-              port: productionPort,
+            this.logger.info('Live server started successfully', {
+              port: livePort,
               context: 'ServerManager',
             });
           }
-        } catch (productionError) {
-          this.logger.error('Error starting production server', {
-            error: productionError,
+        } catch (liveError) {
+          this.logger.error('Error starting live server', {
+            error: liveError,
             context: 'ServerManager',
           });
         }
-      } else if (productionRunning) {
+      } else if (liveRunning) {
         // Already running server counts too
         this.activeServerCount++;
       }
       
       // Check if servers are now running
       let finalPreviewRunning = false;
-      let finalProductionRunning = false;
+      let finalLiveRunning = false;
       
       try {
         finalPreviewRunning = await this.deploymentAdapter.isServerRunning('preview');
-        finalProductionRunning = await this.deploymentAdapter.isServerRunning('production');
+        finalLiveRunning = await this.deploymentAdapter.isServerRunning('live');
       } catch (finalCheckError) {
         this.logger.error('Error checking final server status', {
           error: finalCheckError,
@@ -308,17 +308,17 @@ export class ServerManager {
         });
         // Use best guess based on success of start operations
         finalPreviewRunning = previewRunning || (this.activeServerCount > 0);
-        finalProductionRunning = productionRunning || (this.activeServerCount > 1);
+        finalLiveRunning = liveRunning || (this.activeServerCount > 1);
       }
       
       this.logger.info('Server status after startup attempt', {
         preview: finalPreviewRunning ? 'Running' : 'Not Running',
-        production: finalProductionRunning ? 'Running' : 'Not Running',
+        live: finalLiveRunning ? 'Running' : 'Not Running',
         activeCount: this.activeServerCount,
         context: 'ServerManager',
       });
       
-      return finalPreviewRunning && finalProductionRunning;
+      return finalPreviewRunning && finalLiveRunning;
     } catch (error) {
       this.logger.error('Error starting website servers', {
         error,
@@ -350,14 +350,14 @@ export class ServerManager {
         context: 'ServerManager',
       });
       
-      // Stop both preview and production servers
+      // Stop both preview and live servers
       const previewResult = await this.deploymentAdapter.stopServer('preview');
       if (previewResult) {
         this.activeServerCount = Math.max(0, this.activeServerCount - 1);
       }
       
-      const productionResult = await this.deploymentAdapter.stopServer('production');
-      if (productionResult) {
+      const liveResult = await this.deploymentAdapter.stopServer('live');
+      if (liveResult) {
         this.activeServerCount = Math.max(0, this.activeServerCount - 1);
       }
       
@@ -373,10 +373,10 @@ export class ServerManager {
   }
   
   /**
-   * Ensure the production directory exists and has at least a basic HTML file
-   * This prevents errors when starting the production server before promotion
+   * Ensure the live site directory exists and has at least a basic HTML file
+   * This prevents errors when starting the live server before promotion
    */
-  private async ensureProductionDirectory(productionDir: string): Promise<void> {
+  private async ensureLiveDirectory(liveDir: string): Promise<void> {
     try {
       const fs = await import('fs/promises');
       const path = await import('path');
@@ -384,7 +384,7 @@ export class ServerManager {
       // Check if the directory exists
       let dirExists = false;
       try {
-        const stats = await fs.stat(productionDir);
+        const stats = await fs.stat(liveDir);
         dirExists = stats.isDirectory();
       } catch (_error) {
         dirExists = false;
@@ -392,16 +392,16 @@ export class ServerManager {
       
       // Create the directory if it doesn't exist
       if (!dirExists) {
-        this.logger.info(`Creating production directory: ${productionDir}`, {
+        this.logger.info(`Creating live directory: ${liveDir}`, {
           context: 'ServerManager',
         });
-        await fs.mkdir(productionDir, { recursive: true });
+        await fs.mkdir(liveDir, { recursive: true });
       }
       
       // Check if index.html exists in the directory
       let hasIndex = false;
       try {
-        const files = await fs.readdir(productionDir);
+        const files = await fs.readdir(liveDir);
         hasIndex = files.includes('index.html');
       } catch (_error) {
         hasIndex = false;
@@ -409,19 +409,19 @@ export class ServerManager {
       
       // Create a default index.html file if it doesn't exist
       if (!hasIndex) {
-        this.logger.info('Creating default index.html in production directory', {
+        this.logger.info('Creating default index.html in live directory', {
           context: 'ServerManager',
         });
         
         // Path to the template file
-        const templatePath = path.join(process.cwd(), 'src', 'mcp', 'contexts', 'website', 'services', 'deployment', 'productionTemplate.html');
+        const templatePath = path.join(process.cwd(), 'src', 'contexts', 'website', 'services', 'deployment', 'liveTemplate.html');
         
         try {
           // Read the template file
           const template = await fs.readFile(templatePath, 'utf-8');
           
           // Write the template file to index.html
-          await fs.writeFile(path.join(productionDir, 'index.html'), template);
+          await fs.writeFile(path.join(liveDir, 'index.html'), template);
           
           this.logger.info('Default index.html created from template file', {
             context: 'ServerManager',
@@ -438,21 +438,21 @@ export class ServerManager {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Personal Brain - Production Site</title>
+  <title>Personal Brain - Live Site</title>
 </head>
 <body>
-  <h1>Personal Brain - Production Site</h1>
+  <h1>Personal Brain - Live Site</h1>
   <p>This is a placeholder. Use 'website-promote' to update with your content.</p>
 </body>
 </html>`;
           
-          await fs.writeFile(path.join(productionDir, 'index.html'), fallbackTemplate);
+          await fs.writeFile(path.join(liveDir, 'index.html'), fallbackTemplate);
         }
       }
     } catch (error) {
-      this.logger.error('Error ensuring production directory exists', {
+      this.logger.error('Error ensuring live directory exists', {
         error,
-        productionDir,
+        liveDir,
         context: 'ServerManager',
       });
       // Continue even if this fails - the server will try to start anyway
@@ -462,18 +462,18 @@ export class ServerManager {
   /**
    * Check if servers are running
    */
-  async areServersRunning(): Promise<{ preview: boolean; production: boolean }> {
+  async areServersRunning(): Promise<{ preview: boolean; live: boolean }> {
     if (!this.initialized) {
       await this.initialize();
     }
     
     try {
       const previewRunning = await this.deploymentAdapter.isServerRunning('preview');
-      const productionRunning = await this.deploymentAdapter.isServerRunning('production');
+      const liveRunning = await this.deploymentAdapter.isServerRunning('live');
       
       return {
         preview: previewRunning,
-        production: productionRunning,
+        live: liveRunning,
       };
     } catch (error) {
       this.logger.error('Error checking server status', {
@@ -483,7 +483,7 @@ export class ServerManager {
       
       return {
         preview: false,
-        production: false,
+        live: false,
       };
     }
   }

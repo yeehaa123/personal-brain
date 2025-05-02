@@ -42,7 +42,7 @@ export class InMemoryWebsiteStorageAdapter implements WebsiteStorageAdapter {
     deployment: {
       type: 'local-dev',
       previewPort: 4321,
-      productionPort: 4322,
+      livePort: 4322,
     },
   };
   
@@ -60,6 +60,8 @@ export class InMemoryWebsiteStorageAdapter implements WebsiteStorageAdapter {
   }
   
   async getWebsiteConfig(): Promise<WebsiteConfig> {
+    // Debug log to see what config is being returned
+    console.log('InMemoryWebsiteStorageAdapter.getWebsiteConfig() returning:', this.config);
     return this.config;
   }
   

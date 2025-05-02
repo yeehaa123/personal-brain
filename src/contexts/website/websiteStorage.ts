@@ -14,9 +14,9 @@ const defaultAstroPath = path.join('src', 'website');
 export const DeploymentConfigSchema = z.object({
   type: z.enum(['local-dev', 'caddy']).default('local-dev'),
   previewDir: z.string().optional(),
-  productionDir: z.string().optional(),
+  liveDir: z.string().optional(),
   previewPort: z.number().default(4321),
-  productionPort: z.number().default(4322),
+  livePort: z.number().default(4322),
   domain: z.string().optional(),
 });
 
@@ -34,7 +34,7 @@ export const WebsiteConfigSchema = z.object({
   deployment: DeploymentConfigSchema.default({
     type: 'local-dev',
     previewPort: 4321,
-    productionPort: 4322,
+    livePort: 4322,
   }),
 });
 

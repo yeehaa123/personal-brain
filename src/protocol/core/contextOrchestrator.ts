@@ -662,7 +662,7 @@ export class ContextOrchestrator {
             
             // Use getEnvironmentStatus
             const deploymentManager = await websiteContext.getDeploymentManager();
-            const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'production');
+            const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'live');
             
             return MessageFactory.createSuccessResponse(
               ContextId.WEBSITE,

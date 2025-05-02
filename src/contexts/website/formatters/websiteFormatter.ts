@@ -123,7 +123,7 @@ export class WebsiteFormatter implements FormatterInterface<WebsiteData, string>
       
       if (options.detailed) {
         parts.push(`Preview Port: ${data.config.deployment.previewPort}`);
-        parts.push(`Production Port: ${data.config.deployment.productionPort}`);
+        parts.push(`Live Port: ${data.config.deployment.livePort}`);
         if (data.config.deployment.domain) {
           parts.push(`Domain: ${data.config.deployment.domain}`);
         }
@@ -174,7 +174,7 @@ export class WebsiteFormatter implements FormatterInterface<WebsiteData, string>
       
       if (options.detailed) {
         parts.push(`- **Preview Port:** ${data.config.deployment.previewPort}`);
-        parts.push(`- **Production Port:** ${data.config.deployment.productionPort}`);
+        parts.push(`- **Live Port:** ${data.config.deployment.livePort}`);
         if (data.config.deployment.domain) {
           parts.push(`- **Domain:** ${data.config.deployment.domain}`);
         }

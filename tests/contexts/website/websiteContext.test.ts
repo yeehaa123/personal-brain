@@ -438,7 +438,7 @@ describe('WebsiteContext', () => {
     expect(result.url).toBe('https://test.example.com');
 
     // Verify the deployment manager was called
-    expect(spiedManager.promoteToProduction).toHaveBeenCalled();
+    expect(spiedManager.promoteToLive).toHaveBeenCalled();
   });
 
   test('handleWebsiteStatus should use the deployment manager', async () => {
@@ -467,23 +467,23 @@ describe('WebsiteContext', () => {
     // Verify the deployment manager was called with the correct environment
     expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('preview');
 
-    // Test production environment
-    spiedManager.setEnvironmentStatus('production', {
+    // Test live environment
+    spiedManager.setEnvironmentStatus('live', {
       buildStatus: 'Not Built' as const,
       fileCount: 0,
       accessStatus: 'Not Accessible',
     });
 
-    const prodResult = await context.handleWebsiteStatus('production');
+    const liveResult = await context.handleWebsiteStatus('live');
 
     // Verify result contains the data from our mock
-    expect(prodResult.success).toBe(true);
-    expect(prodResult.data?.environment).toBe('production');
-    expect(prodResult.data?.buildStatus).toBe('Not Built');
-    expect(prodResult.data?.fileCount).toBe(0);
-    expect(prodResult.data?.accessStatus).toBe('Not Accessible');
+    expect(liveResult.success).toBe(true);
+    expect(liveResult.data?.environment).toBe('live');
+    expect(liveResult.data?.buildStatus).toBe('Not Built');
+    expect(liveResult.data?.fileCount).toBe(0);
+    expect(liveResult.data?.accessStatus).toBe('Not Accessible');
 
     // Verify the deployment manager was called with the correct environment
-    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('production');
+    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('live');
   });
 });

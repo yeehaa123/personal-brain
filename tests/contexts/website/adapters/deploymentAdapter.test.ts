@@ -34,7 +34,7 @@ describe('DeploymentAdapter', () => {
     expect(config).toHaveProperty('type');
     expect(config).toHaveProperty('useReverseProxy');
     expect(config).toHaveProperty('previewPort');
-    expect(config).toHaveProperty('productionPort');
+    expect(config).toHaveProperty('livePort');
     expect(config).toHaveProperty('domain');
   });
 });

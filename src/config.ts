@@ -10,7 +10,7 @@ export const logConfig = {
   // Log levels
   consoleLevel: getEnv('LOG_CONSOLE_LEVEL', getEnv('NODE_ENV') === 'production' ? 'info' : 'debug'),
   fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
-  
+
   // Log file paths
   errorLogPath: getEnv('ERROR_LOG_PATH', 'error.log'),
   combinedLogPath: getEnv('COMBINED_LOG_PATH', 'combined.log'),
@@ -27,14 +27,14 @@ export const aiConfig = {
     batchSize: getEnvAsInt('OPENAI_BATCH_SIZE', 10),
     chunkSize: getEnvAsInt('OPENAI_CHUNK_SIZE', 512),
     chunkOverlap: getEnvAsInt('OPENAI_CHUNK_OVERLAP', 100),
-    
+
     // Fallback embedding parameters
     fallbackSeed: 0.1,
     fallbackMultiplier: 10000,
     fallbackScaleFactor: 0.8,
     fallbackOffset: 0.4,
   },
-  
+
   // Anthropic configuration
   anthropic: {
     apiKey: getEnv('ANTHROPIC_API_KEY'),
@@ -50,14 +50,14 @@ export const textConfig = {
   defaultChunkSize: getEnvAsInt('DEFAULT_CHUNK_SIZE', 512),
   defaultChunkOverlap: getEnvAsInt('DEFAULT_CHUNK_OVERLAP', 100),
   defaultChunkThreshold: getEnvAsInt('DEFAULT_CHUNK_THRESHOLD', 1000),
-  
+
   // Truncation thresholds
   tagContentMaxLength: getEnvAsInt('TAG_CONTENT_MAX_LENGTH', 10000),
-  
+
   // Tag extraction
   defaultMaxTags: getEnvAsInt('DEFAULT_MAX_TAGS', 7),
   defaultMaxKeywords: getEnvAsInt('DEFAULT_MAX_KEYWORDS', 10),
-  
+
   // Reading time calculation
   defaultWordsPerMinute: getEnvAsInt('DEFAULT_WORDS_PER_MINUTE', 200),
 };
@@ -69,7 +69,7 @@ export const apiConfig = {
     baseUrl: getEnv('WIKIPEDIA_API_URL', 'https://en.wikipedia.org/w/api.php'),
     userAgent: getEnv('WIKIPEDIA_USER_AGENT', 'PersonalBrain/1.0 (personal use)'),
   },
-  
+
   // News API configuration
   newsApi: {
     apiKey: getEnv('NEWS_API_KEY'),
@@ -104,33 +104,33 @@ export const conversationConfig = {
 export const relevanceConfig = {
   // When profile relevance exceeds this threshold, consider it a profile-related query
   profileQueryThreshold: 0.6,
-  
+
   // Minimum relevance to include profile information in context
   profileInclusionThreshold: 0.4,
-  
+
   // Threshold to include profile information in response
   profileResponseThreshold: 0.5,
-  
+
   // Coverage threshold to determine if external sources are needed
   externalSourcesThreshold: 0.6,
-  
+
   // Threshold for high profile relevance in system prompt
   highProfileRelevanceThreshold: 0.7,
-  
+
   // Threshold for medium profile relevance in system prompt
   mediumProfileRelevanceThreshold: 0.4,
-  
+
   // Threshold for detailed profile information in the prompt
   detailedProfileThreshold: 0.5,
-  
+
   // Fallback values when we can't calculate semantic relevance
   fallback: {
     // High relevance fallback for profile queries
     highRelevance: 0.9,
-    
+
     // Low relevance fallback for non-profile queries
     lowRelevance: 0.2,
-    
+
     // Similarity adjustment factor
     similarityScaleFactor: 0.5,
   },
@@ -143,23 +143,18 @@ export const websiteConfig = {
   description: getEnv('WEBSITE_DESCRIPTION', 'My personal website'),
   author: getEnv('WEBSITE_AUTHOR', ''),
   baseUrl: getEnv('WEBSITE_BASE_URL', 'http://localhost:4321'),
-  
+
   // Project structure
   astroProjectPath: getEnv('WEBSITE_PROJECT_PATH', './src/website'),
-  
+
   // Deployment settings
   deployment: {
-    // Deployment type (local-dev, caddy)
     type: getEnv('WEBSITE_DEPLOYMENT_TYPE', 'local-dev'),
     
-    // Directory settings (for Caddy deployment)
-    previewDir: getEnv('WEBSITE_PREVIEW_DIR', '/opt/personal-brain-website/preview'),
-    productionDir: getEnv('WEBSITE_PRODUCTION_DIR', '/opt/personal-brain-website/production'),
-    
-    // Port settings (for server)
+    // Port settings
     previewPort: getEnvAsInt('WEBSITE_PREVIEW_PORT', 4321),
-    productionPort: getEnvAsInt('WEBSITE_PRODUCTION_PORT', 4322),
-    
+    livePort: getEnvAsInt('WEBSITE_LIVE_PORT', 4322),
+
     // Domain settings
     domain: getEnv('WEBSITE_DOMAIN', 'example.com'),
   },
