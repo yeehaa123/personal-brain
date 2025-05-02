@@ -5,6 +5,7 @@
  * independent of context initialization.
  */
 
+import config from '@/config';
 import { Logger } from '@/utils/logger';
 
 import { type DeploymentAdapter, getDeploymentAdapter } from '../adapters/deploymentAdapter';
@@ -223,9 +224,9 @@ export class ServerManager {
         return true;
       }
       
-      // Default ports from configuration
-      const previewPort = Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321;
-      const livePort = Number(process.env['WEBSITE_LIVE_PORT']) || 4322;
+      // Get ports from config system
+      const previewPort = config.website.deployment.previewPort;
+      const livePort = config.website.deployment.livePort;
       
       // Start the preview server if not running
       if (!previewRunning) {

@@ -3,6 +3,7 @@
  * Handles actual server process management
  */
 
+import config from '@/config';
 import { Logger } from '@/utils/logger';
 
 /**
@@ -206,11 +207,11 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
    * Deployment configuration
    */
   protected readonly config = {
-    type: process.env['WEBSITE_DEPLOYMENT_TYPE'] || 'local-dev',
-    useReverseProxy: process.env['WEBSITE_DEPLOYMENT_TYPE'] === 'caddy',
-    previewPort: Number(process.env['WEBSITE_PREVIEW_PORT']) || 4321,
-    livePort: Number(process.env['WEBSITE_LIVE_PORT']) || 4322,
-    domain: process.env['WEBSITE_DOMAIN'] || 'example.com',
+    type: config.website.deployment.type,
+    useReverseProxy: config.website.deployment.type === 'caddy',
+    previewPort: config.website.deployment.previewPort,
+    livePort: config.website.deployment.livePort,
+    domain: config.website.deployment.domain,
   };
   
   /**
@@ -293,9 +294,11 @@ export class PM2DeploymentAdapter implements DeploymentAdapter {
       
       if (environment === 'preview') {
         // For preview, pass WEBSITE_PREVIEW_PORT environment variable to match what the script looks for
+        // We explicitly do NOT include NODE_ENV=production to avoid PM2 issues with debug module
         command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_PREVIEW_PORT=${port}`;
       } else {
         // For live, pass WEBSITE_LIVE_PORT environment variable to match what the script looks for
+        // We explicitly do NOT include NODE_ENV=production to avoid PM2 issues with debug module
         command = `bun run pm2 start "bun run ${script}" --name ${serverName} --interpreter none --env WEBSITE_LIVE_PORT=${port}`;
       }
       
