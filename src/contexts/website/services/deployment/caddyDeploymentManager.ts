@@ -182,7 +182,7 @@ export class CaddyDeploymentManager implements WebsiteDeploymentManager {
         const execPromise = util.promisify(childProcess.exec);
         await execPromise('systemctl is-active --quiet caddy');
         serverStatus = 'Running';
-      } catch (error) {
+      } catch (_error) {
         serverStatus = 'Not Running';
       }
       
