@@ -2,8 +2,8 @@ import { serve } from 'bun';
 import { readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 
-// Get server type from command line args (preview or production)
-const SERVER_TYPE = process.argv[2] || 'production';
+// Get server type from command line args (preview or live)
+const SERVER_TYPE = process.argv[2] || 'live';
 const IS_PREVIEW = SERVER_TYPE === 'preview';
 
 // Get port number from environment or use default
@@ -14,7 +14,7 @@ const PORT = IS_PREVIEW
 // Set directory based on server type
 const SERVER_DIR = SERVER_TYPE === 'preview' 
   ? join(process.cwd(), 'src', 'website', 'dist')
-  : join(process.cwd(), 'dist', SERVER_TYPE);
+  : join(process.cwd(), 'dist', 'live');
 
 // Log the directory we're serving
 console.log(`Starting ${SERVER_TYPE} server for: ${SERVER_DIR}`);

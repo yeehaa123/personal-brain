@@ -40,8 +40,8 @@
     "prepare": "husky",
     "website:build": "astro build --root ./src/website",
     "website:preview": "bun run scripts/server/production-server.ts preview",
-    "website:production": "bun run scripts/server/production-server.ts production",
-    "website:cleanup": "pm2 stop website-preview || true && pm2 delete website-preview || true && pm2 stop website-production || true && pm2 delete website-production || true",
+    "website:live": "bun run scripts/server/production-server.ts live",
+    "website:cleanup": "pm2 stop website-preview || true && pm2 delete website-preview || true && pm2 stop website-live || true && pm2 delete website-live || true",
     "prestart": "bun run website:cleanup",
     "prerestart": "bun run website:cleanup"
   },
