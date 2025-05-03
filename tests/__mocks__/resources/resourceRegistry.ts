@@ -2,6 +2,7 @@
  * Mock ResourceRegistry
  */
 import type { ModelResponse } from '@/resources/ai/interfaces';
+import type { ResourceRegistry } from '@/resources';
 
 // Create mock interfaces that match the real implementations
 export interface MockLanguageModelAdapter {
@@ -61,7 +62,7 @@ export class MockResourceRegistry {
   /**
    * Get the singleton instance
    */
-  public static getInstance(options?: Record<string, unknown>): MockResourceRegistry {
+  public static getInstance(options?: Record<string, unknown>): ResourceRegistry {
     if (!MockResourceRegistry.instance) {
       MockResourceRegistry.instance = new MockResourceRegistry();
       
@@ -75,7 +76,7 @@ export class MockResourceRegistry {
         }
       }
     }
-    return MockResourceRegistry.instance;
+    return MockResourceRegistry.instance as unknown as ResourceRegistry;
   }
   
   // Mock API keys for testing
@@ -92,18 +93,19 @@ export class MockResourceRegistry {
   /**
    * Create a fresh instance
    */
-  public static createFresh(_options?: Record<string, unknown>): MockResourceRegistry {
-    return new MockResourceRegistry();
+  public static createFresh(_options?: Record<string, unknown>): ResourceRegistry {
+    return new MockResourceRegistry() as unknown as ResourceRegistry;
   }
   
   /**
-   * Create an instance with explicit dependencies
+   * Create an instance with explicit dependencies - deprecated, use createFresh instead
+   * @deprecated Use createFresh with dependencies parameter instead
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
     _dependencies: Record<string, unknown> = {},
-  ): MockResourceRegistry {
-    return new MockResourceRegistry();
+  ): ResourceRegistry {
+    return new MockResourceRegistry() as unknown as ResourceRegistry;
   }
 
   /**

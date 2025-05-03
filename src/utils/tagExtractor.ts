@@ -7,10 +7,10 @@ import { Logger } from '@/utils/logger';
 /**
  * Dependencies interface for TagExtractor
  */
-type TagExtractorDependencies = {
-  logger?: Logger;
-  resourceRegistry?: ResourceRegistry;
-} & Record<string, unknown>;
+export interface TagExtractorDependencies {
+  logger: Logger;
+  resourceRegistry: ResourceRegistry;
+}
 
 /**
  * TagExtractor class - handles tag extraction from content
@@ -19,7 +19,6 @@ type TagExtractorDependencies = {
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 export class TagExtractor {
   /**
@@ -30,13 +29,12 @@ export class TagExtractor {
   /**
    * Logger instance
    */
-  private logger = Logger.getInstance();
+  private logger: Logger;
   
   /**
    * ResourceRegistry instance used for Claude model access
-   * Lazy-loaded when needed in extractTags
    */
-  private resourceRegistry?: ResourceRegistry;
+  private resourceRegistry: ResourceRegistry;
   
   /**
    * Get the singleton instance
@@ -45,7 +43,15 @@ export class TagExtractor {
    */
   public static getInstance(): TagExtractor {
     if (!TagExtractor.instance) {
-      TagExtractor.instance = new TagExtractor();
+      const logger = Logger.getInstance();
+      TagExtractor.instance = new TagExtractor({
+        logger,
+        resourceRegistry: ResourceRegistry.getInstance({
+          anthropicApiKey: aiConfig.anthropic.apiKey,
+        }),
+      });
+      
+      logger.debug('TagExtractor singleton instance created');
     }
     return TagExtractor.instance;
   }
@@ -54,50 +60,58 @@ export class TagExtractor {
    * Reset the singleton instance (primarily for testing)
    */
   public static resetInstance(): void {
-    TagExtractor.instance = null;
+    try {
+      // Clean up resources if needed
+      if (TagExtractor.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during TagExtractor instance reset:', error);
+    } finally {
+      TagExtractor.instance = null;
+      Logger.getInstance().debug('TagExtractor singleton instance reset');
+    }
   }
   
   /**
    * Create a fresh instance without affecting the singleton
    * 
+   * @param _config Optional configuration (unused but kept for pattern consistency)
+   * @param dependencies Optional dependencies object
    * @returns A new TagExtractor instance
    */
-  public static createFresh(): TagExtractor {
-    return new TagExtractor();
-  }
-  
-  /**
-   * Create an instance with explicit dependencies
-   * 
-   * @param _config Optional configuration options (unused but kept for pattern consistency)
-   * @param dependencies Optional dependencies like logger and resourceRegistry
-   * @returns A new TagExtractor instance with the specified dependencies
-   */
-  public static createWithDependencies(
-    _config: Record<string, unknown> = {},
-    dependencies: TagExtractorDependencies = {},
+  public static createFresh(
+    _config?: Record<string, unknown>,
+    dependencies?: TagExtractorDependencies
   ): TagExtractor {
-    const instance = new TagExtractor();
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh TagExtractor instance');
     
-    // Apply dependencies if provided
-    if (dependencies.logger) {
-      instance.logger = dependencies.logger;
+    if (dependencies) {
+      // Use provided dependencies
+      return new TagExtractor(dependencies);
+    } else {
+      // Use default dependencies
+      return new TagExtractor({
+        logger,
+        resourceRegistry: ResourceRegistry.getInstance({
+          anthropicApiKey: aiConfig.anthropic.apiKey,
+        }),
+      });
     }
-    
-    // Store resourceRegistry dependency for later use
-    if (dependencies.resourceRegistry) {
-      instance.resourceRegistry = dependencies.resourceRegistry;
-    }
-    
-    return instance;
   }
   
   /**
    * Private constructor to enforce using factory methods
+   * @param dependencies Required dependencies
    */
-  private constructor() {
-    // Initialize with default dependencies
-    this.logger = Logger.getInstance();
+  private constructor(dependencies: TagExtractorDependencies) {
+    // Initialize from dependencies
+    this.logger = dependencies.logger;
+    this.resourceRegistry = dependencies.resourceRegistry;
+    
+    this.logger.debug('TagExtractor instance created');
   }
 
   /**
@@ -148,10 +162,7 @@ Extract up to ${maxTags} tags that best represent this content.
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
       // Get the Claude model instance from the ResourceRegistry
-      // Use the injected ResourceRegistry if available, otherwise get the singleton instance
-      const registry = this.resourceRegistry || ResourceRegistry.getInstance({
-        anthropicApiKey: anthropicApiKey,
-      });
+      const registry = this.resourceRegistry;
       const claude = registry.getClaudeModel();
 
       // Define the schema for the response

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import type { ResourceRegistry } from '@/resources';
-import type { Logger } from '@/utils/logger';
+// Import types not needed with proper mock casting
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockResourceRegistry } from '@test/__mocks__/resources/resourceRegistry';
 import { TagExtractor } from '@utils/tagExtractor';
@@ -36,11 +35,11 @@ describe('TagExtractor', () => {
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: mockLogger,
+        resourceRegistry: mockRegistry,
       },
     );
 
@@ -81,11 +80,11 @@ describe('TagExtractor', () => {
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: mockLogger,
+        resourceRegistry: mockRegistry,
       },
     );
 
@@ -126,11 +125,11 @@ describe('TagExtractor', () => {
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: mockLogger,
+        resourceRegistry: mockRegistry,
       },
     );
 
@@ -171,11 +170,11 @@ describe('TagExtractor', () => {
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: mockLogger,
+        resourceRegistry: mockRegistry,
       },
     );
 
@@ -209,11 +208,11 @@ describe('TagExtractor', () => {
     };
 
     // Create tag extractor with dependencies
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        logger: mockLogger as unknown as Logger,
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: mockLogger,
+        resourceRegistry: mockRegistry,
       },
     );
 
@@ -242,10 +241,11 @@ describe('TagExtractor', () => {
     };
 
     // Create tag extractor with empty tags for this test
-    const tagExtractor = TagExtractor.createWithDependencies(
+    const tagExtractor = TagExtractor.createFresh(
       {},
       {
-        resourceRegistry: mockRegistry as unknown as ResourceRegistry,
+        logger: MockLogger.getInstance(),
+        resourceRegistry: mockRegistry,
       },
     );
 
