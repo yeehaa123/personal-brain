@@ -95,7 +95,7 @@ export class ErrorUtils {
   private static instance: ErrorUtils | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Private constructor to enforce the use of getInstance() or createFresh()

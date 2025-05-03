@@ -11,7 +11,7 @@
  */
 import winston from 'winston';
 
-import { logConfig } from '@/config';
+import { getEnv, isProductionEnvironment, isTestEnvironment } from '@/utils/configUtils';
 
 /**
  * Logger configuration options
@@ -59,8 +59,10 @@ export class Logger {
    * @param config Optional configuration to override default settings
    */
   private constructor(config?: LoggerConfig) {
-    // Check for silent mode first
-    if (config?.silent) {
+    // Check for silent mode first, either from explicit config or from test environment
+    const isSilent = config?.silent ?? isTestEnvironment();
+    
+    if (isSilent) {
       // Create a silent logger with no transports
       this.winstonLogger = winston.createLogger({
         silent: true,
@@ -69,13 +71,22 @@ export class Logger {
       return;
     }
     
+    // Default config values
+    const defaultConfig = {
+      consoleLevel: getEnv('LOG_CONSOLE_LEVEL', isProductionEnvironment() ? 'info' : 'debug'),
+      fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
+      errorLogPath: getEnv('ERROR_LOG_PATH', 'error.log'),
+      combinedLogPath: getEnv('COMBINED_LOG_PATH', 'combined.log'),
+      debugLogPath: getEnv('DEBUG_LOG_PATH', 'debug.log'),
+    };
+    
     // Merge provided config with defaults
     const mergedConfig = {
-      consoleLevel: config?.consoleLevel || logConfig.consoleLevel,
-      fileLevel: config?.fileLevel || logConfig.fileLevel,
-      errorLogPath: config?.errorLogPath || logConfig.errorLogPath,
-      combinedLogPath: config?.combinedLogPath || logConfig.combinedLogPath,
-      debugLogPath: config?.debugLogPath || logConfig.debugLogPath,
+      consoleLevel: config?.consoleLevel || defaultConfig.consoleLevel,
+      fileLevel: config?.fileLevel || defaultConfig.fileLevel,
+      errorLogPath: config?.errorLogPath || defaultConfig.errorLogPath,
+      combinedLogPath: config?.combinedLogPath || defaultConfig.combinedLogPath,
+      debugLogPath: config?.debugLogPath || defaultConfig.debugLogPath,
     };
 
     // Create a custom format for console output

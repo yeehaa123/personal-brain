@@ -10,6 +10,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
+import { getEnv, getEnvAsFloat, getEnvAsInt } from '@/utils/configUtils';
 import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
 
 import { ClaudeModel } from './ai/claude';
@@ -131,8 +132,13 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
     this.registerResource(
       ResourceIdentifiers.ClaudeModel,
       () => {
-        this.validateApiKey('anthropic'); // Validate API key exists
-        return ClaudeModel.getInstance();
+        const anthropicApiKey = this.validateAnthropicApiKey(); // Validate Anthropic API key exists
+        return ClaudeModel.getInstance({
+          model: getEnv('ANTHROPIC_MODEL', 'claude-3-7-sonnet-20250219'),
+          apiKey: anthropicApiKey,
+          defaultMaxTokens: getEnvAsInt('ANTHROPIC_MAX_TOKENS', 1000),
+          defaultTemperature: getEnvAsFloat('ANTHROPIC_TEMPERATURE', 0.0),
+        });
       },
     );
     
@@ -140,8 +146,12 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
     this.registerResource(
       ResourceIdentifiers.EmbeddingService,
       () => {
-        this.validateApiKey('openai'); // Validate API key exists
-        return EmbeddingService.getInstance();
+        const openAiApiKey = this.validateOpenAiApiKey(); // Validate OpenAI API key exists
+        return EmbeddingService.getInstance({
+          apiKey: openAiApiKey,
+          embeddingModel: getEnv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+          embeddingDimension: getEnvAsInt('OPENAI_EMBEDDING_DIMENSION', 1536),
+        });
       },
     );
     
@@ -170,24 +180,37 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   }
   
   /**
-   * Enhanced API key validation with better error messages
+   * Validate and retrieve Anthropic API key
    * 
-   * @param keyType Type of API key (anthropic or openai)
-   * @returns The validated API key
+   * @returns The validated Anthropic API key
    * @throws Error if API key is missing
    */
-  protected validateApiKey(keyType: 'anthropic' | 'openai'): string {
-    const optionsKey = keyType === 'anthropic' ? 'anthropicApiKey' : 'openAiApiKey';
-    const envKey = keyType === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
-    
-    const apiKey = this.options[optionsKey] || process.env[envKey];
-    if (!apiKey) {
-      const error = new Error(`${keyType.toUpperCase()} API key is required but not provided`);
-      this.logger.error(`Missing ${keyType} API key`, { error });
+  protected validateAnthropicApiKey(): string {
+    const anthropicApiKey = this.options.anthropicApiKey || getEnv('ANTHROPIC_API_KEY');
+    if (!anthropicApiKey) {
+      const error = new Error('ANTHROPIC API key is required but not provided');
+      this.logger.error('Missing Anthropic API key', { error });
       throw error;
     }
     
-    return apiKey;
+    return anthropicApiKey;
+  }
+  
+  /**
+   * Validate and retrieve OpenAI API key
+   * 
+   * @returns The validated OpenAI API key
+   * @throws Error if API key is missing
+   */
+  protected validateOpenAiApiKey(): string {
+    const openAiApiKey = this.options.openAiApiKey || getEnv('OPENAI_API_KEY');
+    if (!openAiApiKey) {
+      const error = new Error('OPENAI API key is required but not provided');
+      this.logger.error('Missing OpenAI API key', { error });
+      throw error;
+    }
+    
+    return openAiApiKey;
   }
   
   /**

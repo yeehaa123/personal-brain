@@ -5,8 +5,7 @@
  * for use in tests across the codebase.
  */
 
-// Import types are removed to avoid unused import warning
-// We can add back explicit interfaces if needed
+import type { Logger } from '@/utils/logger';
 
 /**
  * Configuration options for MockLogger to match real Logger
@@ -24,8 +23,6 @@ export class MockLogger {
 
   // Configuration options
   private config: MockLoggerConfig;
-
-  // We don't need winstonLogger as we're using type assertions in our Registry implementation
 
   // Tracking logged messages for assertions
   messages: {
@@ -59,14 +56,14 @@ export class MockLogger {
    * Get singleton instance
    * @param config Configuration options
    */
-  public static getInstance(config?: MockLoggerConfig): MockLogger {
+  public static getInstance(config?: MockLoggerConfig): Logger {
     if (!MockLogger.instance) {
       MockLogger.instance = new MockLogger(config);
     } else if (config && Object.keys(config).length > 0) {
       // Update existing instance config
       MockLogger.instance.updateConfig(config);
     }
-    return MockLogger.instance;
+    return MockLogger.instance as unknown as Logger;
   }
 
   /**
@@ -80,8 +77,8 @@ export class MockLogger {
    * Create a fresh instance for isolated testing
    * @param config Configuration options
    */
-  public static createFresh(config?: MockLoggerConfig): MockLogger {
-    return new MockLogger(config);
+  public static createFresh(config?: MockLoggerConfig): Logger {
+    return new MockLogger(config) as unknown as Logger;
   }
 
   /**
@@ -137,8 +134,8 @@ export class MockLogger {
   /**
    * Support for child loggers
    */
-  child(_options: Record<string, unknown>): MockLogger {
-    return this;
+  child(_options: Record<string, unknown>): Logger {
+    return this as unknown as Logger;
   }
 
   /**
@@ -158,6 +155,6 @@ export class MockLogger {
  * Create a mock logger instance
  * @param config Logger configuration
  */
-export function createMockLogger(config?: MockLoggerConfig): MockLogger {
+export function createMockLogger(config?: MockLoggerConfig): Logger {
   return MockLogger.createFresh(config);
 }

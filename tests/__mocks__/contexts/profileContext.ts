@@ -11,6 +11,7 @@ import type { ProfileStorageAdapter } from '@/contexts/profiles/profileStorageAd
 import type { NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import type { ProfileEmbeddingService, ProfileSearchService, ProfileTagService } from '@/services/profiles';
 import {
   MockProfileEmbeddingService,
 } from '@test/__mocks__/services/profiles/profileEmbeddingService';
@@ -31,10 +32,10 @@ export class MockProfileContext extends MockBaseContext {
   private static instance: MockProfileContext | null = null;
 
   // Mock services and dependencies
-  public storageAdapter: MockProfileStorageAdapter;
-  public embeddingService: MockProfileEmbeddingService;
-  public tagService: MockProfileTagService;
-  public searchService: MockProfileSearchService;
+  public storageAdapter: ProfileStorageAdapter;
+  public embeddingService: ProfileEmbeddingService;
+  public tagService: ProfileTagService;
+  public searchService: ProfileSearchService;
 
   // Mock note context reference
   protected noteContext: {
@@ -73,10 +74,10 @@ export class MockProfileContext extends MockBaseContext {
    */
   public static createWithDependencies(config: Record<string, unknown> = {}): MockProfileContext {
     // Handle the case where storage or services are provided as dependencies
-    const storage = config['storage'] as MockProfileStorageAdapter;
-    const embeddingService = config['embeddingService'] as MockProfileEmbeddingService;
-    const tagService = config['tagService'] as MockProfileTagService;
-    const searchService = config['searchService'] as MockProfileSearchService;
+    const storage = config['storage'] as ProfileStorageAdapter;
+    const embeddingService = config['embeddingService'] as ProfileEmbeddingService;
+    const tagService = config['tagService'] as ProfileTagService;
+    const searchService = config['searchService'] as ProfileSearchService;
 
     // Create a new instance with the base config
     const instance = new MockProfileContext(config);
@@ -150,14 +151,15 @@ export class MockProfileContext extends MockBaseContext {
    * Set a new storage adapter
    */
   setStorage(storage: ProfileStorageAdapter): void {
-    this.storageAdapter = storage as unknown as MockProfileStorageAdapter;
+    this.storageAdapter = storage as unknown as ProfileStorageAdapter;
   }
 
   /**
    * Get the user profile
    */
   async getProfile(): Promise<Profile | null> {
-    return this.storageAdapter.getProfile();
+    const profile = await this.storageAdapter.getProfile();
+    return profile || null;
   }
 
   /**
@@ -243,7 +245,12 @@ export class MockProfileContext extends MockBaseContext {
    * Find notes related to the profile using tags or embeddings
    */
   async findRelatedNotes(limit = 5): Promise<NoteWithSimilarity[]> {
-    return this.searchService.findRelatedNotes(limit);
+    const relatedNotes = await this.searchService.findRelatedNotes(limit);
+    // Ensure embedding is never undefined
+    return relatedNotes.map(note => ({
+      ...note,
+      embedding: note.embedding ?? null,
+    }));
   }
 
   /**
@@ -253,7 +260,12 @@ export class MockProfileContext extends MockBaseContext {
     profileTags: string[],
     limit = 5,
   ): Promise<NoteWithSimilarity[]> {
-    return this.searchService.findNotesWithSimilarTags(profileTags, limit);
+    const notes = await this.searchService.findNotesWithSimilarTags(profileTags, limit);
+    // Ensure embedding is never undefined
+    return notes.map(note => ({
+      ...note,
+      embedding: note.embedding ?? null,
+    }));
   }
 
   /**

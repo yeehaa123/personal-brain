@@ -543,10 +543,7 @@ export class MatrixBrainInterface {
 
     // Use our enhanced formatter but without bot styling
     // Matrix will handle this itself
-    const formatter = MatrixMarkdownFormatter.getInstance({
-      applyBotStyling: false,
-      enableCustomStyles: false,
-    });
+    const formatter = MatrixMarkdownFormatter.getInstance();
 
     // Format the markdown to HTML with all enhancements
     return formatter.format(markdown);

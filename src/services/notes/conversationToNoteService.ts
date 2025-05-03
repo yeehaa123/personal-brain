@@ -31,7 +31,7 @@ export class ConversationToNoteService {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of the service
@@ -59,11 +59,11 @@ export class ConversationToNoteService {
         conversationStorage,
       );
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationToNoteService singleton instance created');
     } else if (noteRepository || embeddingService || conversationStorage) {
       // Log a warning if trying to get instance with different dependencies
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
     }
     
@@ -83,12 +83,12 @@ export class ConversationToNoteService {
         // No specific cleanup needed for this service
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ConversationToNoteService instance reset:', error);
     } finally {
       ConversationToNoteService.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationToNoteService singleton instance reset');
     }
   }
@@ -110,7 +110,7 @@ export class ConversationToNoteService {
     embeddingService: NoteEmbeddingService,
     conversationStorage?: ConversationStorage,
   ): ConversationToNoteService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationToNoteService instance');
     
     return new ConversationToNoteService(noteRepository, embeddingService, conversationStorage);

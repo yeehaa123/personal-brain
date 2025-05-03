@@ -97,9 +97,8 @@ describe('WebsiteContextMessaging', () => {
     // Reset and recreate the mock mediator
     MockContextMediator.resetInstance();
     mockMediator = MockContextMediator.createFresh({
-      shouldRequestSucceed: true,
       mockResponseData: { success: true },
-    });
+    }) as unknown as MockContextMediator;
     
     // Reset all mock WebsiteContext methods
     (mockWebsiteContext.generateLandingPage as unknown as { mockClear: () => void }).mockClear();

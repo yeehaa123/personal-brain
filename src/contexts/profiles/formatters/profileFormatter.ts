@@ -73,8 +73,8 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       ProfileFormatter.instance = new ProfileFormatter(config);
     } else if (config) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored');
     }
     return ProfileFormatter.instance;
   }
@@ -138,7 +138,7 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       includeEmptySections: config?.includeEmptySections ?? false,
       maxFieldLength: config?.maxFieldLength ?? 0,
     };
-    this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    this.logger = dependencies?.logger || Logger.getInstance();
   }
   
   /**

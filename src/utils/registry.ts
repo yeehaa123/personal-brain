@@ -31,7 +31,7 @@ export interface ServiceConfig<T = unknown> {
 export class SimpleContainer {
   private services = new Map<string, ServiceConfig<unknown>>();
   private instances = new Map<string, unknown>();
-  private logger: Logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger: Logger = Logger.getInstance();
   
   /**
    * Register a service with the container
@@ -235,9 +235,7 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   protected constructor(options: TOptions) {
     this.options = options;
     this.name = options.name || this.constructor.name;
-    this.logger = Logger.getInstance({ 
-      silent: options.silent || process.env.NODE_ENV === 'test',
-    });
+    this.logger = Logger.getInstance();
     this.container = options.container || this.createContainer();
     
     this.logger.debug(`${this.name} constructed`);

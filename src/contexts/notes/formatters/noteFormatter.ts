@@ -55,7 +55,7 @@ export class NoteFormatter implements FormatterInterface<Note, string> {
   private static instance: NoteFormatter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of NoteFormatter

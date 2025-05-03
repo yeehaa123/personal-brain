@@ -5,42 +5,44 @@
  * for use in tests across the codebase.
  */
 
+import type { TagExtractor } from '@/utils/tagExtractor';
+
 /**
  * Mock TagExtractor class with singleton pattern
  */
 export class MockTagExtractor {
   private static instance: MockTagExtractor | null = null;
-  
+
   // Tracking extracted tags for assertions
   public extractedTags: string[][] = [];
-  
+
   // Default tags to return
   private tags: string[] = ['ecosystem', 'architecture', 'example'];
-  
+
   // Flag to control if extractTags throws an error
   private shouldThrowError = false;
-  
+
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockTagExtractor {
+  public static getInstance(): TagExtractor {
     if (!MockTagExtractor.instance) {
       MockTagExtractor.instance = new MockTagExtractor();
     }
-    return MockTagExtractor.instance;
+    return MockTagExtractor.instance as unknown as TagExtractor;
   }
-  
+
   /**
    * Reset the singleton instance
    */
   public static resetInstance(): void {
     MockTagExtractor.instance = null;
   }
-  
+
   /**
    * Create a fresh instance for isolated testing
    */
-  public static createFresh(options?: { tags?: string[], shouldThrowError?: boolean }): MockTagExtractor {
+  public static createFresh(options?: { tags?: string[], shouldThrowError?: boolean }): TagExtractor {
     const instance = new MockTagExtractor();
     if (options?.tags) {
       instance.tags = options.tags;
@@ -48,19 +50,9 @@ export class MockTagExtractor {
     if (options?.shouldThrowError) {
       instance.shouldThrowError = options.shouldThrowError;
     }
-    return instance;
+    return instance as unknown as TagExtractor;
   }
-  
-  /**
-   * Creates a new instance with explicit dependencies
-   */
-  public static createWithDependencies(
-    _config: Record<string, unknown> = {},
-    _dependencies: Record<string, unknown> = {},
-  ): MockTagExtractor {
-    return MockTagExtractor.createFresh();
-  }
-  
+
   /**
    * Mock implementation of extractTags method
    */
@@ -73,39 +65,32 @@ export class MockTagExtractor {
     if (this.shouldThrowError) {
       throw new Error('Mock tag extraction error');
     }
-    
+
     // Record the call for assertions
     this.extractedTags.push([...this.tags]);
-    
+
     // Return a copy of the configured tags
     return [...this.tags].slice(0, maxTags);
   }
-  
+
   /**
    * Configure mock to throw an error
    */
   public setShouldThrowError(shouldThrow: boolean): void {
     this.shouldThrowError = shouldThrow;
   }
-  
+
   /**
    * Configure the tags to return
    */
   public setTags(tags: string[]): void {
     this.tags = [...tags];
   }
-  
+
   /**
    * Clear recorded data
    */
   public clear(): void {
     this.extractedTags = [];
   }
-}
-
-/**
- * Create a mock TagExtractor instance
- */
-export function createMockTagExtractor(options?: { tags?: string[], shouldThrowError?: boolean }): MockTagExtractor {
-  return MockTagExtractor.createFresh(options);
 }

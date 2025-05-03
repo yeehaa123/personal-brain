@@ -62,7 +62,7 @@ export class ConversationFormatter implements FormatterInterface<ConversationTur
   private static instance: ConversationFormatter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Private constructor to enforce singleton pattern

@@ -10,14 +10,14 @@
 import type { Profile } from '@/models/profile';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { DataRequestType, MessageFactory } from '@/protocol/messaging';
-import type { ContextMediator } from '@/protocol/messaging/contextMediator';
+import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { BaseSearchService } from '@/services/common/baseSearchService';
 import type { BaseSearchServiceConfig, BaseSearchServiceDependencies } from '@/services/common/baseSearchService';
 import type { BaseSearchOptions } from '@/services/common/baseSearchService';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
-import { extractKeywords } from '@/utils/textUtils';
+import { TextUtils } from '@/utils/textUtils';
 
 import { ProfileEmbeddingService } from './profileEmbeddingService';
 import { ProfileRepository } from './profileRepository';
@@ -36,15 +36,19 @@ export interface ProfileSearchServiceConfig extends BaseSearchServiceConfig {
  * Dependencies for ProfileSearchService
  */
 export interface ProfileSearchServiceDependencies extends BaseSearchServiceDependencies<
-  Profile, 
+  Profile,
   ProfileRepository,
   ProfileEmbeddingService
 > {
   /** Tag service for profile tag operations */
   tagService: ProfileTagService;
-  
+
   /** Context mediator for cross-context communication */
-  mediator?: ContextMediator;
+  mediator: ContextMediator;
+
+  /** Text utilities for processing text */
+  textUtils: TextUtils;
+  logger: Logger;
 }
 
 export type ProfileSearchOptions = BaseSearchOptions;
@@ -79,13 +83,18 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
   private static instance: ProfileSearchService | null = null;
-  
+
   /**
    * The tag service for profile tag operations
    * This is specific to ProfileSearchService, not in the base class
    */
   private tagService: ProfileTagService;
-  
+
+  /**
+   * Text utilities instance for text processing
+   */
+  private readonly textUtils: TextUtils;
+
   /**
    * Get the singleton instance of the service
    * 
@@ -94,31 +103,24 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @param config Optional configuration options
    * @returns The singleton instance
    */
-  public static getInstance(config?: ProfileSearchServiceConfig): ProfileSearchService {
+  public static getInstance(): ProfileSearchService {
     if (!ProfileSearchService.instance) {
-      // Create with defaults
       const dependencies: ProfileSearchServiceDependencies = {
         repository: ProfileRepository.getInstance(),
         embeddingService: ProfileEmbeddingService.getInstance(),
         tagService: ProfileTagService.getInstance(),
-        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' }),
+        logger: Logger.getInstance(),
+        mediator: ContextMediator.getInstance(),
+        textUtils: TextUtils.getInstance(),
       };
-      
-      ProfileSearchService.instance = new ProfileSearchService(
-        { entityName: 'profile', ...config },
-        dependencies,
-      );
-      
-      dependencies.logger?.debug?.('ProfileSearchService singleton instance created');
-    } else if (config) {
-      // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+
+      ProfileSearchService.instance = new ProfileSearchService({ entityName: 'profile' }, dependencies);
+      dependencies.logger.debug('ProfileSearchService singleton instance created');
     }
-    
+
     return ProfileSearchService.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    * 
@@ -132,16 +134,16 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
         // No specific cleanup needed for this service
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ProfileSearchService instance reset:', error);
     } finally {
       ProfileSearchService.instance = null;
-      
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+
+      const logger = Logger.getInstance();
       logger.debug('ProfileSearchService singleton instance reset');
     }
   }
-  
+
   /**
    * Create a fresh ProfileSearchService instance
    * 
@@ -154,31 +156,28 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @returns A new ProfileSearchService instance
    */
   public static createFresh(
-    config: ProfileSearchServiceConfig,
-    dependencies: ProfileSearchServiceDependencies,
+    config: ProfileSearchServiceConfig = { entityName: 'profile' },
+    dependencies?: ProfileSearchServiceDependencies,
   ): ProfileSearchService {
-    const logger = dependencies.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.debug('Creating fresh ProfileSearchService instance');
-    
-    return new ProfileSearchService(config, dependencies);
+    if (dependencies) {
+      // Use provided dependencies as-is
+      dependencies.logger.debug('Creating fresh ProfileSearchService instance');
+      return new ProfileSearchService(config, dependencies);
+    } else {
+      const defaultDeps: ProfileSearchServiceDependencies = {
+        repository: ProfileRepository.getInstance(),
+        embeddingService: ProfileEmbeddingService.getInstance(),
+        tagService: ProfileTagService.getInstance(),
+        logger: Logger.getInstance(),
+        textUtils: TextUtils.getInstance(),
+        mediator: ContextMediator.getInstance(),
+      };
+
+      defaultDeps.logger.debug('Creating fresh ProfileSearchService instance with default dependencies');
+      return new ProfileSearchService(config, defaultDeps);
+    }
   }
 
-  /**
-   * Create a new ProfileSearchService with injected dependencies
-   * 
-   * This is an alias for createFresh() to maintain consistency with other services
-   * that implement the Component Interface Standardization pattern.
-   * 
-   * @param config Configuration options
-   * @param dependencies Service dependencies
-   * @returns A new ProfileSearchService instance
-   */
-  public static createWithDependencies(
-    config: ProfileSearchServiceConfig,
-    dependencies: ProfileSearchServiceDependencies,
-  ): ProfileSearchService {
-    return ProfileSearchService.createFresh(config, dependencies);
-  }
 
   /**
    * Create a new ProfileSearchService with injected dependencies
@@ -194,19 +193,22 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     dependencies: ProfileSearchServiceDependencies,
   ) {
     super(config, dependencies);
-    
+
     // Set the tag service from dependencies
     this.tagService = dependencies.tagService;
-    
+
     // Store the mediator if provided
     this.mediator = dependencies.mediator;
-    
+
+    // Store the text utilities instance
+    this.textUtils = dependencies.textUtils;
+
     this.logger.debug('ProfileSearchService instance created');
   }
-  
+
   /** Context mediator for cross-context communication */
   private mediator?: ContextMediator;
-  
+
 
   /**
    * Search profiles with various strategies
@@ -226,9 +228,9 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @returns Array of matching profiles
    */
   protected override async keywordSearch(
-    query?: string, 
-    tags?: string[], 
-    _limit = 10, 
+    query?: string,
+    tags?: string[],
+    _limit = 10,
     _offset = 0,
   ): Promise<Profile[]> {
     // Since there's only one profile, we just return it if it matches the query/tags
@@ -272,8 +274,8 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
    * @returns Array of matching profiles
    */
   protected override async semanticSearch(
-    query: string, 
-    tags?: string[], 
+    query: string,
+    tags?: string[],
     _limit = 10, // Renamed to avoid unused parameter warning
     _offset = 0,  // Renamed to avoid unused parameter warning
   ): Promise<Profile[]> {
@@ -281,7 +283,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       if (!isNonEmptyString(query)) {
         throw new ValidationError('Empty query for semantic profile search');
       }
-      
+
       const profile = await this.repository.getProfile();
       if (!profile || !profile.embedding) {
         return this.keywordSearch(query, tags, _limit, _offset);
@@ -289,19 +291,19 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
 
       // Generate embedding for the query
       const queryEmbedding = await this.embeddingService.generateEmbedding(query);
-      
+
       // Calculate similarity between query and profile
       const similarity = this.embeddingService.calculateSimilarity(queryEmbedding, profile.embedding);
-      
+
       // Use a threshold to determine if profile matches
       const threshold = 0.7; // Adjust as needed
-      
+
       // Filter by tags if provided
       let matchesTags = true;
       if (tags && tags.length > 0 && profile.tags) {
         matchesTags = tags.some(tag => profile.tags?.includes(tag));
       }
-      
+
       return (similarity >= threshold && matchesTags) ? [profile] : [];
     } catch (error) {
       this.logger.error(`Profile semantic search failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -331,7 +333,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       this.logger.error('Cannot find related notes: No mediator available for cross-context communication');
       return [];
     }
-    
+
     const profile = await this.repository.getProfile();
     if (!profile) {
       return [];
@@ -342,7 +344,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       try {
         // Create a data request for notes with similar tags
         const tagRequest = MessageFactory.createDataRequest(
-          ContextId.PROFILE, 
+          ContextId.PROFILE,
           ContextId.NOTES,
           DataRequestType.NOTES_SEARCH,
           {
@@ -350,18 +352,18 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
             limit: limit,
           },
         );
-        
+
         // Send the request via mediator
         const tagResponse = await this.mediator.sendRequest(tagRequest);
-        
+
         // Check if we got a successful response with notes
-        if (tagResponse.status === 'success' && tagResponse.data && 
-            'notes' in tagResponse.data && Array.isArray(tagResponse.data['notes']) && 
-            tagResponse.data['notes'].length > 0) {
+        if (tagResponse.status === 'success' && tagResponse.data &&
+          'notes' in tagResponse.data && Array.isArray(tagResponse.data['notes']) &&
+          tagResponse.data['notes'].length > 0) {
           return tagResponse.data['notes'] as NoteWithSimilarity[];
         }
       } catch (error) {
-        this.logger.error('Error finding notes with similar tags', { 
+        this.logger.error('Error finding notes with similar tags', {
           error: error instanceof Error ? error.message : String(error),
           context: 'ProfileSearchService',
         });
@@ -374,10 +376,10 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       if (profile.embedding?.length) {
         // Use the profile text instead of raw embedding for better semantic understanding
         const profileText = this.tagService.prepareProfileTextForEmbedding(profile);
-        
+
         // Create a data request for semantic search
         const semanticRequest = MessageFactory.createDataRequest(
-          ContextId.PROFILE, 
+          ContextId.PROFILE,
           ContextId.NOTES,
           DataRequestType.NOTES_SEMANTIC_SEARCH,
           {
@@ -385,24 +387,24 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
             limit: limit,
           },
         );
-        
+
         // Send the request via mediator
         const semanticResponse = await this.mediator.sendRequest(semanticRequest);
-        
+
         // Check if we got a successful response with notes
-        if (semanticResponse.status === 'success' && semanticResponse.data && 
-            'notes' in semanticResponse.data && Array.isArray(semanticResponse.data['notes']) && 
-            semanticResponse.data['notes'].length > 0) {
+        if (semanticResponse.status === 'success' && semanticResponse.data &&
+          'notes' in semanticResponse.data && Array.isArray(semanticResponse.data['notes']) &&
+          semanticResponse.data['notes'].length > 0) {
           return semanticResponse.data['notes'] as NoteWithSimilarity[];
         }
       }
 
       // Otherwise fall back to keyword search
       const keywords = this.extractKeywords(this.tagService.prepareProfileTextForEmbedding(profile));
-      
+
       // Create a data request for keyword search
       const keywordRequest = MessageFactory.createDataRequest(
-        ContextId.PROFILE, 
+        ContextId.PROFILE,
         ContextId.NOTES,
         DataRequestType.NOTES_SEARCH,
         {
@@ -410,20 +412,20 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
           limit: limit,
         },
       );
-      
+
       // Send the request via mediator
       const keywordResponse = await this.mediator.sendRequest(keywordRequest);
-      
+
       // Check if we got a successful response with notes
-      if (keywordResponse.status === 'success' && keywordResponse.data && 
-          'notes' in keywordResponse.data && Array.isArray(keywordResponse.data['notes']) && 
-          keywordResponse.data['notes'].length > 0) {
+      if (keywordResponse.status === 'success' && keywordResponse.data &&
+        'notes' in keywordResponse.data && Array.isArray(keywordResponse.data['notes']) &&
+        keywordResponse.data['notes'].length > 0) {
         return keywordResponse.data['notes'] as NoteWithSimilarity[];
       }
-      
+
       return [];
     } catch (error) {
-      this.logger.error('Error finding notes related to profile:', { 
+      this.logger.error('Error finding notes related to profile:', {
         error: error instanceof Error ? error.message : String(error),
         context: 'ProfileSearchService',
       });
@@ -446,7 +448,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
       this.logger.error('Cannot find notes with similar tags: No mediator available for cross-context communication');
       return [];
     }
-    
+
     if (!profileTags?.length) {
       return [];
     }
@@ -454,7 +456,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     try {
       // Create a data request for notes with specific tags
       const tagsRequest = MessageFactory.createDataRequest(
-        ContextId.PROFILE, 
+        ContextId.PROFILE,
         ContextId.NOTES,
         DataRequestType.NOTES_SEARCH,
         {
@@ -463,25 +465,25 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
           includeContent: false,
         },
       );
-      
+
       // Send the request via mediator
       const tagsResponse = await this.mediator.sendRequest(tagsRequest);
-      
+
       // Check if we got a successful response with notes
-      if (tagsResponse.status !== 'success' || !tagsResponse.data || 
-          !('notes' in tagsResponse.data) || !Array.isArray(tagsResponse.data['notes']) || 
-          tagsResponse.data['notes'].length === 0) {
+      if (tagsResponse.status !== 'success' || !tagsResponse.data ||
+        !('notes' in tagsResponse.data) || !Array.isArray(tagsResponse.data['notes']) ||
+        tagsResponse.data['notes'].length === 0) {
         return [];
       }
-      
+
       const allNotes = tagsResponse.data['notes'] as NoteWithSimilarity[];
-      
+
       // Filter to notes that have tags and score them
       const scoredNotes = allNotes
         .filter(note => note.tags && Array.isArray(note.tags) && note.tags.length > 0)
         .map(note => {
           // We know tags is not null from the filter above
-          const noteTags = note.tags as string[]; 
+          const noteTags = note.tags as string[];
           const matchCount = this.calculateTagMatchScore(noteTags, profileTags);
           return {
             ...note,
@@ -506,7 +508,7 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
 
       return sortedNotes.slice(0, limit);
     } catch (error) {
-      this.logger.error('Error finding notes with similar tags:', { 
+      this.logger.error('Error finding notes with similar tags:', {
         error: error instanceof Error ? error.message : String(error),
         context: 'ProfileSearchService',
       });
@@ -524,14 +526,14 @@ export class ProfileSearchService extends BaseSearchService<Profile, ProfileRepo
     if (!isNonEmptyString(text)) {
       return [];
     }
-    
+
     try {
       // Apply safe limits with defaults
       const safeMaxKeywords = Math.max(1, Math.min(maxKeywords || 10, 50));
-      
-      // Use the utility function to extract keywords
-      const keywords = extractKeywords(text, safeMaxKeywords);
-      
+
+      // Use TextUtils instance to extract keywords
+      const keywords = this.textUtils.extractKeywords(text, safeMaxKeywords);
+
       // Ensure we return a valid array
       return Array.isArray(keywords) ? keywords.filter(isNonEmptyString) : [];
     } catch (error) {

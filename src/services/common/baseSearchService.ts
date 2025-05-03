@@ -97,15 +97,13 @@ export abstract class BaseSearchService<
       this.entityName = config.entityName;
       this.repository = dependencies.repository;
       this.embeddingService = dependencies.embeddingService;
-      this.logger = dependencies.logger || Logger.getInstance({
-        silent: process.env.NODE_ENV === 'test',
-      });
+      this.logger = dependencies.logger || Logger.getInstance();
     } else {
       // Legacy constructor - derived classes must set these properties
       this.entityName = 'entity';
       this.repository = null as unknown as TRepository;
       this.embeddingService = null as unknown as TEmbeddingService;
-      this.logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      this.logger = Logger.getInstance();
     }
   }
 

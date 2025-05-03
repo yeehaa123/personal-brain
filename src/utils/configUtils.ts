@@ -132,3 +132,27 @@ export function getEnvAsFloat(key: string, defaultValue: number): number {
 export function getEnvAsBool(key: string, defaultValue: boolean): boolean {
   return ConfigUtils.getInstance().getEnvAsBool(key, defaultValue);
 }
+
+/**
+ * Check if the application is running in test environment
+ * @returns true if NODE_ENV is set to 'test', false otherwise
+ */
+export function isTestEnvironment(): boolean {
+  return process.env.NODE_ENV === 'test';
+}
+
+/**
+ * Check if the application is running in production environment
+ * @returns true if NODE_ENV is set to 'production', false otherwise
+ */
+export function isProductionEnvironment(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+/**
+ * Check if the application is running in development environment
+ * @returns true if NODE_ENV is set to 'development' or not set, false otherwise
+ */
+export function isDevelopmentEnvironment(): boolean {
+  return process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+}

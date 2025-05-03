@@ -28,7 +28,7 @@ export interface AstroContentServiceTestHelpers {
  */
 export class AstroContentService {
   private contentCollectionPath: string;
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   private spawnFunction: SpawnFunction;
   
   /**

@@ -21,44 +21,44 @@ import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resour
  */
 export class MockProfileEmbeddingService implements Partial<ProfileEmbeddingService> {
   private static instance: MockProfileEmbeddingService | null = null;
-  
+
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockProfileEmbeddingService {
+  public static getInstance(): ProfileEmbeddingService {
     if (!MockProfileEmbeddingService.instance) {
       MockProfileEmbeddingService.instance = new MockProfileEmbeddingService();
     }
-    return MockProfileEmbeddingService.instance;
+    return MockProfileEmbeddingService.instance as unknown as ProfileEmbeddingService;
   }
-  
+
   /**
    * Reset singleton instance
    */
   public static resetInstance(): void {
     MockProfileEmbeddingService.instance = null;
   }
-  
+
   /**
    * Create fresh instance for isolated testing
    */
-  public static createFresh(): MockProfileEmbeddingService {
-    return new MockProfileEmbeddingService();
+  public static createFresh(): ProfileEmbeddingService {
+    return new MockProfileEmbeddingService() as unknown as ProfileEmbeddingService;
   }
-  
+
   // Mock methods with default implementations
   getProfileTextForEmbedding = mock((_profile: Partial<Profile>): string => {
     return `Mock profile text for ${_profile.fullName || 'Unknown User'}`;
   });
-  
+
   generateEmbedding = mock((_text: string): Promise<number[]> => {
     return Promise.resolve(MockEmbeddingService.createMockEmbedding(_text));
   });
-  
+
   generateEmbeddingForProfile = mock((): Promise<{ updated: boolean }> => {
     return Promise.resolve({ updated: true });
   });
-  
+
   shouldRegenerateEmbedding = mock((_profile: Partial<Profile>): boolean => {
     // Check if profile updates contain fields that would require re-embedding
     const keyFields = ['fullName', 'summary', 'headline', 'occupation'];

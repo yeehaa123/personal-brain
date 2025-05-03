@@ -40,7 +40,7 @@ export class ProfileManager implements IProfileManager {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private profileContext: ProfileContext;
   private profileAnalyzer: ProfileAnalyzer;
@@ -58,11 +58,11 @@ export class ProfileManager implements IProfileManager {
     if (!ProfileManager.instance) {
       ProfileManager.instance = new ProfileManager(config);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileManager singleton instance created');
     } else if (config && Object.keys(config).length > 0) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -82,12 +82,12 @@ export class ProfileManager implements IProfileManager {
         // Any cleanup needed would go here
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ProfileManager instance reset:', error);
     } finally {
       ProfileManager.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileManager singleton instance reset');
     }
   }
@@ -103,7 +103,7 @@ export class ProfileManager implements IProfileManager {
    * @returns A new ProfileManager instance
    */
   public static createFresh(config: ProfileManagerConfig): ProfileManager {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileManager instance');
     
     return new ProfileManager(config);

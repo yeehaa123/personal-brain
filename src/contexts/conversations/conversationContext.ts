@@ -40,7 +40,7 @@ import { ConversationToolService } from '@/contexts/conversations/tools';
 import type { FormatterInterface } from '@/contexts/formatterInterface';
 import type { StorageInterface } from '@/contexts/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
-// No need to import ServiceRegistry anymore
+// No need to import logConfig anymore
 import { Logger } from '@/utils/logger';
 
 /**
@@ -186,11 +186,11 @@ export class ConversationContext extends BaseContext<
     if (!ConversationContext.instance) {
       ConversationContext.instance = ConversationContext.createWithDependencies(options);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationContext singleton instance created');
     } else if (Object.keys(options).length > 0) {
       // Log at debug level if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -204,7 +204,7 @@ export class ConversationContext extends BaseContext<
   static override resetInstance(): void {
     if (ConversationContext.instance) {
       // Any cleanup needed before destroying the instance
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationContext singleton instance reset');
       
       ConversationContext.instance = null;
@@ -219,7 +219,7 @@ export class ConversationContext extends BaseContext<
    * @returns A new ConversationContext instance
    */
   static override createFresh(options: Record<string, unknown> = {}): ConversationContext {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationContext instance');
     
     return ConversationContext.createWithDependencies(options);

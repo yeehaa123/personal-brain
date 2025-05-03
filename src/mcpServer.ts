@@ -10,6 +10,7 @@ import { ExternalSourceContext } from '@/contexts/externalSources';
 import { NoteContext } from '@/contexts/notes';
 import { ProfileContext } from '@/contexts/profiles';
 import { WebsiteContext } from '@/contexts/website';
+import { isTestEnvironment } from '@/utils/configUtils';
 
 // Export the McpServer type directly
 export type { McpServer };
@@ -60,7 +61,7 @@ export function createUnifiedMcpServer(config: McpServerConfig = {}): McpServer 
   
   // Initialize contexts first (this should be done asynchronously in a real scenario)
   // Skip registration in test environment
-  if (mcpServer && process.env.NODE_ENV !== 'test') {
+  if (mcpServer && !isTestEnvironment()) {
     // Register all contexts on the unified server with proper error handling
     try {
       noteContext.registerOnServer(mcpServer);

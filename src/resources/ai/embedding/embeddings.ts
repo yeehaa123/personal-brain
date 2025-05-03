@@ -6,15 +6,16 @@
  * across the application.
  */
 
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { cosineSimilarity, embed, embedMany } from 'ai';
 
-import { aiConfig, textConfig } from '@/config';
+import { textConfig } from '@/config';
 import type { EmbeddingModelAdapter } from '@/resources/ai/interfaces';
+import { getEnv, getEnvAsInt } from '@/utils/configUtils';
 import { ApiError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined } from '@/utils/safeAccessUtils';
-import { chunkText, prepareText } from '@/utils/textUtils';
+import { TextUtils } from '@/utils/textUtils';
 
 /**
  * Configuration options for the embedding service
@@ -49,14 +50,18 @@ export interface EmbeddingDependencies {
  */
 export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> {
   /** Configuration values - used in methods */
-  // apiKey is used by the AI SDK internally
-  // @ts-expect-error Property is used by the AI SDK
   private readonly apiKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
+  
+  /** OpenAI provider instance */
+  private readonly openAIProvider: ReturnType<typeof createOpenAI>;
 
   /** Logger instance for this class */
   private readonly logger: Logger;
+  
+  /** Text utilities instance */
+  private readonly textUtils: TextUtils;
 
   /** Singleton instance */
   private static instance: EmbeddingService | null = null;
@@ -64,7 +69,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   /**
    * Get the singleton instance of EmbeddingService
    * 
-   * @param config Optional configuration to override defaults
+   * @param config Optional configuration for the embedding service
    * @returns The shared EmbeddingService instance
    */
   public static getInstance(config?: EmbeddingConfig): EmbeddingService {
@@ -84,7 +89,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   /**
    * Create a fresh service instance (primarily for testing)
    * 
-   * @param config Optional configuration to override defaults
+   * @param config Optional configuration for the embedding service
    * @returns A new EmbeddingService instance
    */
   public static createFresh(config?: EmbeddingConfig): EmbeddingService {
@@ -99,7 +104,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
    * @returns A new EmbeddingService instance
    */
   public static createWithDependencies(
-    config: Record<string, unknown> = {},
+    config: Record<string, unknown>,
     dependencies: Record<string, unknown> = {},
   ): EmbeddingService {
     // Convert generic config to typed config
@@ -108,6 +113,11 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
       embeddingModel: config['embeddingModel'] as string,
       embeddingDimension: config['embeddingDimension'] as number,
     };
+
+    // Validate API key is required
+    if (!embeddingConfig.apiKey) {
+      throw new Error('Missing required configuration: apiKey');
+    }
 
     // Create instance with typed dependencies
     return new EmbeddingService(
@@ -121,7 +131,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   /**
    * Create a new embedding service
    * 
-   * @param config Optional configuration to override defaults
+   * @param config Configuration for the embedding service
    * @param deps Optional dependencies 
    * @private Use factory methods instead of constructor directly
    */
@@ -129,10 +139,26 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     config?: EmbeddingConfig,
     deps: EmbeddingDependencies = {},
   ) {
-    this.apiKey = config?.apiKey || aiConfig.openAI.apiKey;
-    this.embeddingModel = config?.embeddingModel || aiConfig.openAI.embeddingModel;
-    this.embeddingDimension = config?.embeddingDimension || aiConfig.openAI.embeddingDimension;
+    // Initialize from config or environment variables
+    this.apiKey = config?.apiKey || getEnv('OPENAI_API_KEY', '');
+    this.embeddingModel = config?.embeddingModel || getEnv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small');
+    this.embeddingDimension = config?.embeddingDimension || getEnvAsInt('OPENAI_EMBEDDING_DIMENSION', 1536);
     this.logger = deps.logger || Logger.getInstance();
+    
+    // Verify API key is available
+    if (!this.apiKey) {
+      this.logger.warn('No OpenAI API key provided for embedding service');
+    }
+    
+    // Initialize OpenAI provider with API key
+    this.openAIProvider = createOpenAI({
+      apiKey: this.apiKey,
+    });
+    
+    // Initialize text utilities
+    this.textUtils = TextUtils.getInstance();
+    
+    this.logger.debug(`Initialized EmbeddingService with model: ${this.embeddingModel}`);
   }
 
   /**
@@ -151,12 +177,12 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
 
     try {
       // Prepare the text for embedding
-      const preparedText = prepareText(text);
+      const preparedText = this.textUtils.prepareText(text);
       this.logger.debug('Generating embedding via AI SDK');
 
       // Use the Vercel AI SDK to generate the embedding
       const response = await embed({
-        model: openai.embedding(this.embeddingModel),
+        model: this.openAIProvider.embedding(this.embeddingModel),
         value: preparedText,
         maxRetries: 3,
       });
@@ -208,7 +234,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
       // Prepare the texts and filter out any null/undefined/empty values
       const preparedTexts = texts
         .filter(isDefined)
-        .map(text => prepareText(text));
+        .map(text => this.textUtils.prepareText(text));
 
       // If all texts were invalid and we have no prepared texts, return empty result
       if (preparedTexts.length === 0) {
@@ -218,7 +244,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
 
       // Use the Vercel AI SDK to generate batch embeddings
       const response = await embedMany({
-        model: openai.embedding(this.embeddingModel),
+        model: this.openAIProvider.embedding(this.embeddingModel),
         values: preparedTexts,
         maxRetries: 3,
       });
@@ -283,7 +309,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
     chunkSize = textConfig.defaultChunkSize,
     overlap = textConfig.defaultChunkOverlap,
   ): string[] {
-    return chunkText(text, chunkSize, overlap);
+    return this.textUtils.chunkText(text, chunkSize, overlap);
   }
 
   /**

@@ -69,7 +69,7 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
   private static instance: ExternalSourceStorageAdapter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /** Registered external source instances */
   private sources: Map<string, ExternalSourceInterface> = new Map();

@@ -25,7 +25,7 @@ export class ConversationResourceService {
   private static instance: ConversationResourceService | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of ConversationResourceService

@@ -68,7 +68,7 @@ export class ConversationToolService {
       ConversationToolService.instance = new ConversationToolService(config);
     } else if (config) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return ConversationToolService.instance;
@@ -137,7 +137,7 @@ export class ConversationToolService {
       includeSummaries: config?.includeSummaries ?? false,
       defaultFormat: config?.defaultFormat ?? 'markdown',
     };
-    this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    this.logger = dependencies?.logger || Logger.getInstance();
     
     this.logger.debug('ConversationToolService initialized', { context: 'ConversationToolService' });
   }

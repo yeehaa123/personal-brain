@@ -4,14 +4,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
 import type { TextConfig } from '@/utils/textUtils';
-import { 
-  calculateReadingTime, 
-  chunkText, 
-  extractKeywords, 
-  prepareText, 
-  sanitizeHtml,
-  TextUtils,
-} from '@/utils/textUtils';
+import { TextUtils } from '@/utils/textUtils';
 
 describe('TextUtils', () => {
   beforeEach(() => {
@@ -57,8 +50,9 @@ describe('TextUtils', () => {
     const utils = TextUtils.getInstance();
     expect(utils.prepareText(input)).toBe(expected);
     
-    // Test the exported function
-    expect(prepareText(input)).toBe(expected);
+    // No standalone function, using the class instance
+    const utils2 = TextUtils.getInstance();
+    expect(utils2.prepareText(input)).toBe(expected);
   });
   
   test('chunkText splits text into chunks', () => {
@@ -71,8 +65,9 @@ describe('TextUtils', () => {
     // Should create multiple chunks
     expect(chunks.length).toBeGreaterThan(1);
     
-    // Test the exported function with explicit size
-    const functionChunks = chunkText(text, 25, 10);
+    // No standalone function, using the class instance again
+    const utils2 = TextUtils.createFresh({ defaultChunkSize: 25, defaultChunkOverlap: 10 });
+    const functionChunks = utils2.chunkText(text);
     expect(functionChunks.length).toBeGreaterThan(1);
   });
   
@@ -99,8 +94,9 @@ describe('TextUtils', () => {
     expect(keywords).not.toContain('some');
     expect(keywords).not.toContain('like');
     
-    // Test the exported function
-    const functionKeywords = extractKeywords(text);
+    // No standalone function, use the class instance
+    const utils2 = TextUtils.getInstance();
+    const functionKeywords = utils2.extractKeywords(text);
     expect(functionKeywords).toEqual(keywords);
   });
   
@@ -124,8 +120,9 @@ describe('TextUtils', () => {
     // Should keep safe img tags
     expect(sanitized).toContain('<img src="image.jpg"');
     
-    // Test the exported function
-    const functionSanitized = sanitizeHtml(html);
+    // No standalone function, use the class instance
+    const utils2 = TextUtils.getInstance();
+    const functionSanitized = utils2.sanitizeHtml(html);
     expect(functionSanitized).toEqual(sanitized);
   });
   
@@ -142,8 +139,9 @@ describe('TextUtils', () => {
     // With 100 words per minute, should take 4 minutes
     expect(utils.calculateReadingTime(words, 100)).toBe(4);
     
-    // Test the exported function
-    expect(calculateReadingTime(words)).toBe(2);
-    expect(calculateReadingTime(words, 100)).toBe(4);
+    // No standalone function, use the class instance
+    const utils2 = TextUtils.getInstance();
+    expect(utils2.calculateReadingTime(words)).toBe(2);
+    expect(utils2.calculateReadingTime(words, 100)).toBe(4);
   });
 });

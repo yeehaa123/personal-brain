@@ -4,9 +4,11 @@ import type { Note } from '@/models/note';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
+import { MockTextUtils } from '@test/__mocks__/utils/textUtils';
 
 
 // Mock the EmbeddingService directly
@@ -160,12 +162,14 @@ describe('NoteSearchService', () => {
     repository = mockRepository as unknown as NoteRepository;
     embeddingService = new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
     
-    // Use the new createWithDependencies method with the updated interface
-    searchService = NoteSearchService.createWithDependencies(
+    // Use the createFresh method with the updated interface
+    searchService = NoteSearchService.createFresh(
       { entityName: 'note' },
       { 
         repository: repository,
         embeddingService: embeddingService,
+        logger: MockLogger.createFresh(),
+        textUtils: MockTextUtils.createFresh(),
       },
     );
   });

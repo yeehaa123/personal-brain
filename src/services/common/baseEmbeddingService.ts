@@ -21,7 +21,7 @@ export abstract class BaseEmbeddingService implements IEmbeddingService {
    * Logger instance for this class and its derived classes
    * Each instance of BaseEmbeddingService has its own logger
    */
-  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected logger = Logger.getInstance();
   
   protected embeddingService: EmbeddingService;
 

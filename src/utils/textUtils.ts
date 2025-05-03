@@ -32,14 +32,11 @@ export class TextUtils {
   
   /**
    * Get the singleton instance of TextUtils
-   * @param config Optional configuration to override defaults
+   * @param config Optional configuration for text utilities
    */
   public static getInstance(config?: Partial<TextConfig>): TextUtils {
     if (!TextUtils.instance) {
       TextUtils.instance = new TextUtils(config);
-    } else if (config) {
-      // Update configuration if provided
-      TextUtils.instance.updateConfig(config);
     }
     return TextUtils.instance;
   }
@@ -53,7 +50,7 @@ export class TextUtils {
   
   /**
    * Create a fresh instance (primarily for testing)
-   * @param config Optional configuration to override defaults
+   * @param config Optional configuration for text utilities
    */
   public static createFresh(config?: Partial<TextConfig>): TextUtils {
     return new TextUtils(config);
@@ -61,16 +58,11 @@ export class TextUtils {
   
   /**
    * Private constructor to enforce singleton pattern
-   * @param config Optional configuration to override defaults
+   * @param config Configuration for text utilities (optional for testing)
    */
   private constructor(config?: Partial<TextConfig>) {
-    // Use provided config or defaults from application config
-    this.config = {
-      defaultChunkSize: config?.defaultChunkSize ?? textConfig.defaultChunkSize,
-      defaultChunkOverlap: config?.defaultChunkOverlap ?? textConfig.defaultChunkOverlap,
-      defaultMaxKeywords: config?.defaultMaxKeywords ?? textConfig.defaultMaxKeywords,
-      defaultWordsPerMinute: config?.defaultWordsPerMinute ?? textConfig.defaultWordsPerMinute,
-    };
+    // Merge default config with any provided overrides
+    this.config = { ...textConfig, ...config };
   }
   
   /**
@@ -229,56 +221,5 @@ export class TextUtils {
   }
 }
 
-// Export the singleton instance methods as functions for backward compatibility
-/**
- * Clean and normalize text for embedding
- * @param text Text to prepare
- * @returns Cleaned text
- */
-export function prepareText(text: string): string {
-  return TextUtils.getInstance().prepareText(text);
-}
-
-/**
- * Chunk a long text into smaller pieces
- * @param text The text to chunk
- * @param chunkSize The approximate size of each chunk
- * @param overlap The number of characters to overlap between chunks
- * @returns An array of text chunks
- */
-export function chunkText(
-  text: string, 
-  chunkSize: number = textConfig.defaultChunkSize, 
-  overlap: number = textConfig.defaultChunkOverlap,
-): string[] {
-  return TextUtils.getInstance().chunkText(text, chunkSize, overlap);
-}
-
-/**
- * Extract keywords from text
- * @param text Text to analyze
- * @param maxKeywords Maximum number of keywords to return
- * @returns Array of extracted keywords
- */
-export function extractKeywords(text: string, maxKeywords: number = textConfig.defaultMaxKeywords): string[] {
-  return TextUtils.getInstance().extractKeywords(text, maxKeywords);
-}
-
-/**
- * Sanitize HTML to prevent XSS attacks
- * @param html HTML string to sanitize
- * @returns Sanitized HTML string
- */
-export function sanitizeHtml(html: string): string {
-  return TextUtils.getInstance().sanitizeHtml(html);
-}
-
-/**
- * Calculate the approximate reading time for a text
- * @param text The text to analyze
- * @param wordsPerMinute Average reading speed (default: 200 words per minute)
- * @returns Estimated reading time in minutes
- */
-export function calculateReadingTime(text: string, wordsPerMinute: number = textConfig.defaultWordsPerMinute): number {
-  return TextUtils.getInstance().calculateReadingTime(text, wordsPerMinute);
-}
+// Export the TextConfig interface and TextUtils class
+// Clients should use the TextUtils class directly through its getInstance() or createFresh() methods

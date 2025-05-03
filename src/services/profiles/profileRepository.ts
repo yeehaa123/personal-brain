@@ -41,7 +41,7 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
     if (!ProfileRepository.instance) {
       ProfileRepository.instance = new ProfileRepository();
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileRepository singleton instance created');
     }
     
@@ -61,12 +61,12 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
         // No specific cleanup needed for this repository
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ProfileRepository instance reset:', error);
     } finally {
       ProfileRepository.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileRepository singleton instance reset');
     }
   }
@@ -81,7 +81,7 @@ export class ProfileRepository extends BaseRepository<typeof profiles, Profile> 
    * @returns A new ProfileRepository instance
    */
   public static createFresh(): ProfileRepository {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileRepository instance');
     
     return new ProfileRepository();

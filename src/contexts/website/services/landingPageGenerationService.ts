@@ -58,7 +58,7 @@ export interface LandingPageQualityAssessmentOptions {
 export class LandingPageGenerationService {
   private static instance: LandingPageGenerationService | null = null;
   private brainProtocol: BrainProtocol | null = null;
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   private sectionQualityService: SectionQualityService;
   
   // Record to store section quality assessments

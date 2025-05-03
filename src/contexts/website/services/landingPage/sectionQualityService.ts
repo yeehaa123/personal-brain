@@ -21,7 +21,7 @@ import sectionQualityAssessmentPrompt from '../prompts/section-quality-assessmen
 export class SectionQualityService {
   private static instance: SectionQualityService | null = null;
   private brainProtocol: BrainProtocol | null = null;
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   private qualityThresholds: QualityThresholds;
 
   /**

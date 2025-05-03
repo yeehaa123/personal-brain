@@ -9,7 +9,7 @@
 
 import { marked } from 'marked';
 
-import { sanitizeHtml } from '@/utils/textUtils';
+import { TextUtils } from '@/utils/textUtils';
 
 // Define formatter options
 export interface MarkdownFormatterOptions {
@@ -50,9 +50,9 @@ export class MatrixMarkdownFormatter {
    * @param options Optional formatter options
    * @returns The shared MatrixMarkdownFormatter instance
    */
-  public static getInstance(options?: Partial<MarkdownFormatterOptions>): MatrixMarkdownFormatter {
+  public static getInstance(): MatrixMarkdownFormatter {
     if (!MatrixMarkdownFormatter.instance) {
-      MatrixMarkdownFormatter.instance = new MatrixMarkdownFormatter(options);
+      MatrixMarkdownFormatter.instance = new MatrixMarkdownFormatter();
     }
     return MatrixMarkdownFormatter.instance;
   }
@@ -83,6 +83,7 @@ export class MatrixMarkdownFormatter {
 
   private options: MarkdownFormatterOptions;
   private marked: typeof marked;
+  private textUtils: TextUtils;
 
   /**
    * Create a new MatrixMarkdownFormatter
@@ -97,6 +98,9 @@ export class MatrixMarkdownFormatter {
     
     // Configure marked with default options
     this.marked = marked;
+    
+    // Initialize TextUtils instance
+    this.textUtils = TextUtils.getInstance();
     
     // Set up standard marked options for code blocks
     this.marked.setOptions({
@@ -131,7 +135,7 @@ export class MatrixMarkdownFormatter {
     }
     
     // Sanitize the HTML to prevent XSS
-    return sanitizeHtml(html);
+    return this.textUtils.sanitizeHtml(html);
   }
 
   /**
@@ -215,11 +219,3 @@ export class MatrixMarkdownFormatter {
   }
 }
 
-/**
- * Get the singleton instance of the formatter
- * 
- * @deprecated Use MatrixMarkdownFormatter.getInstance() instead for better consistency with the Component Interface Standardization pattern
- */
-export function getMarkdownFormatter(options?: Partial<MarkdownFormatterOptions>): MatrixMarkdownFormatter {
-  return MatrixMarkdownFormatter.getInstance(options);
-}

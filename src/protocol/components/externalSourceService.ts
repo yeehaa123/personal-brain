@@ -36,7 +36,7 @@ export class ExternalSourceService {
   private static instance: ExternalSourceService | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private externalContext: ExternalSourceContext;
   private profileAnalyzer: ProfileAnalyzer;
@@ -56,7 +56,7 @@ export class ExternalSourceService {
         config.promptFormatter,
       );
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ExternalSourceService singleton instance created');
     }
     
@@ -70,7 +70,7 @@ export class ExternalSourceService {
   public static resetInstance(): void {
     ExternalSourceService.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('ExternalSourceService singleton instance reset');
   }
 
@@ -81,7 +81,7 @@ export class ExternalSourceService {
    * @returns A new ExternalSourceService instance
    */
   public static createFresh(config: ExternalSourceServiceConfig): ExternalSourceService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ExternalSourceService instance');
     
     return new ExternalSourceService(

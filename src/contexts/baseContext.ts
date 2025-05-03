@@ -70,7 +70,7 @@ export abstract class BaseContext<
   // Using private in the derived class: private static instance: DerivedClass | null = null;
   
   /** Logger instance */
-  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected logger = Logger.getInstance();
   
   /** McpServer instance */
   protected mcpServer: McpServer;

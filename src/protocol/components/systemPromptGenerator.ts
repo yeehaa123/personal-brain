@@ -17,7 +17,7 @@ export class SystemPromptGenerator {
   private static instance: SystemPromptGenerator | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of SystemPromptGenerator
@@ -28,7 +28,7 @@ export class SystemPromptGenerator {
     if (!SystemPromptGenerator.instance) {
       SystemPromptGenerator.instance = new SystemPromptGenerator();
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('SystemPromptGenerator singleton instance created');
     }
     
@@ -42,7 +42,7 @@ export class SystemPromptGenerator {
   public static resetInstance(): void {
     SystemPromptGenerator.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('SystemPromptGenerator singleton instance reset');
   }
 
@@ -52,7 +52,7 @@ export class SystemPromptGenerator {
    * @returns A new SystemPromptGenerator instance
    */
   public static createFresh(): SystemPromptGenerator {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh SystemPromptGenerator instance');
     
     return new SystemPromptGenerator();
@@ -69,7 +69,7 @@ export class SystemPromptGenerator {
     _config: Record<string, unknown> = {},
     _dependencies: Record<string, unknown> = {},
   ): SystemPromptGenerator {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating SystemPromptGenerator with explicit dependencies');
     
     // Currently this class doesn't have any configurable options or dependencies,

@@ -51,7 +51,7 @@ export class QueryProcessor implements IQueryProcessor {
   private static instance: QueryProcessor | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private contextManager: IContextManager;
   private conversationManager: IConversationManager;
@@ -73,7 +73,7 @@ export class QueryProcessor implements IQueryProcessor {
         config.apiKey,
       );
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('QueryProcessor singleton instance created');
     }
     
@@ -87,7 +87,7 @@ export class QueryProcessor implements IQueryProcessor {
   public static resetInstance(): void {
     QueryProcessor.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('QueryProcessor singleton instance reset');
   }
 
@@ -98,7 +98,7 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns A new QueryProcessor instance
    */
   public static createFresh(config: QueryProcessorConfig): QueryProcessor {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh QueryProcessor instance');
     
     return new QueryProcessor(
@@ -119,7 +119,7 @@ export class QueryProcessor implements IQueryProcessor {
     config: Record<string, unknown> = {},
     dependencies: Record<string, unknown> = {},
   ): QueryProcessor {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating QueryProcessor with explicit dependencies');
     
     // Extract required dependencies

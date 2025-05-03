@@ -27,7 +27,7 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
   private static instance: NoteStorageAdapter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /** The note repository instance */
   public readonly repository: NoteRepository;

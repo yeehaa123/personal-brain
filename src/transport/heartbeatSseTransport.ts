@@ -47,7 +47,7 @@ export class HeartbeatSSETransport extends SSEServerTransport {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Interval ID for the heartbeat timer
@@ -70,12 +70,12 @@ export class HeartbeatSSETransport extends SSEServerTransport {
         config.heartbeatIntervalMs,
       );
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('HeartbeatSSETransport singleton instance created');
     } else if (config) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored');
     }
     
     return HeartbeatSSETransport.instance;
@@ -88,7 +88,7 @@ export class HeartbeatSSETransport extends SSEServerTransport {
    * Primarily used for testing to ensure a clean state.
    */
   public static resetInstance(): void {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     
     try {
       // Clean up resources if needed
@@ -116,7 +116,7 @@ export class HeartbeatSSETransport extends SSEServerTransport {
    * @returns A new HeartbeatSSETransport instance
    */
   public static createFresh(config: HeartbeatSSETransportConfig): HeartbeatSSETransport {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh HeartbeatSSETransport instance');
     
     return new HeartbeatSSETransport(

@@ -32,7 +32,7 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
   private static instance: ProfileStorageAdapter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Creates a new ProfileStorageAdapter
@@ -67,8 +67,8 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
       });
     } else if (repository) {
       // Log at debug level if trying to get instance with different repository
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.debug('getInstance called with repository but instance already exists. Repository ignored.');
+      const logger = Logger.getInstance();
+      logger.debug('getInstance called with repository but instance already exists. Repository ignored');
     }
     return ProfileStorageAdapter.instance;
   }

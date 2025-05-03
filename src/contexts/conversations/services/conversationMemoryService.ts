@@ -25,7 +25,7 @@ export class ConversationMemoryService {
   private static instance: ConversationMemoryService | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /** The tiered memory manager */
   private tieredMemoryManager: TieredMemoryManager;

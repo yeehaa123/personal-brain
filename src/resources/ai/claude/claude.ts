@@ -5,11 +5,10 @@
  * It follows the Component Interface Standardization pattern and implements the LanguageModelAdapter interface.
  */
 
-import { anthropic } from '@ai-sdk/anthropic';
+import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateObject, type LanguageModelUsage } from 'ai';
 import { z } from 'zod';
 
-import { aiConfig } from '@/config';
 import type { ModelResponse, ModelUsage } from '@/resources/ai/interfaces';
 import logger from '@/utils/logger';
 
@@ -25,8 +24,14 @@ export type DefaultResponseType = z.infer<typeof textSchema>;
  * Configuration options for ClaudeModel
  */
 export interface ClaudeModelOptions {
-  /** Model to use (defaults to aiConfig.anthropic.defaultModel) */
-  model?: string;
+  /** Model to use (e.g., "claude-3-7-sonnet-20250219") */
+  model: string;
+  /** API key for Anthropic */
+  apiKey: string;
+  /** Default max tokens for responses */
+  defaultMaxTokens: number;
+  /** Default temperature for sampling (0-1, lower = more deterministic) */
+  defaultTemperature: number;
 }
 
 /**
@@ -62,7 +67,10 @@ export class ClaudeModel {
    */
   private static instance: ClaudeModel | null = null;
   
-  private model: string;
+  private readonly model: string;
+  private readonly apiKey: string;
+  private readonly defaultMaxTokens: number;
+  private readonly defaultTemperature: number;
 
   /**
    * Get the singleton instance of ClaudeModel
@@ -72,9 +80,9 @@ export class ClaudeModel {
    * @param options Configuration options (only used when creating a new instance)
    * @returns The singleton instance
    */
-  public static getInstance(options?: ClaudeModelOptions): ClaudeModel {
+  public static getInstance(options: ClaudeModelOptions): ClaudeModel {
     if (!ClaudeModel.instance) {
-      ClaudeModel.instance = new ClaudeModel(options?.model);
+      ClaudeModel.instance = new ClaudeModel(options);
       logger.debug('ClaudeModel singleton instance created');
     } else if (options && Object.keys(options).length > 0) {
       // Log at debug level if trying to get instance with different config
@@ -104,9 +112,9 @@ export class ClaudeModel {
    * @param options Configuration options
    * @returns A new ClaudeModel instance
    */
-  public static createFresh(options?: ClaudeModelOptions): ClaudeModel {
+  public static createFresh(options: ClaudeModelOptions): ClaudeModel {
     logger.debug('Creating fresh ClaudeModel instance');
-    return new ClaudeModel(options?.model);
+    return new ClaudeModel(options);
   }
 
   /**
@@ -115,10 +123,15 @@ export class ClaudeModel {
    * Part of the Component Interface Standardization pattern.
    * Users should call getInstance() or createFresh() instead.
    * 
-   * @param model Model to use (defaults to aiConfig.anthropic.defaultModel)
+   * @param options Configuration options
    */
-  private constructor(model = aiConfig.anthropic.defaultModel) {
-    this.model = model;
+  private constructor(options: ClaudeModelOptions) {
+    // Initialize parameters from required options
+    this.model = options.model;
+    this.apiKey = options.apiKey;
+    this.defaultMaxTokens = options.defaultMaxTokens;
+    this.defaultTemperature = options.defaultTemperature;
+    
     logger.debug(`Claude model initialized with model: ${this.model}`);
   }
 
@@ -139,13 +152,17 @@ export class ClaudeModel {
       const schema = options.schema || (textSchema as unknown as z.ZodType<T>);
       
       // Generate structured object using the Vercel AI SDK
+      const anthropicProvider = createAnthropic({
+        apiKey: this.apiKey,
+      });
+      
       const response = await generateObject({
-        model: anthropic(this.model),
+        model: anthropicProvider(this.model),
         system: options.systemPrompt,
         prompt: options.userPrompt,
         schema,
-        temperature: options.temperature ?? aiConfig.anthropic.temperature,
-        maxTokens: options.maxTokens ?? aiConfig.anthropic.defaultMaxTokens,
+        temperature: options.temperature ?? this.defaultTemperature,
+        maxTokens: options.maxTokens ?? this.defaultMaxTokens,
       });
       
       // Map usage from the AI SDK to our internal format

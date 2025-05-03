@@ -27,7 +27,7 @@ export class NoteService {
   private static instance: NoteService | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private context: NoteContext;
 
@@ -41,7 +41,7 @@ export class NoteService {
     if (!NoteService.instance) {
       NoteService.instance = new NoteService(config.context);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteService singleton instance created');
     }
     
@@ -55,7 +55,7 @@ export class NoteService {
   public static resetInstance(): void {
     NoteService.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('NoteService singleton instance reset');
   }
 
@@ -66,7 +66,7 @@ export class NoteService {
    * @returns A new NoteService instance
    */
   public static createFresh(config: NoteServiceConfig): NoteService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteService instance');
     
     return new NoteService(config.context);

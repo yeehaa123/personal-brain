@@ -23,7 +23,7 @@ export class PromptFormatter {
   private static instance: PromptFormatter | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of PromptFormatter
@@ -34,7 +34,7 @@ export class PromptFormatter {
     if (!PromptFormatter.instance) {
       PromptFormatter.instance = new PromptFormatter();
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('PromptFormatter singleton instance created');
     }
     
@@ -48,7 +48,7 @@ export class PromptFormatter {
   public static resetInstance(): void {
     PromptFormatter.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('PromptFormatter singleton instance reset');
   }
 
@@ -58,7 +58,7 @@ export class PromptFormatter {
    * @returns A new PromptFormatter instance
    */
   public static createFresh(): PromptFormatter {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh PromptFormatter instance');
     
     return new PromptFormatter();
@@ -75,7 +75,7 @@ export class PromptFormatter {
     _config: Record<string, unknown> = {},
     _dependencies: Record<string, unknown> = {},
   ): PromptFormatter {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating PromptFormatter with explicit dependencies');
     
     // Currently this class doesn't have any configurable options or dependencies,

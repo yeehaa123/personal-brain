@@ -58,7 +58,7 @@ export class ExternalSourceToolService {
       ExternalSourceToolService.instance = new ExternalSourceToolService(config);
     } else if (config) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     return ExternalSourceToolService.instance;
@@ -123,7 +123,7 @@ export class ExternalSourceToolService {
       includeDebugInfo: config?.includeDebugInfo ?? false,
       defaultSearchLimit: config?.defaultSearchLimit ?? 5,
     };
-    this.logger = dependencies?.logger || Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    this.logger = dependencies?.logger || Logger.getInstance();
     
     this.logger.debug('ExternalSourceToolService initialized', { context: 'ExternalSourceToolService' });
   }

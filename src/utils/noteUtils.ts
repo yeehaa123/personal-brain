@@ -14,8 +14,8 @@ import { Logger } from './logger';
  * Display a collection of notes in the console
  */
 export function displayNotes(notes: Note[]) {
-  // Create a logger instance with silent mode in tests
-  const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  // Create a logger instance
+  const logger = Logger.getInstance();
   
   if (notes.length === 0) {
     CLIInterface.warn('No notes found.');

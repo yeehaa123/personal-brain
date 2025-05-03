@@ -27,7 +27,7 @@ export class ProfileAnalyzer {
   private static instance: ProfileAnalyzer | null = null;
 
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private embeddingService: EmbeddingService;
 
@@ -41,7 +41,7 @@ export class ProfileAnalyzer {
     if (!ProfileAnalyzer.instance) {
       ProfileAnalyzer.instance = new ProfileAnalyzer(config.embeddingService);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileAnalyzer singleton instance created');
     }
     
@@ -55,7 +55,7 @@ export class ProfileAnalyzer {
   public static resetInstance(): void {
     ProfileAnalyzer.instance = null;
     
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('ProfileAnalyzer singleton instance reset');
   }
 
@@ -66,7 +66,7 @@ export class ProfileAnalyzer {
    * @returns A new ProfileAnalyzer instance
    */
   public static createFresh(config: ProfileAnalyzerConfig): ProfileAnalyzer {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileAnalyzer instance');
     
     return new ProfileAnalyzer(config.embeddingService);

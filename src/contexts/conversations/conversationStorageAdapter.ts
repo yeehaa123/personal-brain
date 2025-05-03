@@ -31,7 +31,7 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
   private static instance: ConversationStorageAdapter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Create a new ConversationStorageAdapter
@@ -50,8 +50,8 @@ export class ConversationStorageAdapter implements StorageInterface<Conversation
       ConversationStorageAdapter.instance = ConversationStorageAdapter.createWithDependencies(storage);
     } else if (storage) {
       // Log at debug level if trying to get instance with different storage
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.debug('getInstance called with storage but instance already exists. Storage ignored.');
+      const logger = Logger.getInstance();
+      logger.debug('getInstance called with storage but instance already exists. Storage ignored');
     }
     return ConversationStorageAdapter.instance;
   }

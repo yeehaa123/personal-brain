@@ -30,7 +30,7 @@ export class WebsiteToolService {
   private static instance: WebsiteToolService | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of WebsiteToolService

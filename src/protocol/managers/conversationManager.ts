@@ -37,7 +37,7 @@ export class ConversationManager implements IConversationManager {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private conversationContext: ConversationContext;
   private currentRoomId?: string;
@@ -56,12 +56,12 @@ export class ConversationManager implements IConversationManager {
     if (!ConversationManager.instance) {
       ConversationManager.instance = new ConversationManager(options.config);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationManager singleton instance created');
     } else if (options) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-      logger.warn('getInstance called with config but instance already exists. Config ignored.');
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored');
     }
     
     return ConversationManager.instance;
@@ -80,12 +80,12 @@ export class ConversationManager implements IConversationManager {
         // No cleanup needed currently
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ConversationManager instance reset:', error);
     } finally {
       ConversationManager.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ConversationManager singleton instance reset');
     }
   }
@@ -100,7 +100,7 @@ export class ConversationManager implements IConversationManager {
    * @returns A new ConversationManager instance
    */
   public static createFresh(options: ConversationManagerConfig): ConversationManager {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationManager instance');
     
     return new ConversationManager(options.config);

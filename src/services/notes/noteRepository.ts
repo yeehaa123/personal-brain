@@ -40,7 +40,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
     if (!NoteRepository.instance) {
       NoteRepository.instance = new NoteRepository();
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteRepository singleton instance created');
     }
     
@@ -60,12 +60,12 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
         // No specific cleanup needed for this repository
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during NoteRepository instance reset:', error);
     } finally {
       NoteRepository.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteRepository singleton instance reset');
     }
   }
@@ -80,7 +80,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    * @returns A new NoteRepository instance
    */
   public static createFresh(): NoteRepository {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteRepository instance');
     
     return new NoteRepository();
@@ -96,7 +96,7 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
    * @returns A new NoteRepository instance
    */
   public static createWithDependencies(_config: Record<string, unknown> = {}): NoteRepository {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating NoteRepository with dependencies');
     
     // For this repository, we currently don't have any dependencies to inject,

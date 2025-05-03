@@ -44,7 +44,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private externalSourceService: ExternalSourceService | null;
   private enabled: boolean;
@@ -66,11 +66,11 @@ export class ExternalSourceManager implements IExternalSourceManager {
         config.enabled,
       );
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ExternalSourceManager singleton instance created');
     } else if (config && Object.keys(config).length > 0) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -90,12 +90,12 @@ export class ExternalSourceManager implements IExternalSourceManager {
         // Any cleanup needed for the service would go here
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ExternalSourceManager instance reset:', error);
     } finally {
       ExternalSourceManager.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ExternalSourceManager singleton instance reset');
     }
   }
@@ -111,7 +111,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
    * @returns A new ExternalSourceManager instance
    */
   public static createFresh(config: ExternalSourceManagerConfig): ExternalSourceManager {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ExternalSourceManager instance');
     
     return new ExternalSourceManager(

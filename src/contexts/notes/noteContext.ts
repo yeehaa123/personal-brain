@@ -76,7 +76,7 @@ export class NoteContext extends BaseContext<
   string
 > {
   /** Logger instance - overrides the protected one from BaseContext */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance();
   
   // Storage adapter and formatter
   private storage: NoteStorageAdapter;
@@ -99,11 +99,11 @@ export class NoteContext extends BaseContext<
       // Use the config directly - NoteContextConfig extends Record<string, unknown>
       NoteContext.instance = NoteContext.createWithDependencies(config);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteContext singleton instance created');
     } else if (options) {
       // Log at debug level if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -117,7 +117,7 @@ export class NoteContext extends BaseContext<
   static override resetInstance(): void {
     if (NoteContext.instance) {
       // Any cleanup needed before destroying the instance
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteContext singleton instance reset');
       
       NoteContext.instance = null;
@@ -132,7 +132,7 @@ export class NoteContext extends BaseContext<
    * @returns A new NoteContext instance
    */
   static override createFresh(options?: NoteContextConfig): NoteContext {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteContext instance');
     
     // Prepare config with defaults

@@ -70,7 +70,7 @@ export class ExternalSourceContext extends BaseContext<
   string
 > {
   /** Logger instance - overrides the protected one from BaseContext */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance();
   
   // Singleton instance
   private static instance: ExternalSourceContext | null = null;
@@ -85,11 +85,11 @@ export class ExternalSourceContext extends BaseContext<
     if (!ExternalSourceContext.instance) {
       ExternalSourceContext.instance = ExternalSourceContext.createWithDependencies(options as ExternalSourceContextConfig);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ExternalSourceContext singleton instance created');
     } else if (Object.keys(options).length > 0) {
       // Log at debug level if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -103,7 +103,7 @@ export class ExternalSourceContext extends BaseContext<
   static override resetInstance(): void {
     if (ExternalSourceContext.instance) {
       // Any cleanup needed before destroying the instance
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ExternalSourceContext singleton instance reset');
       
       ExternalSourceContext.instance = null;
@@ -118,7 +118,7 @@ export class ExternalSourceContext extends BaseContext<
    * @returns A new ExternalSourceContext instance
    */
   static override createFresh(options: Record<string, unknown> = {}): ExternalSourceContext {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ExternalSourceContext instance');
     
     return ExternalSourceContext.createWithDependencies(options as ExternalSourceContextConfig);

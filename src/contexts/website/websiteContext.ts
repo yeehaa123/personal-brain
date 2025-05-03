@@ -1,3 +1,5 @@
+import * as path from 'path';
+
 import config from '@/config';
 import { BaseContext } from '@/contexts/baseContext';
 import type { ContextDependencies, ContextInterface } from '@/contexts/contextInterface';
@@ -5,6 +7,7 @@ import type { FormatterInterface, FormattingOptions } from '@/contexts/formatter
 import { ProfileContext } from '@/contexts/profiles';
 import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
+import { getProjectRoot, resolvePath } from '@/utils/pathUtils';
 import { Registry } from '@/utils/registry';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
@@ -53,7 +56,7 @@ export class WebsiteContext extends BaseContext<
   private static instance: WebsiteContext | null = null;
   private contextName: string;
   private contextVersion: string;
-  protected override logger = Logger.getInstance({ silent: process.env['NODE_ENV'] === 'test' });
+  protected override logger = Logger.getInstance();
   private astroContentService: AstroContentService | null = null;
   private landingPageGenerationService: LandingPageGenerationService | null = null;
   private profileContext: ProfileContext | null = null;
@@ -269,16 +272,13 @@ export class WebsiteContext extends BaseContext<
    * @returns The absolute path for the environment
    */
   private async getEnvironmentPath(environment: 'preview' | 'live'): Promise<string> {
-    const path = await import('path');
-    const rootDir = process.cwd();
-    
     if (environment === 'preview') {
       // For preview, use the build output directory
       const astroContentService = await this.getAstroContentService();
       return astroContentService.getBuildDir();
     } else {
       // For live, use the standard live directory
-      return path.join(rootDir, 'dist', 'live');
+      return resolvePath(getProjectRoot(), path.join('dist', 'live'));
     }
   }
   

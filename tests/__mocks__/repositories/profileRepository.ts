@@ -21,7 +21,7 @@ import { createMockProfile, createMockProfiles } from '@test/__mocks__/models/pr
  * - Search and query operations
  * - Methods for test setup and verification
  */
-export class MockProfileRepository implements Partial<ProfileRepository> {
+export class MockProfileRepository {
   private static instance: MockProfileRepository | null = null;
   profiles: Profile[] = [];
   // Add logger to match the BaseRepository implementation
@@ -37,11 +37,11 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockProfileRepository {
+  public static getInstance(): ProfileRepository {
     if (!MockProfileRepository.instance) {
       MockProfileRepository.instance = new MockProfileRepository();
     }
-    return MockProfileRepository.instance;
+    return MockProfileRepository.instance as unknown as ProfileRepository;
   }
 
   /**
@@ -54,8 +54,8 @@ export class MockProfileRepository implements Partial<ProfileRepository> {
   /**
    * Create fresh instance for isolated testing
    */
-  public static createFresh(initialProfiles: Profile[] = createMockProfiles()): MockProfileRepository {
-    return new MockProfileRepository(initialProfiles);
+  public static createFresh(initialProfiles: Profile[] = createMockProfiles()): ProfileRepository {
+    return new MockProfileRepository(initialProfiles) as unknown as ProfileRepository;
   }
 
   /**

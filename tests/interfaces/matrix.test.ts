@@ -27,17 +27,14 @@ describe('MatrixBrainInterface', () => {
     MockBrainProtocol.resetInstance();
     MockCommandHandler.resetInstance();
     MockLogger.resetInstance();
-    
-    // Set up silent logger to avoid console noise during tests
-    MockLogger.instance = MockLogger.createFresh({ silent: true, name: 'test-logger' });
-    
+
     // Set necessary environment variables
     process.env['MATRIX_ACCESS_TOKEN'] = 'test-token';
     process.env['MATRIX_USER_ID'] = '@test:matrix.org';
     process.env['MATRIX_ROOM_IDS'] = 'room1,room2';
     process.env['NODE_ENV'] = 'test';
   });
-  
+
   // Clean up after each test
   afterEach(() => {
     // Reset mocked singletons
@@ -45,7 +42,7 @@ describe('MatrixBrainInterface', () => {
     MockBrainProtocol.resetInstance();
     MockCommandHandler.resetInstance();
     MockLogger.resetInstance();
-    
+
     // Clean up environment variables
     delete process.env['MATRIX_ACCESS_TOKEN'];
     delete process.env['MATRIX_USER_ID'];
@@ -61,10 +58,10 @@ describe('MatrixBrainInterface', () => {
       once: mock(),
       joinRoom: mock(() => Promise.resolve()),
     } as unknown as sdk.MatrixClient;
-    
+
     const mockBrainProtocol = MockBrainProtocol.createFresh() as unknown as IBrainProtocol;
     const mockCommandHandler = MockCommandHandler.createFresh() as unknown as CommandHandler;
-    
+
     const mockConfig = {
       homeserverUrl: 'https://test.matrix.org',
       accessToken: 'test-token',
@@ -72,13 +69,13 @@ describe('MatrixBrainInterface', () => {
       roomIds: ['room1', 'room2'],
       commandPrefix: '!brain',
     };
-    
+
     const mockServerManager = {
       initialize: mock(() => Promise.resolve()),
       startServers: mock(() => Promise.resolve(true)),
       cleanup: mock(() => Promise.resolve()),
     } as unknown as ServerManager;
-    
+
     // Create a fresh instance with explicit dependencies
     const matrixInterface = MatrixBrainInterface.createFresh(
       mockClient,
@@ -88,29 +85,29 @@ describe('MatrixBrainInterface', () => {
       MockLogger.createFresh({ silent: true, name: 'test-instance-1' }) as unknown as Logger,
       mockServerManager,
     );
-    
+
     // Verify instance was created
     expect(matrixInterface).toBeDefined();
   });
-  
+
   test('Should maintain singleton instance', () => {
     // Get singleton instance
     const instance1 = MatrixBrainInterface.getInstance();
     const instance2 = MatrixBrainInterface.getInstance();
-    
+
     // Verify both references point to the same instance
     expect(instance1).toBe(instance2);
-    
+
     // Reset singleton
     MatrixBrainInterface.resetInstance();
-    
+
     // Get new instance
     const instance3 = MatrixBrainInterface.getInstance();
-    
+
     // Verify it's different from the original instance
     expect(instance1).not.toBe(instance3);
   });
-  
+
   test('Should start without initializing server if specified', async () => {
     // Create mock dependencies
     const mockClient = {
@@ -125,12 +122,12 @@ describe('MatrixBrainInterface', () => {
       }),
       joinRoom: mock(() => Promise.resolve()),
     } as unknown as sdk.MatrixClient;
-    
+
     const mockBrainProtocol = MockBrainProtocol.createFresh() as unknown as IBrainProtocol;
     mockBrainProtocol.initialize = mock(() => Promise.resolve());
-    
+
     const mockCommandHandler = MockCommandHandler.createFresh() as unknown as CommandHandler;
-    
+
     const mockConfig = {
       homeserverUrl: 'https://test.matrix.org',
       accessToken: 'test-token',
@@ -138,13 +135,13 @@ describe('MatrixBrainInterface', () => {
       roomIds: ['room1'],
       commandPrefix: '!brain',
     };
-    
+
     const mockServerManager = {
       initialize: mock(() => Promise.resolve()),
       startServers: mock(() => Promise.resolve(true)),
       cleanup: mock(() => Promise.resolve()),
     } as unknown as ServerManager;
-    
+
     // Create a fresh instance with explicit dependencies
     const matrixInterface = MatrixBrainInterface.createFresh(
       mockClient,
@@ -154,30 +151,30 @@ describe('MatrixBrainInterface', () => {
       MockLogger.createFresh({ silent: true, name: 'test-instance-2' }) as unknown as Logger,
       mockServerManager,
     );
-    
+
     // Start the interface without initializing the server
     await matrixInterface.start(false);
-    
+
     // Verify server was not initialized
     expect(mockServerManager.initialize).not.toHaveBeenCalled();
-    
+
     // Verify client was started
     expect(mockClient.startClient).toHaveBeenCalled();
-    
+
     // Verify brainProtocol was initialized
     expect(mockBrainProtocol.initialize).toHaveBeenCalled();
-    
+
     // Verify room was joined
     expect(mockClient.joinRoom).toHaveBeenCalledTimes(1);
   });
-  
+
   test('Basic protocol instantiation test', () => {
     // Create a protocol instance for testing
     const protocol = MockBrainProtocol.getInstance({
       interfaceType: 'matrix',
       roomId: 'test-room',
     });
-    
+
     // Verify it was initialized correctly
     expect(protocol).toBeDefined();
     expect(protocol.getContextManager()).toBeDefined();

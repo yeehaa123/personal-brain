@@ -37,7 +37,7 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
    * Override the logger from the base class with protected visibility
    * This allows the derived class to use the logger directly
    */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of the service
@@ -51,11 +51,11 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
     if (!ProfileEmbeddingService.instance) {
       ProfileEmbeddingService.instance = new ProfileEmbeddingService(embeddingService);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileEmbeddingService singleton instance created');
     } else if (embeddingService) {
       // Log a warning if trying to get instance with different embedding service
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with embeddingService but instance already exists. Service ignored.');
     }
     
@@ -75,12 +75,12 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
         // No specific cleanup needed for this service
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ProfileEmbeddingService instance reset:', error);
     } finally {
       ProfileEmbeddingService.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileEmbeddingService singleton instance reset');
     }
   }
@@ -100,7 +100,7 @@ export class ProfileEmbeddingService extends BaseEmbeddingService {
     embeddingService?: EmbeddingService,
     repository?: ProfileRepository,
   ): ProfileEmbeddingService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileEmbeddingService instance');
     
     return new ProfileEmbeddingService(embeddingService, repository);

@@ -64,7 +64,7 @@ export class ConversationMcpFormatter {
   private static instance: ConversationMcpFormatter | null = null;
   
   /** Logger instance for this class */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Private constructor to enforce singleton pattern

@@ -28,7 +28,7 @@ implements IRepository<TEntity, string> {
    * Logger instance for this class and its subclasses
    * Protected so derived classes can access it
    */
-  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected logger = Logger.getInstance();
   
   /**
    * Get the table that this repository uses

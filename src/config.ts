@@ -3,7 +3,7 @@
  * Loads values from environment variables with sensible defaults
  */
 
-import { getEnv, getEnvAsFloat, getEnvAsInt } from '@utils/configUtils';
+import { getEnv, getEnvAsBool, getEnvAsFloat, getEnvAsInt } from '@utils/configUtils';
 
 // Log configuration
 export const logConfig = {
@@ -15,6 +15,9 @@ export const logConfig = {
   errorLogPath: getEnv('ERROR_LOG_PATH', 'error.log'),
   combinedLogPath: getEnv('COMBINED_LOG_PATH', 'combined.log'),
   debugLogPath: getEnv('DEBUG_LOG_PATH', 'debug.log'),
+  
+  // Test mode configuration - used for silencing logs during tests
+  isTestMode: getEnvAsBool('TEST_MODE', process.env.NODE_ENV === 'test'),
 };
 
 // AI Model configuration

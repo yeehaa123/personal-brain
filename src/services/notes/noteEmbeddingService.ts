@@ -33,7 +33,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
    * Override the logger from the base class with protected visibility
    * This allows the derived class to use the logger directly
    */
-  protected override logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected override logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of the service
@@ -47,11 +47,11 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
     if (!NoteEmbeddingService.instance) {
       NoteEmbeddingService.instance = new NoteEmbeddingService(embeddingService);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteEmbeddingService singleton instance created');
     } else if (embeddingService) {
       // Log a warning if trying to get instance with different embedding service
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with embeddingService but instance already exists. Service ignored.');
     }
     
@@ -71,12 +71,12 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
         // No specific cleanup needed for this service
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during NoteEmbeddingService instance reset:', error);
     } finally {
       NoteEmbeddingService.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteEmbeddingService singleton instance reset');
     }
   }
@@ -96,7 +96,7 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
     embeddingService?: EmbeddingService,
     noteRepository?: NoteRepository,
   ): NoteEmbeddingService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteEmbeddingService instance');
     
     return new NoteEmbeddingService(embeddingService, noteRepository);

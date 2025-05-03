@@ -79,9 +79,6 @@ describe('ProfileContext', () => {
     ProfileContext.resetInstance();
     MockLogger.resetInstance();
 
-    // Set up silent logger
-    MockLogger.instance = MockLogger.createFresh({ silent: true });
-
     // Create a fresh context with directly injected dependencies
     profileContext = new ProfileContext(
       { apiKey: 'mock-api-key' },

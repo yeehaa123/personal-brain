@@ -22,7 +22,7 @@ export abstract class BaseCommandHandler {
   protected brainProtocol: IBrainProtocol;
   
   /** Logger instance for this class and its derived classes */
-  protected logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  protected logger = Logger.getInstance();
 
   /**
    * Constructor for base command handler

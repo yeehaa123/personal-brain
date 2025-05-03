@@ -19,8 +19,11 @@ import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorag
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
+import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { ResourceRegistry } from '@/resources/resourceRegistry';
+import { Logger } from '@/utils/logger';
 import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
+import { TextUtils } from '@/utils/textUtils';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
 import type { IRepository } from './interfaces/IRepository';
@@ -50,18 +53,18 @@ export const ServiceIdentifiers = {
   // Repository identifiers
   NoteRepository: 'service.repositories.note',
   ProfileRepository: 'service.repositories.profile',
-  
+
   // Embedding service identifiers
   NoteEmbeddingService: 'service.embedding.note',
   ProfileEmbeddingService: 'service.embedding.profile',
-  
+
   // Search service identifiers
   NoteSearchService: 'service.search.note',
   ProfileSearchService: 'service.search.profile',
-  
+
   // Tag service identifiers
   ProfileTagService: 'service.tag.profile',
-  
+
   // Conversation service identifiers
   ConversationResourceService: 'service.conversation.resources',
   ConversationToolService: 'service.conversation.tools',
@@ -70,6 +73,11 @@ export const ServiceIdentifiers = {
   ConversationStorageAdapter: 'service.conversation.storage',
   ConversationFormatter: 'service.conversation.formatter',
   ConversationMcpFormatter: 'service.conversation.mcpFormatter',
+  
+  // Utility service identifiers
+  TextUtils: 'service.utils.text',
+  ContextMediator: 'service.messaging.mediator',
+  Logger: 'service.utils.logger',
 };
 
 /**
@@ -81,16 +89,16 @@ export const ServiceIdentifiers = {
 export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   /** Singleton instance storage */
   private static instance: ServiceRegistry | null = null;
-  
+
   /** Reference to the resource registry */
   private resourceRegistry: ResourceRegistry;
-  
+
   /** Track if services have been registered */
   private servicesRegistered = false;
-  
+
   /** Registry type for context-specific operations */
   protected readonly registryType = 'service';
-  
+
   /**
    * Get the singleton instance of the ServiceRegistry
    * 
@@ -107,10 +115,10 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       // Update options if instance exists but options were provided
       ServiceRegistry.instance.updateOptions(options);
     }
-    
+
     return ServiceRegistry.instance;
   }
-  
+
   /**
    * Reset the singleton instance (primarily for testing)
    * This clears the instance and any resources it holds
@@ -121,7 +129,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       ServiceRegistry.instance = null;
     }
   }
-  
+
   /**
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
@@ -134,7 +142,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
     registry.initialize();
     return registry;
   }
-  
+
   /**
    * Protected constructor to enforce the use of getInstance() or createFresh()
    * 
@@ -145,13 +153,13 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       name: 'ServiceRegistry',
       ...options,
     });
-    
+
     // Initialize or reference the resource registry
     this.resourceRegistry = options.resourceRegistry || ResourceRegistry.getInstance({
       anthropicApiKey: options.apiKey,
       openAiApiKey: options.apiKey,
     });
-    
+
     // Ensure ResourceRegistry is initialized
     if (!this.resourceRegistry.isInitialized()) {
       this.logger.info('Initializing ResourceRegistry dependency');
@@ -161,7 +169,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       }
     }
   }
-  
+
   /**
    * Create the dependency container
    * 
@@ -170,7 +178,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   protected override createContainer(): SimpleContainer {
     return new SimpleContainer();
   }
-  
+
   /**
    * Register standard services with the registry
    * This is called automatically by initialize()
@@ -179,20 +187,20 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
     if (this.servicesRegistered) {
       return;
     }
-    
+
     this.logger.info('Registering standard services');
-    
+
     // Register repositories
     this.register<IRepository<Note>>(
       ServiceIdentifiers.NoteRepository,
       () => NoteRepository.getInstance(),
     );
-    
+
     this.register<IRepository<Profile>>(
       ServiceIdentifiers.ProfileRepository,
       () => ProfileRepository.getInstance(),
     );
-    
+
     // Register embedding services
     this.register<IEmbeddingService>(
       ServiceIdentifiers.NoteEmbeddingService,
@@ -202,7 +210,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         return NoteEmbeddingService.getInstance();
       },
     );
-    
+
     this.register<IEmbeddingService>(
       ServiceIdentifiers.ProfileEmbeddingService,
       () => {
@@ -211,13 +219,29 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         return ProfileEmbeddingService.getInstance();
       },
     );
-    
+
     // Register tag services
     this.register(
       ServiceIdentifiers.ProfileTagService,
       () => ProfileTagService.getInstance(),
     );
     
+    // Register utility services
+    this.register(
+      ServiceIdentifiers.TextUtils,
+      () => TextUtils.getInstance(),
+    );
+    
+    this.register(
+      ServiceIdentifiers.ContextMediator,
+      () => ContextMediator.getInstance(),
+    );
+    
+    this.register(
+      ServiceIdentifiers.Logger,
+      () => Logger.getInstance(),
+    );
+
     // Register search services with dependencies
     this.registerService<ISearchService<Note>>(
       ServiceIdentifiers.NoteSearchService,
@@ -225,19 +249,28 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         // Get dependencies from container
         const repository = container.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
         const embeddingService = container.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
-        
+        const textUtils = container.resolve<TextUtils>(ServiceIdentifiers.TextUtils);
+        const logger = container.resolve<Logger>(ServiceIdentifiers.Logger);
+
         // Create service with injected dependencies using the updated interface
-        return NoteSearchService.createWithDependencies(
+        return NoteSearchService.createFresh(
           { entityName: 'note' },
           {
             repository,
             embeddingService,
+            logger,
+            textUtils,
           },
         );
       },
-      [ServiceIdentifiers.NoteRepository, ServiceIdentifiers.NoteEmbeddingService],
+      [
+        ServiceIdentifiers.NoteRepository, 
+        ServiceIdentifiers.NoteEmbeddingService,
+        ServiceIdentifiers.TextUtils,
+        ServiceIdentifiers.Logger,
+      ],
     );
-    
+
     this.registerService<ISearchService<Profile>>(
       ServiceIdentifiers.ProfileSearchService,
       (container) => {
@@ -245,26 +278,35 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         const repository = container.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
         const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
         const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-        
+        const textUtils = container.resolve<TextUtils>(ServiceIdentifiers.TextUtils);
+        const mediator = container.resolve<ContextMediator>(ServiceIdentifiers.ContextMediator);
+        const logger = container.resolve<Logger>(ServiceIdentifiers.Logger);
+
         // Create service with injected dependencies using the updated interface
-        return ProfileSearchService.createWithDependencies(
+        return ProfileSearchService.createFresh(
           { entityName: 'profile' },
           {
             repository,
             embeddingService,
             tagService,
+            logger,
+            textUtils,
+            mediator,
           },
         );
       },
       [
-        ServiceIdentifiers.ProfileRepository, 
+        ServiceIdentifiers.ProfileRepository,
         ServiceIdentifiers.ProfileEmbeddingService,
         ServiceIdentifiers.ProfileTagService,
+        ServiceIdentifiers.TextUtils,
+        ServiceIdentifiers.ContextMediator,
+        ServiceIdentifiers.Logger,
       ],
     );
-    
+
     // Register conversation services
-    
+
     // Register storage adapter and formatters first since other services depend on them
     this.register(
       ServiceIdentifiers.ConversationStorageAdapter,
@@ -273,28 +315,28 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         return ConversationStorageAdapter.getInstance(storage);
       },
     );
-    
+
     this.register(
       ServiceIdentifiers.ConversationFormatter,
       () => ConversationFormatter.getInstance(),
     );
-    
+
     this.register(
       ServiceIdentifiers.ConversationMcpFormatter,
       () => ConversationMcpFormatter.getInstance(),
     );
-    
+
     // Register resource and tool services
     this.register(
       ServiceIdentifiers.ConversationResourceService,
       () => ConversationResourceService.getInstance(),
     );
-    
+
     this.register(
       ServiceIdentifiers.ConversationToolService,
       () => ConversationToolService.getInstance(),
     );
-    
+
     // Register query service with its dependencies
     this.register(
       ServiceIdentifiers.ConversationQueryService,
@@ -305,7 +347,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         return ConversationQueryService.getInstance(storageAdapter);
       },
     );
-    
+
     // Register memory service with its dependencies
     this.register(
       ServiceIdentifiers.ConversationMemoryService,
@@ -316,11 +358,11 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         return ConversationMemoryService.getInstance(storageAdapter);
       },
     );
-    
+
     this.servicesRegistered = true;
     this.logger.info('Standard services registered');
   }
-  
+
   /**
    * Get the note repository
    * 
@@ -329,7 +371,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getNoteRepository(): IRepository<Note> {
     return this.resolve<IRepository<Note>>(ServiceIdentifiers.NoteRepository);
   }
-  
+
   /**
    * Get the profile repository
    * 
@@ -338,7 +380,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getProfileRepository(): IRepository<Profile> {
     return this.resolve<IRepository<Profile>>(ServiceIdentifiers.ProfileRepository);
   }
-  
+
   /**
    * Get the note embedding service
    * 
@@ -347,7 +389,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getNoteEmbeddingService(): IEmbeddingService {
     return this.resolve<IEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
   }
-  
+
   /**
    * Get the profile embedding service
    * 
@@ -356,7 +398,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getProfileEmbeddingService(): IEmbeddingService {
     return this.resolve<IEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
   }
-  
+
   /**
    * Get the note search service
    * 
@@ -365,7 +407,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getNoteSearchService(): ISearchService<Note> {
     return this.resolve<ISearchService<Note>>(ServiceIdentifiers.NoteSearchService);
   }
-  
+
   /**
    * Get the profile search service
    * 
@@ -374,7 +416,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getProfileSearchService(): ISearchService<Profile> {
     return this.resolve<ISearchService<Profile>>(ServiceIdentifiers.ProfileSearchService);
   }
-  
+
   /**
    * Get the profile tag service
    * 
@@ -383,7 +425,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getProfileTagService(): ProfileTagService {
     return this.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
   }
-  
+
   /**
    * Get the conversation query service
    * 
@@ -392,7 +434,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getConversationQueryService(): ConversationQueryService {
     return this.resolve<ConversationQueryService>(ServiceIdentifiers.ConversationQueryService);
   }
-  
+
   /**
    * Get the conversation memory service
    * 
@@ -401,7 +443,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getConversationMemoryService(): ConversationMemoryService {
     return this.resolve<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
   }
-  
+
   /**
    * Helper method for getting any service with proper typing
    * 
@@ -411,7 +453,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getService<T>(serviceId: string): T {
     return this.resolve<T>(serviceId);
   }
-  
+
   /**
    * Helper method to get the ResourceRegistry
    * 
@@ -420,7 +462,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   public getResourceRegistry(): ResourceRegistry {
     return this.resourceRegistry;
   }
-  
+
   /**
    * Standardized service registration helper
    * Validates dependencies before registering a service
@@ -436,10 +478,10 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   ): void {
     // Validate dependencies before registration
     let dependenciesValid = true;
-    
+
     for (const dependencyId of dependencies) {
       if (this.has(dependencyId)) continue;
-      
+
       // For cross-registry dependencies, check the resource registry
       if (dependencyId.startsWith('resource.') && this.resourceRegistry) {
         if (!this.resourceRegistry.has(dependencyId)) {
@@ -451,11 +493,11 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
         dependenciesValid = false;
       }
     }
-    
+
     if (!dependenciesValid) {
       this.logger.warn(`Registering service "${id}" with missing dependencies. It may not work correctly.`);
     }
-    
+
     this.register<T>(id, factory);
   }
 }

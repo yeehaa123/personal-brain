@@ -21,40 +21,40 @@ import type { ProfileSearchService } from '@/services/profiles/profileSearchServ
  */
 export class MockProfileSearchService implements Partial<ProfileSearchService> {
   private static instance: MockProfileSearchService | null = null;
-  
+
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockProfileSearchService {
+  public static getInstance(): ProfileSearchService {
     if (!MockProfileSearchService.instance) {
       MockProfileSearchService.instance = new MockProfileSearchService();
     }
-    return MockProfileSearchService.instance;
+    return MockProfileSearchService.instance as unknown as ProfileSearchService;
   }
-  
+
   /**
    * Reset singleton instance
    */
   public static resetInstance(): void {
     MockProfileSearchService.instance = null;
   }
-  
+
   /**
    * Create fresh instance for isolated testing
    */
-  public static createFresh(): MockProfileSearchService {
-    return new MockProfileSearchService();
+  public static createFresh(): ProfileSearchService {
+    return new MockProfileSearchService() as unknown as ProfileSearchService;
   }
-  
+
   // Mock methods with default implementations
   findRelatedNotes = mock((_limit: number = 5): Promise<NoteWithSimilarity[]> => {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
   });
-  
+
   findNotesWithSimilarTags = mock((_tags: string[], _limit: number = 5): Promise<NoteWithSimilarity[]> => {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
   });
-  
+
   /**
    * Helper method to create mock notes with similarity scores
    */

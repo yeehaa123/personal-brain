@@ -34,7 +34,7 @@ export class NoteManager implements INoteManager {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   private noteContext: NoteContext;
 
@@ -50,11 +50,11 @@ export class NoteManager implements INoteManager {
     if (!NoteManager.instance) {
       NoteManager.instance = new NoteManager(config);
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteManager singleton instance created');
     } else if (config && Object.keys(config).length > 0) {
       // Log a warning if trying to get instance with different config
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
     
@@ -74,12 +74,12 @@ export class NoteManager implements INoteManager {
         // Any cleanup needed would go here
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during NoteManager instance reset:', error);
     } finally {
       NoteManager.instance = null;
       
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('NoteManager singleton instance reset');
     }
   }
@@ -95,7 +95,7 @@ export class NoteManager implements INoteManager {
    * @returns A new NoteManager instance
    */
   public static createFresh(config: NoteManagerConfig): NoteManager {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteManager instance');
     
     return new NoteManager(config);

@@ -21,7 +21,7 @@ import type { CommandInfo, CommandResult } from './index';
  * Render command results for the CLI
  */
 export class CLIRenderer {
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
   
   /**
    * Render help command

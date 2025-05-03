@@ -17,6 +17,11 @@ import { TagExtractor } from '@/utils/tagExtractor';
 
 import { ProfileRepository } from './profileRepository';
 
+export interface ProfileTagServiceDependencies {
+  repository: ProfileRepository;
+  tagExtractor: TagExtractor;
+  logger: Logger;
+}
 
 /**
  * Service for generating and managing profile tags
@@ -40,7 +45,7 @@ export class ProfileTagService {
   /**
    * Logger instance for this class
    */
-  private logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  private logger = Logger.getInstance();
 
   /**
    * Tag extractor instance for generating tags
@@ -60,10 +65,10 @@ export class ProfileTagService {
       ProfileTagService.instance = new ProfileTagService({
         repository: ProfileRepository.getInstance(),
         tagExtractor: TagExtractor.getInstance(),
-        logger: Logger.getInstance({ silent: process.env.NODE_ENV === 'test' }),
+        logger: Logger.getInstance(),
       });
 
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileTagService singleton instance created');
     }
 
@@ -83,12 +88,12 @@ export class ProfileTagService {
         // No specific cleanup needed for this service
       }
     } catch (error) {
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.error('Error during ProfileTagService instance reset:', error);
     } finally {
       ProfileTagService.instance = null;
 
-      const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+      const logger = Logger.getInstance();
       logger.debug('ProfileTagService singleton instance reset');
     }
   }
@@ -100,39 +105,29 @@ export class ProfileTagService {
    * Creates a new instance without affecting the singleton instance.
    * Primarily used for testing.
    * 
+   * @param config Optional configuration (unused but kept for pattern consistency)
+   * @param dependencies Optional complete dependencies object
    * @returns A new ProfileTagService instance
    */
-  public static createFresh(): ProfileTagService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
+  public static createFresh(
+    _config: Record<string, unknown>,
+    dependencies?: ProfileTagServiceDependencies,
+  ): ProfileTagService {
+    const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileTagService instance');
 
-    return new ProfileTagService({
-      repository: ProfileRepository.getInstance(),
-      tagExtractor: TagExtractor.getInstance(),
-      logger: logger,
-    });
+    if (dependencies) {
+      // Use provided dependencies with defaults for any missing ones
+      return new ProfileTagService(dependencies);
+    } else {
+      // Use default dependencies
+      return new ProfileTagService({
+        repository: ProfileRepository.getInstance(),
+        tagExtractor: TagExtractor.getInstance(),
+        logger: logger,
+      });
+    }
   }
-
-  /**
-   * Create a new service instance with explicit dependencies
-   * 
-   * Part of the Component Interface Standardization pattern.
-   * 
-   * @param _config Optional configuration (unused but kept for pattern consistency)
-   * @param dependencies Optional dependencies object with repository, tagExtractor, and logger
-   * @returns A new ProfileTagService instance with the provided dependencies
-   */
-  public static createWithDependencies(
-    _config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {},
-  ): ProfileTagService {
-    const logger = Logger.getInstance({ silent: process.env.NODE_ENV === 'test' });
-    logger.debug('Creating ProfileTagService with dependencies');
-    
-    // Create instance with provided dependencies
-    return new ProfileTagService(dependencies);
-  }
-
 
   /**
    * Create a new ProfileTagService
@@ -144,16 +139,12 @@ export class ProfileTagService {
    * 
    * @param dependencies The dependencies to use (repository, tagExtractor, logger)
    */
-  private constructor(dependencies: Record<string, unknown> = {}) {
+  private constructor(dependencies: ProfileTagServiceDependencies) {
     // Initialize repository
-    const repo = dependencies['repository'] as ProfileRepository | undefined;
-    this.repository = repo || ProfileRepository.getInstance();
+    this.repository = dependencies['repository'];
 
     // Initialize logger if provided
-    const loggerDep = dependencies['logger'] as Logger | undefined;
-    if (loggerDep) {
-      this.logger = loggerDep;
-    }
+    this.logger = dependencies['logger'];
 
     // Initialize tag extractor
     const tagExtractorDep = dependencies['tagExtractor'] as TagExtractor | undefined;
