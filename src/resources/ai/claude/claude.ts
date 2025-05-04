@@ -9,6 +9,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { generateObject, type LanguageModelUsage } from 'ai';
 import { z } from 'zod';
 
+import { aiConfig } from '@/config';
 import type { ModelResponse, ModelUsage } from '@/resources/ai/interfaces';
 import logger from '@/utils/logger';
 
@@ -77,16 +78,20 @@ export class ClaudeModel {
    * 
    * Part of the Component Interface Standardization pattern.
    * 
-   * @param options Configuration options (only used when creating a new instance)
    * @returns The singleton instance
    */
-  public static getInstance(options: ClaudeModelOptions): ClaudeModel {
+  public static getInstance(): ClaudeModel {
     if (!ClaudeModel.instance) {
+      // Get configuration from imported config
+      const options: ClaudeModelOptions = {
+        model: aiConfig.anthropic.defaultModel,
+        apiKey: aiConfig.anthropic.apiKey,
+        defaultMaxTokens: aiConfig.anthropic.defaultMaxTokens,
+        defaultTemperature: aiConfig.anthropic.temperature,
+      };
+      
       ClaudeModel.instance = new ClaudeModel(options);
       logger.debug('ClaudeModel singleton instance created');
-    } else if (options && Object.keys(options).length > 0) {
-      // Log at debug level if trying to get instance with different config
-      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
     
     return ClaudeModel.instance;
@@ -109,12 +114,27 @@ export class ClaudeModel {
    * Part of the Component Interface Standardization pattern.
    * Primarily used for testing to create isolated instances.
    * 
-   * @param options Configuration options
+   * @param options Optional configuration options (overrides defaults)
    * @returns A new ClaudeModel instance
    */
-  public static createFresh(options: ClaudeModelOptions): ClaudeModel {
+  public static createFresh(options?: Partial<ClaudeModelOptions>): ClaudeModel {
     logger.debug('Creating fresh ClaudeModel instance');
-    return new ClaudeModel(options);
+    
+    // Get default configuration from config
+    const defaultOptions: ClaudeModelOptions = {
+      model: aiConfig.anthropic.defaultModel,
+      apiKey: aiConfig.anthropic.apiKey,
+      defaultMaxTokens: aiConfig.anthropic.defaultMaxTokens,
+      defaultTemperature: aiConfig.anthropic.temperature,
+    };
+    
+    // Merge with provided options
+    const mergedOptions: ClaudeModelOptions = {
+      ...defaultOptions,
+      ...options,
+    };
+    
+    return new ClaudeModel(mergedOptions);
   }
 
   /**

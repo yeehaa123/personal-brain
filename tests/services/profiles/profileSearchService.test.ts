@@ -7,6 +7,7 @@
 
 import { beforeEach, describe, expect, test } from 'bun:test';
 
+import type { Profile } from '@/models/profile';
 import type { ContextMediator } from '@/protocol/messaging';
 import { ProfileSearchService } from '@/services/profiles/profileSearchService';
 import { MockLogger } from '@test/__mocks__/core/logger';
@@ -18,13 +19,14 @@ import { MockProfileEmbeddingService } from '@test/__mocks__/services/profiles/p
 import { MockProfileTagService } from '@test/__mocks__/services/profiles/profileTagService';
 import { MockTextUtils } from '@test/__mocks__/utils/textUtils';
 
-const mockProfile = MockProfile.createDefault();
+// Will be initialized in beforeEach
+let mockProfile: Profile;
 
 describe('ProfileSearchService', () => {
   let searchService: ProfileSearchService;
   let mockMediator: ContextMediator;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset all singletons
     ProfileSearchService.resetInstance();
     MockProfileRepository.resetInstance();
@@ -32,6 +34,8 @@ describe('ProfileSearchService', () => {
     MockProfileTagService.resetInstance();
     MockContextMediator.resetInstance();
 
+    // Initialize the mock profile
+    mockProfile = await MockProfile.createDefault();
 
     // Create mediator with specific mock response data for note search
     mockMediator = MockContextMediator.createFresh({

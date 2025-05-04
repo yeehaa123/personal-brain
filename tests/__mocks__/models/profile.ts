@@ -64,7 +64,11 @@ export function createMockEducation(options: Partial<ProfileEducation> = {}): Pr
  * MockProfile class with factory methods
  */
 export class MockProfile {
-  static createDefault(id: string = 'mock-profile-id'): Profile {
+  static async createDefault(id: string = 'mock-profile-id'): Promise<Profile> {
+    // Use the standard API method for generating embeddings
+    const mockService = EmbeddingService.createFresh();
+    const embedding = await mockService.getEmbedding('John Doe profile');
+    
     return {
       id,
       publicIdentifier: null,
@@ -104,24 +108,25 @@ export class MockProfile {
       accomplishmentHonorsAwards: null,
       accomplishmentProjects: null,
       volunteerWork: null,
-      embedding: EmbeddingService.createMockEmbedding('John Doe profile'),
+      embedding,
       tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
   }
 
-  static createWithCustomData(
+  static async createWithCustomData(
     id: string = 'mock-profile-id',
     options: Partial<Profile> = {},
-  ): Profile {
+  ): Promise<Profile> {
+    const baseProfile = await this.createDefault(id);
     return {
-      ...this.createDefault(id),
+      ...baseProfile,
       ...options,
     };
   }
 
-  static createDeveloperProfile(id: string = 'dev-profile-id'): Profile {
+  static async createDeveloperProfile(id: string = 'dev-profile-id'): Promise<Profile> {
     return this.createWithCustomData(id, {
       firstName: 'Jane',
       lastName: 'Smith',
@@ -153,7 +158,7 @@ export class MockProfile {
     });
   }
 
-  static createMinimalProfile(id: string = 'minimal-profile-id'): Profile {
+  static async createMinimalProfile(id: string = 'minimal-profile-id'): Promise<Profile> {
     return {
       id,
       publicIdentifier: null,
@@ -190,23 +195,23 @@ export class MockProfile {
  * Create a mock profile for testing
  * For backward compatibility with existing tests
  */
-export function createMockProfile(id: string = 'mock-profile-id'): Profile {
+export async function createMockProfile(id: string = 'mock-profile-id'): Promise<Profile> {
   return MockProfile.createDefault(id);
 }
 
 /**
  * Create multiple mock profiles for testing
  */
-export function createMockProfiles(count: number = 3): Profile[] {
+export async function createMockProfiles(count: number = 3): Promise<Profile[]> {
   const profiles: Profile[] = [];
 
-  profiles.push(MockProfile.createDefault('profile-1'));
-  profiles.push(MockProfile.createDeveloperProfile('profile-2'));
+  profiles.push(await MockProfile.createDefault('profile-1'));
+  profiles.push(await MockProfile.createDeveloperProfile('profile-2'));
 
   // Add additional profiles if needed
   for (let i = 3; i <= count; i++) {
     profiles.push(
-      MockProfile.createWithCustomData(`profile-${i}`, {
+      await MockProfile.createWithCustomData(`profile-${i}`, {
         firstName: `User${i}`,
         lastName: `Test${i}`,
         fullName: `User${i} Test${i}`,

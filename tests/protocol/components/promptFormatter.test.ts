@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
@@ -13,23 +13,38 @@ import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resour
 
 describe('PromptFormatter', () => {
   const promptFormatter = PromptFormatter.createFresh();
+  
+  // Will be initialized in beforeEach
+  let sampleNotes: Note[];
 
-  // Test data
-  const sampleNotes: Note[] = [
-    createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing', 'science']),
-    createMockNote('note-2', 'Quantum Entanglement', ['quantum', 'physics']),
-  ];
+  beforeEach(async () => {
+    // Initialize sample notes
+    sampleNotes = await createSampleNotes();
+    
+    // Initialize profile embedding
+    const mockService = MockEmbeddingService.createFresh();
+    sampleProfile.embedding = await mockService.getEmbedding('Quantum researcher profile');
+  });
   
-  // Customize the notes with specific contents and embeddings
-  sampleNotes[0].content = 'Quantum computing uses quantum bits or qubits which can exist in multiple states simultaneously.';
-  sampleNotes[0].embedding = MockEmbeddingService.createMockEmbedding('Quantum computing basics');
-  sampleNotes[0].createdAt = new Date('2025-01-01');
-  sampleNotes[0].updatedAt = new Date('2025-01-02');
-  
-  sampleNotes[1].content = 'Quantum entanglement is a physical phenomenon that occurs when a pair of particles interact in such a way that the quantum state of each particle cannot be described independently of the others.';
-  sampleNotes[1].embedding = MockEmbeddingService.createMockEmbedding('Quantum entanglement');
-  sampleNotes[1].createdAt = new Date('2025-01-03');
-  sampleNotes[1].updatedAt = new Date('2025-01-04');
+  // Create sample notes with embeddings
+  async function createSampleNotes(): Promise<Note[]> {
+    const note1 = await createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing', 'science']);
+    note1.content = 'Quantum computing uses quantum bits or qubits which can exist in multiple states simultaneously.';
+    note1.createdAt = new Date('2025-01-01');
+    note1.updatedAt = new Date('2025-01-02');
+    
+    const note2 = await createMockNote('note-2', 'Quantum Entanglement', ['quantum', 'physics']);
+    note2.content = 'Quantum entanglement is a physical phenomenon that occurs when a pair of particles interact in such a way that the quantum state of each particle cannot be described independently of the others.';
+    note2.createdAt = new Date('2025-01-03');
+    note2.updatedAt = new Date('2025-01-04');
+    
+    // Use the standard API for embedding generation
+    const mockService = MockEmbeddingService.createFresh();
+    note1.embedding = await mockService.getEmbedding('Quantum computing basics');
+    note2.embedding = await mockService.getEmbedding('Quantum entanglement');
+    
+    return [note1, note2];
+  }
 
   const sampleProfile: Profile = {
     id: 'profile-1',
@@ -67,7 +82,8 @@ describe('PromptFormatter', () => {
     accomplishmentHonorsAwards: null,
     accomplishmentProjects: null,
     volunteerWork: null,
-    embedding: MockEmbeddingService.createMockEmbedding('Quantum researcher profile'),
+    // We'll set this in beforeEach
+    embedding: [] as number[],
     tags: ['quantum', 'research', 'AI'],
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -85,7 +101,7 @@ describe('PromptFormatter', () => {
     },
   ];
 
-  test('should format prompts with notes only', () => {
+  test('should format prompts with notes only', async () => {
     const { formattedPrompt, citations } = promptFormatter.formatPromptWithContext(
       'Explain quantum computing',
       sampleNotes,
@@ -107,7 +123,7 @@ describe('PromptFormatter', () => {
     expect(citations[0].excerpt).toBeDefined();
   });
 
-  test('should format prompts with profile information', () => {
+  test('should format prompts with profile information', async () => {
     const { formattedPrompt, citations } = promptFormatter.formatPromptWithContext(
       'What do I know about quantum computing?',
       sampleNotes,
@@ -131,7 +147,7 @@ describe('PromptFormatter', () => {
     expect(citations).toHaveLength(2);
   });
 
-  test('should format prompts with external sources', () => {
+  test('should format prompts with external sources', async () => {
     const { formattedPrompt, citations } = promptFormatter.formatPromptWithContext(
       'What are recent advances in quantum computing?',
       sampleNotes,
@@ -149,7 +165,7 @@ describe('PromptFormatter', () => {
     expect(citations).toHaveLength(2); // Only notes create citations
   });
 
-  test('should format prompts with both profile and external sources', () => {
+  test('should format prompts with both profile and external sources', async () => {
     const { formattedPrompt, citations } = promptFormatter.formatPromptWithContext(
       'How does my background relate to quantum computing advances?',
       sampleNotes,
@@ -169,11 +185,15 @@ describe('PromptFormatter', () => {
     expect(citations).toHaveLength(2); // Only notes create citations
   });
 
-  test('should calculate content coverage correctly', () => {
+  test('should calculate content coverage correctly', async () => {
     // Create a note with specific content for testing coverage
     const testNote = createMockNote('test-note', 'Quantum Entanglement Explained', ['quantum', 'physics']);
     testNote.content = 'Quantum entanglement occurs when particles become correlated in ways that cannot be explained by classical physics. Quantum states of entangled particles are dependent on each other regardless of distance. Einstein called this "spooky action at a distance".';
-    testNote.embedding = MockEmbeddingService.createMockEmbedding('Quantum entanglement test');
+    
+    // Initialize embedding using standard API
+    const mockService = MockEmbeddingService.createFresh();
+    testNote.embedding = await mockService.getEmbedding('Quantum entanglement test');
+    
     testNote.createdAt = new Date('2025-01-03');
     testNote.updatedAt = new Date('2025-01-04');
     
@@ -197,7 +217,7 @@ describe('PromptFormatter', () => {
     expect(irrelevantCoverage).toBeLessThan(0.3);
   });
 
-  test('should get excerpt from content correctly', () => {
+  test('should get excerpt from content correctly', async () => {
     const content = 'This is a very long content that should be truncated to a shorter excerpt for display purposes.';
     
     const excerpt = promptFormatter.getExcerpt(content, 20);

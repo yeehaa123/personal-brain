@@ -31,8 +31,8 @@ export class MockCommandHandler {
   getCommands = mock(() => this.mockCommands);
   
   // Use the standard mock profile from the mocks
-  private createMockProfile(): Profile {
-    return MockProfile.createDefault('profile-1');
+  private async createMockProfile(): Promise<Profile> {
+    return await MockProfile.createDefault('profile-1');
   }
   
   // Create a standard mock note that matches the Note type
@@ -53,13 +53,14 @@ export class MockCommandHandler {
     };
   }
   
-  processCommand = mock((command: string, args: string): Promise<CommandResult> => {
+  processCommand = mock(async (command: string, args: string): Promise<CommandResult> => {
     switch (command) {
-    case 'profile':
+    case 'profile': {  
       if (args === 'related') {
-        return Promise.resolve({
+        const profile = await this.createMockProfile();
+        return {
           type: 'profile-related',
-          profile: this.createMockProfile(),
+          profile,
           relatedNotes: [
             this.createMockNote(
               'note-1', 
@@ -69,13 +70,16 @@ export class MockCommandHandler {
             ),
           ],
           matchType: 'tags',
-        });
+        };
       }
-        
-      return Promise.resolve({
-        type: 'profile',
-        profile: this.createMockProfile(),
-      });
+      
+      {
+        const profile = await this.createMockProfile();
+        return {
+          type: 'profile',
+          profile,
+        };
+      }}
         
     case 'search':
       return Promise.resolve({

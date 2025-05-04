@@ -47,7 +47,7 @@ describe('ConversationToNoteService', () => {
   let insertNoteCalls: Note[] = [];
 
   // Use our standardized mock repository implementation
-  const mockNoteRepository = MockNoteRepository.createFresh([sampleNote]);
+  let mockNoteRepository = MockNoteRepository.createFresh();
 
   // Override insertNote method to track calls for test assertions
   mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
@@ -156,8 +156,11 @@ describe('ConversationToNoteService', () => {
       updatedAt: new Date(),
     });
 
-    // Reset the mockNoteRepository to have the sample note
-    mockNoteRepository.notes = [sampleNote];
+    // Create a fresh mock repository for testing
+    mockNoteRepository = MockNoteRepository.createFresh();
+    
+    // Setup getNoteById to return the sample note
+    mockNoteRepository.getNoteById = async () => Promise.resolve(sampleNote);
 
     // Re-implement the custom insertNote method for tracking
     mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {

@@ -1,58 +1,51 @@
 /**
  * Mock implementation for NoteEmbeddingService
  * 
- * Provides a standardized mock that follows the Component Interface Standardization pattern.
+ * A simple mock that follows the Component Interface Standardization pattern
+ * and returns realistic test data.
  */
 
 import type { Note } from '@/models/note';
-import type { EmbeddingService } from '@/resources/ai/embedding';
-import { createMockNote } from '@test/__mocks__/models/note';
-import { MockBaseEmbeddingService } from '@test/__mocks__/services/common/baseEmbeddingService';
+import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import { createTestNote } from '@test/__mocks__/models/note';
+import { EmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 /**
  * Standardized mock implementation for NoteEmbeddingService
- * Implements the Component Interface Standardization pattern
  */
-export class MockNoteEmbeddingService extends MockBaseEmbeddingService {
-  /** Singleton instance - use a different name to avoid property shadowing from parent class */
-  private static noteEmbeddingInstance: MockNoteEmbeddingService | null = null;
+export class MockNoteEmbeddingService {
+  private static instance: MockNoteEmbeddingService | null = null;
 
   /**
    * Get the singleton instance
    */
-  public static override getInstance(embeddingService?: EmbeddingService): MockNoteEmbeddingService {
-    if (!MockNoteEmbeddingService.noteEmbeddingInstance) {
-      MockNoteEmbeddingService.noteEmbeddingInstance = new MockNoteEmbeddingService(embeddingService);
+  public static getInstance(): NoteEmbeddingService {
+    if (!MockNoteEmbeddingService.instance) {
+      MockNoteEmbeddingService.instance = new MockNoteEmbeddingService();
     }
-    return MockNoteEmbeddingService.noteEmbeddingInstance;
+    return MockNoteEmbeddingService.instance as unknown as NoteEmbeddingService;
   }
 
   /**
    * Reset the singleton instance
    */
-  public static override resetInstance(): void {
-    MockNoteEmbeddingService.noteEmbeddingInstance = null;
+  public static resetInstance(): void {
+    MockNoteEmbeddingService.instance = null;
   }
 
   /**
-   * Create a fresh instance
+   * Create a fresh instance for testing
    */
-  public static override createFresh(embeddingService?: EmbeddingService): MockNoteEmbeddingService {
-    return new MockNoteEmbeddingService(embeddingService);
-  }
-
-  /**
-   * Constructor
-   */
-  constructor(embeddingService?: EmbeddingService) {
-    super(embeddingService);
+  public static createFresh(): NoteEmbeddingService {
+    return new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
   }
 
   /**
    * Generate an embedding for a note
    */
   async generateNoteEmbedding(_title: string, _content: string): Promise<number[]> {
-    return [0.1, 0.2, 0.3, 0.4, 0.5];
+    // Just return a mock embedding with random values
+    return Array.from({ length: 5 }, () => Math.random());
   }
 
   /**
@@ -70,26 +63,41 @@ export class MockNoteEmbeddingService extends MockBaseEmbeddingService {
   }
 
   /**
+   * Generate embedding
+   */
+  async generateEmbedding(_text: string): Promise<number[]> {
+    // Use the MockEmbeddingService for consistency
+    const mockService = EmbeddingService.createFresh();
+    return mockService.getEmbedding(_text);
+  }
+
+  /**
    * Search notes by embedding similarity
    */
-  async searchSimilarNotes(_embedding: number[], maxResults = 5): Promise<(Note & { score: number })[]> {
-    const mockNotes = Array.from({ length: maxResults }, (_, i) => ({
-      ...createMockNote(`note-${i + 1}`, `Test Note ${i + 1}`, ['test']),
-      score: 0.9 - (i * 0.1),
-    }));
-    
-    return mockNotes;
+  async searchSimilarNotes(_embedding: number[], maxResults = 5): Promise<Note[]> {
+    // Just create and return some test notes
+    return Array.from({ length: maxResults }, (_, i) => 
+      createTestNote({
+        id: `note-${i + 1}`,
+        title: `Test Note ${i + 1}`,
+        content: `This is test note ${i + 1}`,
+        tags: ['test'],
+      }),
+    );
   }
 
   /**
    * Find related notes for a given note ID based on embedding similarity
    */
-  async findRelatedNotes(_noteId: string, maxResults = 5): Promise<(Note & { score: number })[]> {
-    const mockNotes = Array.from({ length: maxResults }, (_, i) => ({
-      ...createMockNote(`related-${i + 1}`, `Related Note ${i + 1}`, ['test']),
-      score: 0.9 - (i * 0.1),
-    }));
-    
-    return mockNotes;
+  async findRelatedNotes(_noteId: string, maxResults = 5): Promise<Note[]> {
+    // Just create and return some test notes
+    return Array.from({ length: maxResults }, (_, i) => 
+      createTestNote({
+        id: `related-${i + 1}`,
+        title: `Related Note ${i + 1}`,
+        content: `This is related note ${i + 1}`,
+        tags: ['test'],
+      }),
+    );
   }
 }

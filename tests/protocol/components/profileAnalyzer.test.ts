@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import type { Profile } from '@/models/profile';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { createMockProfile } from '@test/__mocks__/models/profile';
@@ -9,7 +10,10 @@ describe('ProfileAnalyzer', () => {
   // Use our standardized MockEmbeddingService
   let mockEmbeddingService: EmbeddingService;
   
-  beforeEach(() => {
+  // Sample profile - will be initialized in beforeEach
+  let sampleProfile: Profile;
+  
+  beforeEach(async () => {
     // Reset the mock instance to ensure test isolation
     MockEmbeddingService.resetInstance();
     
@@ -19,12 +23,12 @@ describe('ProfileAnalyzer', () => {
     // Set up specific mocks for this test
     mockEmbeddingService.getEmbedding = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
     mockEmbeddingService.calculateSimilarity = mock(() => 0.75);
+    
+    // Initialize sample profile
+    sampleProfile = await createMockProfile('profile-1');
   });
 
-  // Sample profile
-  const sampleProfile = createMockProfile('profile-1');
-
-  test('should detect profile queries correctly', () => {
+  test('should detect profile queries correctly', async () => {
     // Create profile analyzer for this test
     const profileAnalyzer = ProfileAnalyzer.createFresh({ embeddingService: mockEmbeddingService });
     
@@ -58,7 +62,7 @@ describe('ProfileAnalyzer', () => {
     // Create profile analyzer for this test
     const profileAnalyzer = ProfileAnalyzer.createFresh({ embeddingService: mockEmbeddingService });
     
-    const profileWithoutEmbedding = { 
+    const profileWithoutEmbedding: Profile = { 
       ...sampleProfile, 
       embedding: null,
     };

@@ -28,9 +28,11 @@ export class MockNote {
     };
   }
 
-  static createWithEmbedding(id: string, title: string, tags: string[] = []): Note {
+  static async createWithEmbedding(id: string, title: string, tags: string[] = []): Promise<Note> {
     const note = this.createWithDefaults(id, title, tags);
-    note.embedding = EmbeddingService.createMockEmbedding(`${id}-${title}`);
+    // Use the standard API method for generating embeddings
+    const mockService = EmbeddingService.createFresh();
+    note.embedding = await mockService.getEmbedding(`${id}-${title}`);
     return note;
   }
 
@@ -47,11 +49,13 @@ export class MockNote {
     return note;
   }
 
-  static createStandardSet(): Note[] {
+  static async createStandardSet(): Promise<Note[]> {
+    const noteWithEmbedding = await this.createWithEmbedding('note-3', 'Test Note with Embedding', ['embedding', 'vector']);
+    
     return [
       this.createWithDefaults('note-1', 'Test Note 1', ['tag1', 'tag2']),
       this.createWithDefaults('note-2', 'Test Note 2'),
-      this.createWithEmbedding('note-3', 'Test Note with Embedding', ['embedding', 'vector']),
+      noteWithEmbedding,
       this.createFromConversation('note-4', 'Conversation Note', 'conv-123'),
     ];
   }

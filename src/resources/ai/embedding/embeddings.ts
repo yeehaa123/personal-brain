@@ -9,7 +9,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { cosineSimilarity, embed, embedMany } from 'ai';
 
-import { textConfig } from '@/config';
+import { aiConfig, textConfig } from '@/config';
 import type { EmbeddingModelAdapter } from '@/resources/ai/interfaces';
 import { getEnv, getEnvAsInt } from '@/utils/configUtils';
 import { ApiError } from '@/utils/errorUtils';
@@ -30,26 +30,57 @@ export interface EmbeddingConfig {
 }
 
 /**
- * Dependencies interface for EmbeddingService
+ * Dependencies required by the EmbeddingService
  */
 export interface EmbeddingDependencies {
   /** Logger instance */
-  logger?: Logger;
+  logger: Logger;
+  /** TextUtils instance */
+  textUtils: TextUtils;
 }
 
 /**
  * Service for generating and working with text embeddings
  * 
  * Implements the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
+ * - getInstance(): Returns the singleton instance with default configuration
  * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates an instance with explicit dependencies
+ * - createFresh(): Creates a new instance with explicit dependencies and configuration
  * 
  * Implements the EmbeddingModelAdapter interface for consistent integration.
+ * 
+ * INTEGRATION WITH RESOURCE REGISTRY:
+ * This service is registered in the ResourceRegistry and should be accessed through 
+ * ResourceRegistry.getEmbeddingService() for proper dependency management in production code.
+ * 
+ * Access pattern in components:
+ * 1. Production code:
+ *    ```typescript
+ *    const resourceRegistry = ResourceRegistry.getInstance();
+ *    const embeddingService = resourceRegistry.getEmbeddingService();
+ *    ```
+ * 
+ * 2. Direct singleton (less preferred):
+ *    ```typescript
+ *    const embeddingService = EmbeddingService.getInstance();
+ *    ```
+ * 
+ * 3. Testing:
+ *    ```typescript
+ *    const embeddingService = EmbeddingService.createFresh(mockConfig, mockDependencies);
+ *    ```
  */
 export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> {
-  /** Configuration values - used in methods */
+  /** Singleton instance */
+  private static instance: EmbeddingService | null = null;
+
+  /** Logger instance */
+  private readonly logger: Logger;
+  
+  /** Text utilities instance */
+  private readonly textUtils: TextUtils;
+  
+  /** Configuration values */
   private readonly apiKey: string;
   private readonly embeddingModel: string;
   private readonly embeddingDimension: number;
@@ -57,93 +88,127 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   /** OpenAI provider instance */
   private readonly openAIProvider: ReturnType<typeof createOpenAI>;
 
-  /** Logger instance for this class */
-  private readonly logger: Logger;
-  
-  /** Text utilities instance */
-  private readonly textUtils: TextUtils;
-
-  /** Singleton instance */
-  private static instance: EmbeddingService | null = null;
-
   /**
    * Get the singleton instance of EmbeddingService
    * 
-   * @param config Optional configuration for the embedding service
+   * This method retrieves or creates the shared singleton instance using default
+   * configuration values from the application config. 
+   * 
+   * IMPORTANT: In production code, prefer using ResourceRegistry:
+   * ```typescript
+   * const embeddingService = ResourceRegistry.getInstance().getEmbeddingService();
+   * ```
+   * 
+   * Direct singleton access should be avoided in unit tests to prevent cross-test 
+   * contamination. Instead, use createFresh() with mock dependencies.
+   * 
    * @returns The shared EmbeddingService instance
    */
-  public static getInstance(config?: EmbeddingConfig): EmbeddingService {
+  public static getInstance(): EmbeddingService {
     if (!EmbeddingService.instance) {
-      EmbeddingService.instance = new EmbeddingService(config);
+      const logger = Logger.getInstance();
+      logger.debug('Creating EmbeddingService singleton instance');
+      
+      // Get default configuration from environment/config
+      const config: EmbeddingConfig = {
+        apiKey: aiConfig.openAI.apiKey,
+        embeddingModel: aiConfig.openAI.embeddingModel,
+        embeddingDimension: aiConfig.openAI.embeddingDimension,
+      };
+      
+      // Get default dependencies
+      const dependencies: EmbeddingDependencies = {
+        logger,
+        textUtils: TextUtils.getInstance(),
+      };
+      
+      // Create the instance with default configuration and dependencies
+      EmbeddingService.instance = new EmbeddingService(config, dependencies);
     }
+    
     return EmbeddingService.instance;
   }
 
   /**
-   * Reset the singleton instance (primarily for testing)
+   * Reset the singleton instance
+   * 
+   * This method clears the static instance reference and performs any necessary
+   * cleanup. It is primarily used in testing to ensure a clean state between tests.
    */
   public static resetInstance(): void {
-    EmbeddingService.instance = null;
+    try {
+      // Clean up resources if needed
+      if (EmbeddingService.instance) {
+        // No specific cleanup needed for this service
+      }
+    } catch (error) {
+      const logger = Logger.getInstance();
+      logger.error('Error during EmbeddingService instance reset:', error);
+    } finally {
+      EmbeddingService.instance = null;
+      Logger.getInstance().debug('EmbeddingService singleton instance reset');
+    }
   }
 
   /**
-   * Create a fresh service instance (primarily for testing)
+   * Create a fresh service instance for testing
    * 
-   * @param config Optional configuration for the embedding service
-   * @returns A new EmbeddingService instance
+   * This method creates a new instance with explicit configuration and dependencies,
+   * without affecting the singleton instance. It is primarily used in tests to create
+   * isolated instances with controlled dependencies and configuration.
+   * 
+   * USAGE:
+   * This method should be used ONLY in tests. In production code, access the service
+   * through ResourceRegistry.getInstance().getEmbeddingService() to ensure proper
+   * integration with the application's dependency management.
+   * 
+   * Example test usage:
+   * ```typescript
+   * const mockLogger = MockLogger.createFresh();
+   * const mockTextUtils = MockTextUtils.createFresh();
+   * 
+   * const embeddingService = EmbeddingService.createFresh(
+   *   { apiKey: 'test-key', embeddingModel: 'test-model' },
+   *   { logger: mockLogger, textUtils: mockTextUtils }
+   * );
+   * ```
+   * 
+   * @param config Required configuration for the test instance
+   * @param dependencies Required dependencies for the test instance
+   * @returns A new isolated EmbeddingService instance
    */
-  public static createFresh(config?: EmbeddingConfig): EmbeddingService {
-    return new EmbeddingService(config);
+  public static createFresh(
+    config: EmbeddingConfig,
+    dependencies: EmbeddingDependencies,
+  ): EmbeddingService {
+    dependencies.logger.debug('Creating fresh EmbeddingService instance');
+    return new EmbeddingService(config, dependencies);
   }
 
   /**
-   * Create a new service instance with dependencies
+   * Private constructor to enforce factory methods
+   * 
+   * The constructor is private to ensure that instances are only created through
+   * the static factory methods (getInstance, createFresh), which provide proper
+   * initialization and configuration.
    * 
    * @param config Configuration options
-   * @param dependencies External dependencies
-   * @returns A new EmbeddingService instance
-   */
-  public static createWithDependencies(
-    config: Record<string, unknown>,
-    dependencies: Record<string, unknown> = {},
-  ): EmbeddingService {
-    // Convert generic config to typed config
-    const embeddingConfig: EmbeddingConfig = {
-      apiKey: config['apiKey'] as string,
-      embeddingModel: config['embeddingModel'] as string,
-      embeddingDimension: config['embeddingDimension'] as number,
-    };
-
-    // Validate API key is required
-    if (!embeddingConfig.apiKey) {
-      throw new Error('Missing required configuration: apiKey');
-    }
-
-    // Create instance with typed dependencies
-    return new EmbeddingService(
-      embeddingConfig,
-      {
-        logger: dependencies['logger'] as Logger,
-      },
-    );
-  }
-
-  /**
-   * Create a new embedding service
-   * 
-   * @param config Configuration for the embedding service
-   * @param deps Optional dependencies 
-   * @private Use factory methods instead of constructor directly
+   * @param dependencies Required dependencies
    */
   private constructor(
-    config?: EmbeddingConfig,
-    deps: EmbeddingDependencies = {},
+    config: EmbeddingConfig,
+    dependencies: EmbeddingDependencies,
   ) {
-    // Initialize from config or environment variables
-    this.apiKey = config?.apiKey || getEnv('OPENAI_API_KEY', '');
-    this.embeddingModel = config?.embeddingModel || getEnv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small');
-    this.embeddingDimension = config?.embeddingDimension || getEnvAsInt('OPENAI_EMBEDDING_DIMENSION', 1536);
-    this.logger = deps.logger || Logger.getInstance();
+    // Store dependencies
+    this.logger = dependencies.logger;
+    this.textUtils = dependencies.textUtils;
+    
+    // Apply configuration with fallbacks to environment variables
+    this.apiKey = config.apiKey || getEnv('OPENAI_API_KEY', '');
+    this.embeddingModel = config.embeddingModel || 
+                         getEnv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small');
+    this.embeddingDimension = config.embeddingDimension || 
+                            getEnvAsInt('OPENAI_EMBEDDING_DIMENSION', 1536);
     
     // Verify API key is available
     if (!this.apiKey) {
@@ -155,10 +220,7 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
       apiKey: this.apiKey,
     });
     
-    // Initialize text utilities
-    this.textUtils = TextUtils.getInstance();
-    
-    this.logger.debug(`Initialized EmbeddingService with model: ${this.embeddingModel}`);
+    this.logger.debug(`EmbeddingService instance created with model: ${this.embeddingModel}`);
   }
 
   /**
@@ -320,5 +382,4 @@ export class EmbeddingService implements EmbeddingModelAdapter<EmbeddingConfig> 
   async getChunkedEmbeddings(textChunks: string[]): Promise<number[][]> {
     return this.getBatchEmbeddings(textChunks);
   }
-
 }

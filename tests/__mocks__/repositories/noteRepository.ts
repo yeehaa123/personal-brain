@@ -34,11 +34,11 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockNoteRepository {
+  public static getInstance(): NoteRepository {
     if (!MockNoteRepository.instance) {
       MockNoteRepository.instance = new MockNoteRepository();
     }
-    return MockNoteRepository.instance;
+    return MockNoteRepository.instance as unknown as NoteRepository;
   }
 
   /**
@@ -51,8 +51,8 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   /**
    * Create fresh instance for isolated testing
    */
-  public static createFresh(initialNotes: Note[] = createMockNotes()): MockNoteRepository {
-    return new MockNoteRepository(initialNotes);
+  public static createFresh(initialNotes: Note[] = createMockNotes()): NoteRepository {
+    return new MockNoteRepository(initialNotes) as unknown as NoteRepository;
   }
 
   /**
@@ -83,6 +83,13 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     this.notes = this.notes.filter(note => note.id !== id);
     return this.notes.length < initialLength;
   };
+
+  /**
+   * Set the notes array (helper for tests)
+   */
+  setNotes(notes: Note[]): void {
+    this.notes = [...notes];
+  }
 
   /**
    * Get a note by ID - matches the real implementation
@@ -155,6 +162,18 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   };
 
   /**
+   * Find notes related to a conversation - matches the interface
+   */
+  findNotesByConversationId = async (conversationId: string): Promise<Note[]> => {
+    return this.notes.filter(note => {
+      if (note.conversationMetadata && typeof note.conversationMetadata === 'object') {
+        return note.conversationMetadata.conversationId === conversationId;
+      }
+      return false;
+    });
+  };
+
+  /**
    * Update a note's embedding - matches the real implementation
    */
   updateNoteEmbedding = async (noteId: string, embedding: number[]): Promise<void> => {
@@ -162,6 +181,13 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     if (index !== -1) {
       this.notes[index] = { ...this.notes[index], embedding };
     }
+  };
+
+  /**
+   * Find notes matching criteria - matches IBaseRepository interface
+   */
+  find = async (): Promise<Note[]> => {
+    return [...this.notes];
   };
 
   /**

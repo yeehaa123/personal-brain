@@ -51,8 +51,9 @@ export class MockProfileEmbeddingService implements Partial<ProfileEmbeddingServ
     return `Mock profile text for ${_profile.fullName || 'Unknown User'}`;
   });
 
-  generateEmbedding = mock((_text: string): Promise<number[]> => {
-    return Promise.resolve(MockEmbeddingService.createMockEmbedding(_text));
+  generateEmbedding = mock(async (_text: string): Promise<number[]> => {
+    const service = MockEmbeddingService.createFresh();
+    return await service.getEmbedding(_text);
   });
 
   generateEmbeddingForProfile = mock((): Promise<{ updated: boolean }> => {

@@ -34,6 +34,26 @@ interface NewsApiResponse {
   code?: string;
 }
 
+/**
+ * Configuration options for NewsApiSource
+ */
+export interface NewsApiSourceOptions {
+  /**
+   * Required NewsAPI key
+   */
+  apiKey?: string;
+  
+  /**
+   * Optional embedding service for semantic search
+   */
+  embeddingService?: EmbeddingService;
+  
+  /**
+   * Maximum age of news articles in hours (defaults to 1 week)
+   */
+  maxAgeHours?: number;
+}
+
 export class NewsApiSource implements ExternalSourceInterface {
   readonly name = 'NewsAPI';
   private embeddingService: EmbeddingService | null = null;
@@ -47,18 +67,17 @@ export class NewsApiSource implements ExternalSourceInterface {
   /**
    * Get singleton instance of NewsApiSource
    * 
-   * @param apiKey Optional NewsAPI key
-   * @param openAiKey Optional OpenAI API key for embeddings
-   * @param maxAgeHours Maximum age of news articles in hours
+   * Following Component Interface Standardization pattern:
+   * - No parameters to getInstance (configuration handled elsewhere)
+   * - Auto-initialization of dependencies using standard patterns
+   * 
    * @returns The shared NewsApiSource instance
    */
-  public static getInstance(
-    apiKey?: string,
-    openAiKey?: string,
-    maxAgeHours = 24 * 7,
-  ): NewsApiSource {
+  public static getInstance(): NewsApiSource {
     if (!NewsApiSource.instance) {
-      NewsApiSource.instance = NewsApiSource.createWithDependencies(apiKey, openAiKey, maxAgeHours);
+      // For the singleton, we read from the environment variable
+      const apiKey = getEnv('NEWSAPI_KEY', '');
+      NewsApiSource.instance = NewsApiSource.createFresh({ apiKey });
     }
     return NewsApiSource.instance;
   }
@@ -72,54 +91,40 @@ export class NewsApiSource implements ExternalSourceInterface {
   
   /**
    * Create a fresh instance (primarily for testing)
+   * Following Component Interface Standardization pattern with:
+   * - Options object parameter for configuration
+   * - Auto-initialization of required dependencies
    * 
-   * @param apiKey NewsAPI key
-   * @param embeddingService Optional embedding service
-   * @param maxAgeHours Maximum age of news articles in hours
+   * @param options Configuration options
    * @returns A new NewsApiSource instance
    */
-  public static createFresh(
-    apiKey?: string,
-    embeddingService?: EmbeddingService | null,
-    maxAgeHours = 24 * 7,
-  ): NewsApiSource {
-    return new NewsApiSource(apiKey, embeddingService, maxAgeHours);
-  }
-  
-  /**
-   * Factory method that resolves dependencies and creates a new instance
-   * 
-   * @param apiKey Optional NewsAPI key, falls back to NEWSAPI_KEY env variable
-   * @param openAiKey Optional OpenAI API key for embeddings
-   * @param maxAgeHours Maximum age of news articles in hours
-   * @returns A new NewsApiSource instance with resolved dependencies
-   */
-  public static createWithDependencies(
-    apiKey?: string,
-    openAiKey?: string,
-    maxAgeHours = 24 * 7,
-  ): NewsApiSource {
-    // Only in this factory method do we use the environment variable as fallback
-    const resolvedApiKey = apiKey || getEnv('NEWSAPI_KEY', '');
-    const embeddingService = openAiKey ? EmbeddingService.getInstance({ apiKey: openAiKey }) : null;
-    return new NewsApiSource(resolvedApiKey, embeddingService, maxAgeHours);
+  public static createFresh(options: NewsApiSourceOptions = {}): NewsApiSource {
+    // Auto-initialize embedding service if not provided
+    const embeddingService = options.embeddingService || EmbeddingService.getInstance();
+    
+    // Resolve API key
+    const apiKey = options.apiKey || '';
+    
+    // Get maxAgeHours with default
+    const maxAgeHours = options.maxAgeHours || 24 * 7; // 1 week default
+    
+    return new NewsApiSource({
+      apiKey,
+      embeddingService,
+      maxAgeHours,
+    });
   }
 
   /**
    * Create a new NewsApiSource with explicit dependencies
+   * Private constructor to ensure use of factory methods.
    * 
-   * @param apiKey NewsAPI key - required for this source to function
-   * @param embeddingService Optional embedding service for semantic search
-   * @param maxAgeHours Maximum age of news articles in hours
+   * @param options Configuration options
    */
-  constructor(
-    apiKey = '',
-    embeddingService: EmbeddingService | null = null,
-    maxAgeHours = 24 * 7,
-  ) {
-    this.apiKey = apiKey;
-    this.maxAgeHours = maxAgeHours;
-    this.embeddingService = embeddingService;
+  private constructor(options: NewsApiSourceOptions) {
+    this.apiKey = options.apiKey || '';
+    this.maxAgeHours = options.maxAgeHours || 24 * 7;
+    this.embeddingService = options.embeddingService || null;
     
     if (!this.apiKey) {
       logger.warn('NewsAPI source initialized without API key');

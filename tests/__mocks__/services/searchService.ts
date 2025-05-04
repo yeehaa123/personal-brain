@@ -51,50 +51,43 @@ export class MockNoteSearchService {
    * Search by embedding
    */
   searchByEmbedding = mock<
-    (embedding: number[], limit?: number, threshold?: number) => Promise<Array<Note & { _score: number }>>
-      >(async (_embedding: number[], limit?: number, _threshold?: number) => {
-        return this.notes.slice(0, limit || this.notes.length).map(note => ({
-          ...note,
-          _score: 0.85,
-        }));
+    (embedding: number[], limit?: number, threshold?: number) => Note[]
+      >((_embedding: number[], limit?: number, _threshold?: number) => {
+        return this.notes.slice(0, limit || this.notes.length);
       });
 
   /**
    * Search by keywords
    */
   searchByKeywords = mock<
-    (query: string, tags?: string[], limit?: number) => Promise<Note[]>
-      >(async (_query: string, _tags?: string[], limit?: number) => {
+    (query: string, tags?: string[], limit?: number) => Note[]
+      >((_query: string, _tags?: string[], limit?: number) => {
         return this.notes.slice(0, limit || this.notes.length);
       });
 
   /**
    * Search notes with combined approach
    */
-  search = mock<
-    (options: {
+  search = mock<(options: {
       query?: string;
       tags?: string[];
       limit?: number;
       offset?: number;
       semanticSearch?: boolean;
-    }) => Promise<Note[]>
-      >(async (options) => {
-        const limit = options.limit || 10;
-        const offset = options.offset || 0;
-        return this.notes.slice(offset, offset + limit);
-      });
+    }) => Note[]>((options) => {
+      const limit = options.limit || 10;
+      const offset = options.offset || 0;
+      return this.notes.slice(offset, offset + limit);
+    });
 
   /**
    * Find related notes
    */
-  findRelated = mock<
-    (noteId: string, limit?: number) => Promise<Note[]>
-      >(async (noteId: string, limit: number = 5) => {
-        return this.notes
-          .filter(note => note.id !== noteId)
-          .slice(0, limit);
-      });
+  findRelated = mock<(noteId: string, limit?: number) => Note[]>((noteId: string, limit: number = 5) => {
+    return this.notes
+      .filter(note => note.id !== noteId)
+      .slice(0, limit);
+  });
 
   /**
    * Set notes for testing
@@ -128,9 +121,10 @@ export class MockProfileSearchService {
   /**
    * Get singleton instance
    */
-  public static getInstance(): MockProfileSearchService {
+  public static async getInstance(): Promise<MockProfileSearchService> {
     if (!MockProfileSearchService.instance) {
-      MockProfileSearchService.instance = new MockProfileSearchService();
+      const profile = await createMockProfile();
+      MockProfileSearchService.instance = new MockProfileSearchService([profile]);
     }
     return MockProfileSearchService.instance;
   }
@@ -145,11 +139,13 @@ export class MockProfileSearchService {
   /**
    * Create a fresh instance for testing
    */
-  public static createFresh(initialProfiles: Profile[] = [createMockProfile()]): MockProfileSearchService {
-    return new MockProfileSearchService(initialProfiles);
+  public static async createFresh(initialProfiles?: Profile[]): Promise<MockProfileSearchService> {
+    // Get initial profiles if not provided
+    const profiles = initialProfiles || [await createMockProfile()];
+    return new MockProfileSearchService(profiles);
   }
 
-  constructor(initialProfiles: Profile[] = [createMockProfile()]) {
+  constructor(initialProfiles: Profile[]) {
     this.profiles = [...initialProfiles];
   }
 
@@ -157,39 +153,34 @@ export class MockProfileSearchService {
    * Search by embedding
    */
   searchByEmbedding = mock<
-    (embedding: number[], limit?: number, threshold?: number) => Promise<Array<Profile & { _score: number }>>
-      >(async (_embedding: number[], limit?: number, _threshold?: number) => {
-        return this.profiles.slice(0, limit || this.profiles.length).map(profile => ({
-          ...profile,
-          _score: 0.85,
-        }));
+    (embedding: number[], limit?: number, threshold?: number) => Profile[]
+      >((_embedding: number[], limit?: number, _threshold?: number) => {
+        return this.profiles.slice(0, limit || this.profiles.length);
       });
 
   /**
    * Search by keywords
    */
   searchByKeywords = mock<
-    (query: string, tags?: string[], limit?: number) => Promise<Profile[]>
-      >(async (_query: string, _tags?: string[], limit?: number) => {
+    (query: string, tags?: string[], limit?: number) => Profile[]
+      >((_query: string, _tags?: string[], limit?: number) => {
         return this.profiles.slice(0, limit || this.profiles.length);
       });
 
   /**
    * Search profiles with combined approach
    */
-  search = mock<
-    (options: {
+  search = mock<(options: {
       query?: string;
       tags?: string[];
       limit?: number;
       offset?: number;
       semanticSearch?: boolean;
-    }) => Promise<Profile[]>
-      >(async (options) => {
-        const limit = options.limit || 10;
-        const offset = options.offset || 0;
-        return this.profiles.slice(offset, offset + limit);
-      });
+    }) => Profile[]>((options) => {
+      const limit = options.limit || 10;
+      const offset = options.offset || 0;
+      return this.profiles.slice(offset, offset + limit);
+    });
 
   /**
    * Set profiles for testing

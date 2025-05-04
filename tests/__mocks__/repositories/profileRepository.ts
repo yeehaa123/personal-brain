@@ -30,8 +30,8 @@ export class MockProfileRepository {
   /**
    * Private constructor to enforce singleton pattern
    */
-  constructor(initialProfiles: Profile[] = createMockProfiles()) {
-    this.profiles = [...initialProfiles];
+  constructor() {
+    this.profiles = [];
   }
 
   /**
@@ -40,6 +40,12 @@ export class MockProfileRepository {
   public static getInstance(): ProfileRepository {
     if (!MockProfileRepository.instance) {
       MockProfileRepository.instance = new MockProfileRepository();
+      // Initialize with default profiles asynchronously
+      createMockProfiles().then(profiles => {
+        if (MockProfileRepository.instance) {
+          MockProfileRepository.instance.profiles = [...profiles];
+        }
+      });
     }
     return MockProfileRepository.instance as unknown as ProfileRepository;
   }
@@ -54,8 +60,31 @@ export class MockProfileRepository {
   /**
    * Create fresh instance for isolated testing
    */
-  public static createFresh(initialProfiles: Profile[] = createMockProfiles()): ProfileRepository {
-    return new MockProfileRepository(initialProfiles) as unknown as ProfileRepository;
+  public static createFresh(initialProfiles: Profile[] = []): ProfileRepository {
+    const repo = new MockProfileRepository();
+    
+    // If we have initial profiles, use them
+    if (initialProfiles.length > 0) {
+      // Handle both regular profiles and Promises
+      const profilePromises = initialProfiles.map(profile => {
+        if (profile && typeof profile === 'object' && 'then' in profile) {
+          return profile;
+        }
+        return Promise.resolve(profile);
+      });
+      
+      // Load the profiles asynchronously
+      Promise.all(profilePromises).then(resolvedProfiles => {
+        repo.profiles = [...resolvedProfiles];
+      });
+    } else {
+      // Otherwise load default profiles
+      createMockProfiles().then(profiles => {
+        repo.profiles = [...profiles];
+      });
+    }
+    
+    return repo as unknown as ProfileRepository;
   }
 
   /**
@@ -186,11 +215,12 @@ export class MockProfileRepository {
   }
 
   /**
-   * Reset repository state
+   * Reset repository state (instance method to reset content, not singleton)
    */
-  reset(): void {
-    this.profiles = createMockProfiles();
-  }
+  reset = async (): Promise<void> => {
+    const profiles = await createMockProfiles();
+    this.profiles = [...profiles];
+  };
 
   /**
    * Clear all profiles
@@ -202,13 +232,13 @@ export class MockProfileRepository {
   /**
    * Add test profiles
    */
-  addTestProfiles(count: number = 3): Profile[] {
+  addTestProfiles = async (count: number = 3): Promise<Profile[]> => {
     const newProfiles: Profile[] = [];
     for (let i = 1; i <= count; i++) {
-      const profile = createMockProfile(`test-profile-${i}`);
+      const profile = await createMockProfile(`test-profile-${i}`);
       this.profiles.push(profile);
       newProfiles.push(profile);
     }
     return newProfiles;
-  }
+  };
 }

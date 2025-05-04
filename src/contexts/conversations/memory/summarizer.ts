@@ -57,11 +57,9 @@ export class ConversationSummarizer {
    * @param options Configuration options including optional API key for Claude
    * @private Private constructor to enforce getInstance() usage
    */
-  private constructor(options?: ConversationSummarizerOptions) {
-    // Initialize the ResourceRegistry with the provided API key
-    this.resourceRegistry = ResourceRegistry.getInstance({
-      anthropicApiKey: options?.anthropicApiKey,
-    });
+  private constructor(_options?: ConversationSummarizerOptions) {
+    // Initialize the ResourceRegistry
+    this.resourceRegistry = ResourceRegistry.getInstance();
   }
 
   /**

@@ -50,7 +50,7 @@ describe('QueryProcessor', () => {
     // Setup mock profile context
     MockProfileContext.resetInstance();
     const profileContext = MockProfileContext.getInstance();
-    spyOn(profileContext, 'getProfile').mockResolvedValue(sampleProfile);
+    spyOn(profileContext, 'getProfile').mockReturnValue(Promise.resolve(sampleProfile));
 
     // Setup mock conversation context
     MockConversationContext.resetInstance();

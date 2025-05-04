@@ -4,7 +4,7 @@ import type { Profile } from '@/models/profile';
 import type { EmbeddingService } from '@/resources/ai/embedding/embeddings';
 import { ProfileEmbeddingService } from '@/services/profiles/profileEmbeddingService';
 import type { ProfileRepository } from '@/services/profiles/profileRepository';
-import { createMockProfile } from '@test/__mocks__/models/profile';
+import { MockProfile } from '@test/__mocks__/models/profile';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
@@ -13,59 +13,30 @@ mock.module('@/resources/ai/embedding', () => ({
   EmbeddingService: MockEmbeddingService,
 }));
 
-// Create a mock profile for testing - using the standard createMockProfile but customizing it
-const mockProfile: Profile = {
-  ...createMockProfile('profile-1'),
-  headline: 'Senior Developer | Open Source Contributor',
-  summary: 'Experienced software engineer with a focus on TypeScript and React.',
-  experiences: [
-    {
-      title: 'Senior Developer',
-      company: 'Tech Corp',
-      description: 'Leading development of web applications',
-      starts_at: { day: 1, month: 1, year: 2020 },
-      ends_at: null,
-      company_linkedin_profile_url: null,
-      company_facebook_profile_url: null,
-      location: null,
-      logo_url: null,
-    },
-  ],
-  education: [
-    {
-      degree_name: 'Computer Science',
-      school: 'University of Technology',
-      starts_at: { day: 1, month: 9, year: 2012 },
-      ends_at: { day: 30, month: 6, year: 2016 },
-      field_of_study: null,
-      school_linkedin_profile_url: null,
-      school_facebook_profile_url: null,
-      description: null,
-      logo_url: null,
-      grade: null,
-      activities_and_societies: null,
-    },
-  ],
-  tags: ['software-engineering', 'typescript', 'react'],
-};
-
-// Create a mock repository with the test profile
-// Use our standardized mock repository
-MockProfileRepository.resetInstance();
-const mockRepository = MockProfileRepository.createFresh([mockProfile]);
+// Will be initialized in beforeEach
+let mockProfile: Profile;
+let mockRepository: ProfileRepository;
 
 // No need to add the static factory method as the class doesn't have one - we'll handle this in the test
 
 describe('ProfileEmbeddingService', () => {
   let embeddingService: ProfileEmbeddingService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset singleton instances to ensure test isolation
     ProfileEmbeddingService.resetInstance();
     MockEmbeddingService.resetInstance();
+    MockProfileRepository.resetInstance();
     
-    // Create the service using the standardized factory method
+    // Create a dev profile which already has appropriate fields for tests
+    mockProfile = await MockProfile.createDeveloperProfile('profile-1');
+    
+    // Create the repository with our mock profile
+    mockRepository = MockProfileRepository.createFresh([mockProfile]);
+    
+    // Create the embedding service using the standardized factory method
     const mockEmbeddingService = MockEmbeddingService.createFresh();
+    
     // Use createFresh to create a new instance with our dependencies
     embeddingService = ProfileEmbeddingService.createFresh(
       mockEmbeddingService as unknown as EmbeddingService,
@@ -132,12 +103,12 @@ describe('ProfileEmbeddingService', () => {
     expect(profileText.length).toBeGreaterThan(0);
 
     // Should include important profile information
-    expect(profileText).toContain('John Doe');
+    expect(profileText).toContain('Jane Smith');
     // Update the expected text to match what's actually generated
-    expect(profileText).toContain('Ecosystem Architect');
+    expect(profileText).toContain('Senior Software Engineer');
     expect(profileText).toContain('Senior Developer');
-    expect(profileText).toContain('Tech Corp');
-    expect(profileText).toContain('University of Technology');
+    expect(profileText).toContain('TechCorp');
+    expect(profileText).toContain('University of Innovation');
   });
 
   test('should generate embedding for profile', async () => {

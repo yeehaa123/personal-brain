@@ -25,17 +25,17 @@ export class TagExtractor {
    * Singleton instance of TagExtractor
    */
   private static instance: TagExtractor | null = null;
-  
+
   /**
    * Logger instance
    */
   private logger: Logger;
-  
+
   /**
    * ResourceRegistry instance used for Claude model access
    */
   private resourceRegistry: ResourceRegistry;
-  
+
   /**
    * Get the singleton instance
    * 
@@ -46,16 +46,14 @@ export class TagExtractor {
       const logger = Logger.getInstance();
       TagExtractor.instance = new TagExtractor({
         logger,
-        resourceRegistry: ResourceRegistry.getInstance({
-          anthropicApiKey: aiConfig.anthropic.apiKey,
-        }),
+        resourceRegistry: ResourceRegistry.getInstance(),
       });
-      
+
       logger.debug('TagExtractor singleton instance created');
     }
     return TagExtractor.instance;
   }
-  
+
   /**
    * Reset the singleton instance (primarily for testing)
    */
@@ -73,7 +71,7 @@ export class TagExtractor {
       Logger.getInstance().debug('TagExtractor singleton instance reset');
     }
   }
-  
+
   /**
    * Create a fresh instance without affecting the singleton
    * 
@@ -83,11 +81,11 @@ export class TagExtractor {
    */
   public static createFresh(
     _config?: Record<string, unknown>,
-    dependencies?: TagExtractorDependencies
+    dependencies?: TagExtractorDependencies,
   ): TagExtractor {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh TagExtractor instance');
-    
+
     if (dependencies) {
       // Use provided dependencies
       return new TagExtractor(dependencies);
@@ -95,13 +93,11 @@ export class TagExtractor {
       // Use default dependencies
       return new TagExtractor({
         logger,
-        resourceRegistry: ResourceRegistry.getInstance({
-          anthropicApiKey: aiConfig.anthropic.apiKey,
-        }),
+        resourceRegistry: ResourceRegistry.getInstance(),
       });
     }
   }
-  
+
   /**
    * Private constructor to enforce using factory methods
    * @param dependencies Required dependencies
@@ -110,7 +106,7 @@ export class TagExtractor {
     // Initialize from dependencies
     this.logger = dependencies.logger;
     this.resourceRegistry = dependencies.resourceRegistry;
-    
+
     this.logger.debug('TagExtractor instance created');
   }
 
@@ -130,7 +126,7 @@ export class TagExtractor {
     try {
       // Use provided API key or fallback to config
       const anthropicApiKey = apiKey || aiConfig.anthropic.apiKey;
-      
+
       // Check for API key
       if (!anthropicApiKey) {
         this.logger.error('No Anthropic API key available for tag extraction');

@@ -120,7 +120,7 @@ export class ProfileManager implements IProfileManager {
     this.profileContext = config.profileContext;
     
     // Initialize the profile analyzer using Component Interface Standardization pattern
-    const embeddingService = EmbeddingService.getInstance(config.apiKey ? { apiKey: config.apiKey } : undefined);
+    const embeddingService = EmbeddingService.getInstance();
     this.profileAnalyzer = ProfileAnalyzer.getInstance({
       embeddingService,
     });

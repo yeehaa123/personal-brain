@@ -147,19 +147,19 @@ export class ExternalSourceStorageAdapter implements StorageInterface<ExternalSo
    * @private
    */
   private initializeSources(): void {
-    // Create and register Wikipedia source with explicit dependency injection
-    const embeddingService = EmbeddingService.getInstance({ apiKey: this.options.apiKey });
+    // Create embedding service using the standard interface pattern - no params
+    const embeddingService = EmbeddingService.getInstance();
     
-    // Create and register Wikipedia source with explicit dependency
-    const wikipediaSource = WikipediaSource.createFresh(embeddingService);
+    // Create and register Wikipedia source with standard pattern
+    const wikipediaSource = WikipediaSource.createFresh({ embeddingService });
     this.registerSource(wikipediaSource);
 
     // Create and register NewsAPI source if key is provided
     if (this.options.newsApiKey) {
-      const newsApiSource = NewsApiSource.createFresh(
-        this.options.newsApiKey,
+      const newsApiSource = NewsApiSource.createFresh({
+        apiKey: this.options.newsApiKey,
         embeddingService,
-      );
+      });
       this.registerSource(newsApiSource);
       this.logger.debug('NewsAPI source registered', { context: 'ExternalSourceStorage' });
     }

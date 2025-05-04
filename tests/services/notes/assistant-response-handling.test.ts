@@ -87,7 +87,7 @@ describe('Assistant Response Handling in Conversations', () => {
   });
 
   // Use our standardized MockNoteRepository
-  const mockNoteRepository = MockNoteRepository.createFresh([sampleNote]);
+  let mockNoteRepository = MockNoteRepository.createFresh();
   
   // Override methods for test-specific behavior
   mockNoteRepository.insertNote = async () => Promise.resolve('note-test');
@@ -123,10 +123,11 @@ describe('Assistant Response Handling in Conversations', () => {
     // Reset our standardized mock repository
     MockNoteRepository.resetInstance();
     
-    // Ensure mockNoteRepository has the sample note
-    mockNoteRepository.notes = [sampleNote];
+    // Create a fresh repository for testing
+    mockNoteRepository = MockNoteRepository.createFresh();
     
     // Override methods for test-specific behavior
+    mockNoteRepository.getNoteById = async () => Promise.resolve(sampleNote);
     mockNoteRepository.insertNote = async () => Promise.resolve('note-test');
     
     // Create fresh mock storage

@@ -39,12 +39,20 @@ describe('ExternalSourceService', () => {
     },
   ];
 
-  const sampleNotes: Note[] = [
-    createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing']),
-  ];
-  // Update the first note to have custom embedding
-  sampleNotes[0].embedding = MockEmbeddingService.createMockEmbedding('Quantum computing basics');
-  sampleNotes[0].content = 'Quantum computing uses qubits instead of classical bits.';
+  // Create sample notes with embeddings
+  const createSampleNotes = async (): Promise<Note[]> => {
+    const note = await createMockNote('note-1', 'Quantum Computing Basics', ['quantum', 'computing']);
+    note.content = 'Quantum computing uses qubits instead of classical bits.';
+    
+    // Use the standard API for embedding generation
+    const mockService = MockEmbeddingService.createFresh();
+    note.embedding = await mockService.getEmbedding('Quantum computing basics');
+    
+    return [note];
+  };
+  
+  // We'll initialize these in each test
+  let sampleNotes: Note[];
 
   // Mock the dependencies
   const mockExternalSourceContext = {
@@ -159,7 +167,10 @@ describe('ExternalSourceService', () => {
     expect(results).toEqual([]);
   });
 
-  test('should not query external sources for profile queries', () => {
+  test('should not query external sources for profile queries', async () => {
+    // Initialize sample notes
+    sampleNotes = await createSampleNotes();
+    
     const shouldQuery = shouldQueryExternalSourcesWithThreshold(
       'Tell me about my background',
       sampleNotes,
@@ -180,7 +191,10 @@ describe('ExternalSourceService', () => {
     expect(shouldQuery).toBe(true);
   });
 
-  test('should query external sources for explicit external keywords', () => {
+  test('should query external sources for explicit external keywords', async () => {
+    // Initialize sample notes
+    sampleNotes = await createSampleNotes();
+    
     const externalKeywordQueries = [
       'search for the latest quantum research',
       'what does wikipedia say about quantum computing',
@@ -188,17 +202,20 @@ describe('ExternalSourceService', () => {
       'what is the current state of quantum computing?',
     ];
     
-    externalKeywordQueries.forEach(query => {
+    for (const query of externalKeywordQueries) {
       const shouldQuery = shouldQueryExternalSourcesWithThreshold(
         query, 
         sampleNotes,
         TEST_THRESHOLD,
       );
       expect(shouldQuery).toBe(true);
-    });
+    }
   });
 
-  test('should determine query coverage from notes', () => {
+  test('should determine query coverage from notes', async () => {
+    // Initialize sample notes
+    sampleNotes = await createSampleNotes();
+    
     // Set high coverage value for the first call
     mockCalculateCoverage.mockReturnValueOnce(0.8);
     

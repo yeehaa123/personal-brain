@@ -10,12 +10,18 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import { getEnv, getEnvAsFloat, getEnvAsInt } from '@/utils/configUtils';
+import { getEnv } from '@/utils/configUtils';
 import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
 
 import { ClaudeModel } from './ai/claude';
 import { EmbeddingService } from './ai/embedding';
-import type { EmbeddingModelAdapter, LanguageModelAdapter } from './ai/interfaces';
+
+// Export interface type for type-safe usage
+export type ResourceRegistryInterface = {
+  getClaudeModel(): ClaudeModel;
+  getEmbeddingService(): EmbeddingService;
+  getResource<T>(resourceId: string): T;
+}
 
 /**
  * ResourceRegistry configuration options
@@ -40,7 +46,27 @@ export const ResourceIdentifiers = {
  * Central registry for accessing external resources
  * 
  * This registry provides a single point of access for all external resources,
- * ensuring consistent initialization and configuration.
+ * ensuring consistent initialization and configuration. It is the primary way
+ * to access shared resources in production code.
+ * 
+ * Resource access pattern:
+ * ```typescript
+ * // Get the registry singleton
+ * const resourceRegistry = ResourceRegistry.getInstance();
+ * 
+ * // Access resources through type-safe methods
+ * const embeddingService = resourceRegistry.getEmbeddingService();
+ * const claudeModel = resourceRegistry.getClaudeModel();
+ * 
+ * // Or using identifiers
+ * const resource = resourceRegistry.getResource(ResourceIdentifiers.EmbeddingService);
+ * ```
+ * 
+ * This pattern ensures:
+ * 1. Resources are properly initialized before use
+ * 2. Configuration is consistently applied
+ * 3. Resource dependencies are managed centrally
+ * 4. Resources can be mocked in tests without changing client code
  */
 export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   /** Singleton instance storage */
@@ -132,13 +158,10 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
     this.registerResource(
       ResourceIdentifiers.ClaudeModel,
       () => {
-        const anthropicApiKey = this.validateAnthropicApiKey(); // Validate Anthropic API key exists
-        return ClaudeModel.getInstance({
-          model: getEnv('ANTHROPIC_MODEL', 'claude-3-7-sonnet-20250219'),
-          apiKey: anthropicApiKey,
-          defaultMaxTokens: getEnvAsInt('ANTHROPIC_MAX_TOKENS', 1000),
-          defaultTemperature: getEnvAsFloat('ANTHROPIC_TEMPERATURE', 0.0),
-        });
+        // Validate API key exists without passing config to getInstance()
+        // This ensures ClaudeModel gets its config from config.ts and env vars
+        this.validateAnthropicApiKey();
+        return ClaudeModel.getInstance();
       },
     );
     
@@ -146,12 +169,10 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
     this.registerResource(
       ResourceIdentifiers.EmbeddingService,
       () => {
-        const openAiApiKey = this.validateOpenAiApiKey(); // Validate OpenAI API key exists
-        return EmbeddingService.getInstance({
-          apiKey: openAiApiKey,
-          embeddingModel: getEnv('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
-          embeddingDimension: getEnvAsInt('OPENAI_EMBEDDING_DIMENSION', 1536),
-        });
+        // Just validate the API key exists but don't pass config to getInstance()
+        // This ensures EmbeddingService gets its config from config.ts and env vars
+        this.validateOpenAiApiKey(); 
+        return EmbeddingService.getInstance();
       },
     );
     
@@ -214,21 +235,39 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   }
   
   /**
-   * Get the Claude language model adapter
+   * Get the Claude language model
    * 
-   * @returns The Claude model adapter
+   * This method provides type-safe access to the ClaudeModel singleton.
+   * It is the preferred way to access the language model in production code.
+   * 
+   * Usage:
+   * ```typescript
+   * const claudeModel = ResourceRegistry.getInstance().getClaudeModel();
+   * const response = await claudeModel.generateText('What is the capital of France?');
+   * ```
+   * 
+   * @returns The ClaudeModel instance with proper configuration
    */
-  public getClaudeModel(): LanguageModelAdapter {
-    return this.resolve<LanguageModelAdapter>(ResourceIdentifiers.ClaudeModel);
+  public getClaudeModel(): ClaudeModel {
+    return this.resolve<ClaudeModel>(ResourceIdentifiers.ClaudeModel);
   }
   
   /**
-   * Get the embedding service adapter
+   * Get the embedding service
    * 
-   * @returns The embedding model adapter
+   * This method provides type-safe access to the EmbeddingService singleton.
+   * It is the preferred way to access the embedding service in production code.
+   * 
+   * Usage:
+   * ```typescript
+   * const embeddingService = ResourceRegistry.getInstance().getEmbeddingService();
+   * await embeddingService.getEmbedding('Some text to embed');
+   * ```
+   * 
+   * @returns The EmbeddingService instance with proper configuration
    */
-  public getEmbeddingService(): EmbeddingModelAdapter {
-    return this.resolve<EmbeddingModelAdapter>(ResourceIdentifiers.EmbeddingService);
+  public getEmbeddingService(): EmbeddingService {
+    return this.resolve<EmbeddingService>(ResourceIdentifiers.EmbeddingService);
   }
   
   /**

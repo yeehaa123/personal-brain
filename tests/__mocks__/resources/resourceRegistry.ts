@@ -1,8 +1,9 @@
 /**
  * Mock ResourceRegistry
  */
-import type { ModelResponse } from '@/resources/ai/interfaces';
 import type { ResourceRegistry } from '@/resources';
+import type { ClaudeModel } from '@/resources/ai/claude';
+import type { ModelResponse } from '@/resources/ai/interfaces';
 
 // Create mock interfaces that match the real implementations
 export interface MockLanguageModelAdapter {
@@ -110,9 +111,10 @@ export class MockResourceRegistry {
 
   /**
    * Get the language model
+   * Uses type assertion to make it compatible with ClaudeModel interface
    */
-  public getClaudeModel(): MockLanguageModelAdapter {
-    return this.mockLanguageModel;
+  public getClaudeModel() {
+    return this.mockLanguageModel as unknown as ClaudeModel;
   }
 
   /**

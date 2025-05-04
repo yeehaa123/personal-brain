@@ -55,6 +55,16 @@ interface WikipediaSiteInfoResponse {
   };
 }
 
+/**
+ * Configuration options for WikipediaSource
+ */
+export interface WikipediaSourceOptions {
+  /**
+   * Optional embedding service for semantic search capabilities
+   */
+  embeddingService?: EmbeddingService;
+}
+
 export class WikipediaSource implements ExternalSourceInterface {
   readonly name = 'Wikipedia';
   private embeddingService: EmbeddingService | null = null;
@@ -67,13 +77,15 @@ export class WikipediaSource implements ExternalSourceInterface {
   /**
    * Get singleton instance of WikipediaSource
    * 
-   * @param apiKey Optional OpenAI API key for embeddings
+   * Following Component Interface Standardization pattern:
+   * - No parameters to getInstance (configuration handled elsewhere)
+   * - Auto-initialization of dependencies using standard patterns
+   * 
    * @returns The shared WikipediaSource instance
    */
-  public static getInstance(apiKey?: string): WikipediaSource {
+  public static getInstance(): WikipediaSource {
     if (!WikipediaSource.instance) {
-      const embeddingService = apiKey ? EmbeddingService.getInstance({ apiKey }) : null;
-      WikipediaSource.instance = new WikipediaSource(embeddingService);
+      WikipediaSource.instance = WikipediaSource.createFresh();
     }
     return WikipediaSource.instance;
   }
@@ -87,32 +99,27 @@ export class WikipediaSource implements ExternalSourceInterface {
   
   /**
    * Create a fresh instance (primarily for testing)
+   * Following Component Interface Standardization pattern with:
+   * - Optional options parameter for configuration
+   * - Auto-initialization of required dependencies
    * 
-   * @param embeddingService Optional embedding service for semantic search
+   * @param options Configuration options
    * @returns A new WikipediaSource instance
    */
-  public static createFresh(embeddingService?: EmbeddingService | null): WikipediaSource {
-    return new WikipediaSource(embeddingService);
-  }
-  
-  /**
-   * Factory method that resolves dependencies and creates a new instance
-   * 
-   * @param apiKey Optional OpenAI API key for embeddings
-   * @returns A new WikipediaSource instance with resolved dependencies
-   */
-  public static createWithDependencies(apiKey?: string): WikipediaSource {
-    const embeddingService = apiKey ? EmbeddingService.getInstance({ apiKey }) : null;
-    return new WikipediaSource(embeddingService);
+  public static createFresh(options: WikipediaSourceOptions = {}): WikipediaSource {
+    // Auto-initialize embedding service if not provided
+    const embeddingService = options.embeddingService || EmbeddingService.getInstance();
+    return new WikipediaSource({ embeddingService });
   }
 
   /**
    * Create a new WikipediaSource with explicit dependencies
+   * Private constructor to ensure use of factory methods.
    * 
-   * @param embeddingService Optional embedding service for semantic search
+   * @param options Configuration and dependencies
    */
-  constructor(embeddingService?: EmbeddingService | null) {
-    this.embeddingService = embeddingService || null;
+  private constructor(options: WikipediaSourceOptions) {
+    this.embeddingService = options.embeddingService || null;
     
     if (this.embeddingService) {
       logger.debug('Wikipedia source initialized with embedding service');

@@ -19,6 +19,24 @@ import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 /**
+ * Configuration options for NoteStorageAdapter
+ */
+export interface NoteStorageAdapterConfig {
+  /** Name of the entity being stored */
+  entityName?: string;
+}
+
+/**
+ * Dependencies for NoteStorageAdapter
+ */
+export interface NoteStorageAdapterDependencies {
+  /** Repository for accessing notes */
+  repository: NoteRepository;
+  /** Logger instance */
+  logger?: Logger;
+}
+
+/**
  * Adapter to provide standard StorageInterface for notes
  * Implements the StorageInterface and follows the Component Interface Standardization pattern
  */
@@ -41,30 +59,15 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
   }
   
   /**
-   * Factory method for creating an instance with dependencies from ServiceRegistry
-   * Use this method instead of direct ServiceRegistry access
-   * 
-   * @returns A new NoteStorageAdapter instance with resolved dependencies
-   */
-  public static createWithDependencies(): NoteStorageAdapter {
-    const serviceRegistry = ServiceRegistry.getInstance();
-    const repository = serviceRegistry.getNoteRepository() as NoteRepository;
-    return new NoteStorageAdapter(repository);
-  }
-  
-  /**
    * Get the singleton instance of NoteStorageAdapter
    * 
-   * @param repository Optional repository to use (useful for testing)
    * @returns The shared NoteStorageAdapter instance
    */
-  public static getInstance(repository?: NoteRepository): NoteStorageAdapter {
+  public static getInstance(): NoteStorageAdapter {
     if (!NoteStorageAdapter.instance) {
-      if (repository) {
-        NoteStorageAdapter.instance = new NoteStorageAdapter(repository);
-      } else {
-        NoteStorageAdapter.instance = NoteStorageAdapter.createWithDependencies();
-      }
+      const serviceRegistry = ServiceRegistry.getInstance();
+      const repository = serviceRegistry.getNoteRepository() as NoteRepository;
+      NoteStorageAdapter.instance = new NoteStorageAdapter(repository);
     }
     return NoteStorageAdapter.instance;
   }
@@ -81,11 +84,20 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param repository Repository to use (required)
+   * @param config Optional configuration options (not used)
+   * @param dependencies Injectable dependencies for the adapter
    * @returns A new NoteStorageAdapter instance
    */
-  public static createFresh(repository: NoteRepository): NoteStorageAdapter {
-    return new NoteStorageAdapter(repository);
+  public static createFresh(
+    _config: NoteStorageAdapterConfig = {},
+    dependencies: NoteStorageAdapterDependencies,
+  ): NoteStorageAdapter {
+    if (!dependencies || !dependencies.repository) {
+      throw new Error('Repository is required for NoteStorageAdapter.createFresh()');
+    }
+    
+    // Create and return adapter with required dependencies
+    return new NoteStorageAdapter(dependencies.repository);
   }
 
   /**

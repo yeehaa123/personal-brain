@@ -6,7 +6,7 @@ import { ProfileRepository } from '@/services/profiles/profileRepository';
 import { createMockProfile } from '@test/__mocks__/models/profile';
 
 // Define initial profile for testing
-const initialProfile: Profile = createMockProfile('profile-1');
+const initialProfilePromise = createMockProfile('profile-1');
 
 // Create a mock repository class that extends the real one
 export class MockProfileRepository extends ProfileRepository {
@@ -19,7 +19,20 @@ export class MockProfileRepository extends ProfileRepository {
   
   // Add static factory methods for consistency with real implementation
   public static override createFresh(initialProfiles: Profile[] = []): MockProfileRepository {
-    return new MockProfileRepository(initialProfiles.length > 0 ? initialProfiles[0] : null);
+    const repo = new MockProfileRepository();
+    // Initialize profile asynchronously if provided
+    if (initialProfiles.length > 0) {
+      if ('then' in initialProfiles[0]) {
+        // Handle Promise<Profile>
+        Promise.resolve(initialProfiles[0]).then(profile => {
+          repo.profile = JSON.parse(JSON.stringify(profile));
+        });
+      } else {
+        // Handle regular Profile
+        repo.profile = JSON.parse(JSON.stringify(initialProfiles[0]));
+      }
+    }
+    return repo;
   }
   
   // Static method to reset the parent class singleton instance
@@ -122,9 +135,12 @@ export class MockProfileRepository extends ProfileRepository {
 describe('ProfileRepository', () => {
   let repository: MockProfileRepository;
   
-  beforeEach(() => {
+  beforeEach(async () => {
     // Clean up any singleton instances
     ProfileRepository.resetInstance();
+    
+    // Get the initial profile
+    const initialProfile = await initialProfilePromise;
     
     // Create a fresh repository with the initial profile
     repository = MockProfileRepository.createFresh([initialProfile]);
@@ -136,6 +152,7 @@ describe('ProfileRepository', () => {
   
   test('should get the user profile', async () => {
     const profile = await repository.getProfile();
+    const initialProfile = await initialProfilePromise;
     
     expect(profile).toBeDefined();
     expect(profile?.id).toBe('profile-1');
@@ -146,7 +163,7 @@ describe('ProfileRepository', () => {
     // First clear the existing profile for this test
     await repository.deleteProfile('profile-1');
     
-    const newProfile = createMockProfile('new-profile-id');
+    const newProfile = await createMockProfile('new-profile-id');
     newProfile.fullName = 'Jane Smith';
     newProfile.occupation = 'Data Scientist';
     
@@ -202,7 +219,7 @@ describe('ProfileRepository', () => {
     await repository.deleteProfile('profile-1');
     
     // Create a complex profile
-    const complexProfile = createMockProfile('complex-profile-id');
+    const complexProfile = await createMockProfile('complex-profile-id');
     complexProfile.fullName = 'Alex Johnson';
     complexProfile.occupation = 'Full Stack Developer';
     complexProfile.headline = 'Web & Mobile Developer';
@@ -245,7 +262,7 @@ describe('ProfileRepository', () => {
     await repository.deleteProfile('profile-1');
     
     // Use a valid profile to confirm that validation happens
-    const validProfile = createMockProfile('valid-profile');
+    const validProfile = await createMockProfile('valid-profile');
     await repository.insertProfile(validProfile);
     
     // Verify it was inserted correctly

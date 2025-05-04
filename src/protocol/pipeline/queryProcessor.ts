@@ -156,7 +156,7 @@ export class QueryProcessor implements IQueryProcessor {
   private constructor(
     contextManager: IContextManager,
     conversationManager: IConversationManager,
-    apiKey?: string,
+    _apiKey?: string,
   ) {
     this.contextManager = contextManager;
     this.conversationManager = conversationManager;
@@ -164,9 +164,7 @@ export class QueryProcessor implements IQueryProcessor {
     // Initialize helpers using their getInstance methods
     this.promptFormatter = PromptFormatter.getInstance();
     this.systemPromptGenerator = SystemPromptGenerator.getInstance();
-    this.resourceRegistry = ResourceRegistry.getInstance({
-      anthropicApiKey: apiKey,
-    });
+    this.resourceRegistry = ResourceRegistry.getInstance();
     
     this.logger.debug('Query processor initialized');
   }

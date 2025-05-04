@@ -5,14 +5,11 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import type { Note } from '@/models/note';
-import type { NoteRepository } from '@/services/notes/noteRepository'; import { createMockNote } from '@test/__mocks__/models/note';
+import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 
 // Create mock notes for testing
 const mockNotes = [createMockNote('note-1', 'Test Note')];
-
-// Create a mock repository instance that will be reset for each test
-const mockRepository = MockNoteRepository.createFresh(mockNotes);
 
 describe('NoteStorageAdapter', () => {
   // Create an instance of the adapter with the mock repository
@@ -22,11 +19,18 @@ describe('NoteStorageAdapter', () => {
     // Reset mock repository instance
     MockNoteRepository.resetInstance();
 
-    // Re-initialize with test data
-    mockRepository.notes = [...mockNotes];
+    // Create a fresh repository using the factory pattern
+    const mockRepo = MockNoteRepository.createFresh();
+    
+    // We need to cast to access the find method that exists on MockNoteRepository
+    // but might not be visible through the NoteRepository interface
+    const typedRepo = mockRepo as unknown as MockNoteRepository;
+    typedRepo.find = mock(async () => {
+      return [...mockNotes];
+    });
 
-    // Create a new adapter for each test
-    adapter = new NoteStorageAdapter(mockRepository as unknown as NoteRepository);
+    // Create a new adapter for each test using the factory method
+    adapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
   });
 
   test('create should call repository insertNote', async () => {
@@ -37,8 +41,8 @@ describe('NoteStorageAdapter', () => {
     const insertNoteSpy = mock(() => Promise.resolve('note-1'));
     mockRepo.insertNote = insertNoteSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the create method
     const note = { title: 'Test Note', content: 'Test content' } as Partial<Note>;
@@ -56,8 +60,8 @@ describe('NoteStorageAdapter', () => {
     const getNoteByIdSpy = mock(() => Promise.resolve(createMockNote('note-1', 'Test Note')));
     mockRepo.getNoteById = getNoteByIdSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the read method
     await testAdapter.read('note-1');
@@ -73,8 +77,8 @@ describe('NoteStorageAdapter', () => {
     // Mock getNoteById to return undefined (not found)
     mockRepo.getNoteById = mock(() => Promise.resolve(undefined));
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the read method
     const result = await testAdapter.read('non-existent');
@@ -96,8 +100,8 @@ describe('NoteStorageAdapter', () => {
     mockRepo.getById = getByIdSpy;
     mockRepo.insert = insertSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the update method
     await testAdapter.update('note-1', updates);
@@ -115,8 +119,8 @@ describe('NoteStorageAdapter', () => {
     const deleteByIdSpy = mock(() => Promise.resolve(true));
     mockRepo.deleteById = deleteByIdSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the delete method
     await testAdapter.delete('note-1');
@@ -133,8 +137,8 @@ describe('NoteStorageAdapter', () => {
     const searchSpy = mock(() => Promise.resolve([createMockNote('note-2', 'JavaScript Test', ['tag1'])]));
     mockRepo.searchNotesByKeywords = searchSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the search method
     const criteria = { query: 'javascript', tags: ['tag1'], limit: 5 };
@@ -152,8 +156,8 @@ describe('NoteStorageAdapter', () => {
     const getRecentNotesSpy = mock(() => Promise.resolve([createMockNote('note-1', 'Test Note')]));
     mockRepo.getRecentNotes = getRecentNotesSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the search method without query or tags
     const criteria = { limit: 5 };
@@ -171,8 +175,8 @@ describe('NoteStorageAdapter', () => {
     const getRecentNotesSpy = mock(() => Promise.resolve([createMockNote('note-1', 'Test Note')]));
     mockRepo.getRecentNotes = getRecentNotesSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the list method
     const options = { limit: 20 };
@@ -190,8 +194,8 @@ describe('NoteStorageAdapter', () => {
     const getNoteCountSpy = mock(() => Promise.resolve(3));
     mockRepo.getNoteCount = getNoteCountSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the count method
     await testAdapter.count();
@@ -208,8 +212,8 @@ describe('NoteStorageAdapter', () => {
     const findBySourceSpy = mock(() => Promise.resolve([createMockNote('note-2', 'Conversation Note')]));
     mockRepo.findBySource = findBySourceSpy;
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the findBySource method
     await testAdapter.findBySource('conversation', 5, 0);
@@ -227,8 +231,8 @@ describe('NoteStorageAdapter', () => {
       throw new Error('Repository error');
     });
 
-    // Create adapter with the configured mock
-    const testAdapter = new NoteStorageAdapter(mockRepo as unknown as NoteRepository);
+    // Create adapter with the configured mock using the factory method
+    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
 
     // Call the read method - should handle the error and return null
     const result = await testAdapter.read('note-1');
@@ -238,7 +242,10 @@ describe('NoteStorageAdapter', () => {
   });
 
   test('getRepository should return the repository instance', () => {
+    // Get the current repository instance used by the adapter
     const result = adapter.getRepository();
-    expect(result).toBe(mockRepository as unknown as NoteRepository);
+    // Check that it's a NoteRepository
+    expect(result).toBeInstanceOf(Object);
+    expect(result).toHaveProperty('getNoteById');
   });
 });

@@ -8,16 +8,20 @@ import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepos
 import { MockProfileTagService } from '@test/__mocks__/services/profiles/profileTagService';
 import { MockTagExtractor } from '@test/__mocks__/utils/tagExtractor';
 
-const mockProfile = MockProfile.createDefault();
+// Will be initialized in beforeEach
+let mockProfile: Profile;
 
 describe('ProfileTagService', () => {
   let tagService: ProfileTagService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset singleton instances
     MockProfileRepository.resetInstance();
     MockProfileTagService.resetInstance();
     MockTagExtractor.resetInstance();
+
+    // Initialize mock profile
+    mockProfile = await MockProfile.createDefault();
 
     // Set up mocked TagExtractor with predictable tags
     const mockTagExtractor = MockTagExtractor.createFresh({

@@ -24,7 +24,7 @@ interface ParsedMarkdown {
 }
 
 const context = NoteContext.createWithDependencies();
-const embeddingService = EmbeddingService.getInstance({});
+const embeddingService = EmbeddingService.getInstance();
 
 /**
  * Parses a markdown file with optional frontmatter

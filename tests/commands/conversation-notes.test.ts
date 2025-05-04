@@ -134,7 +134,12 @@ describe('Conversation Notes Commands', () => {
     
     // Reset our standardized repository
     MockNoteRepository.resetInstance();
-    mockRepository = MockNoteRepository.createFresh([mockConversationNote]);
+    // Cast to access MockNoteRepository methods while preserving the NoteRepository interface
+    // Use an empty array to ensure we start with no notes
+    mockRepository = MockNoteRepository.createFresh([]) as unknown as MockNoteRepository;
+    
+    // Setup findNotesByConversationId to return our mock note
+    mockRepository.findNotesByConversationId = async () => [mockConversationNote];
     
     // Reset mocks
     mockConversationToNoteService.prepareNotePreview.mockClear();
@@ -299,8 +304,8 @@ describe('Conversation Notes Commands', () => {
     });
 
     test('should handle confirmation of save-note', async () => {
-      // Verify repository's initial state
-      expect(mockRepository.notes.length).toBe(1);
+      // Verify repository's initial state - should be empty array at start
+      expect(mockRepository.notes.length).toBe(0);
       const initialLength = mockRepository.notes.length;
       
       const result = await commandHandler.confirmSaveNote('conv123', 'Final Title');

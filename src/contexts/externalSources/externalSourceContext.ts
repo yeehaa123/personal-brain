@@ -158,9 +158,8 @@ export class ExternalSourceContext extends BaseContext<
     const config = configOrDependencies as ExternalSourceContextConfig;
     
     // Create instances of required dependencies with explicit dependency injection
-    const embeddingService = EmbeddingService.getInstance({ 
-      apiKey: config.apiKey, 
-    });
+    // Following Component Interface Standardization pattern - no params to getInstance
+    const embeddingService = EmbeddingService.getInstance();
     
     // Create storage adapter with explicit dependency injection
     const storageAdapter = ExternalSourceStorageAdapter.createWithDependencies({

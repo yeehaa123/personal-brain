@@ -8,6 +8,7 @@ import { MockLogger } from '@test/__mocks__/core/logger';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
+import { MockNoteEmbeddingService } from '@test/__mocks__/services/notes/noteEmbeddingService';
 import { MockTextUtils } from '@test/__mocks__/utils/textUtils';
 
 
@@ -32,119 +33,49 @@ mock.module('@/utils/textUtils', () => ({
   calculateReadingTime: (text: string) => Math.ceil(text.length / 1000),
 }));
 
-// Create mock notes for testing
-const mockNotes = [
-  createTestNote({
+// Create sample notes with embeddings
+const createSampleNotes = async (): Promise<Note[]> => {
+  const mockService = MockEmbeddingService.createFresh();
+  
+  const note1 = createTestNote({
     id: 'note-1',
     title: 'Test Note 1',
     content: 'This is a test note about artificial intelligence and machine learning',
     tags: ['ai', 'ml', 'technology'],
-    embedding: MockEmbeddingService.createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
     source: 'import',
-  }),
-  createTestNote({
+  });
+  note1.embedding = await mockService.getEmbedding('AI note');
+  
+  const note2 = createTestNote({
     id: 'note-2',
     title: 'Test Note 2',
     content: 'This note is about programming languages like JavaScript and TypeScript',
     tags: ['programming', 'javascript', 'typescript'],
-    embedding: MockEmbeddingService.createMockEmbedding('programming note'),
     createdAt: new Date('2023-02-01'),
     updatedAt: new Date('2023-02-02'),
     source: 'import',
-  }),
-  createTestNote({
+  });
+  note2.embedding = await mockService.getEmbedding('programming note');
+  
+  const note3 = createTestNote({
     id: 'note-3',
     title: 'Test Note 3',
     content: 'Notes about web development with frameworks like React and Vue',
     tags: ['web', 'frontend', 'javascript'],
-    embedding: MockEmbeddingService.createMockEmbedding('web dev note'),
     createdAt: new Date('2023-03-01'),
     updatedAt: new Date('2023-03-02'),
     source: 'import',
-  }),
-];
-
-// Create a mock repository using our standardized implementation
-const mockRepository = MockNoteRepository.createFresh(mockNotes);
-
-// Mock the repository's search methods using Bun's mock functionality
-mockRepository.searchNotesByKeywords = mock((query: string | undefined, tags: string[] | undefined, limit = 10, offset = 0) => {
-  let results = [...mockNotes];
+  });
+  note3.embedding = await mockService.getEmbedding('web dev note');
   
-  // Filter by query if provided
-  if (query) {
-    const lowerQuery = query.toLowerCase();
-    results = results.filter(note => 
-      note.title.toLowerCase().includes(lowerQuery) ||
-      note.content.toLowerCase().includes(lowerQuery),
-    );
-  }
-  
-  // Filter by tags if provided
-  if (tags && tags.length > 0) {
-    results = results.filter(note => 
-      note.tags && tags.some(tag => note.tags?.includes(tag)),
-    );
-  }
-  
-  // Apply pagination
-  return Promise.resolve(results.slice(offset, offset + limit));
-});
+  return [note1, note2, note3];
+};
 
-// Mock the getRecentNotes method using Bun's mock functionality
-mockRepository.getRecentNotes = mock((limit = 10, offset = 0) => {
-  // Sort by createdAt in descending order and apply pagination
-  return Promise.resolve(
-    [...mockNotes]
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(offset, offset + limit),
-  );
-});
+// Will be initialized in beforeEach
+let mockNotes: Note[];
 
-// Create a mock embedding service
-class MockNoteEmbeddingService {
-  async generateEmbedding(text: string): Promise<number[]> {
-    return MockEmbeddingService.createMockEmbedding(text);
-  }
-
-  async searchSimilarNotes(_embedding: number[], limit: number = 5): Promise<Note[]> {
-    // Return notes with a mock similarity score
-    const result = mockNotes.map(note => ({
-      ...note,
-      score: 0.85 - Math.random() * 0.2, // Random similarity between 0.65 and 0.85
-    })).sort((a, b) => (b.score || 0) - (a.score || 0)).slice(0, limit);
-
-    // Make sure we return valid Note objects
-    return result.map(({ score: _score, ...rest }) => createTestNote({
-      ...rest,
-      // Extract only the Note fields we need
-      id: rest.id,
-      title: rest.title,
-      content: rest.content,
-      tags: rest.tags || [],
-      embedding: rest.embedding || undefined,
-      createdAt: rest.createdAt,
-      updatedAt: rest.updatedAt,
-    }));
-  }
-
-  async findRelatedNotes(noteId: string, maxResults: number = 5): Promise<Note[]> {
-    // Check if the note exists first
-    const noteExists = mockNotes.some(note => note.id === noteId);
-    if (!noteExists) {
-      // Since we changed the implementation to fall back to recent notes,
-      // we need to match that behavior in the mock
-      return [];
-    }
-
-    // Return other notes, excluding the target note
-    return mockNotes
-      .filter(note => note.id !== noteId)
-      .slice(0, maxResults);
-  }
-}
 
 // Create instances of the mocks for tests
 let repository: NoteRepository;
@@ -153,21 +84,26 @@ let searchService: NoteSearchService;
 
 describe('NoteSearchService', () => {
   // Set up the test instances
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset singleton instances
     NoteRepository.resetInstance();
     NoteEmbeddingService.resetInstance();
     NoteSearchService.resetInstance();
+    MockNoteEmbeddingService.resetInstance();
     
-    repository = mockRepository as unknown as NoteRepository;
-    embeddingService = new MockNoteEmbeddingService() as unknown as NoteEmbeddingService;
+    // Initialize mock notes
+    mockNotes = await createSampleNotes();
+    
+    // Initialize repository and embedding service
+    repository = MockNoteRepository.createFresh(mockNotes);
+    embeddingService = MockNoteEmbeddingService.createFresh();
     
     // Use the createFresh method with the updated interface
     searchService = NoteSearchService.createFresh(
       { entityName: 'note' },
       { 
-        repository: repository,
-        embeddingService: embeddingService,
+        repository,
+        embeddingService,
         logger: MockLogger.createFresh(),
         textUtils: MockTextUtils.createFresh(),
       },

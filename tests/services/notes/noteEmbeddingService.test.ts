@@ -6,22 +6,25 @@ import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
-// Create mock notes for testing
-const mockNotes: Note[] = [
-  createTestNote({ 
+// Create sample notes with embeddings
+const createSampleNotes = async (): Promise<Note[]> => {
+  const mockService = MockEmbeddingService.createFresh();
+  
+  const note1 = createTestNote({ 
     id: 'note-1', 
     title: 'Test Note 1', 
     content: 'This is a test note about artificial intelligence.',
     tags: ['ai', 'ml', 'technology'],
-    embedding: MockEmbeddingService.createMockEmbedding('AI note'),
     createdAt: new Date('2023-01-01'),
     updatedAt: new Date('2023-01-02'),
     source: 'import',
     confidence: null,
     conversationMetadata: null,
     verified: false,
-  }),
-  createTestNote({ 
+  });
+  note1.embedding = await mockService.getEmbedding('AI note');
+  
+  const note2 = createTestNote({ 
     id: 'note-2', 
     title: 'Test Note 2', 
     content: 'This note is about programming languages.',
@@ -33,8 +36,13 @@ const mockNotes: Note[] = [
     confidence: null,
     conversationMetadata: null,
     verified: false,
-  }),
-];
+  });
+  
+  return [note1, note2];
+};
+
+// Will be initialized in beforeEach
+let mockNotes: Note[];
 
 // Mock the required repository methods
 const mockRepositoryMethods = {
@@ -99,9 +107,12 @@ class TestNoteEmbeddingService extends NoteEmbeddingService {
 describe('NoteEmbeddingService', () => {
   let embeddingService: TestNoteEmbeddingService;
   
-  beforeEach(() => {
+  beforeEach(async () => {
     // Reset singleton instances
     NoteEmbeddingService.resetInstance();
+    
+    // Initialize mock notes
+    mockNotes = await createSampleNotes();
     
     // Create a fresh service instance for testing
     embeddingService = TestNoteEmbeddingService.createFresh();
@@ -154,7 +165,8 @@ describe('NoteEmbeddingService', () => {
       },
       // Make sure getBatchEmbeddings returns the correct number of mock embeddings
       getBatchEmbeddings: async (texts: string[]) => {
-        return texts.map(text => MockEmbeddingService.createMockEmbedding(text));
+        const mockService = MockEmbeddingService.createFresh();
+        return mockService.getBatchEmbeddings(texts);
       },
     };
     
@@ -187,7 +199,9 @@ describe('NoteEmbeddingService', () => {
   });
   
   test('should search similar notes', async () => {
-    const embedding = MockEmbeddingService.createMockEmbedding('search embedding');
+    const mockService = MockEmbeddingService.createFresh();
+    const embedding = await mockService.getEmbedding('search embedding');
+    
     const results = await embeddingService.searchSimilarNotes(embedding, 5);
     
     expect(results).toBeDefined();

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-// Import types not needed with proper mock casting
+// Import types needed for casting
+import type { ClaudeModel } from '@/resources/ai/claude';
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockResourceRegistry } from '@test/__mocks__/resources/resourceRegistry';
 import { TagExtractor } from '@utils/tagExtractor';
@@ -17,21 +18,35 @@ describe('TagExtractor', () => {
     // Create mocks
     const mockLogger = MockLogger.createFresh({ silent: true });
 
-    // Create mock registry with custom response for ecosystem content
+    // Create mock registry
     const mockRegistry = MockResourceRegistry.createFresh();
-    // Add proper ModelResponse format to avoid type errors
-    mockRegistry.mockModelResponse = {
-      object: {
-        tags: [
-          'ecosystem-architecture',
-          'regenerative-systems',
-          'decentralized',
-          'collaboration',
-          'interconnected-communities',
-        ],
+    
+    // Mock the getClaudeModel method to return a model with our test response
+    const mockClaudeModel = {
+      complete: async () => {
+        return {
+          object: {
+            tags: [
+              'ecosystem-architecture',
+              'regenerative-systems',
+              'decentralized',
+              'collaboration',
+              'interconnected-communities',
+            ],
+          },
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
       },
-      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
+      // Add minimum required properties to satisfy ClaudeModel interface
+      model: 'mock-model',
+      apiKey: 'mock-key',
+      defaultMaxTokens: 1000,
+      defaultTemperature: 0.7,
+      mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
     };
+    
+    // Type assertion to fix type incompatibility
+    mockRegistry.getClaudeModel = () => mockClaudeModel as unknown as ClaudeModel;
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
@@ -62,21 +77,35 @@ describe('TagExtractor', () => {
     // Create mocks
     const mockLogger = MockLogger.createFresh({ silent: true });
 
-    // Create mock registry with custom response for education content
+    // Create mock registry
     const mockRegistry = MockResourceRegistry.createFresh();
-    // Add proper ModelResponse format to avoid type errors
-    mockRegistry.mockModelResponse = {
-      object: {
-        tags: [
-          'education',
-          'critical-thinking',
-          'creativity',
-          'learning',
-          'modern-education',
-        ],
+    
+    // Mock the getClaudeModel method to return a model with our test response
+    const mockClaudeModel = {
+      complete: async () => {
+        return {
+          object: {
+            tags: [
+              'education',
+              'critical-thinking',
+              'creativity',
+              'learning',
+              'modern-education',
+            ],
+          },
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
       },
-      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
+      // Add minimum required properties to satisfy ClaudeModel interface
+      model: 'mock-model',
+      apiKey: 'mock-key',
+      defaultMaxTokens: 1000,
+      defaultTemperature: 0.7,
+      mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
     };
+    
+    // Type assertion to fix type incompatibility
+    mockRegistry.getClaudeModel = () => mockClaudeModel as unknown as ClaudeModel;
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
@@ -107,21 +136,35 @@ describe('TagExtractor', () => {
     // Create mocks
     const mockLogger = MockLogger.createFresh({ silent: true });
 
-    // Create mock registry with custom response for technology content
+    // Create mock registry
     const mockRegistry = MockResourceRegistry.createFresh();
-    // Add proper ModelResponse format to avoid type errors
-    mockRegistry.mockModelResponse = {
-      object: {
-        tags: [
-          'technology',
-          'digital-transformation',
-          'innovation',
-          'future',
-          'digital',
-        ],
+    
+    // Mock the getClaudeModel method to return a model with our test response
+    const mockClaudeModel = {
+      complete: async () => {
+        return {
+          object: {
+            tags: [
+              'technology',
+              'digital-transformation',
+              'innovation',
+              'future',
+              'digital',
+            ],
+          },
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
       },
-      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
+      // Add minimum required properties to satisfy ClaudeModel interface
+      model: 'mock-model',
+      apiKey: 'mock-key',
+      defaultMaxTokens: 1000,
+      defaultTemperature: 0.7,
+      mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
     };
+    
+    // Type assertion to fix type incompatibility
+    mockRegistry.getClaudeModel = () => mockClaudeModel as unknown as ClaudeModel;
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
@@ -154,19 +197,33 @@ describe('TagExtractor', () => {
     // Create mocks
     const mockLogger = MockLogger.createFresh({ silent: true });
 
-    // Create mock registry with custom response that includes exactly maxTags
+    // Create mock registry
     const mockRegistry = MockResourceRegistry.createFresh();
-    // Add proper ModelResponse format to avoid type errors
-    mockRegistry.mockModelResponse = {
-      object: {
-        tags: [
-          'ecosystem-architecture',
-          'innovation',
-          'collaboration',
-        ],
+    
+    // Mock the getClaudeModel method to return a model with our test response
+    const mockClaudeModel = {
+      complete: async () => {
+        return {
+          object: {
+            tags: [
+              'ecosystem-architecture',
+              'innovation',
+              'collaboration',
+            ],
+          },
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
       },
-      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
+      // Add minimum required properties to satisfy ClaudeModel interface
+      model: 'mock-model',
+      apiKey: 'mock-key',
+      defaultMaxTokens: 1000,
+      defaultTemperature: 0.7,
+      mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
     };
+    
+    // Type assertion to fix type incompatibility
+    mockRegistry.getClaudeModel = () => mockClaudeModel as unknown as ClaudeModel;
 
     // Create tag extractor with dependencies
     // Use type assertion to handle incompatible mock types
@@ -198,13 +255,18 @@ describe('TagExtractor', () => {
     // Create mock registry that throws an error
     const mockRegistry = MockResourceRegistry.createFresh();
     // Override the getClaudeModel to return a model that throws
-    const originalGetClaudeModel = mockRegistry.getClaudeModel;
     mockRegistry.getClaudeModel = () => {
       return {
         complete: async () => {
           throw new Error('Test error');
         },
-      };
+        // Add minimum required properties to satisfy ClaudeModel interface
+        model: 'mock-model',
+        apiKey: 'mock-key',
+        defaultMaxTokens: 1000,
+        defaultTemperature: 0.7,
+        mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
+      } as unknown as ClaudeModel;
     };
 
     // Create tag extractor with dependencies
@@ -226,19 +288,30 @@ describe('TagExtractor', () => {
 
     // No need to check error logging since we can see the test passes
     // if we get an empty array as expected
-
-    // Restore original method
-    mockRegistry.getClaudeModel = originalGetClaudeModel;
   });
 
   test('should handle API key validation', async () => {
-    // Create a mock with a custom response for API key validation
+    // Create mock registry
     const mockRegistry = MockResourceRegistry.createFresh();
-    // Add proper ModelResponse format to avoid type errors
-    mockRegistry.mockModelResponse = {
-      object: { tags: [] },
-      usage: { inputTokens: 10, outputTokens: 20 }, // Required by ModelResponse
+    
+    // Mock the getClaudeModel method to return a model with an empty tags response
+    const mockClaudeModel = {
+      complete: async () => {
+        return {
+          object: { tags: [] },
+          usage: { inputTokens: 10, outputTokens: 20 },
+        };
+      },
+      // Add minimum required properties to satisfy ClaudeModel interface
+      model: 'mock-model',
+      apiKey: 'mock-key',
+      defaultMaxTokens: 1000,
+      defaultTemperature: 0.7,
+      mapUsage: () => ({ prompt: 0, completion: 0, total: 0 }),
     };
+    
+    // Type assertion to fix type incompatibility
+    mockRegistry.getClaudeModel = () => mockClaudeModel as unknown as ClaudeModel;
 
     // Create tag extractor with empty tags for this test
     const tagExtractor = TagExtractor.createFresh(
