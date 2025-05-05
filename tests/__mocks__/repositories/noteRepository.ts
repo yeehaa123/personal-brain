@@ -151,14 +151,14 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   };
 
   /**
-   * Update an existing note
+   * Update an existing note - matches the BaseRepository implementation
    */
-  update = async (id: string, update: Partial<Note>): Promise<Note | null> => {
+  update = async (id: string, updates: Partial<Note>): Promise<boolean> => {
     const index = this.notes.findIndex(note => note.id === id);
-    if (index === -1) return null;
+    if (index === -1) return false;
 
-    this.notes[index] = { ...this.notes[index], ...update };
-    return this.notes[index];
+    this.notes[index] = { ...this.notes[index], ...updates };
+    return true;
   };
 
   /**

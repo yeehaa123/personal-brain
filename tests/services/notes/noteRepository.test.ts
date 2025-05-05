@@ -133,7 +133,7 @@ export class MockNoteRepository extends NoteRepository {
   }
   
   // Implementation of BaseRepository method
-  async update(id: string, updates: Partial<Note>): Promise<boolean> {
+  override async update(id: string, updates: Partial<Note>): Promise<boolean> {
     const index = this.notes.findIndex(note => note.id === id);
     if (index === -1) return Promise.resolve(false);
     
@@ -292,11 +292,15 @@ describe('NoteRepository', () => {
       content: 'This is a new test note.',
     });
     
-    // Convert null to undefined for the API
+    // Convert null to undefined and extract only needed properties for the API
     const noteDataForInsert = {
-      ...newNote,
+      id: newNote.id,
+      title: newNote.title,
+      content: newNote.content,
       embedding: newNote.embedding === null ? undefined : newNote.embedding,
       tags: newNote.tags === null ? undefined : newNote.tags,
+      createdAt: newNote.createdAt,
+      updatedAt: newNote.updatedAt,
     };
     const noteId = await repository.insertNote(noteDataForInsert);
     

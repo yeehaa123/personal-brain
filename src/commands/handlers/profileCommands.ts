@@ -11,7 +11,7 @@ import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
 
 // Define valid source types
-type NoteSource = 'import' | 'conversation' | 'user-created';
+type NoteSource = 'import' | 'conversation' | 'user-created' | 'landing-page';
 
 /**
  * Handler for profile-related commands

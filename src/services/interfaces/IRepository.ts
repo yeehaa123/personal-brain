@@ -14,6 +14,19 @@ export interface IRepository<TEntity, TId = string> {
   getById(id: TId): Promise<TEntity | undefined>;
   
   /**
+   * Insert entity
+   * @param entity The entity to insert
+   */
+  insert(entity: TEntity): Promise<TEntity>;
+  
+  /**
+   * Update entity by ID
+   * @param id Entity ID
+   * @param updates Partial entity with updates
+   */
+  update(id: TId, updates: Partial<TEntity>): Promise<boolean>;
+  
+  /**
    * Delete entity by ID
    * @param id Entity ID
    */

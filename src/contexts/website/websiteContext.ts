@@ -1,6 +1,5 @@
 import * as path from 'path';
 
-import config from '@/config';
 import { BaseContext } from '@/contexts/baseContext';
 import type { ContextDependencies, ContextInterface } from '@/contexts/contextInterface';
 import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
@@ -12,6 +11,7 @@ import { Registry } from '@/utils/registry';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
+import { PersistentWebsiteStorageAdapter } from './adapters/persistentWebsiteStorageAdapter';
 import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import { type WebsiteData, WebsiteFormatter } from './formatters';
@@ -181,74 +181,25 @@ export class WebsiteContext extends BaseContext<
       return new WebsiteContext(dependencies);
     }
     
-    // Handle the case where this is called with a config object
-    // Create storage adapter
-    const storage = new InMemoryWebsiteStorageAdapter();
+    // Create persistent storage (this approach avoids circular dependencies)
+    // We'll implement a static method to create the storage
+    const storage = this.createPersistentStorage();
     
-    // Initialize with values from global config
-    const websiteConfig = {
-      title: config.website.title,
-      description: config.website.description,
-      author: config.website.author,
-      baseUrl: config.website.baseUrl,
-      astroProjectPath: config.website.astroProjectPath,
-      deployment: {
-        type: config.website.deployment.type as 'local-dev' | 'caddy',
-        previewPort: config.website.deployment.previewPort,
-        livePort: config.website.deployment.livePort,
-        domain: config.website.deployment.domain,
-      },
-    };
-    
-    // We need to initialize the adapter before we can update it
-    storage.initialize().then(() => {
-      storage.updateWebsiteConfig(websiteConfig).catch(error => {
-        Logger.getInstance().error('Error updating website config during initialization', {
-          error: error instanceof Error ? error.message : String(error),
-          context: 'WebsiteContext',
-        });
-      });
-    }).catch(error => {
-      Logger.getInstance().error('Error initializing website storage adapter', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'WebsiteContext',
-      });
-    });
-    
-    // Create formatter
-    const formatter = WebsiteFormatter.getInstance();
-    
-    // Create AstroContentService - doesn't use getInstance pattern, so create directly
-    const astroContentService = new AstroContentService(websiteConfig.astroProjectPath);
-    
-    // Create LandingPageGenerationService
-    const landingPageGenerationService = LandingPageGenerationService.getInstance();
-    
-    // Get ProfileContext - optional dependency
-    const profileContext = ProfileContext.getInstance();
-    
-    // Create DeploymentManager with a fresh factory to ensure it respects current config
-    const factory = DeploymentManagerFactory.createFresh();
-    const deploymentManager = factory.create({
-      baseDir: websiteConfig.astroProjectPath,
-      deploymentType: websiteConfig.deployment.type,
-      deploymentConfig: {
-        previewPort: websiteConfig.deployment.previewPort,
-        livePort: websiteConfig.deployment.livePort,
-      },
-    });
-    
-    // Create context with all dependencies
+    // Create context with persistent storage and any other options
     return new WebsiteContext({
       storage,
-      formatter,
-      astroContentService,
-      landingPageGenerationService,
-      profileContext,
-      deploymentManager,
+      ...configOrDependencies as WebsiteContextOptions,
     });
   }
   
+  /**
+   * Create a persistent storage adapter for the website context
+   * This is a helper method to avoid circular dependencies
+   */
+  private static createPersistentStorage(): WebsiteStorageAdapter {
+    return PersistentWebsiteStorageAdapter.getInstance();
+  }
+
   /**
    * Initialize the WebsiteContext
    */

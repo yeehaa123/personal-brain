@@ -87,7 +87,7 @@ describe('NoteStorageAdapter', () => {
     expect(result).toBeNull();
   });
 
-  test('update should call repository getById and insert', async () => {
+  test('update should call repository getById and update', async () => {
     const updates = { title: 'Updated Title' };
 
     // Create a new mock repository for this test
@@ -95,10 +95,10 @@ describe('NoteStorageAdapter', () => {
 
     // Spy on the methods
     const getByIdSpy = mock(() => Promise.resolve(createMockNote('note-1', 'Test Note')));
-    const insertSpy = mock(() => Promise.resolve(createMockNote('note-1', 'Updated Title')));
+    const updateSpy = mock(() => Promise.resolve(true));
 
     mockRepo.getById = getByIdSpy;
-    mockRepo.insert = insertSpy;
+    mockRepo.update = updateSpy;
 
     // Create adapter with the configured mock using the factory method
     const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
@@ -108,7 +108,7 @@ describe('NoteStorageAdapter', () => {
 
     // Verify the correct methods were called
     expect(getByIdSpy).toHaveBeenCalledWith('note-1');
-    expect(insertSpy).toHaveBeenCalled();
+    expect(updateSpy).toHaveBeenCalled();
   });
 
   test('delete should call repository deleteById', async () => {

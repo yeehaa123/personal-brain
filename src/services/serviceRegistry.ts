@@ -17,6 +17,7 @@ import { ConversationResourceService } from '@/contexts/conversations/resources'
 import { ConversationMemoryService, ConversationQueryService } from '@/contexts/conversations/services';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
+import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { ContextMediator } from '@/protocol/messaging/contextMediator';
@@ -64,6 +65,9 @@ export const ServiceIdentifiers = {
 
   // Tag service identifiers
   ProfileTagService: 'service.tag.profile',
+
+  // Note service identifiers
+  NoteStorageAdapter: 'noteStorageAdapter', // Must match string used in LandingPageNoteAdapter
 
   // Conversation service identifiers
   ConversationResourceService: 'service.conversation.resources',
@@ -326,6 +330,12 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
       () => ConversationMcpFormatter.getInstance(),
     );
 
+    // Register NoteStorageAdapter
+    this.register(
+      ServiceIdentifiers.NoteStorageAdapter,
+      () => NoteStorageAdapter.getInstance(),
+    );
+
     // Register resource and tool services
     this.register(
       ServiceIdentifiers.ConversationResourceService,
@@ -442,6 +452,15 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    */
   public getConversationMemoryService(): ConversationMemoryService {
     return this.resolve<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
+  }
+  
+  /**
+   * Get the note storage adapter
+   * 
+   * @returns Note storage adapter
+   */
+  public getNoteStorageAdapter(): NoteStorageAdapter {
+    return this.resolve<NoteStorageAdapter>(ServiceIdentifiers.NoteStorageAdapter);
   }
 
   /**

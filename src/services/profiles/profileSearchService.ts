@@ -63,7 +63,7 @@ interface NoteWithSimilarity {
   createdAt: Date;
   updatedAt: Date;
   // Added fields to match the updated Note schema
-  source?: 'import' | 'conversation' | 'user-created';
+  source?: 'import' | 'conversation' | 'user-created' | 'landing-page';
   confidence?: number | null;
   conversationMetadata?: {
     conversationId: string;

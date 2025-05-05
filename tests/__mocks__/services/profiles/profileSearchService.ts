@@ -5,7 +5,6 @@
  * for use in tests across the codebase.
  */
 
-import { mock } from 'bun:test';
 import { nanoid } from 'nanoid';
 
 import type { NoteWithSimilarity } from '@/contexts/profiles/profileTypes';
@@ -47,13 +46,13 @@ export class MockProfileSearchService implements Partial<ProfileSearchService> {
   }
 
   // Mock methods with default implementations
-  findRelatedNotes = mock((_limit: number = 5): Promise<NoteWithSimilarity[]> => {
+  findRelatedNotes(_limit: number = 5): Promise<NoteWithSimilarity[]> {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
-  });
+  }
 
-  findNotesWithSimilarTags = mock((_tags: string[], _limit: number = 5): Promise<NoteWithSimilarity[]> => {
+  findNotesWithSimilarTags(_tags: string[], _limit: number = 5): Promise<NoteWithSimilarity[]> {
     return Promise.resolve(this.createMockRelatedNotes(_limit));
-  });
+  }
 
   /**
    * Helper method to create mock notes with similarity scores
@@ -68,6 +67,7 @@ export class MockProfileSearchService implements Partial<ProfileSearchService> {
       updatedAt: new Date(),
       embedding: null,
       similarity: 0.8 - (i * 0.1),
+      source: i % 3 === 0 ? 'import' : (i % 3 === 1 ? 'conversation' : 'user-created'),
     }));
   }
 }

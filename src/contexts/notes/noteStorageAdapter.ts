@@ -156,17 +156,12 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
         updatedAt: new Date(),
       };
       
-      // Use generic method from BaseRepository
-      const note = await this.repository.getById(id);
-      if (!note) return false;
+      // First check if note exists
+      const exists = await this.repository.getById(id);
+      if (!exists) return false;
       
-      // Update the note in the database
-      await this.repository.insert({
-        ...note,
-        ...noteUpdates,
-      } as Note);
-      
-      return true;
+      // Use the repository's update method from BaseRepository
+      return await this.repository.update(id, noteUpdates);
     } catch (error) {
       this.logger.error(`Failed to update note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return false;

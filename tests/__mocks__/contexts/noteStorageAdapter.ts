@@ -7,23 +7,25 @@
 
 import { mock } from 'bun:test';
 
-import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
+import type { ListOptions, SearchCriteria } from '@/contexts/storageInterface';
 import type { Note } from '@/models/note';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 
 /**
  * Mock implementation of NoteStorageAdapter
  */
-export class MockNoteStorageAdapter implements StorageInterface<Note> {
+export class MockNoteStorageAdapter {
   private static instance: MockNoteStorageAdapter | null = null;
   
+  
   // Mocked note repository
-  private mockRepository: {
+  public readonly repository: {
     getNoteById: (id: string) => Promise<Note | undefined>;
     insertNote: (note: Partial<Note>) => Promise<string>;
     deleteById: (id: string) => Promise<boolean>;
     getById: (id: string) => Promise<Note | undefined>;
     insert: (note: Note) => Promise<Note>;
+    update: (id: string, updates: Partial<Note>) => Promise<boolean>;
     searchNotesByKeywords: (query?: string, tags?: string[], limit?: number, offset?: number) => Promise<Note[]>;
     getRecentNotes: (limit?: number) => Promise<Note[]>;
     getNoteCount: () => Promise<number>;
@@ -66,7 +68,7 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
    * Constructor
    */
   constructor() {
-    this.mockRepository = {
+    this.repository = {
       getNoteById: mock((id: string) => Promise.resolve(this.notes.find(n => n.id === id))),
       insertNote: mock((note: Partial<Note>) => Promise.resolve(note.id || 'note-123')), // Fixed ID for testing
       deleteById: mock((id: string) => {
@@ -83,6 +85,14 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
           this.notes.push(note);
         }
         return Promise.resolve(note);
+      }),
+      update: mock((id: string, updates: Partial<Note>) => {
+        const index = this.notes.findIndex(n => n.id === id);
+        if (index >= 0) {
+          this.notes[index] = { ...this.notes[index], ...updates };
+          return Promise.resolve(true);
+        }
+        return Promise.resolve(false);
       }),
       searchNotesByKeywords: mock((query?: string, tags?: string[], limit?: number) => {
         let result = [...this.notes];
@@ -133,14 +143,14 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
    * Create a new note
    */
   async create(item: Partial<Note>): Promise<string> {
-    return this.mockRepository.insertNote(item);
+    return this.repository.insertNote(item);
   }
   
   /**
    * Read a note by ID
    */
   async read(id: string): Promise<Note | null> {
-    const result = await this.mockRepository.getNoteById(id);
+    const result = await this.repository.getNoteById(id);
     return result || null;
   }
   
@@ -148,23 +158,17 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
    * Update an existing note
    */
   async update(id: string, updates: Partial<Note>): Promise<boolean> {
-    const note = await this.mockRepository.getById(id);
-    if (!note) return false;
-    
-    await this.mockRepository.insert({
-      ...note,
+    return this.repository.update(id, {
       ...updates,
       updatedAt: new Date(),
-    } as Note);
-    
-    return true;
+    });
   }
   
   /**
    * Delete a note
    */
   async delete(id: string): Promise<boolean> {
-    return this.mockRepository.deleteById(id);
+    return this.repository.deleteById(id);
   }
   
   /**
@@ -176,7 +180,7 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
     const limit = criteria['limit'] as number | undefined;
     
     if (query || tags) {
-      return this.mockRepository.searchNotesByKeywords(query, tags, limit);
+      return this.repository.searchNotesByKeywords(query, tags, limit);
     }
     
     return this.list({ limit });
@@ -187,27 +191,27 @@ export class MockNoteStorageAdapter implements StorageInterface<Note> {
    */
   async list(options?: ListOptions): Promise<Note[]> {
     const limit = options?.limit || 10;
-    return this.mockRepository.getRecentNotes(limit);
+    return this.repository.getRecentNotes(limit);
   }
   
   /**
    * Count notes
    */
   async count(_criteria?: SearchCriteria): Promise<number> {
-    return this.mockRepository.getNoteCount();
+    return this.repository.getNoteCount();
   }
   
   /**
    * Find notes by source
    */
   async findBySource(source: string, limit = 10, offset = 0): Promise<Note[]> {
-    return this.mockRepository.findBySource(source, limit, offset);
+    return this.repository.findBySource(source, limit, offset);
   }
   
   /**
    * Get the repository
    */
   getRepository(): NoteRepository {
-    return this.mockRepository as unknown as NoteRepository;
+    return this.repository as unknown as NoteRepository;
   }
 }

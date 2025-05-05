@@ -18,9 +18,9 @@ export interface NoteWithSimilarity extends Omit<Note, 'source' | 'confidence' |
   similarity?: number;
   
   /**
-   * Source of the note (import, conversation, user-created)
+   * Source of the note (import, conversation, user-created, landing-page)
    */
-  source?: 'import' | 'conversation' | 'user-created';
+  source?: 'import' | 'conversation' | 'user-created' | 'landing-page';
   
   /**
    * Confidence score for notes generated from conversations

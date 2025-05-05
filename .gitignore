@@ -183,3 +183,5 @@ dist
 
 # Generated landing page content
 src/website/src/content/landingPage/profile.json
+
+**/.claude/settings.local.json

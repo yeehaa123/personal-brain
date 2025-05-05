@@ -136,6 +136,40 @@ implements IRepository<TEntity, string> {
   }
 
   /**
+   * Update an existing entity by ID with partial updates
+   * @param id The ID of the entity to update
+   * @param updates Partial entity with only the fields to update
+   * @returns True if the update was successful
+   * @throws ValidationError If the ID is invalid
+   * @throws DatabaseError If there's an error updating the entity
+   */
+  async update(id: string, updates: Partial<TEntity>): Promise<boolean> {
+    if (!isNonEmptyString(id)) {
+      throw new ValidationError(`Invalid ${this.entityName} ID for update`, { id });
+    }
+
+    try {
+      this.logger.debug(`Updating ${this.entityName} with ID: ${id}`);
+      
+      // Use Drizzle's update operation with type assertion for complex generic types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await db.update(this.table).set(updates as any).where(eq(this.getIdColumn(), id));
+      
+      this.logger.debug(`Successfully updated ${this.entityName} with ID: ${id}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to update ${this.entityName} with ID: ${id}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      
+      throw new DatabaseError(
+        `Failed to update ${this.entityName} with ID: ${id}`,
+        { id, error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+  }
+
+  /**
    * Delete an entity by ID
    * @param id Entity ID
    * @returns true if successful

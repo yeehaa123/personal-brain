@@ -125,7 +125,7 @@ export class MockBaseRepository<
   /**
    * Update an entity
    */
-  update = mock(async (id: string, updates: Partial<TEntity>): Promise<boolean> => {
+  override update = mock(async (id: string, updates: Partial<TEntity>): Promise<boolean> => {
     const index = this.entities.findIndex(e => e.id === id);
     if (index === -1) return false;
     
