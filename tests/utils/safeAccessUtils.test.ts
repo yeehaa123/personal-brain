@@ -17,153 +17,115 @@ describe('safeAccessUtils', () => {
     SafeAccessUtils.resetInstance();
   });
 
-  describe('SafeAccessUtils class', () => {
-    // REMOVED TEST: test('getInstance returns...
-
+  // Test all array access cases in a single test with table-driven approach
+  test('safeArrayAccess handles various scenarios correctly', () => {
+    // Test case 1: Valid index
+    const array1 = [1, 2, 3];
+    expect(safeArrayAccess(array1, 1, 0)).toBe(2);
     
-    // REMOVED TEST: test('resetInstance clears...
-
+    // Test case 2: Out of bounds index
+    const array2 = [1, 2, 3];
+    expect(safeArrayAccess(array2, 5, 0)).toBe(0);
     
-    // REMOVED TEST: test('createFresh creates...
-
-  });
-  describe('safeArrayAccess', () => {
-    test('should return array element when index is valid', () => {
-      const array = [1, 2, 3];
-      expect(safeArrayAccess(array, 1, 0)).toBe(2);
-    });
-
-    test('should return default value when index is out of bounds', () => {
-      const array = [1, 2, 3];
-      expect(safeArrayAccess(array, 5, 0)).toBe(0);
-    });
-
-    test('should return default value when array is undefined', () => {
-      const array = undefined;
-      expect(safeArrayAccess(array, 0, 'default')).toBe('default');
-    });
+    // Test case 3: Undefined array
+    expect(safeArrayAccess(undefined, 0, 'default')).toBe('default');
   });
 
-  describe('safeObjectAccess', () => {
-    interface TestObj {
-      name: string;
-      age?: number;
+  // Test all object access cases in a single test
+  test('safeObjectAccess handles various scenarios correctly', () => {
+    // Test case 1: Existing key
+    const obj1 = { name: 'John', age: 30 };
+    expect(safeObjectAccess(obj1, 'name', '')).toBe('John');
+    
+    // Test case 2: Missing key using type assertions for test
+    const obj2 = { name: 'John' } as { name: string; age?: number };
+    expect(safeObjectAccess(obj2, 'age', 0)).toBe(0);
+    
+    // Test case 3: Null object using Record<string, unknown> for type safety
+    expect(safeObjectAccess(null as unknown as Record<string, unknown>, 'name', 'default')).toBe('default');
+  });
+
+  // Test all index access cases in a single test
+  test('safeIndexAccess handles various scenarios correctly', () => {
+    // Test case 1: Existing index
+    const obj1 = { 'user-1': 'John', 'user-2': 'Jane' };
+    expect(safeIndexAccess(obj1, 'user-1', '')).toBe('John');
+    
+    // Test case 2: Missing index
+    const obj2 = { 'user-1': 'John' };
+    expect(safeIndexAccess(obj2, 'user-3', 'Not Found')).toBe('Not Found');
+    
+    // Test case 3: Undefined object
+    const obj3 = undefined;
+    expect(safeIndexAccess(obj3, 'user-1', 'default')).toBe('default');
+  });
+
+  // Test all nested access cases in a single test
+  test('safeNestedAccess handles various scenarios correctly', () => {
+    // Test case 1: Valid path
+    const obj1 = { user: { profile: { name: 'John' } } };
+    expect(safeNestedAccess(obj1, 'user.profile.name', '')).toBe('John');
+    
+    // Test case 2: Missing nested property
+    const obj2 = { user: { profile: {} } };
+    expect(safeNestedAccess(obj2, 'user.profile.name', 'Unknown')).toBe('Unknown');
+    
+    // Test case 3: Null intermediate path
+    const obj3 = { user: null };
+    expect(safeNestedAccess(obj3, 'user.profile.name', 'default')).toBe('default');
+  });
+
+  // Test assert defined cases
+  test('assertDefined correctly validates defined values and throws for undefined', () => {
+    // Valid cases
+    expect(assertDefined('value')).toBe('value');
+    expect(assertDefined(0)).toBe(0);
+    expect(assertDefined(false)).toBe(false);
+    
+    // Invalid cases
+    expect(() => assertDefined(undefined)).toThrow();
+    expect(() => assertDefined(null)).toThrow();
+  });
+
+  // Test isDefined all cases
+  test('isDefined correctly identifies defined and undefined values', () => {
+    // True cases
+    const definedValues = ['value', 0, false, {}];
+    definedValues.forEach(value => {
+      expect(isDefined(value)).toBe(true);
+    });
+    
+    // False cases
+    expect(isDefined(undefined)).toBe(false);
+    expect(isDefined(null)).toBe(false);
+    
+    // Type narrowing
+    const value: string | undefined = Math.random() > 0.5 ? 'value' : undefined;
+    if (isDefined(value)) {
+      expect(typeof value).toBe('string');
+    } else {
+      expect(value).toBeUndefined();
     }
-
-    test('should return property value when key exists', () => {
-      const obj: TestObj = { name: 'John', age: 30 };
-      expect(safeObjectAccess(obj, 'name', '')).toBe('John');
-    });
-
-    test('should return default value when key does not exist', () => {
-      const obj: TestObj = { name: 'John' };
-      expect(safeObjectAccess(obj, 'age', 0)).toBe(0);
-    });
-
-    test('should return default value when object is null', () => {
-      type NameObj = { name: string };
-      const obj: NameObj | null = null;
-      // Type assertion needed for testing null objects
-      expect(safeObjectAccess<NameObj, 'name'>(obj as unknown as NameObj, 'name', 'default')).toBe('default');
-    });
-  });
-
-  describe('safeIndexAccess', () => {
-    test('should return property value when key exists', () => {
-      const obj = { 'user-1': 'John', 'user-2': 'Jane' };
-      expect(safeIndexAccess(obj, 'user-1', '')).toBe('John');
-    });
-
-    test('should return default value when key does not exist', () => {
-      const obj = { 'user-1': 'John' };
-      expect(safeIndexAccess(obj, 'user-3', 'Not Found')).toBe('Not Found');
-    });
-
-    test('should return default value when object is undefined', () => {
-      const obj = undefined;
-      expect(safeIndexAccess(obj, 'user-1', 'default')).toBe('default');
-    });
-  });
-
-  describe('safeNestedAccess', () => {
-    test('should return nested property value when path exists', () => {
-      const obj = { user: { profile: { name: 'John' } } };
-      expect(safeNestedAccess(obj, 'user.profile.name', '')).toBe('John');
-    });
-
-    test('should return default value when path does not exist', () => {
-      const obj = { user: { profile: {} } };
-      expect(safeNestedAccess(obj, 'user.profile.name', 'Unknown')).toBe('Unknown');
-    });
-
-    test('should return default value when intermediate path is null', () => {
-      const obj = { user: null };
-      expect(safeNestedAccess(obj, 'user.profile.name', 'default')).toBe('default');
-    });
-  });
-
-  describe('assertDefined', () => {
-    test('should return value when it is defined', () => {
-      expect(assertDefined('value')).toBe('value');
-      expect(assertDefined(0)).toBe(0);
-      expect(assertDefined(false)).toBe(false);
-    });
-
-    test('should throw error when value is undefined', () => {
-      expect(() => assertDefined(undefined)).toThrow();
-    });
-
-    test('should throw error when value is null', () => {
-      expect(() => assertDefined(null)).toThrow();
-    });
-  });
-
-  describe('isDefined', () => {
-    test('should return true for defined values', () => {
-      expect(isDefined('value')).toBe(true);
-      expect(isDefined(0)).toBe(true);
-      expect(isDefined(false)).toBe(true);
-      expect(isDefined({})).toBe(true);
-    });
-
-    test('should return false for undefined', () => {
-      expect(isDefined(undefined)).toBe(false);
-    });
-
-    test('should return false for null', () => {
-      expect(isDefined(null)).toBe(false);
-    });
-
-    test('should work with type narrowing', () => {
-      const value: string | undefined = Math.random() > 0.5 ? 'value' : undefined;
-      
-      if (isDefined(value)) {
-        // TypeScript should recognize value as string here
-        expect(typeof value).toBe('string');
-      } else {
-        // TypeScript should recognize value as undefined here
-        expect(value).toBeUndefined();
-      }
-    });
   });
   
-  describe('isNonEmptyString', () => {
-    test('should return true for non-empty strings', () => {
-      expect(isNonEmptyString('value')).toBe(true);
-      expect(isNonEmptyString(' value with spaces ')).toBe(true);
+  // Test isNonEmptyString all cases
+  test('isNonEmptyString correctly identifies valid and invalid strings', () => {
+    // True cases
+    const validStrings = ['value', ' value with spaces '];
+    validStrings.forEach(str => {
+      expect(isNonEmptyString(str)).toBe(true);
     });
     
-    test('should return false for empty strings', () => {
-      expect(isNonEmptyString('')).toBe(false);
-      expect(isNonEmptyString('   ')).toBe(false);
+    // False cases - empty strings
+    const emptyStrings = ['', '   '];
+    emptyStrings.forEach(str => {
+      expect(isNonEmptyString(str)).toBe(false);
     });
     
-    test('should return false for non-string values', () => {
-      expect(isNonEmptyString(123)).toBe(false);
-      expect(isNonEmptyString(null)).toBe(false);
-      expect(isNonEmptyString(undefined)).toBe(false);
-      expect(isNonEmptyString({})).toBe(false);
-      expect(isNonEmptyString([])).toBe(false);
+    // False cases - non-strings
+    const nonStrings = [123, null, undefined, {}, []];
+    nonStrings.forEach(val => {
+      expect(isNonEmptyString(val as unknown as string)).toBe(false);
     });
   });
 });

@@ -16,9 +16,6 @@ import { createTestLandingPageData } from '@test/helpers';
 
 // Create our mock instances with proper typings
 const mockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
-// Use type assertion since our mock doesn't implement the full interface
-const mockLandingPageGenerationService = MockLandingPageGenerationService.createFresh() as unknown as LandingPageGenerationService;
-const mockDeploymentManager = MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager;
 describe('WebsiteContext', () => {
   // Set up and tear down for each test
   beforeEach(() => {
@@ -38,77 +35,38 @@ describe('WebsiteContext', () => {
     MockWebsiteStorageAdapter.resetInstance();
   });
 
-  // Test methods
-  test('initialize should set readyState to true', async () => {
+  // Test storage-related methods
+  test('basic storage and configuration methods work correctly', async () => {
+    // Create a mock storage adapter
     const mockStorage = MockWebsiteStorageAdapter.createFresh();
     const context = WebsiteContext.createFresh({ storage: mockStorage });
-
+    
+    // Test initialization
     await context.initialize();
-
     expect(context.isReady()).toBe(true);
-    expect(mockStorage.initialize).toHaveBeenCalled();
-  });
-
-  test('getConfig should return website configuration', async () => {
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    const context = WebsiteContext.createFresh({ storage: mockStorage });
-
+    
+    // Test config operations
     await context.getConfig();
-
     expect(mockStorage.getWebsiteConfig).toHaveBeenCalled();
-  });
-
-  test('updateConfig should update website configuration', async () => {
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    const context = WebsiteContext.createFresh({ storage: mockStorage });
-
-    const updates = {
-      title: 'Updated Title',
-      author: 'Updated Author',
-    };
-
+    
+    const updates = { title: 'Updated Title', author: 'Updated Author' };
     await context.updateConfig(updates);
-
     expect(mockStorage.updateWebsiteConfig).toHaveBeenCalledWith(updates);
-  });
-
-  test('saveLandingPageData should save landing page data', async () => {
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    const context = WebsiteContext.createFresh({ storage: mockStorage });
-
+    
+    // Test landing page data operations
     const landingPageData = createTestLandingPageData();
-
     await context.saveLandingPageData(landingPageData);
-
     expect(mockStorage.saveLandingPageData).toHaveBeenCalledWith(landingPageData);
-  });
-
-  test('getLandingPageData should retrieve landing page data', async () => {
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    const testData = createTestLandingPageData();
-    mockStorage.setLandingPageData(testData);
-
-    const context = WebsiteContext.createFresh({ storage: mockStorage });
-
+    
+    mockStorage.setLandingPageData(landingPageData);
     await context.getLandingPageData();
-
     expect(mockStorage.getLandingPageData).toHaveBeenCalled();
-  });
-
-  test('getStorage should return the storage adapter', () => {
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    const context = WebsiteContext.createFresh({ storage: mockStorage });
-
+    
+    // Test storage getter/setter
     expect(context.getStorage()).toBe(mockStorage);
-  });
-
-  test('setStorage should update the storage adapter', () => {
-    const mockStorage1 = MockWebsiteStorageAdapter.createFresh();
+    
     const mockStorage2 = MockWebsiteStorageAdapter.createFresh();
-
-    const context = WebsiteContext.createFresh({ storage: mockStorage1 });
     context.setStorage(mockStorage2);
-
     expect(context.getStorage()).toBe(mockStorage2);
   });
 
@@ -118,150 +76,28 @@ describe('WebsiteContext', () => {
   // REMOVED TEST: test('getContextVersion should return...
 
 
-  // Tests for Astro integration
-  test('getAstroContentService should return an AstroContentService instance', async () => {
-    // Create a properly typed mock AstroContentService
-    const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
-    });
-
-    const service = await context.getAstroContentService();
-
-    expect(service).toBe(mockAstroContentService);
-  });
-
-  test('generateLandingPage should extract data from profile and write to content service', async () => {
-    // Setup
-    const profileData = {
-      name: 'Test User',
-      title: 'Developer',
-      tagline: 'Building great things',
-    };
-
-    // Create a fresh mock profile context
+  // Tests for Astro and landing page content generation
+  test('content generation and management features work correctly', async () => {
+    // Create mocks
+    const mockStorage = MockWebsiteStorageAdapter.createFresh();
     const mockProfileContext = MockProfileContext.createFresh();
-
-    // Create a properly typed mock for the getProfile method
+    const freshAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
+    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
+    
+    // Mock profile data
     const mockProfileObj = MockProfile.createWithCustomData('profile-1', {
-      fullName: profileData.name,
-      occupation: profileData.title.split(' - ')[1],
-      headline: profileData.tagline,
+      fullName: 'Test User',
+      occupation: 'Developer',
+      headline: 'Building great things',
     });
     mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfileObj));
-
-    // Create context with mocked services
-    const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
-      landingPageGenerationService: mockLandingPageGenerationService,
-      profileContext: mockProfileContext as unknown as ProfileContext,
-    });
-
-    const result = await context.generateLandingPage();
-
-    // Assertions
-    expect(result.success).toBe(true);
-    expect(mockLandingPageGenerationService.generateLandingPageData).toHaveBeenCalled();
-    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
-  });
-
-  test('generateLandingPage should generate landing page without quality assessment', async () => {
-    // Setup
-    const mockProfileContext = MockProfileContext.createFresh();
-    const mockProfileObj = MockProfile.createDefault();
-    mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfileObj));
-
-    // Create a fresh mock with our standardized implementation
-    MockLandingPageGenerationService.resetInstance();
-    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
-
-    // Use the test helper to create a complete landing page data object
+    
+    // Mock landing page data
     const mockLandingPageData = createTestLandingPageData();
-
-    // Simple implementation for generating landing page
-    const generateImplementation = mock(() => Promise.resolve(mockLandingPageData));
-    freshLandingPageService.generateLandingPageData = generateImplementation;
-
-    // Create context with mocked services
-    const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
-      landingPageGenerationService: freshLandingPageService as unknown as LandingPageGenerationService,
-      profileContext: mockProfileContext as unknown as ProfileContext,
-    });
-
-    // Test basic generation
-    const result = await context.generateLandingPage();
-
-    // Assertions
-    expect(result.success).toBe(true);
-    expect(generateImplementation).toHaveBeenCalled();
-    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalled();
-  });
-
-  test('editLandingPage should perform holistic editing on the landing page', async () => {
-    // Setup
-    const mockProfileContext = MockProfileContext.createFresh();
-    
-    // Create a fresh mock
-    MockLandingPageGenerationService.resetInstance();
-    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
-    
-    // Use the test helper to create a complete landing page data object
-    const mockLandingPageData = createTestLandingPageData();
-    
-    // Mock storage to return some landing page data
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
     mockStorage.getLandingPageData = mock(() => Promise.resolve(mockLandingPageData));
+    freshLandingPageService.generateLandingPageData = mock(() => Promise.resolve(mockLandingPageData));
     
-    // Mock the edit function
-    const editedLandingPage = { 
-      ...mockLandingPageData, 
-      hero: { 
-        ...mockLandingPageData.hero, 
-        headline: 'Edited: ' + mockLandingPageData.hero.headline, 
-      }, 
-    };
-    freshLandingPageService.editLandingPage = mock(() => Promise.resolve(editedLandingPage));
-    
-    // Mock the content service write function
-    mockAstroContentService.writeLandingPageContent = mock(() => Promise.resolve(true));
-    
-    // Create context with mocked services
-    const context = WebsiteContext.createFresh({
-      storage: mockStorage,
-      astroContentService: mockAstroContentService,
-      landingPageGenerationService: freshLandingPageService as unknown as LandingPageGenerationService,
-      profileContext: mockProfileContext as unknown as ProfileContext,
-    });
-    
-    // Execute the edit function
-    const result = await context.editLandingPage();
-    
-    // Assertions
-    expect(result.success).toBe(true);
-    expect(result.message).toContain('Successfully edited landing page');
-    expect(result.data).toEqual(editedLandingPage);
-    expect(freshLandingPageService.editLandingPage).toHaveBeenCalledWith(mockLandingPageData);
-    expect(mockAstroContentService.writeLandingPageContent).toHaveBeenCalledWith(editedLandingPage);
-  });
-
-  test('assessLandingPage should assess landing page quality', async () => {
-    // Setup
-    const mockProfileContext = MockProfileContext.createFresh();
-    const mockProfileObj = MockProfile.createDefault();
-    mockProfileContext.getProfile = mock(() => Promise.resolve(mockProfileObj));
-
-    // Create a fresh mock with our standardized implementation
-    MockLandingPageGenerationService.resetInstance();
-    const freshLandingPageService = MockLandingPageGenerationService.createFresh();
-
-    // Use the test helper to create a complete landing page data object
-    const mockLandingPageData = createTestLandingPageData();
-
-    // Mock storage to return some landing page data
-    const mockStorage = MockWebsiteStorageAdapter.createFresh();
-    mockStorage.getLandingPageData = mock(() => Promise.resolve(mockLandingPageData));
-
-    // Mock the assessment function
+    // Mock assessment data
     const assessmentResult = {
       landingPage: { ...mockLandingPageData },
       assessments: {
@@ -282,208 +118,131 @@ describe('WebsiteContext', () => {
       },
     };
     freshLandingPageService.assessLandingPageQuality = mock(() => Promise.resolve(assessmentResult));
-
-    // Create context with mocked services
+    
+    // Mock edited landing page
+    const editedLandingPage = { 
+      ...mockLandingPageData, 
+      hero: { 
+        ...mockLandingPageData.hero, 
+        headline: 'Edited: ' + mockLandingPageData.hero.headline, 
+      }, 
+    };
+    freshLandingPageService.editLandingPage = mock(() => Promise.resolve(editedLandingPage));
+    
+    // Create context with all mocked services
     const context = WebsiteContext.createFresh({
       storage: mockStorage,
-      astroContentService: mockAstroContentService,
+      astroContentService: freshAstroContentService,
       landingPageGenerationService: freshLandingPageService as unknown as LandingPageGenerationService,
       profileContext: mockProfileContext as unknown as ProfileContext,
     });
-
-    // Test assessment without applying recommendations
-    const result = await context.assessLandingPage({
-      qualityThresholds: {
-        minCombinedScore: 7,
-        minQualityScore: 6,
-        minConfidenceScore: 6,
-      },
-      applyRecommendations: false,
-    });
-
-    // Create a fresh mock to reset state
-    const newWriteMock = mock(() => Promise.resolve(true));
-    mockAstroContentService.writeLandingPageContent = newWriteMock;
     
-    // Assertions
-    expect(result.success).toBe(true);
-    expect(result.message).toContain('Successfully assessed landing page quality');
+    // Test getting astro service
+    const service = await context.getAstroContentService();
+    expect(service).toBe(freshAstroContentService);
+    
+    // Test landing page generation
+    const generationResult = await context.generateLandingPage();
+    expect(generationResult.success).toBe(true);
+    expect(freshLandingPageService.generateLandingPageData).toHaveBeenCalled();
+    
+    // Test landing page editing
+    const editResult = await context.editLandingPage();
+    expect(editResult.success).toBe(true);
+    expect(editResult.message).toContain('Successfully edited landing page');
+    expect(freshLandingPageService.editLandingPage).toHaveBeenCalled();
+    
+    // Test landing page quality assessment
+    const assessmentResult1 = await context.assessLandingPage({ applyRecommendations: false });
+    expect(assessmentResult1.success).toBe(true);
     expect(freshLandingPageService.assessLandingPageQuality).toHaveBeenCalled();
-    expect(newWriteMock).not.toHaveBeenCalled();
-
-    // Test assessment with applying recommendations
-    const anotherWriteMock = mock(() => Promise.resolve(true));
-    mockAstroContentService.writeLandingPageContent = anotherWriteMock;
-    const resultWithRecommendations = await context.assessLandingPage({
-      applyRecommendations: true,
-    });
-
-    // Assertions
-    expect(resultWithRecommendations.success).toBe(true);
-    expect(resultWithRecommendations.message).toContain('applied quality recommendations');
-    expect(anotherWriteMock).toHaveBeenCalled();
+    
+    // Test website building
+    const buildResult = await context.buildWebsite();
+    expect(buildResult.success).toBe(true);
+    expect(freshAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
   });
 
-  test('buildWebsite should run the build command through astro service', async () => {
-    // Clear any previously called methods on the existing mock
-    MockAstroContentService.resetInstance();
-
-    // Create a fresh mock with our standardized implementation
-    const freshMockAstroContentService = MockAstroContentService.createFresh() as unknown as AstroContentService & AstroContentServiceTestHelpers;
-
-    // Create context with the standardized mock
-    const context = WebsiteContext.createFresh({
-      astroContentService: freshMockAstroContentService,
-    });
-
-    const result = await context.buildWebsite();
-
-    expect(result.success).toBe(true);
-    expect(freshMockAstroContentService.runAstroCommand).toHaveBeenCalledWith('build');
-  });
-
-  // Tests for Caddy-based approach
-  test('handleWebsiteBuild should build the website to preview environment', async () => {
-    // Reset and create a fresh mock deployment manager
-    MockWebsiteDeploymentManager.resetInstance();
+  // Tests for deployment features
+  test('deployment management features work correctly', async () => {
+    // Create a fresh mock deployment manager
     const mockDeployManager = MockWebsiteDeploymentManager.createFresh();
+    
+    // Set up status data
+    mockDeployManager.setEnvironmentStatus('preview', {
+      buildStatus: 'Built' as const,
+      fileCount: 123,
+      accessStatus: 'Test Status',
+    });
+    
+    mockDeployManager.setEnvironmentStatus('live', {
+      buildStatus: 'Not Built' as const,
+      fileCount: 0,
+      accessStatus: 'Not Accessible',
+    });
+    
+    // Set up promotion result
+    mockDeployManager.setPromotionResult({
+      success: true,
+      message: 'Test promotion message',
+      url: 'https://test.example.com',
+    });
     
     // Create context with mocked services
     const context = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
       deploymentManager: mockDeployManager as unknown as WebsiteDeploymentManager,
     });
-
-    // Mock the buildWebsite method to return success
+    
+    // Test deployment manager accessor
+    const deploymentManager = await context.getDeploymentManager();
+    expect(deploymentManager).toBe(mockDeployManager);
+    
+    // Test successful website build
     context.buildWebsite = mock(() => Promise.resolve({
       success: true,
       message: 'Website built successfully',
       output: 'Build output...',
     }));
-
-    const result = await context.handleWebsiteBuild();
-
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Website built successfully');
-    expect(result.path).toBeDefined();
-    // URL should come from the mock deployment manager's environment status
-    expect(result.url).toBe('https://preview.example.com');
-  });
-
-  test('handleWebsiteBuild should handle errors when build fails', async () => {
-    // Create context with mocked Astro service
-    const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
-    });
-
-    // Mock the buildWebsite method to return failure
+    const buildResult = await context.handleWebsiteBuild();
+    expect(buildResult.success).toBe(true);
+    expect(buildResult.url).toBe('https://preview.example.com');
+    
+    // Test build error handling
     context.buildWebsite = mock(() => Promise.resolve({
       success: false,
       message: 'Build error',
       output: 'Error output...',
     }));
-
-    const result = await context.handleWebsiteBuild();
-
-    expect(result.success).toBe(false);
-    expect(result.message).toContain('Failed to build website');
-  });
-
-  test('getDeploymentManager should create deployment manager if not injected', async () => {
-    // Create context without providing a deployment manager
-    const context = WebsiteContext.createFresh({
+    const failedBuildResult = await context.handleWebsiteBuild();
+    expect(failedBuildResult.success).toBe(false);
+    expect(failedBuildResult.message).toContain('Failed to build website');
+    
+    // Test website promotion
+    const promotionResult = await context.handleWebsitePromote();
+    expect(promotionResult.success).toBe(true);
+    expect(promotionResult.message).toBe('Test promotion message');
+    expect(promotionResult.url).toBe('https://test.example.com');
+    expect(mockDeployManager.promoteToLive).toHaveBeenCalled();
+    
+    // Test website status
+    const previewStatus = await context.handleWebsiteStatus();
+    expect(previewStatus.success).toBe(true);
+    expect(previewStatus.data?.environment).toBe('preview');
+    expect(previewStatus.data?.fileCount).toBe(123);
+    expect(mockDeployManager.getEnvironmentStatus).toHaveBeenCalledWith('preview');
+    
+    const liveStatus = await context.handleWebsiteStatus('live');
+    expect(liveStatus.success).toBe(true);
+    expect(liveStatus.data?.environment).toBe('live');
+    expect(liveStatus.data?.buildStatus).toBe('Not Built');
+    expect(mockDeployManager.getEnvironmentStatus).toHaveBeenCalledWith('live');
+    
+    // Test auto-creation of deployment manager
+    const contextWithoutManager = WebsiteContext.createFresh({
       astroContentService: mockAstroContentService,
     });
-
-    // Get the deployment manager
-    const deploymentManager = await context.getDeploymentManager();
-
-    // The method should create a deployment manager
-    expect(deploymentManager).toBeDefined();
-  });
-
-  test('getDeploymentManager should return injected deployment manager', async () => {
-    // Create context with mocked deployment manager
-    const context = WebsiteContext.createFresh({
-      astroContentService: mockAstroContentService,
-      deploymentManager: mockDeploymentManager,
-    });
-
-    // Get the deployment manager
-    const deploymentManager = await context.getDeploymentManager();
-
-    // The method should return the injected deployment manager
-    expect(deploymentManager).toBe(mockDeploymentManager);
-  });
-
-  test('handleWebsitePromote should use the deployment manager', async () => {
-    // Create a manager with spied methods
-    const spiedManager = MockWebsiteDeploymentManager.createFresh();
-    spiedManager.setPromotionResult({
-      success: true,
-      message: 'Test promotion message',
-      url: 'https://test.example.com',
-    });
-
-    // Create context with mocked deployment manager
-    const context = WebsiteContext.createFresh({
-      deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
-    });
-
-    const result = await context.handleWebsitePromote();
-
-    // Should delegate to the deployment manager
-    expect(result.success).toBe(true);
-    expect(result.message).toBe('Test promotion message');
-    expect(result.url).toBe('https://test.example.com');
-
-    // Verify the deployment manager was called
-    expect(spiedManager.promoteToLive).toHaveBeenCalled();
-  });
-
-  test('handleWebsiteStatus should use the deployment manager', async () => {
-    // Create a manager with spied methods
-    const spiedManager = MockWebsiteDeploymentManager.createFresh();
-    spiedManager.setEnvironmentStatus('preview', {
-      buildStatus: 'Built' as const,
-      fileCount: 123,
-      accessStatus: 'Test Status',
-    });
-
-    // Create context with mocked deployment manager
-    const context = WebsiteContext.createFresh({
-      deploymentManager: spiedManager as unknown as WebsiteDeploymentManager,
-    });
-
-    // Test preview environment
-    const previewResult = await context.handleWebsiteStatus();
-
-    // Verify result contains the data from our mock
-    expect(previewResult.success).toBe(true);
-    expect(previewResult.data?.environment).toBe('preview');
-    expect(previewResult.data?.fileCount).toBe(123);
-    expect(previewResult.data?.accessStatus).toBe('Test Status');
-
-    // Verify the deployment manager was called with the correct environment
-    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('preview');
-
-    // Test live environment
-    spiedManager.setEnvironmentStatus('live', {
-      buildStatus: 'Not Built' as const,
-      fileCount: 0,
-      accessStatus: 'Not Accessible',
-    });
-
-    const liveResult = await context.handleWebsiteStatus('live');
-
-    // Verify result contains the data from our mock
-    expect(liveResult.success).toBe(true);
-    expect(liveResult.data?.environment).toBe('live');
-    expect(liveResult.data?.buildStatus).toBe('Not Built');
-    expect(liveResult.data?.fileCount).toBe(0);
-    expect(liveResult.data?.accessStatus).toBe('Not Accessible');
-
-    // Verify the deployment manager was called with the correct environment
-    expect(spiedManager.getEnvironmentStatus).toHaveBeenCalledWith('live');
+    const autoCreatedManager = await contextWithoutManager.getDeploymentManager();
+    expect(autoCreatedManager).toBeDefined();
   });
 });

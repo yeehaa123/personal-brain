@@ -7,14 +7,9 @@
  */
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
-import type { Note } from '@/models/note';
-import type { Profile } from '@/models/profile';
 import { ClaudeModel } from '@/resources/ai/claude';
 import { EmbeddingService } from '@/resources/ai/embedding';
 import { ResourceRegistry } from '@/resources/resourceRegistry';
-import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
-import type { IRepository } from '@/services/interfaces/IRepository';
-import type { ISearchService } from '@/services/interfaces/ISearchService';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import { NoteRepository } from '@/services/notes/noteRepository';
 import { NoteSearchService } from '@/services/notes/noteSearchService';
@@ -82,138 +77,71 @@ describe('ServiceRegistry Class', () => {
     process.env = originalEnv;
   });
 
-  // REMOVED BLOCK: describe('Component Interface Standardiz...
-
-
-  describe('Service registration', () => {
-    test('should automatically register standard services', () => {
-      const registry = ServiceRegistry.createFresh();
-      
-      // Check for key repositories
-      expect(registry.has(ServiceIdentifiers.NoteRepository)).toBe(true);
-      expect(registry.has(ServiceIdentifiers.ProfileRepository)).toBe(true);
-      
-      // Check for embedding services
-      expect(registry.has(ServiceIdentifiers.NoteEmbeddingService)).toBe(true);
-      expect(registry.has(ServiceIdentifiers.ProfileEmbeddingService)).toBe(true);
-      
-      // Check for search services
-      expect(registry.has(ServiceIdentifiers.NoteSearchService)).toBe(true);
-      expect(registry.has(ServiceIdentifiers.ProfileSearchService)).toBe(true);
-      
-      // Check for tag service
-      expect(registry.has(ServiceIdentifiers.ProfileTagService)).toBe(true);
+  test('should correctly register and provide all standard services', () => {
+    const registry = ServiceRegistry.createFresh();
+    
+    // Test registration status of all services
+    const expectedServices = [
+      [ServiceIdentifiers.NoteRepository, NoteRepository],
+      [ServiceIdentifiers.ProfileRepository, ProfileRepository],
+      [ServiceIdentifiers.NoteEmbeddingService, NoteEmbeddingService],
+      [ServiceIdentifiers.ProfileEmbeddingService, ProfileEmbeddingService],
+      [ServiceIdentifiers.NoteSearchService, NoteSearchService],
+      [ServiceIdentifiers.ProfileSearchService, ProfileSearchService],
+      [ServiceIdentifiers.ProfileTagService, ProfileTagService],
+    ];
+    
+    // Verify all services are registered
+    expectedServices.forEach(([serviceId]) => {
+      expect(registry.has(serviceId as string)).toBe(true);
+    });
+    
+    // Verify direct accessor methods return correct instance types
+    expect(registry.getNoteRepository()).toBeInstanceOf(NoteRepository);
+    expect(registry.getProfileRepository()).toBeInstanceOf(ProfileRepository);
+    expect(registry.getNoteEmbeddingService()).toBeInstanceOf(NoteEmbeddingService);
+    expect(registry.getProfileEmbeddingService()).toBeInstanceOf(ProfileEmbeddingService);
+    expect(registry.getNoteSearchService()).toBeInstanceOf(NoteSearchService);
+    expect(registry.getProfileSearchService()).toBeInstanceOf(ProfileSearchService);
+    expect(registry.getProfileTagService()).toBeInstanceOf(ProfileTagService);
+    
+    // Verify generic getService method
+    const serviceTypes = [
+      { id: ServiceIdentifiers.NoteRepository, type: NoteRepository },
+      { id: ServiceIdentifiers.ProfileRepository, type: ProfileRepository },
+      { id: ServiceIdentifiers.NoteEmbeddingService, type: NoteEmbeddingService },
+      { id: ServiceIdentifiers.ProfileEmbeddingService, type: ProfileEmbeddingService },
+      { id: ServiceIdentifiers.NoteSearchService, type: NoteSearchService },
+      { id: ServiceIdentifiers.ProfileSearchService, type: ProfileSearchService },
+      { id: ServiceIdentifiers.ProfileTagService, type: ProfileTagService },
+    ];
+    
+    serviceTypes.forEach(({ id, type }) => {
+      expect(registry.getService(id)).toBeInstanceOf(type);
     });
   });
 
-  describe('Service resolution', () => {
-    test('should resolve note repository', () => {
-      const registry = ServiceRegistry.createFresh();
-      const repository = registry.getNoteRepository();
-      
-      expect(repository).toBeDefined();
-      expect(repository).toBeInstanceOf(NoteRepository);
+  test('should handle ResourceRegistry integration', () => {
+    // Test with provided ResourceRegistry
+    const resourceRegistry = ResourceRegistry.createFresh({
+      anthropicApiKey: 'test-api-key',
+      openAiApiKey: 'test-openai-key',
     });
+    const registryWithProvided = ServiceRegistry.createFresh({ resourceRegistry });
     
-    test('should resolve profile repository', () => {
-      const registry = ServiceRegistry.createFresh();
-      const repository = registry.getProfileRepository();
-      
-      expect(repository).toBeDefined();
-      expect(repository).toBeInstanceOf(ProfileRepository);
-    });
+    // @ts-expect-error - Accessing private property for testing
+    expect(registryWithProvided.resourceRegistry).toBe(resourceRegistry);
     
-    test('should resolve note embedding service', () => {
-      const registry = ServiceRegistry.createFresh();
-      const service = registry.getNoteEmbeddingService();
-      
-      expect(service).toBeDefined();
-      expect(service).toBeInstanceOf(NoteEmbeddingService);
-    });
+    // Test automatic creation when not provided
+    const registryWithoutProvided = ServiceRegistry.createFresh();
     
-    test('should resolve profile embedding service', () => {
-      const registry = ServiceRegistry.createFresh();
-      const service = registry.getProfileEmbeddingService();
-      
-      expect(service).toBeDefined();
-      expect(service).toBeInstanceOf(ProfileEmbeddingService);
-    });
+    // @ts-expect-error - Accessing private property for testing
+    expect(registryWithoutProvided.resourceRegistry).toBeDefined();
     
-    test('should resolve note search service', () => {
-      const registry = ServiceRegistry.createFresh();
-      const service = registry.getNoteSearchService();
-      
-      expect(service).toBeDefined();
-      expect(service).toBeInstanceOf(NoteSearchService);
-    });
-    
-    test('should resolve profile search service', () => {
-      const registry = ServiceRegistry.createFresh();
-      const service = registry.getProfileSearchService();
-      
-      expect(service).toBeDefined();
-      expect(service).toBeInstanceOf(ProfileSearchService);
-    });
-    
-    test('should resolve profile tag service', () => {
-      const registry = ServiceRegistry.createFresh();
-      const service = registry.getProfileTagService();
-      
-      expect(service).toBeDefined();
-      expect(service).toBeInstanceOf(ProfileTagService);
-    });
-    
-    test('should resolve services with generic getService method', () => {
-      const registry = ServiceRegistry.createFresh();
-      
-      const noteRepo = registry.getService<IRepository<Note>>(ServiceIdentifiers.NoteRepository);
-      const profileRepo = registry.getService<IRepository<Profile>>(ServiceIdentifiers.ProfileRepository);
-      const noteEmbedding = registry.getService<IEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
-      const profileEmbedding = registry.getService<IEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
-      const noteSearch = registry.getService<ISearchService<Note>>(ServiceIdentifiers.NoteSearchService);
-      const profileSearch = registry.getService<ISearchService<Profile>>(ServiceIdentifiers.ProfileSearchService);
-      const tagService = registry.getService<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-      
-      expect(noteRepo).toBeInstanceOf(NoteRepository);
-      expect(profileRepo).toBeInstanceOf(ProfileRepository);
-      expect(noteEmbedding).toBeInstanceOf(NoteEmbeddingService);
-      expect(profileEmbedding).toBeInstanceOf(ProfileEmbeddingService);
-      expect(noteSearch).toBeInstanceOf(NoteSearchService);
-      expect(profileSearch).toBeInstanceOf(ProfileSearchService);
-      expect(tagService).toBeInstanceOf(ProfileTagService);
-    });
-  });
-
-  describe('ResourceRegistry integration', () => {
-    test('should use provided ResourceRegistry', () => {
-      const resourceRegistry = ResourceRegistry.createFresh({
-        anthropicApiKey: 'test-api-key',
-        openAiApiKey: 'test-openai-key',
-      });
-      const serviceRegistry = ServiceRegistry.createFresh({ resourceRegistry });
-      
-      // @ts-expect-error - Accessing private property for testing
-      expect(serviceRegistry.resourceRegistry).toBe(resourceRegistry);
-    });
-    
-    test('should create a resource registry if not provided', () => {
-      const serviceRegistry = ServiceRegistry.createFresh();
-      
-      // @ts-expect-error - Accessing private property for testing
-      expect(serviceRegistry.resourceRegistry).toBeDefined();
-    });
-  });
-
-  describe('Global getService function', () => {
-    test('should resolve services from singleton instance', () => {
-      // First initialize the singleton
-      ServiceRegistry.getInstance();
-      
-      // Then use the getService method from the registry
-      const noteRepo = ServiceRegistry.getInstance().getService(ServiceIdentifiers.NoteRepository) as IRepository<Note>;
-      
-      expect(noteRepo).toBeDefined();
-      expect(noteRepo).toBeInstanceOf(NoteRepository);
-    });
+    // Test singleton behavior
+    ServiceRegistry.getInstance();
+    const noteRepo = ServiceRegistry.getInstance().getService(ServiceIdentifiers.NoteRepository);
+    expect(noteRepo).toBeDefined();
+    expect(noteRepo).toBeInstanceOf(NoteRepository);
   });
 });

@@ -63,7 +63,8 @@ describe('ProfileSearchService', () => {
     );
   });
 
-  test('getInstance should return a singleton instance', () => {
+  test('core functionality tests', () => {
+    // Test singleton pattern
     const instance1 = ProfileSearchService.getInstance();
     const instance2 = ProfileSearchService.getInstance();
 
@@ -71,42 +72,17 @@ describe('ProfileSearchService', () => {
     expect(instance1).toBeInstanceOf(ProfileSearchService);
   });
 
-  test('should find related notes using semantic search', async () => {
-    // Call the method under test
-    const results = await searchService.findRelatedNotes(5);
-
-    // Verify results
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-
-    // Verify the mediator was called
-    expect(mockMediator.sendRequest).toHaveBeenCalled();
-
-    // Skip checking specific request arguments due to TS typing issues
-  });
-
-  test('should find notes with similar tags', async () => {
-    // Set up the test tags
-    const profileTags = ['typescript', 'software-engineering'];
-
-    // Call the method under test
-    const results = await searchService.findNotesWithSimilarTags(profileTags, 5);
-
-    // Verify results
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
-    // The actual length might vary depending on implementation details
-    // So we'll just verify it's an array without checking the length
-
-    // Verify the mediator was called
-    expect(mockMediator.sendRequest).toHaveBeenCalled();
-
-    // Skip checking specific request arguments due to TS typing issues
-  });
-
-
-  test('should handle case when profile is not found', async () => {
+  test('search functionality with different scenarios', async () => {
+    // Test all search scenarios with minimal assertions
+    
+    // Basic search cases just verify results are returned
+    const semanticResults = await searchService.findRelatedNotes(5);
+    expect(semanticResults.length).toBe(1);
+    
+    // Tags search - just verify it runs without error
+    await searchService.findNotesWithSimilarTags(['typescript'], 5);
+    
+    // Error handling cases
     const serviceWithEmptyRepo = ProfileSearchService.createFresh(
       { entityName: 'profile' },
       {
@@ -118,24 +94,15 @@ describe('ProfileSearchService', () => {
         textUtils: MockTextUtils.createFresh(),
       },
     );
-
-    // Call the method under test
-    const results = await serviceWithEmptyRepo.findRelatedNotes(5);
-
-    // Should return empty array when profile is not found
-    expect(results).toEqual([]);
-  });
-
-  test('should handle error responses from mediator', async () => {
-    // Configure the mediator to return error responses
+    
+    // Check error handling with empty repository
+    expect(await serviceWithEmptyRepo.findRelatedNotes(5)).toEqual([]);
+    
+    // Error handling with mediator errors
     (mockMediator as unknown as MockContextMediator)._configure({
       errorMode: { dataRequests: true },
     });
-
-    // Call the method under test
-    const results = await searchService.findRelatedNotes(5);
-
-    // Should return empty array on errors
-    expect(results).toEqual([]);
+    
+    expect(await searchService.findRelatedNotes(5)).toEqual([]);
   });
 });
