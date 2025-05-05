@@ -1,15 +1,30 @@
 import { z } from 'zod';
 
 import { aiConfig, textConfig } from '@/config';
-import { ResourceRegistry } from '@/resources';
+import type { ClaudeModel } from '@/resources/ai/claude'; 
+import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
+
+/**
+ * Configuration options for TagExtractor
+ */
+export interface TagExtractorConfig {
+  /** Maximum number of tags to extract by default */
+  defaultMaxTags?: number;
+  /** Maximum length of content to analyze */
+  tagContentMaxLength?: number;
+  /** Model temperature for tag extraction */
+  temperature?: number;
+}
 
 /**
  * Dependencies interface for TagExtractor
  */
 export interface TagExtractorDependencies {
+  /** Logger for tag extraction operations */
   logger: Logger;
-  resourceRegistry: ResourceRegistry;
+  /** Claude model for AI-powered tag extraction */
+  claudeModel: ClaudeModel;
 }
 
 /**
@@ -32,22 +47,32 @@ export class TagExtractor {
   private logger: Logger;
 
   /**
-   * ResourceRegistry instance used for Claude model access
+   * Claude model for tag extraction
    */
-  private resourceRegistry: ResourceRegistry;
+  private claudeModel: ClaudeModel;
+
+  /**
+   * Configuration options
+   */
+  private config: TagExtractorConfig;
 
   /**
    * Get the singleton instance
    * 
+   * @param config Optional configuration options (used when creating a new instance)
    * @returns Singleton instance of TagExtractor
    */
-  public static getInstance(): TagExtractor {
+  public static getInstance(config?: TagExtractorConfig): TagExtractor {
     if (!TagExtractor.instance) {
       const logger = Logger.getInstance();
+      // Get resources through ServiceRegistry
+      const serviceRegistry = ServiceRegistry.getInstance();
+      const claudeModel = serviceRegistry.getResourceRegistry().getClaudeModel();
+      
       TagExtractor.instance = new TagExtractor({
         logger,
-        resourceRegistry: ResourceRegistry.getInstance(),
-      });
+        claudeModel,
+      }, config);
 
       logger.debug('TagExtractor singleton instance created');
     }
@@ -75,12 +100,12 @@ export class TagExtractor {
   /**
    * Create a fresh instance without affecting the singleton
    * 
-   * @param _config Optional configuration (unused but kept for pattern consistency)
+   * @param config Optional configuration options
    * @param dependencies Optional dependencies object
    * @returns A new TagExtractor instance
    */
   public static createFresh(
-    _config?: Record<string, unknown>,
+    config?: TagExtractorConfig,
     dependencies?: TagExtractorDependencies,
   ): TagExtractor {
     const logger = Logger.getInstance();
@@ -88,24 +113,38 @@ export class TagExtractor {
 
     if (dependencies) {
       // Use provided dependencies
-      return new TagExtractor(dependencies);
+      return new TagExtractor(dependencies, config);
     } else {
-      // Use default dependencies
+      // Use default dependencies from the ServiceRegistry
+      const serviceRegistry = ServiceRegistry.getInstance();
+      const claudeModel = serviceRegistry.getResourceRegistry().getClaudeModel();
+      
       return new TagExtractor({
         logger,
-        resourceRegistry: ResourceRegistry.getInstance(),
-      });
+        claudeModel,
+      }, config);
     }
   }
 
   /**
    * Private constructor to enforce using factory methods
    * @param dependencies Required dependencies
+   * @param config Optional configuration options
    */
-  private constructor(dependencies: TagExtractorDependencies) {
+  private constructor(
+    dependencies: TagExtractorDependencies,
+    config?: TagExtractorConfig,
+  ) {
     // Initialize from dependencies
     this.logger = dependencies.logger;
-    this.resourceRegistry = dependencies.resourceRegistry;
+    this.claudeModel = dependencies.claudeModel;
+    
+    // Apply configuration with defaults
+    this.config = {
+      defaultMaxTags: config?.defaultMaxTags ?? textConfig.defaultMaxTags,
+      tagContentMaxLength: config?.tagContentMaxLength ?? textConfig.tagContentMaxLength,
+      temperature: config?.temperature ?? aiConfig.anthropic.temperature,
+    };
 
     this.logger.debug('TagExtractor instance created');
   }
@@ -114,28 +153,24 @@ export class TagExtractor {
    * Extract tags from content using Claude AI
    * @param content The text content to analyze
    * @param existingTags Optional array of existing tags to consider
-   * @param maxTags Maximum number of tags to extract (default: 7)
+   * @param maxTags Maximum number of tags to extract (defaults to config value)
    * @returns Array of extracted tags
    */
   public async extractTags(
     content: string,
     existingTags: string[] = [],
-    maxTags: number = textConfig.defaultMaxTags,
-    apiKey?: string,
+    maxTags?: number,
   ): Promise<string[]> {
     try {
-      // Use provided API key or fallback to config
-      const anthropicApiKey = apiKey || aiConfig.anthropic.apiKey;
-
-      // Check for API key
-      if (!anthropicApiKey) {
-        this.logger.error('No Anthropic API key available for tag extraction');
-        return [];
-      }
-
+      // Use provided max tags or fall back to config
+      const tagsLimit = maxTags ?? this.config.defaultMaxTags;
+      
+      // API key is no longer needed as the Claude model already has it
+      
       // Truncate content if it's too long
-      const truncatedContent = content.length > textConfig.tagContentMaxLength
-        ? content.substring(0, textConfig.tagContentMaxLength) + '... [content truncated]'
+      const maxContentLength = this.config.tagContentMaxLength ?? textConfig.tagContentMaxLength;
+      const truncatedContent = content.length > maxContentLength
+        ? content.substring(0, maxContentLength) + '... [content truncated]'
         : content;
 
       // Build the prompt
@@ -153,25 +188,22 @@ ${truncatedContent}
 
 ${existingTags.length > 0 ? 'Existing tags to consider: ' + existingTags.join(', ') : ''}
 
-Extract up to ${maxTags} tags that best represent this content.
+Extract up to ${tagsLimit} tags that best represent this content.
 
 FORMAT: Respond with ONLY a comma-separated list of tags, with no additional text or explanation.`;
 
-      // Get the Claude model instance from the ResourceRegistry
-      const registry = this.resourceRegistry;
-      const claude = registry.getClaudeModel();
-
       // Define the schema for the response
+      const maxTagCount = tagsLimit || 5; // Provide a default value in case tagsLimit is undefined
       const tagSchema = z.object({
-        tags: z.array(z.string()).max(maxTags),
+        tags: z.array(z.string()).max(maxTagCount),
       });
 
-      // Call Claude with schema, type is inferred from the schema using z.infer
-      const response = await claude.complete<z.infer<typeof tagSchema>>({
+      // Call Claude with schema, using the injected Claude model
+      const response = await this.claudeModel.complete<z.infer<typeof tagSchema>>({
         schema: tagSchema,
         systemPrompt: 'You extract tags from content. Only respond with the tags, nothing else.',
         userPrompt: prompt,
-        temperature: aiConfig.anthropic.temperature,
+        temperature: this.config.temperature,
       });
 
       // Return the tags array directly

@@ -41,7 +41,8 @@ export class ClaudeModel {
     if (!ClaudeModel.instance) {
       ClaudeModel.instance = new ClaudeModel();
     }
-    return ClaudeModel.instance;
+    // Cast to ClaudeModel to make it compatible with the actual ClaudeModel interface
+    return ClaudeModel.instance as unknown as ClaudeModel;
   }
 
   /**
@@ -55,7 +56,8 @@ export class ClaudeModel {
    * Create a fresh instance
    */
   public static createFresh(_options?: ClaudeModelOptions): ClaudeModel {
-    return new ClaudeModel();
+    // Cast to ClaudeModel to make it compatible with the actual ClaudeModel interface
+    return new ClaudeModel() as unknown as ClaudeModel;
   }
 
   /**
