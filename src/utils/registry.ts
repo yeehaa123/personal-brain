@@ -201,11 +201,11 @@ export abstract class Registry implements IRegistry {
   public initialize(): boolean {
     if (this.initialized) return true;
     
-    this.logger.info(`Initializing ${this.name} (${this.registryType})`);
+    this.logger.debug(`Initializing ${this.name} (${this.registryType})`);
     try {
       this.registerComponents();
       this.initialized = true;
-      this.logger.info(`${this.name} initialized successfully`);
+      this.logger.debug(`${this.name} initialized successfully`);
       return true;
     } catch (error) {
       this.logger.error(`Error initializing ${this.name}`, { error });

@@ -175,7 +175,7 @@ export class ResourceRegistry extends Registry {
       return;
     }
     
-    this.logger.info('Registering standard resources');
+    this.logger.debug('Registering standard resources');
     
     // Register Claude model with validation
     this.registerResource(
@@ -200,7 +200,7 @@ export class ResourceRegistry extends Registry {
     );
     
     this.resourcesRegistered = true;
-    this.logger.info('Standard resources registered');
+    this.logger.debug('Standard resources registered');
   }
   
   /**

@@ -185,7 +185,7 @@ export class ServiceRegistry extends Registry {
 
     // Ensure ResourceRegistry is initialized
     if (!this.resourceRegistry.isInitialized()) {
-      this.logger.info('Initializing ResourceRegistry dependency');
+      this.logger.debug('Initializing ResourceRegistry dependency');
       const success = this.resourceRegistry.initialize();
       if (!success) {
         this.logger.warn('ResourceRegistry initialization failed, some services may not work');
@@ -211,7 +211,7 @@ export class ServiceRegistry extends Registry {
       return;
     }
 
-    this.logger.info('Registering standard services');
+    this.logger.debug('Registering standard services');
 
     // Register repositories
     this.register<IRepository<Note>>(
@@ -389,7 +389,7 @@ export class ServiceRegistry extends Registry {
     );
 
     this.servicesRegistered = true;
-    this.logger.info('Standard services registered');
+    this.logger.debug('Standard services registered');
   }
 
   /**
