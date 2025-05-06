@@ -6,6 +6,8 @@
  * - Matrix formatters
  * - Matrix conversation notes functionality
  * - Matrix command rendering
+ * 
+ * Refactored to use table-driven tests for improved maintainability and readability
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
@@ -63,135 +65,172 @@ describe('MatrixBrainInterface', () => {
     delete process.env['NODE_ENV'];
   });
 
-  test('Should create MatrixBrainInterface instance with dependencies', () => {
-    // Create mock dependencies
-    const mockClient = {
-      startClient: mock(() => Promise.resolve()),
-      on: mock(),
-      once: mock(),
-      joinRoom: mock(() => Promise.resolve()),
-    } as unknown as sdk.MatrixClient;
-
-    const mockBrainProtocol = MockBrainProtocol.createFresh() as unknown as IBrainProtocol;
-    const mockCommandHandler = MockCommandHandler.createFresh() as unknown as CommandHandler;
-
-    const mockConfig = {
-      homeserverUrl: 'https://test.matrix.org',
-      accessToken: 'test-token',
-      userId: '@test:matrix.org',
-      roomIds: ['room1', 'room2'],
-      commandPrefix: '!brain',
+  test('matrix interface functionality', async () => {
+    // Standard mock client creation function for testing
+    const createMockClient = (syncCallback?: (state: string) => void) => {
+      return {
+        startClient: mock(() => Promise.resolve()),
+        on: mock(),
+        once: mock((event, callback) => {
+          // Simulate successful sync if callback provided
+          if (event === 'sync' && callback && syncCallback) {
+            callback('PREPARED');
+          }
+          return { removeListener: mock() };
+        }),
+        joinRoom: mock(() => Promise.resolve()),
+      } as unknown as sdk.MatrixClient;
     };
 
-    const mockServerManager = {
-      initialize: mock(() => Promise.resolve()),
-      startServers: mock(() => Promise.resolve(true)),
-      cleanup: mock(() => Promise.resolve()),
-    } as unknown as ServerManager;
-
-    // Create a fresh instance with explicit dependencies
-    const matrixInterface = MatrixBrainInterface.createFresh(
-      mockClient,
-      mockBrainProtocol,
-      mockCommandHandler,
-      mockConfig,
-      MockLogger.createFresh({ silent: true, name: 'test-instance-1' }) as unknown as Logger,
-      mockServerManager,
-    );
-
-    // Verify instance was created
-    expect(matrixInterface).toBeDefined();
-  });
-
-  test('Should maintain singleton instance', () => {
-    // Get singleton instance
-    const instance1 = MatrixBrainInterface.getInstance();
-    const instance2 = MatrixBrainInterface.getInstance();
-
-    // Verify both references point to the same instance
-    expect(instance1).toBe(instance2);
-
-    // Reset singleton
-    MatrixBrainInterface.resetInstance();
-
-    // Get new instance
-    const instance3 = MatrixBrainInterface.getInstance();
-
-    // Verify it's different from the original instance
-    expect(instance1).not.toBe(instance3);
-  });
-
-  test('Should start without initializing server if specified', async () => {
-    // Create mock dependencies
-    const mockClient = {
-      startClient: mock(() => Promise.resolve()),
-      on: mock(),
-      once: mock((event, callback) => {
-        // Simulate successful sync
-        if (event === 'sync') {
-          callback('PREPARED');
-        }
-        return { removeListener: mock() };
-      }),
-      joinRoom: mock(() => Promise.resolve()),
-    } as unknown as sdk.MatrixClient;
-
-    const mockBrainProtocol = MockBrainProtocol.createFresh() as unknown as IBrainProtocol;
-    mockBrainProtocol.initialize = mock(() => Promise.resolve());
-
-    const mockCommandHandler = MockCommandHandler.createFresh() as unknown as CommandHandler;
-
-    const mockConfig = {
-      homeserverUrl: 'https://test.matrix.org',
-      accessToken: 'test-token',
-      userId: '@test:matrix.org',
-      roomIds: ['room1'],
-      commandPrefix: '!brain',
+    // Standard mock dependencies
+    const createMockDependencies = () => {
+      const mockBrainProtocol = MockBrainProtocol.createFresh() as unknown as IBrainProtocol;
+      mockBrainProtocol.initialize = mock(() => Promise.resolve());
+      
+      const mockCommandHandler = MockCommandHandler.createFresh() as unknown as CommandHandler;
+      const mockServerManager = {
+        initialize: mock(() => Promise.resolve()),
+        startServers: mock(() => Promise.resolve(true)),
+        cleanup: mock(() => Promise.resolve()),
+      } as unknown as ServerManager;
+      
+      const mockConfig = {
+        homeserverUrl: 'https://test.matrix.org',
+        accessToken: 'test-token',
+        userId: '@test:matrix.org',
+        roomIds: ['room1', 'room2'],
+        commandPrefix: '!brain',
+      };
+      
+      const mockLogger = MockLogger.createFresh({ 
+        silent: true, 
+        name: 'test-matrix-interface', 
+      }) as unknown as Logger;
+      
+      return {
+        brainProtocol: mockBrainProtocol,
+        commandHandler: mockCommandHandler,
+        serverManager: mockServerManager,
+        config: mockConfig,
+        logger: mockLogger,
+      };
     };
 
-    const mockServerManager = {
-      initialize: mock(() => Promise.resolve()),
-      startServers: mock(() => Promise.resolve(true)),
-      cleanup: mock(() => Promise.resolve()),
-    } as unknown as ServerManager;
+    // Define test cases for MatrixBrainInterface functionality
+    const matrixInterfaceTestCases = [
+      {
+        name: 'singleton pattern behavior',
+        test: () => {
+          // Get singleton instance
+          const instance1 = MatrixBrainInterface.getInstance();
+          const instance2 = MatrixBrainInterface.getInstance();
 
-    // Create a fresh instance with explicit dependencies
-    const matrixInterface = MatrixBrainInterface.createFresh(
-      mockClient,
-      mockBrainProtocol,
-      mockCommandHandler,
-      mockConfig,
-      MockLogger.createFresh({ silent: true, name: 'test-instance-2' }) as unknown as Logger,
-      mockServerManager,
-    );
+          // Verify both references point to the same instance
+          expect(instance1).toBe(instance2);
 
-    // Start the interface without initializing the server
-    await matrixInterface.start(false);
+          // Reset singleton
+          MatrixBrainInterface.resetInstance();
 
-    // Verify server was not initialized
-    expect(mockServerManager.initialize).not.toHaveBeenCalled();
+          // Get new instance
+          const instance3 = MatrixBrainInterface.getInstance();
 
-    // Verify client was started
-    expect(mockClient.startClient).toHaveBeenCalled();
+          // Verify it's different from the original instance
+          expect(instance1).not.toBe(instance3);
+        },
+      },
+      {
+        name: 'instance creation with dependencies',
+        test: () => {
+          // Create mock dependencies
+          const client = createMockClient();
+          const deps = createMockDependencies();
 
-    // Verify brainProtocol was initialized
-    expect(mockBrainProtocol.initialize).toHaveBeenCalled();
+          // Create a fresh instance with explicit dependencies
+          const matrixInterface = MatrixBrainInterface.createFresh(
+            client,
+            deps.brainProtocol,
+            deps.commandHandler,
+            deps.config,
+            deps.logger,
+            deps.serverManager,
+          );
 
-    // Verify room was joined
-    expect(mockClient.joinRoom).toHaveBeenCalledTimes(1);
-  });
+          // Verify instance was created
+          expect(matrixInterface).toBeDefined();
+        },
+      },
+      {
+        name: 'start without initializing server',
+        test: async () => {
+          // Create mock dependencies with sync callback
+          let syncCalled = false;
+          const client = {
+            startClient: mock(() => Promise.resolve()),
+            on: mock(),
+            once: mock((event, callback) => {
+              // Immediately call the callback with 'PREPARED' when 'sync' is registered
+              if (event === 'sync' && callback) {
+                syncCalled = true;
+                callback('PREPARED');
+              }
+              return { removeListener: mock() };
+            }),
+            joinRoom: mock(() => Promise.resolve()),
+          } as unknown as sdk.MatrixClient;
+          
+          const deps = createMockDependencies();
 
-  test('Basic protocol instantiation test', () => {
-    // Create a protocol instance for testing
-    const protocol = MockBrainProtocol.getInstance({
-      interfaceType: 'matrix',
-      roomId: 'test-room',
-    });
+          // Create a fresh instance with explicit dependencies
+          const matrixInterface = MatrixBrainInterface.createFresh(
+            client,
+            deps.brainProtocol,
+            deps.commandHandler,
+            deps.config,
+            deps.logger,
+            deps.serverManager,
+          );
 
-    // Verify it was initialized correctly
-    expect(protocol).toBeDefined();
-    expect(protocol.getContextManager()).toBeDefined();
-    expect(protocol.getConversationManager()).toBeDefined();
+          // Start the interface without initializing the server
+          await matrixInterface.start(false);
+
+          // Verify server was not initialized
+          expect(deps.serverManager.initialize).not.toHaveBeenCalled();
+          
+          // Verify client was started
+          expect(client.startClient).toHaveBeenCalled();
+          
+          // Verify brainProtocol was initialized
+          expect(deps.brainProtocol.initialize).toHaveBeenCalled();
+          
+          // Verify room was joined
+          expect(client.joinRoom).toHaveBeenCalledTimes(deps.config.roomIds.length);
+          
+          // Verify sync callback was called
+          expect(syncCalled).toBe(true);
+        },
+      },
+      {
+        name: 'protocol instantiation',
+        test: () => {
+          // Create a protocol instance for testing
+          const protocol = MockBrainProtocol.getInstance({
+            interfaceType: 'matrix',
+            roomId: 'test-room',
+          });
+
+          // Verify it was initialized correctly
+          expect(protocol).toBeDefined();
+          expect(protocol.getContextManager()).toBeDefined();
+          expect(protocol.getConversationManager()).toBeDefined();
+        },
+      },
+    ];
+
+    // Run all test cases
+    for (const { test: testFn } of matrixInterfaceTestCases) {
+      // Run the test and await its completion
+      await testFn();
+    }
   });
 });
 
@@ -199,91 +238,153 @@ describe('MatrixBrainInterface', () => {
 // MATRIX FORMATTERS TESTS
 // ==================================
 describe('Matrix Formatters', () => {
+  // MarkdownFormatter Tests
   describe('MarkdownFormatter', () => {
-    test('should format basic markdown', () => {
+    test('markdown formatting', () => {
       const formatter = MatrixMarkdownFormatter.getInstance();
-      const result = formatter.format('# Hello World');
       
-      // Should contain the header with no styling
-      expect(result).toContain('<h1>Hello World</h1>');
-    });
-    
-    test('should format code blocks', () => {
-      const formatter = MatrixMarkdownFormatter.getInstance();
-      const result = formatter.formatCodeBlock('console.log("Hello")', 'javascript');
+      // Define test cases for markdown formatting
+      const markdownTestCases = [
+        {
+          input: '# Hello World',
+          checkOutput: (output: string) => {
+            expect(output).toContain('<h1>Hello World</h1>');
+          },
+        },
+        {
+          // The formatCodeBlock method is tested with this case
+          formatFn: () => formatter.formatCodeBlock('console.log("Hello")', 'javascript'),
+          checkOutput: (output: string) => {
+            expect(output).toContain('console.log');
+          },
+        },
+      ];
       
-      // Should contain the code and language formatting
-      expect(result).toContain('console.log');
-    });
-  });
-  
-  describe('CitationFormatter', () => {
-    test('should format a citation', () => {
-      const formatter = MatrixCitationFormatter.getInstance();
-      const result = formatter.formatCitation({
-        source: 'Test Source',
-        title: 'Test Title',
-        content: 'Test content',
-        type: 'note',
-        id: 'test-id',
+      // Run all test cases
+      markdownTestCases.forEach(({ input, formatFn, checkOutput }) => {
+        // Get output either from input or custom formatFn
+        const output = input ? formatter.format(input) : formatFn!();
+        
+        // Check output meets expectations
+        checkOutput(output);
       });
-      
-      // Should contain the citation elements
-      expect(result).toContain('Test Title');
-      expect(result).toContain('Test content');
-      expect(result).toContain('Source: Test Source');
-      expect(result).toContain('test-id');
     });
-    
-    test('should create a note-based citation', () => {
+  });
+  
+  // CitationFormatter Tests
+  describe('CitationFormatter', () => {
+    test('citation formatting', () => {
       const formatter = MatrixCitationFormatter.getInstance();
-      const note = {
-        id: 'note-id',
-        title: 'Note Title',
-        content: 'Note content',
-        createdAt: new Date().toISOString(),
-      };
       
-      const citation = formatter.createNoteBasedCitation(note);
+      // Define test cases for citation formatting
+      const citationTestCases = [
+        {
+          formatFn: () => formatter.formatCitation({
+            source: 'Test Source',
+            title: 'Test Title',
+            content: 'Test content',
+            type: 'note',
+            id: 'test-id',
+          }),
+          checkOutput: (output: string | unknown) => {
+            // We know this will be a string but need to handle type correctly
+            if (typeof output === 'string') {
+              expect(output).toContain('Test Title');
+              expect(output).toContain('Test content');
+              expect(output).toContain('Source: Test Source');
+              expect(output).toContain('test-id');
+            }
+          },
+        },
+        {
+          formatFn: () => {
+            const note = {
+              id: 'note-id',
+              title: 'Note Title',
+              content: 'Note content',
+              createdAt: new Date().toISOString(),
+            };
+            
+            return formatter.createNoteBasedCitation(note);
+          },
+          checkOutput: (citation: unknown) => {
+            // This returns an object, not a string
+            const typedCitation = citation as { title: string; id: string; type: string };
+            expect(typedCitation.title).toBe('Note Title');
+            expect(typedCitation.id).toBe('note-id');
+            expect(typedCitation.type).toBe('note');
+          },
+        },
+      ];
       
-      expect(citation.title).toBe('Note Title');
-      expect(citation.id).toBe('note-id');
-      expect(citation.type).toBe('note');
+      // Run all test cases
+      citationTestCases.forEach(({ formatFn, checkOutput }) => {
+        // Get output from format function
+        const output = formatFn();
+        
+        // Check output meets expectations
+        checkOutput(output);
+      });
     });
   });
   
+  // BlockBuilder Tests
   describe('BlockBuilder', () => {
-    test('should build blocks with HTML fallback', () => {
-      const builder = new MatrixBlockBuilder({ clientSupportsBlocks: false });
+    test('block building with different client support', () => {
+      // Define test cases for block building
+      const blockBuilderTestCases = [
+        {
+          setup: () => {
+            const builder = new MatrixBlockBuilder({ clientSupportsBlocks: false });
+            builder.addHeader('Test Header');
+            builder.addSection('Test Section');
+            builder.addDivider();
+            
+            return builder.build() as string;
+          },
+          checkOutput: (output: string) => {
+            expect(output).toContain('<h3>Test Header</h3>');
+            expect(output).toContain('Test Section');
+            expect(output).toContain('<hr>');
+          },
+        },
+        {
+          setup: () => {
+            const builder = new MatrixBlockBuilder({ clientSupportsBlocks: true });
+            builder.addHeader('Test Header');
+            builder.addSection('Test Section');
+            
+            return builder.build() as Record<string, unknown>;
+          },
+          checkOutput: (output: Record<string, unknown>) => {
+            expect(output['body']).toContain('Test Header');
+            expect(output['blocks']).toBeDefined();
+          },
+        },
+      ];
       
-      builder.addHeader('Test Header');
-      builder.addSection('Test Section');
-      builder.addDivider();
-      
-      const result = builder.build() as string;
-      
-      expect(result).toContain('<h3>Test Header</h3>');
-      expect(result).toContain('Test Section');
-      expect(result).toContain('<hr>');
-    });
-    
-    test('should generate plain text fallback', () => {
-      const builder = new MatrixBlockBuilder({ clientSupportsBlocks: true });
-      
-      builder.addHeader('Test Header');
-      builder.addSection('Test Section');
-      
-      const result = builder.build() as Record<string, unknown>;
-      
-      expect(result['body']).toContain('Test Header');
-      expect(result['blocks']).toBeDefined();
+      // Run all test cases
+      blockBuilderTestCases.forEach(({ setup, checkOutput }) => {
+        // Build blocks according to test case
+        const output = setup();
+        
+        // Check output meets expectations - need to handle different output types
+        if (typeof output === 'string') {
+          (checkOutput as (output: string) => void)(output);
+        } else {
+          (checkOutput as (output: Record<string, unknown>) => void)(output);
+        }
+      });
     });
   });
   
+  // ResponseFormatter Tests
   describe('ResponseFormatter', () => {
-    test('should format search results', () => {
+    test('response formatting for different content types', () => {
       const formatter = MatrixResponseFormatter.getInstance();
-      const notes = [
+      
+      // Sample notes to use in tests
+      const sampleNotes = [
         { 
           id: 'note-1', 
           title: 'Note 1', 
@@ -302,16 +403,8 @@ describe('Matrix Formatters', () => {
         },
       ];
       
-      const result = formatter.formatSearchResults('test', notes);
-      
-      expect(result).toContain('Search Results for "test"');
-      expect(result).toContain('Note 1');
-      expect(result).toContain('Note 2');
-    });
-    
-    test('should format note display', () => {
-      const formatter = MatrixResponseFormatter.getInstance();
-      const note = {
+      // Sample note for display
+      const sampleNote = {
         id: 'note-id',
         title: 'Note Title',
         content: 'Note content with some **markdown**',
@@ -320,29 +413,50 @@ describe('Matrix Formatters', () => {
         updatedAt: new Date().toISOString(),
       };
       
-      const result = formatter.formatNote(note);
-      
-      expect(result).toContain('Note Title');
-      expect(result).toContain('Note content');
-      expect(result).toContain('tag1');
-      expect(result).toContain('tag2');
-    });
-    
-    test('should format an answer with citations', () => {
-      const formatter = MatrixResponseFormatter.getInstance();
-      const answer = 'This is the answer with some *markdown*.';
-      const citations = [
+      // Sample citations
+      const sampleCitations = [
         { noteId: 'note-1', noteTitle: 'Source 1', excerpt: 'Excerpt 1' },
         { noteId: 'note-2', noteTitle: 'Source 2', excerpt: 'Excerpt 2' },
       ];
       
-      const result = formatter.formatAnswer(answer, citations);
+      // Define test cases for response formatting
+      const responseFormatterTestCases = [
+        {
+          formatFn: () => formatter.formatSearchResults('test', sampleNotes),
+          checkOutput: (output: string) => {
+            expect(output).toContain('Search Results for "test"');
+            expect(output).toContain('Note 1');
+            expect(output).toContain('Note 2');
+          },
+        },
+        {
+          formatFn: () => formatter.formatNote(sampleNote),
+          checkOutput: (output: string) => {
+            expect(output).toContain('Note Title');
+            expect(output).toContain('Note content');
+            expect(output).toContain('tag1');
+            expect(output).toContain('tag2');
+          },
+        },
+        {
+          formatFn: () => formatter.formatAnswer('This is the answer with some *markdown*.', sampleCitations),
+          checkOutput: (output: string) => {
+            expect(output).toContain('This is the answer with some');
+            expect(output).toContain('<em>markdown</em>');
+            expect(output).toContain('Source 1');
+            expect(output).toContain('Source 2');
+          },
+        },
+      ];
       
-      // Check for the formatted content, not raw markdown
-      expect(result).toContain('This is the answer with some');
-      expect(result).toContain('<em>markdown</em>');
-      expect(result).toContain('Source 1');
-      expect(result).toContain('Source 2');
+      // Run all test cases
+      responseFormatterTestCases.forEach(({ formatFn, checkOutput }) => {
+        // Format according to test case
+        const output = formatFn();
+        
+        // Check output meets expectations
+        checkOutput(output);
+      });
     });
   });
 });
@@ -406,77 +520,78 @@ describe('MatrixRenderer Conversation Notes', () => {
     renderer.setCommandHandler(mockHandler);
   });
 
-  test('should render save-note-preview correctly', () => {
-    const result = {
-      type: 'save-note-preview' as const,
-      noteContent: 'This is a sample note content about ecosystem architecture and its principles.',
-      title: 'What is ecosystem architecture?',
-      conversationId: 'conv123',
-    };
+  test('should render different command result types correctly', () => {
+    // Define test cases for rendering different types of command results
+    const renderTestCases = [
+      {
+        name: 'save-note-preview',
+        result: {
+          type: 'save-note-preview' as const,
+          noteContent: 'This is a sample note content about ecosystem architecture and its principles.',
+          title: 'What is ecosystem architecture?',
+          conversationId: 'conv123',
+        },
+        expectations: (message: string) => {
+          expect(message).toContain('Note Preview');
+          expect(message).toContain('<strong>Title</strong>: What is ecosystem architecture?');
+          expect(message).toContain('This is a sample note content');
+          expect(message).toContain('confirm');
+          expect(message).toContain('cancel');
+          expect(message).toContain('Note ID: conv123');
+        },
+      },
+      {
+        name: 'save-note-confirm',
+        result: {
+          type: 'save-note-confirm' as const,
+          noteId: 'note-123',
+          title: 'What is ecosystem architecture?',
+        },
+        expectations: (message: string) => {
+          expect(message).toContain('Note Saved Successfully');
+          expect(message).toContain('<strong>Title</strong>: "What is ecosystem architecture?"');
+          expect(message).toContain('<strong>Note ID</strong>: <code>note-123</code>');
+          expect(message).toContain('note-123');
+        },
+      },
+      {
+        name: 'conversation-notes with notes',
+        result: {
+          type: 'conversation-notes' as const,
+          notes: [mockConversationNote],
+        },
+        expectations: (message: string) => {
+          expect(message).toContain('Notes Created from Conversations');
+          expect(message).toContain('What is ecosystem architecture?');
+          expect(message).toContain('ecosystem-architecture');
+        },
+      },
+      {
+        name: 'conversation-notes with no notes',
+        result: {
+          type: 'conversation-notes' as const,
+          notes: [],
+        },
+        expectations: (message: string) => {
+          expect(message).toContain('No conversation notes found');
+        },
+      },
+    ];
 
-    renderer.render('test-room', result);
-
-    expect(messages.length).toBe(1);
-    expect(messages[0].roomId).toBe('test-room');
-    
-    const message = messages[0].message;
-    // Check essential parts of the rendered message
-    expect(message).toContain('Note Preview');
-    expect(message).toContain('<strong>Title</strong>: What is ecosystem architecture?');
-    expect(message).toContain('This is a sample note content');
-    expect(message).toContain('confirm');
-    expect(message).toContain('cancel');
-    expect(message).toContain('Note ID: conv123');
-  });
-
-  test('should render save-note-confirm correctly', () => {
-    const result = {
-      type: 'save-note-confirm' as const,
-      noteId: 'note-123',
-      title: 'What is ecosystem architecture?',
-    };
-
-    renderer.render('test-room', result);
-
-    expect(messages.length).toBe(1);
-    expect(messages[0].roomId).toBe('test-room');
-    
-    const message = messages[0].message;
-    expect(message).toContain('Note Saved Successfully');
-    expect(message).toContain('<strong>Title</strong>: "What is ecosystem architecture?"');
-    expect(message).toContain('<strong>Note ID</strong>: <code>note-123</code>');
-    expect(message).toContain('note-123');
-  });
-
-  test('should render conversation-notes correctly with notes', () => {
-    const result = {
-      type: 'conversation-notes' as const,
-      notes: [mockConversationNote],
-    };
-
-    renderer.render('test-room', result);
-
-    expect(messages.length).toBe(1);
-    expect(messages[0].roomId).toBe('test-room');
-    
-    const message = messages[0].message;
-    expect(message).toContain('Notes Created from Conversations');
-    expect(message).toContain('What is ecosystem architecture?');
-    expect(message).toContain('ecosystem-architecture');
-  });
-
-  test('should render conversation-notes correctly with no notes', () => {
-    const result = {
-      type: 'conversation-notes' as const,
-      notes: [],
-    };
-
-    renderer.render('test-room', result);
-
-    expect(messages.length).toBe(1);
-    expect(messages[0].roomId).toBe('test-room');
-    
-    const message = messages[0].message;
-    expect(message).toContain('No conversation notes found');
+    // Execute each test case
+    renderTestCases.forEach(({ name, result, expectations }) => {
+      // Clear messages before each test case
+      messages = [];
+      
+      // Render the result
+      renderer.render('test-room', result);
+      
+      // Verify expectations
+      expect(messages.length, `${name} should produce one message`).toBe(1);
+      expect(messages[0].roomId, `${name} should target correct room`).toBe('test-room');
+      
+      // Check message content expectations
+      expectations(messages[0].message);
+    });
   });
 });
