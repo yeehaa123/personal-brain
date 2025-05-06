@@ -4,7 +4,7 @@ import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import type { CommandHandler, CommandResult } from '@commands/index';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
-import { createTrackers, mockCLIInterface, restoreCLIInterface } from '@test/__mocks__/utils/cliUtils';
+import { MockCLIInterface } from '@test/__mocks__/utils/cliInterface';
 
 // Mock the conversation turns
 const mockConversationTurns = [
@@ -124,13 +124,10 @@ const mockBrainProtocol = {
 
 describe('Conversation Notes Commands', () => {
   let commandHandler: CommandHandler;
-  let originalCLI: Record<string, unknown>;
-  let trackers: ReturnType<typeof createTrackers>;
 
   beforeEach(() => {
-    // Set up trackers and mock CLI interface
-    trackers = createTrackers();
-    originalCLI = mockCLIInterface(trackers);
+    // Reset mock CLI interface
+    MockCLIInterface.resetInstance();
     
     // Reset our standardized repository
     MockNoteRepository.resetInstance();
@@ -522,7 +519,8 @@ describe('Conversation Notes Commands', () => {
   });
 
   afterEach(() => {
-    // Restore original CLI interface
-    restoreCLIInterface(originalCLI);
+    // Reset mock CLIInterface and repository
+    MockCLIInterface.resetInstance();
+    MockNoteRepository.resetInstance();
   });
 });

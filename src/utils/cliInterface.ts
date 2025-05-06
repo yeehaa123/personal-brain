@@ -1,8 +1,10 @@
 /**
  * CLI Interface utility using Inquirer for prompts and Chalk for styling
  * 
- * TODO: This class will be updated as part of the CLI/logger separation initiative
- * See planning/cli-logger-separation.md for the detailed plan
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { clearInterval, setInterval } from 'timers';
 
@@ -11,46 +13,163 @@ import inquirer from 'inquirer';
 
 import logger from './logger';
 
+/**
+ * Configuration options for CLIInterface
+ */
+export interface CLIInterfaceOptions {
+  /** Whether to disable console output (useful for testing) */
+  silent?: boolean;
+  /** Custom logger instance to use */
+  customLogger?: typeof logger;
+}
 
+/**
+ * CLI Styles interface to help with type checking
+ */
+export interface CLIStyles {
+  // Basic styles
+  title: typeof chalk.cyan.bold;
+  subtitle: typeof chalk.magenta.bold;
+  separator: typeof chalk.cyan;
+  label: typeof chalk.dim;
+  value: typeof chalk.white;
+  highlight: typeof chalk.cyan;
+  success: typeof chalk.green;
+  error: typeof chalk.red;
+  warning: typeof chalk.yellow;
+  info: typeof chalk.blue;
+  dim: typeof chalk.dim;
+
+  // Specialized styles
+  id: typeof chalk.gray;
+  tag: typeof chalk.cyan;
+  date: typeof chalk.white;
+  number: typeof chalk.cyan;
+  command: typeof chalk.cyan;
+  example: typeof chalk.italic;
+  url: typeof chalk.blue.underline;
+  warn: typeof chalk.yellow;
+
+  // Icon styles
+  successIcon: string;
+  errorIcon: string;
+  warningIcon: string;
+  infoIcon: string;
+}
+
+/**
+ * CLIInterface provides standardized CLI output and user interaction methods.
+ * 
+ * This class follows the Component Interface Standardization pattern with singleton
+ * management via getInstance(), resetInstance(), and createFresh().
+ */
 export class CLIInterface {
-  // Color styles
-  static get styles() {
-    return {
-      // Basic styles
-      title: chalk.cyan.bold,             // Cyan bold for main titles
-      subtitle: chalk.magenta.bold,       // Magenta bold for subtitles - distinct color
-      separator: chalk.cyan,              // Cyan for separators
-      label: chalk.dim,                   // Dim for labels
-      value: chalk.white,                 // White for values
-      highlight: chalk.cyan,              // Cyan for highlighted text
-      success: chalk.green,               // Green for success messages
-      error: chalk.red,                   // Red for error messages
-      warning: chalk.yellow,              // Yellow for warnings
-      info: chalk.blue,                   // Blue for info messages
-      dim: chalk.dim,                     // Dim for less important text
+  /** The singleton instance */
+  private static instance: CLIInterface | null = null;
 
-      // Specialized styles
-      id: chalk.gray,                     // Gray for IDs
-      tag: chalk.cyan,                    // Cyan for tags
-      date: chalk.white,                  // White for dates
-      number: chalk.cyan,                 // Cyan for numbers
-      command: chalk.cyan,                // Cyan for commands
-      example: chalk.italic,              // Italic for examples
-      url: chalk.blue.underline,          // Blue underlined for URLs
-      warn: chalk.yellow,                 // Yellow for warnings
+  /** Whether console output is disabled */
+  public readonly silent: boolean;
 
-      // Icon styles
-      successIcon: chalk.green('✓'),      // Green checkmark for success
-      errorIcon: chalk.red('✖'),          // Red X for errors
-      warningIcon: chalk.yellow('⚠'),     // Yellow warning symbol
-      infoIcon: chalk.blue('ℹ'),           // Blue info symbol
-    };
+  /** Logger instance to use */
+  public readonly logger: typeof logger;
+
+  /** Common style configuration */
+  private static readonly styleConfig: CLIStyles = {
+    // Basic styles
+    title: chalk.cyan.bold,              // Cyan bold for main titles
+    subtitle: chalk.magenta.bold,        // Magenta bold for subtitles
+    separator: chalk.cyan,               // Cyan for separators
+    label: chalk.dim,                    // Dim for labels
+    value: chalk.white,                  // White for values
+    highlight: chalk.cyan,               // Cyan for highlighted text
+    success: chalk.green,                // Green for success messages
+    error: chalk.red,                    // Red for error messages
+    warning: chalk.yellow,               // Yellow for warnings
+    info: chalk.blue,                    // Blue for info messages
+    dim: chalk.dim,                      // Dim for less important text
+
+    // Specialized styles
+    id: chalk.gray,                      // Gray for IDs
+    tag: chalk.cyan,                     // Cyan for tags
+    date: chalk.white,                   // White for dates
+    number: chalk.cyan,                  // Cyan for numbers
+    command: chalk.cyan,                 // Cyan for commands
+    example: chalk.italic,               // Italic for examples
+    url: chalk.blue.underline,           // Blue underlined for URLs
+    warn: chalk.yellow,                  // Yellow for warnings
+
+    // Icon styles
+    successIcon: chalk.green('✓'),       // Green checkmark for success
+    errorIcon: chalk.red('✖'),           // Red X for errors
+    warningIcon: chalk.yellow('⚠'),      // Yellow warning symbol
+    infoIcon: chalk.blue('ℹ'),           // Blue info symbol
+  };
+
+  /**
+   * Get the singleton instance of CLIInterface
+   * 
+   * @param options Options for configuring the interface
+   * @returns The shared CLIInterface instance
+   */
+  public static getInstance(options?: CLIInterfaceOptions): CLIInterface {
+    if (!CLIInterface.instance) {
+      CLIInterface.instance = new CLIInterface(options);
+    }
+    return CLIInterface.instance;
+  }
+
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance to ensure test isolation
+   */
+  public static resetInstance(): void {
+    CLIInterface.instance = null;
+  }
+
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Options for configuring the interface
+   * @returns A new CLIInterface instance
+   */
+  public static createFresh(options?: CLIInterfaceOptions): CLIInterface {
+    return new CLIInterface(options);
+  }
+
+  /**
+   * Get the style configuration for CLI output
+   */
+  public get styles(): CLIStyles {
+    return CLIInterface.styleConfig;
+  }
+
+  /**
+   * Static method to display an error message
+   * @param message The error message to display
+   */
+  public static error(message: string): void {
+    const instance = CLIInterface.getInstance();
+    instance.error(message);
+  }
+
+  /**
+   * Private constructor to enforce the use of getInstance()
+   * 
+   * @param options Configuration options
+   */
+  private constructor(options?: CLIInterfaceOptions) {
+    this.silent = options?.silent ?? false;
+    this.logger = options?.customLogger ?? logger;
   }
 
   /**
    * Display a styled title
+   * @param title The title to display
    */
-  static displayTitle(title: string): void {
+  public displayTitle(title: string): void {
+    if (this.silent) return;
+
     const separator = '='.repeat(title.length + 4);
     const formattedTitle = `\n${this.styles.separator(separator)}\n${this.styles.title(`  ${title}  `)}\n${this.styles.separator(separator)}\n`;
 
@@ -58,13 +177,16 @@ export class CLIInterface {
     process.stdout.write(formattedTitle);
 
     // Log to file only, not to console
-    logger.debug(`Displayed title: ${title}`);
+    this.logger.debug(`Displayed title: ${title}`);
   }
 
   /**
    * Display a styled subtitle
+   * @param subtitle The subtitle to display
    */
-  static displaySubtitle(subtitle: string): void {
+  public displaySubtitle(subtitle: string): void {
+    if (this.silent) return;
+
     // Add a separator line before subtitle
     const line = '─'.repeat(subtitle.length + 4);
 
@@ -75,59 +197,83 @@ export class CLIInterface {
     process.stdout.write(formattedSubtitle);
 
     // Log to file only, not to console
-    logger.debug(`Displayed subtitle: ${subtitle}`);
+    this.logger.debug(`Displayed subtitle: ${subtitle}`);
   }
 
   /**
    * Display a success message
+   * @param message The success message to display
    */
-  static success(message: string): void {
+  public success(message: string): void {
+    if (this.silent) return;
+
     const formatted = `${this.styles.successIcon} ${message}`;
     process.stdout.write(formatted + '\n');
-    logger.info(`[SUCCESS] ${message}`);
+    this.logger.info(`[SUCCESS] ${message}`);
   }
 
   /**
    * Display an error message
+   * @param message The error message to display
    */
-  static error(message: string): void {
+  public error(message: string): void {
+    if (this.silent) return;
+
     const formatted = `${this.styles.errorIcon} ${message}`;
     process.stdout.write(formatted + '\n');
-    logger.error(message);
+    this.logger.error(message);
   }
 
   /**
    * Display a warning message
+   * @param message The warning message to display
    */
-  static warn(message: string): void {
+  public warn(message: string): void {
+    if (this.silent) return;
+
     const formatted = `${this.styles.warningIcon} ${message}`;
     process.stdout.write(formatted + '\n');
-    logger.warn(message);
+    this.logger.warn(message);
   }
 
   /**
    * Display an info message
+   * @param message The info message to display
    */
-  static info(message: string): void {
+  public info(message: string): void {
+    if (this.silent) return;
+
     const formatted = `${this.styles.infoIcon} ${message}`;
     process.stdout.write(formatted + '\n');
-    logger.info(message);
+    this.logger.info(message);
   }
 
   /**
    * Print text to console without logging
+   * @param message The message to print
    */
-  static print(message: string): void {
+  public print(message: string): void {
+    if (this.silent) return;
+
     process.stdout.write(message + '\n');
   }
 
   /**
    * Format and print a label-value pair
+   * @param label The label to print
+   * @param value The value to print
+   * @param options Optional formatting options
    */
-  static printLabelValue(label: string, value: string | number | string[] | null, options?: {
-    emptyText?: string,
-    formatter?: (val: string) => string
-  }): void {
+  public printLabelValue(
+    label: string,
+    value: string | number | string[] | null,
+    options?: {
+      emptyText?: string,
+      formatter?: (val: string) => string
+    },
+  ): void {
+    if (this.silent) return;
+
     const emptyText = options?.emptyText || 'None';
 
     // Format the label
@@ -156,10 +302,14 @@ export class CLIInterface {
 
   /**
    * Display a formatted list of items
+   * @param items The items to display
+   * @param formatter Optional formatter for the items
    */
-  static displayList<T>(items: T[], formatter?: (item: T, index: number) => string): void {
+  public displayList<T>(items: T[], formatter?: (item: T, index: number) => string): void {
+    if (this.silent) return;
+
     // Log the list operation
-    logger.info(`Displaying list of ${items.length} items`);
+    this.logger.info(`Displaying list of ${items.length} items`);
 
     items.forEach((item, index) => {
       const display = formatter ? formatter(item, index) : String(item);
@@ -172,8 +322,12 @@ export class CLIInterface {
 
   /**
    * Format a command for display
+   * @param command The command to format
+   * @param description The command description
+   * @param examples Optional usage examples
+   * @returns The formatted command string
    */
-  static formatCommand(command: string, description: string, examples?: string[]): string {
+  public formatCommand(command: string, description: string, examples?: string[]): string {
     const cmdText = `  ${this.styles.command(command.padEnd(20))} - ${description}`;
 
     if (!examples || examples.length === 0) {
@@ -188,15 +342,19 @@ export class CLIInterface {
 
   /**
    * Format an ID for display
+   * @param id The ID to format
+   * @returns The formatted ID string
    */
-  static formatId(id: string): string {
+  public formatId(id: string): string {
     return this.styles.id(id);
   }
 
   /**
-   * Format tags for display 
+   * Format tags for display
+   * @param tags The tags to format
+   * @returns The formatted tags string
    */
-  static formatTags(tags: string[] | null | undefined): string {
+  public formatTags(tags: string[] | null | undefined): string {
     if (!tags || tags.length === 0) {
       return this.styles.dim('No tags');
     }
@@ -206,16 +364,25 @@ export class CLIInterface {
 
   /**
    * Format a date for display
+   * @param date The date to format
+   * @returns The formatted date string
    */
-  static formatDate(date: Date | string | number): string {
+  public formatDate(date: Date | string | number): string {
     const dateObj = typeof date === 'object' ? date : new Date(date);
     return dateObj.toLocaleString();
   }
 
   /**
    * Prompt for a selection from a list of choices
+   * @param message The prompt message
+   * @param choices The available choices
+   * @returns The selected value
    */
-  static async select<T>(message: string, choices: Array<{ name: string, value: T }>): Promise<T> {
+  public async select<T>(message: string, choices: Array<{ name: string, value: T }>): Promise<T> {
+    if (this.silent) {
+      throw new Error('Cannot use select in silent mode');
+    }
+
     const { selection } = await inquirer.prompt([
       {
         type: 'list',
@@ -229,8 +396,15 @@ export class CLIInterface {
 
   /**
    * Prompt for a free text input
+   * @param message The prompt message
+   * @param defaultValue Optional default value
+   * @returns The user's input
    */
-  static async input(message: string, defaultValue?: string): Promise<string> {
+  public async input(message: string, defaultValue?: string): Promise<string> {
+    if (this.silent) {
+      throw new Error('Cannot use input in silent mode');
+    }
+
     const { input } = await inquirer.prompt([
       {
         type: 'input',
@@ -244,8 +418,15 @@ export class CLIInterface {
 
   /**
    * Prompt for a confirmation (yes/no)
+   * @param message The prompt message
+   * @param defaultValue Optional default value
+   * @returns The user's confirmation
    */
-  static async confirm(message: string, defaultValue = false): Promise<boolean> {
+  public async confirm(message: string, defaultValue = false): Promise<boolean> {
+    if (this.silent) {
+      throw new Error('Cannot use confirm in silent mode');
+    }
+
     const { confirmed } = await inquirer.prompt([
       {
         type: 'confirm',
@@ -259,9 +440,15 @@ export class CLIInterface {
 
   /**
    * Display a spinner while an async operation is in progress
-   * Note: This uses console for the spinner effect
+   * @param message The message to display
+   * @param task The async task to execute
+   * @returns The result of the task
    */
-  static async withSpinner<T>(message: string, task: () => Promise<T>): Promise<T> {
+  public async withSpinner<T>(message: string, task: () => Promise<T>): Promise<T> {
+    if (this.silent) {
+      return task();
+    }
+
     const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
     let frameIndex = 0;
 

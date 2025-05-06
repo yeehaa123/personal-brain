@@ -39,46 +39,61 @@ describe('ProfileTagService', () => {
     });
   });
 
-  test('should properly initialize', () => {
-    expect(tagService).toBeDefined();
-  });
+  // Simple initialization test - minimal but useful for regression
+  test('should properly initialize', () => expect(tagService).toBeDefined());
 
   test('should extract keywords from profile', () => {
     const keywords = tagService.extractProfileKeywords(mockProfile);
 
-    expect(keywords).toBeDefined();
-    expect(Array.isArray(keywords)).toBe(true);
-    expect(keywords.length).toBeGreaterThan(0);
-
-    // Should extract important keywords from the profile based on mock data
-    expect(keywords).toContain('build');
-    expect(keywords).toContain('ecosystems');
-    expect(keywords).toContain('innovation');
-    expect(keywords).toContain('collaboration');
+    // Single consolidated assertion
+    expect({
+      isDefined: keywords !== undefined,
+      isArray: Array.isArray(keywords),
+      hasItems: keywords.length > 0,
+      containsExpectedKeywords: [
+        'build', 'ecosystems', 'innovation', 'collaboration',
+      ].every(keyword => keywords.includes(keyword)),
+    }).toMatchObject({
+      isDefined: true,
+      isArray: true,
+      hasItems: true,
+      containsExpectedKeywords: true,
+    });
   });
 
   test('should generate profile tags with AI', async () => {
     const profileText = 'John Doe is a software engineer with expertise in TypeScript and React.';
     const tags = await tagService.generateProfileTags(profileText);
 
-    expect(tags).toBeDefined();
-    expect(Array.isArray(tags)).toBe(true);
-    expect(tags.length).toBeGreaterThan(0);
-
-    // Should include tags from our mock implementation
-    expect(tags).toContain('software-development');
-    expect(tags).toContain('typescript');
-    expect(tags).toContain('react');
+    // Single consolidated assertion
+    expect({
+      isDefined: tags !== undefined,
+      isArray: Array.isArray(tags),
+      hasItems: tags.length > 0,
+      containsExpectedTags: [
+        'software-development', 'typescript', 'react',
+      ].every(tag => tags.includes(tag)),
+    }).toMatchObject({
+      isDefined: true,
+      isArray: true,
+      hasItems: true,
+      containsExpectedTags: true,
+    });
   });
 
   test('should update profile tags', async () => {
     const updatedTags = await tagService.updateProfileTags(true);
 
-    expect(updatedTags).toBeDefined();
-    expect(Array.isArray(updatedTags)).toBe(true);
-    if (updatedTags) {
-      expect(updatedTags.length).toBeGreaterThan(0);
-    }
+    // Single consolidated assertion
+    expect({
+      isDefined: updatedTags !== undefined,
+      isArray: Array.isArray(updatedTags),
+      hasItems: updatedTags ? updatedTags.length > 0 : false,
+    }).toMatchObject({
+      isDefined: true,
+      isArray: true,
+      hasItems: true,
+    });
   });
 
   test('should handle minimal profile information', () => {
@@ -94,13 +109,20 @@ describe('ProfileTagService', () => {
 
     const keywords = tagService.extractProfileKeywords(minimalProfile);
 
-    expect(keywords).toBeDefined();
-    expect(Array.isArray(keywords)).toBe(true);
-    expect(keywords.length).toBeGreaterThan(0);
-    expect(keywords).toContain('experienced');
-    expect(keywords).toContain('developer');
-    expect(keywords).toContain('react');
-    expect(keywords).toContain('skills');
+    // Single consolidated assertion
+    expect({
+      isDefined: keywords !== undefined,
+      isArray: Array.isArray(keywords),
+      hasItems: keywords.length > 0,
+      containsExpectedKeywords: [
+        'experienced', 'developer', 'react', 'skills',
+      ].every(keyword => keywords.includes(keyword)),
+    }).toMatchObject({
+      isDefined: true,
+      isArray: true,
+      hasItems: true,
+      containsExpectedKeywords: true,
+    });
   });
 
   test('should extract keywords from experiences', () => {
@@ -137,10 +159,16 @@ describe('ProfileTagService', () => {
 
     const keywords = tagService.extractProfileKeywords(profileWithExperiences);
 
-    expect(keywords).toBeDefined();
-    expect(keywords).toContain('data');
-    expect(keywords).toContain('scientist');
-    expect(keywords).toContain('analyst');
+    // Single consolidated assertion
+    expect({
+      isDefined: keywords !== undefined,
+      containsExpectedKeywords: [
+        'data', 'scientist', 'analyst',
+      ].every(keyword => keywords.includes(keyword)),
+    }).toMatchObject({
+      isDefined: true,
+      containsExpectedKeywords: true,
+    });
   });
 
   test('should normalize tags before using them', async () => {
@@ -153,17 +181,35 @@ describe('ProfileTagService', () => {
     const profileText = 'John is a software developer';
     const tags = await tagService.generateProfileTags(profileText);
 
-    // Verify the returned tags are as expected from our mock
-    expect(tags).toContain('software-development');
-    expect(tags).toContain('typescript');
-    expect(tags).toContain('react');
-
     // Test basic tag normalization logic that would occur in a normalization function
     const rawTags = ['Software Development', 'TypeScript ', ' React'];
     const normalizedTags = rawTags.map(tag => tag.trim().toLowerCase());
 
-    expect(normalizedTags).toContain('software development');
-    expect(normalizedTags).toContain('typescript');
-    expect(normalizedTags).toContain('react');
+    // Single consolidated assertion for both tests
+    expect({
+      // Verify the returned tags are as expected from our mock
+      generatedTags: {
+        containsSoftwareDevelopment: tags.includes('software-development'),
+        containsTypescript: tags.includes('typescript'),
+        containsReact: tags.includes('react'),
+      },
+      // Test normalization logic
+      normalizedTags: {
+        containsSoftwareDevelopment: normalizedTags.includes('software development'),
+        containsTypescript: normalizedTags.includes('typescript'),
+        containsReact: normalizedTags.includes('react'),
+      },
+    }).toMatchObject({
+      generatedTags: {
+        containsSoftwareDevelopment: true,
+        containsTypescript: true,
+        containsReact: true,
+      },
+      normalizedTags: {
+        containsSoftwareDevelopment: true,
+        containsTypescript: true,
+        containsReact: true,
+      },
+    });
   });
 });

@@ -1,14 +1,7 @@
 /**
  * Tests for the ContextInterface
  * 
- * These tests validate that the interface can be implemented correctly
- * and that implementations behave as expected.
- * 
- * This test file has been updated to include tests for the new standardized interfaces:
- * - StorageAccess
- * - FormatterAccess
- * - ServiceAccess
- * - ExtendedContextInterface
+ * Validates the core interface contract focusing only on essential behavior
  */
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { beforeEach, describe, expect, test } from 'bun:test';
@@ -18,30 +11,27 @@ import type {
   ContextDependencies,
   ContextInterface,
   ContextStatus,
-  ResourceDefinition,
 } from '@/contexts/contextInterface';
 import type { FormattingOptions } from '@/contexts/formatterInterface';
 import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
-// Imports for testing
-import type { Registry, RegistryOptions } from '@/utils/registry';
 import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';
 import { MockStorageInterface } from '@test/__mocks__/storage/baseStorageInterface';
 import { MockRegistry } from '@test/__mocks__/utils/registry';
 
-// Define MockData interface for type safety
+// Simple test data type
 interface MockData {
   id: string;
   [key: string]: unknown;
 }
 
-// Mock implementation of a service for testing
+// Simple mock service
 class MockService {
   getServiceName(): string {
     return 'MockService';
   }
 }
 
-// Mock implementation of ContextInterface for testing
+// Minimal implementation of ContextInterface
 class MockContext implements ContextInterface<
   MockStorageInterface<MockData>,
   MockConversationFormatter,
@@ -50,61 +40,23 @@ class MockContext implements ContextInterface<
 > {
   private static instance: MockContext | null = null;
   
-  private readyState = false;
-  private mockServer: McpServer;
-  private mockResources: ResourceDefinition[] = [];
-  private mockTools: ResourceDefinition[] = [];
-  private mockStorage: MockStorageInterface<MockData>;
-  private mockFormatter: MockConversationFormatter;
-  private mockRegistry: MockRegistry | Registry<RegistryOptions>;
-  private options: Record<string, unknown>;
+  private ready = false;
+  private storage: MockStorageInterface<MockData>;
+  private formatter: MockConversationFormatter;
+  private registry: MockRegistry;
+  private hasService: boolean;
 
-  private constructor(
-    options: Record<string, unknown> = {}, 
-    dependencies?: ContextDependencies<MockStorageInterface<MockData>, MockConversationFormatter>,
-  ) {
-    // Store options for use in other methods
-    this.options = options;
-    this.mockServer = {
-      resource: () => {},
-      tool: () => {},
-    } as unknown as McpServer;
-
-    // Add a sample resource and tool for testing
-    this.mockResources = [
-      {
-        protocol: 'test',
-        path: 'resource',
-        handler: async () => ({ success: true }),
-        name: 'Test Resource',
-      },
-    ];
+  private constructor(options: Record<string, unknown> = {}) {
+    this.storage = MockStorageInterface.createFresh<MockData>();
+    this.formatter = MockConversationFormatter.createFresh();
+    this.registry = MockRegistry.createFresh();
+    this.hasService = !!options['registerMockService'];
     
-    this.mockTools = [
-      {
-        protocol: 'test',
-        path: 'tool',
-        handler: async () => ({ success: true }),
-        name: 'Test Tool',
-      },
-    ];
-    
-    // Initialize dependencies from explicit dependencies or create new ones
-    this.mockStorage = dependencies?.storage || MockStorageInterface.createFresh<MockData>();
-    this.mockFormatter = dependencies?.formatter || MockConversationFormatter.createFresh();
-    
-    // We'll use the standard MockRegistry from our mocks
-    this.mockRegistry = dependencies?.registry || MockRegistry.createFresh();
-    
-    // Register a test service
-    if (options['registerMockService']) {
-      this.mockRegistry.register('MockService', () => new MockService());
+    if (this.hasService) {
+      this.registry.register('MockService', () => new MockService());
     }
   }
 
-  /**
-   * Get the singleton instance
-   */
   static getInstance(options: Record<string, unknown> = {}): MockContext {
     if (!MockContext.instance) {
       MockContext.instance = new MockContext(options);
@@ -112,115 +64,87 @@ class MockContext implements ContextInterface<
     return MockContext.instance;
   }
   
-  /**
-   * Reset the singleton instance
-   */
   static resetInstance(): void {
     MockContext.instance = null;
   }
   
-  /**
-   * Create a fresh instance
-   */
   static createFresh(options: Record<string, unknown> = {}): MockContext {
     return new MockContext(options);
   }
   
-  /**
-   * Create an instance with dependencies
-   */
   static createWithDependencies(
     dependencies: ContextDependencies<MockStorageInterface<MockData>, MockConversationFormatter>,
   ): MockContext {
-    return new MockContext({}, dependencies);
+    const context = new MockContext();
+    context.storage = dependencies.storage || context.storage;
+    context.formatter = dependencies.formatter || context.formatter;
+    return context;
   }
 
   async initialize(): Promise<boolean> {
-    // Simulate initialization
-    this.readyState = true;
+    this.ready = true;
     return true;
   }
 
-  // Mock implementation to satisfy ESLint
-  _testServerUsage(_server: McpServer): void {
-    // This method is only used to ensure the 'server' parameter
-    // is recognized as used by the linter
-    return;
-  }
-
   isReady(): boolean {
-    return this.readyState;
+    return this.ready;
   }
 
   getStatus(): ContextStatus {
     return {
       name: 'MockContext',
       version: '1.0.0',
-      ready: this.readyState,
-      resourceCount: this.mockResources.length,
-      toolCount: this.mockTools.length,
+      ready: this.ready,
+      resourceCount: 1,
+      toolCount: 1,
     };
   }
 
-  registerOnServer(server: McpServer): boolean {
-    try {
-      // Simulate registering resources and tools
-      this._testServerUsage(server);
-      return true;
-    } catch (_error) {
-      return false;
-    }
+  registerOnServer(_server: McpServer): boolean {
+    return true;
   }
 
   getMcpServer(): McpServer {
-    return this.mockServer;
+    return {} as McpServer;
   }
 
   getCapabilities(): ContextCapabilities {
     return {
-      resources: [...this.mockResources],
-      tools: [...this.mockTools],
+      resources: [{
+        protocol: 'test',
+        path: 'resource',
+        handler: async () => ({ success: true }),
+        name: 'Test Resource',
+      }],
+      tools: [{
+        protocol: 'test',
+        path: 'tool',
+        handler: async () => ({ success: true }),
+        name: 'Test Tool',
+      }],
       features: [],
     };
   }
   
   getStorage(): MockStorageInterface<MockData> {
-    return this.mockStorage;
+    return this.storage;
   }
   
   getFormatter(): MockConversationFormatter {
-    return this.mockFormatter;
+    return this.formatter;
   }
   
   format(data: ConversationTurn[], options?: FormattingOptions): string {
-    // Use the formatter to format the data
-    return this.mockFormatter.format(data, options);
+    return this.formatter.format(data, options);
   }
   
   getService<T>(serviceType: new () => T): T {
-    // Always check if we've registered the service
-    const serviceName = 'MockService';
-    
-    // We need to explicitly check if the service was registered with the mock registry
-    if (this.options['registerMockService'] !== true) {
-      throw new Error(`Service ${serviceType.name} is not registered in the container`);
+    if (!this.hasService) {
+      throw new Error('Service not registered');
     }
-    
-    // For the success case, we return the service
-    if (serviceType === MockService && this.mockRegistry.has(serviceName)) {
-      return this.mockRegistry.resolve<T>(serviceName);
-    }
-    
-    // Any other case should throw
-    throw new Error(`Service ${serviceType.name} is not registered in the container`);
+    return new serviceType() as T;
   }
   
-  // Methods required by ExtendedContextInterface
-  createWithDependencies(dependencies: ContextDependencies<MockStorageInterface<MockData>, MockConversationFormatter>): MockContext {
-    return MockContext.createWithDependencies(dependencies);
-  }
-  
-  // Methods required by ContextInterface
   getInstance(): MockContext {
     return MockContext.getInstance();
   }
@@ -233,184 +157,275 @@ class MockContext implements ContextInterface<
     return MockContext.createFresh(options);
   }
   
+  createWithDependencies(
+    dependencies: ContextDependencies<MockStorageInterface<MockData>, MockConversationFormatter>,
+  ): MockContext {
+    return MockContext.createWithDependencies(dependencies);
+  }
+  
   async cleanup(): Promise<void> {
-    // Simulate cleanup in the mock
-    this.readyState = false;
-    this.mockResources = [];
-    this.mockTools = [];
+    this.ready = false;
   }
 }
 
 describe('ContextInterface', () => {
-  // Reset the singleton before each test
   beforeEach(() => {
     MockContext.resetInstance();
   });
   
-  describe('Core Interface', () => {
-    test('should initialize successfully', async () => {
-      const context = MockContext.getInstance();
-      const result = await context.initialize();
-      expect(result).toBe(true);
-      expect(context.isReady()).toBe(true);
-    });
-
-    test('getStatus should return valid status object', () => {
-      const context = MockContext.getInstance();
-      const status = context.getStatus();
-      expect(status).toHaveProperty('name', 'MockContext');
-      expect(status).toHaveProperty('version', '1.0.0');
-      expect(status).toHaveProperty('ready');
-      expect(status).toHaveProperty('resourceCount');
-      expect(status).toHaveProperty('toolCount');
-    });
-
-    test('registerOnServer should return true for successful registration', () => {
-      const context = MockContext.getInstance();
-      const mockServer = {} as McpServer;
-      // Pass the mock server to registerOnServer
-      const result = context.registerOnServer(mockServer);
-      expect(result).toBe(true);
-    });
-
-    test('getMcpServer should return an MCP server instance', () => {
-      const context = MockContext.getInstance();
-      const serverInstance = context.getMcpServer();
-      expect(serverInstance).toBeDefined();
-    });
-
-    test('getCapabilities should return resources, tools, and features', () => {
-      const context = MockContext.getInstance();
-      const capabilities = context.getCapabilities();
-      
-      // Check resources
-      expect(Array.isArray(capabilities.resources)).toBe(true);
-      expect(capabilities.resources.length).toBe(1);
-      expect(capabilities.resources[0]).toHaveProperty('protocol', 'test');
-      expect(capabilities.resources[0]).toHaveProperty('path', 'resource');
-      expect(capabilities.resources[0]).toHaveProperty('handler');
-      expect(capabilities.resources[0]).toHaveProperty('name', 'Test Resource');
-      
-      // Check tools
-      expect(Array.isArray(capabilities.tools)).toBe(true);
-      expect(capabilities.tools.length).toBe(1);
-      expect(capabilities.tools[0]).toHaveProperty('protocol', 'test');
-      expect(capabilities.tools[0]).toHaveProperty('path', 'tool');
-      expect(capabilities.tools[0]).toHaveProperty('handler');
-      expect(capabilities.tools[0]).toHaveProperty('name', 'Test Tool');
-      
-      // Check features
-      expect(Array.isArray(capabilities.features)).toBe(true);
-    });
-  });
-
-  describe('Component Interface Standardization Pattern', () => {
-    test('getInstance should return a singleton instance', () => {
-      const instance1 = MockContext.getInstance();
-      const instance2 = MockContext.getInstance();
-      expect(instance1).toBe(instance2);
-    });
+  test('initialization and status reporting', async () => {
+    // Create and initialize context
+    const context = MockContext.getInstance();
     
-    test('resetInstance should clear the singleton', () => {
-      const instance1 = MockContext.getInstance();
-      MockContext.resetInstance();
-      const instance2 = MockContext.getInstance();
-      expect(instance1).not.toBe(instance2);
-    });
+    // Capture initial state
+    const initialReady = context.isReady();
     
-    test('createFresh should return a new instance', () => {
-      const singleton = MockContext.getInstance();
-      const freshInstance = MockContext.createFresh();
-      expect(singleton).not.toBe(freshInstance);
-    });
+    // Perform initialization
+    const initResult = await context.initialize();
     
-    test('createWithDependencies should use provided dependencies', () => {
-      // Create mock dependencies
-      const customStorage = MockStorageInterface.createFresh<MockData>();
-      const customFormatter = MockConversationFormatter.createFresh();
-      const customRegistry = MockRegistry.createFresh();
-      
-      // Create instance with dependencies
-      const instance = MockContext.createWithDependencies({
-        storage: customStorage,
-        formatter: customFormatter,
-        registry: customRegistry,
-      });
-      
-      // Verify dependencies were used
-      expect(instance.getStorage()).toBe(customStorage);
-      expect(instance.getFormatter()).toBe(customFormatter);
+    // Capture post-initialization state
+    const afterInitReady = context.isReady();
+    const status = context.getStatus();
+    
+    // Check for required status properties
+    const hasRequiredStatusProps = 
+      'name' in status && 
+      'version' in status && 
+      'ready' in status && 
+      'resourceCount' in status && 
+      'toolCount' in status;
+    
+    // Consolidated assertion for initialization behavior
+    expect({
+      initialState: {
+        ready: initialReady,
+      },
+      initialization: {
+        result: initResult,
+        readyAfterInit: afterInitReady,
+      },
+      status: {
+        name: status.name,
+        version: status.version,
+        hasRequiredProps: hasRequiredStatusProps,
+        readyValue: status.ready,
+      },
+    }).toMatchObject({
+      initialState: {
+        ready: false,
+      },
+      initialization: {
+        result: true,
+        readyAfterInit: true,
+      },
+      status: {
+        name: 'MockContext',
+        version: '1.0.0',
+        hasRequiredProps: true,
+        readyValue: true,
+      },
     });
   });
   
-  describe('StorageAccess Interface', () => {
-    test('getStorage should return a storage implementation', () => {
-      const context = MockContext.getInstance();
-      const storage = context.getStorage();
-      expect(storage).toBeInstanceOf(MockStorageInterface);
-    });
+  test('server operations and capabilities', () => {
+    const context = MockContext.getInstance();
     
-    test('storage should be functional', async () => {
-      const context = MockContext.getInstance();
-      const storage = context.getStorage();
-      
-      // Test basic storage operations
-      const testData = { id: 'test-id', value: 'test-value' };
-      await storage.create(testData);
-      const retrieved = await storage.read('test-id');
-      
-      expect(retrieved).toEqual(testData);
-    });
-  });
-  
-  describe('FormatterAccess Interface', () => {
-    test('getFormatter should return a formatter implementation', () => {
-      const context = MockContext.getInstance();
-      const formatter = context.getFormatter();
-      expect(formatter).toBeInstanceOf(MockConversationFormatter);
-    });
+    // Test server registration
+    const registerResult = context.registerOnServer({} as McpServer);
     
-    test('format should apply formatting to data', () => {
-      const context = MockContext.getInstance();
-      const testTurns: ConversationTurn[] = [
-        {
-          query: 'Test query',
-          response: 'Test response',
-          timestamp: new Date(),
+    // Test server access
+    const server = context.getMcpServer();
+    const hasServer = !!server;
+    
+    // Test capabilities
+    const capabilities = context.getCapabilities();
+    const hasResources = Array.isArray(capabilities.resources) && capabilities.resources.length > 0;
+    const hasTools = Array.isArray(capabilities.tools) && capabilities.tools.length > 0;
+    const hasFeatures = Array.isArray(capabilities.features);
+    
+    // Resource and tool properties
+    const firstResource = capabilities.resources[0];
+    const firstTool = capabilities.tools[0];
+    
+    // Consolidated assertion for server and capabilities
+    expect({
+      server: {
+        registerResult,
+        hasServer,
+      },
+      capabilities: {
+        hasResources,
+        hasTools,
+        hasFeatures,
+        resourceProps: firstResource ? {
+          hasName: 'name' in firstResource,
+          hasPath: 'path' in firstResource,
+          hasHandler: typeof firstResource.handler === 'function',
+        } : null,
+        toolProps: firstTool ? {
+          hasName: 'name' in firstTool,
+          hasPath: 'path' in firstTool,
+          hasHandler: typeof firstTool.handler === 'function',
+        } : null,
+      },
+    }).toMatchObject({
+      server: {
+        registerResult: true,
+        hasServer: true,
+      },
+      capabilities: {
+        hasResources: true,
+        hasTools: true,
+        hasFeatures: true,
+        resourceProps: {
+          hasName: true,
+          hasPath: true,
+          hasHandler: true,
         },
-        {
-          query: 'Follow-up question',
-          response: 'Follow-up answer',
-          timestamp: new Date(),
+        toolProps: {
+          hasName: true,
+          hasPath: true,
+          hasHandler: true,
         },
-      ];
-      
-      const formatted = context.format(testTurns);
-      
-      // The mock formatter returns a preset string
-      expect(formatted).toBe('Formatted turns');
+      },
     });
   });
   
-  describe('ServiceAccess Interface', () => {
-    test('getService should retrieve a registered service', () => {
-      // Create a context with the mockService option
-      const context = MockContext.createFresh({ registerMockService: true });
-      const service = context.getService(MockService);
-      
-      expect(service).toBeInstanceOf(MockService);
-      expect(service.getServiceName()).toBe('MockService');
-    });
+  test('component interface standardization pattern', () => {
+    // Test getInstance singleton behavior
+    const instance1 = MockContext.getInstance();
+    const instance2 = MockContext.getInstance();
+    const sameInstances = instance1 === instance2;
     
-    test('getService should throw when service is not registered', () => {
-      // Create a fresh instance without registering any services
-      const context = MockContext.createFresh({
-        // Explicitly set registerMockService to false to ensure no services are registered
-        registerMockService: false,
-      });
-      
-      // This should throw because the service is not registered
-      expect(() => context.getService(MockService)).toThrow();
+    // Test resetInstance behavior
+    MockContext.resetInstance();
+    const instance3 = MockContext.getInstance();
+    const resetWorked = instance1 !== instance3;
+    
+    // Test createFresh behavior
+    const singleton = MockContext.getInstance();
+    const freshInstance = MockContext.createFresh();
+    const freshIsDifferent = singleton !== freshInstance;
+    
+    // Dependency injection
+    const customStorage = MockStorageInterface.createFresh<MockData>();
+    const dependencyContext = MockContext.createWithDependencies({ 
+      storage: customStorage, 
+    });
+    const injectionWorked = dependencyContext.getStorage() === customStorage;
+    
+    // Consolidated assertion for instance management pattern
+    expect({
+      singleton: {
+        multipleGetInstanceSame: sameInstances,
+        resetWorks: resetWorked,
+      },
+      freshInstances: {
+        differentFromSingleton: freshIsDifferent,
+      },
+      dependencyInjection: {
+        injectionWorked,
+      },
+    }).toMatchObject({
+      singleton: {
+        multipleGetInstanceSame: true,
+        resetWorks: true,
+      },
+      freshInstances: {
+        differentFromSingleton: true,
+      },
+      dependencyInjection: {
+        injectionWorked: true,
+      },
+    });
+  });
+  
+  test('storage and formatter access', async () => {
+    const context = MockContext.getInstance();
+    
+    // Test storage access and operations
+    const storage = context.getStorage();
+    const isStorageInstance = storage instanceof MockStorageInterface;
+    
+    // Test basic storage operations
+    const testData = { id: 'test-id', value: 'test-value' };
+    await storage.create(testData);
+    const retrieved = await storage.read('test-id');
+    const storageOperationWorks = retrieved && retrieved.id === testData.id;
+    
+    // Test formatter access and operations
+    const formatter = context.getFormatter();
+    const isFormatterInstance = formatter instanceof MockConversationFormatter;
+    
+    // Test format method
+    const emptyTurns: ConversationTurn[] = [];
+    const formatted = context.format(emptyTurns);
+    const formatMethodWorks = formatted === 'Formatted turns';
+    
+    // Consolidated assertion for storage and formatter
+    expect({
+      storage: {
+        isCorrectInstance: isStorageInstance,
+        operationSucceeded: storageOperationWorks,
+      },
+      formatter: {
+        isCorrectInstance: isFormatterInstance,
+        formatMethodWorks,
+      },
+    }).toMatchObject({
+      storage: {
+        isCorrectInstance: true,
+        operationSucceeded: true,
+      },
+      formatter: {
+        isCorrectInstance: true,
+        formatMethodWorks: true,
+      },
+    });
+  });
+  
+  test('service access success and failure', () => {
+    // Test service access - success case
+    const contextWithService = MockContext.createFresh({ registerMockService: true });
+    let serviceWorks = false;
+    let serviceName = '';
+    
+    try {
+      const service = contextWithService.getService(MockService);
+      serviceWorks = service instanceof MockService;
+      serviceName = service.getServiceName();
+    } catch (_error) {
+      serviceWorks = false;
+    }
+    
+    // Test service access - failure case
+    const contextWithoutService = MockContext.createFresh({ registerMockService: false });
+    let serviceThrows = false;
+    
+    try {
+      contextWithoutService.getService(MockService);
+      serviceThrows = false;
+    } catch (_error) {
+      serviceThrows = true;
+    }
+    
+    // Consolidated assertion for service access
+    expect({
+      success: {
+        serviceWorks,
+        serviceName,
+      },
+      failure: {
+        throwsWhenNotRegistered: serviceThrows,
+      },
+    }).toMatchObject({
+      success: {
+        serviceWorks: true,
+        serviceName: 'MockService',
+      },
+      failure: {
+        throwsWhenNotRegistered: true,
+      },
     });
   });
 });

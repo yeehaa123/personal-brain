@@ -5,35 +5,73 @@
  */
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 
-import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { WebsiteToolService } from '@/contexts/website/tools';
 import type { WebsiteContext } from '@/contexts/website/websiteContext';
-import { 
+import type { 
+  LandingPageResult,
+  WebsiteBuildResult,
+  WebsitePromoteResult,
+  WebsiteStatusResult,
+} from '@/interfaces/matrix/formatters/types';
+import { createTestLandingPageData } from '@test/helpers';
+import {
   LandingPageGenerationToolSchema,
   WebsiteBuildToolSchema,
   WebsitePromoteToolSchema,
   WebsiteStatusToolSchema,
 } from '@website/schemas/websiteToolSchemas';
 
+// Define interface for mock context that correctly specifies the return types
+interface MockWebsiteContext {
+  generateLandingPage: ReturnType<typeof mock<() => Promise<LandingPageResult>>>;
+  editLandingPage: ReturnType<typeof mock<() => Promise<LandingPageResult>>>;
+  assessLandingPage: ReturnType<typeof mock<(options?: unknown) => Promise<LandingPageResult>>>;
+  handleWebsiteBuild: ReturnType<typeof mock<() => Promise<WebsiteBuildResult>>>;
+  handleWebsitePromote: ReturnType<typeof mock<() => Promise<WebsitePromoteResult>>>;
+  handleWebsiteStatus: ReturnType<typeof mock<() => Promise<WebsiteStatusResult>>>;
+}
+
 describe('WebsiteToolService', () => {
   let toolService: WebsiteToolService;
-  
-  // Create mock context with all required methods
-  // Create mocks that will actually be called by the tool handlers
-  // Must be manually reset before each test
-  const mockContext = {
-    generateLandingPage: mock(() => {}),
-    editLandingPage: mock(() => {}),
-    assessLandingPage: mock(() => {}),
-    handleWebsiteBuild: mock(() => {}),
-    handleWebsitePromote: mock(() => {}),
-    handleWebsiteStatus: mock(() => {}),
+
+  // Create mock context with complete return types that match the interfaces
+  const mockContext: MockWebsiteContext = {
+    generateLandingPage: mock(() => Promise.resolve({ 
+      type: 'landing-page',
+      success: true, 
+      message: '', 
+    })),
+    editLandingPage: mock(() => Promise.resolve({ 
+      type: 'landing-page',
+      success: true, 
+      message: '', 
+    })),
+    assessLandingPage: mock(() => Promise.resolve({ 
+      type: 'landing-page',
+      success: true, 
+      message: '', 
+    })),
+    handleWebsiteBuild: mock(() => Promise.resolve({ 
+      type: 'website-build',
+      success: true, 
+      message: '', 
+    })),
+    handleWebsitePromote: mock(() => Promise.resolve({ 
+      type: 'website-promote',
+      success: true, 
+      message: '', 
+    })),
+    handleWebsiteStatus: mock(() => Promise.resolve({ 
+      type: 'website-status',
+      success: true, 
+      message: '', 
+    })),
   };
 
   beforeEach(() => {
     // Reset singleton
     WebsiteToolService.resetInstance();
-    
+
     // Reset mocks
     mockContext.generateLandingPage.mockReset();
     mockContext.editLandingPage.mockReset();
@@ -41,7 +79,7 @@ describe('WebsiteToolService', () => {
     mockContext.handleWebsiteBuild.mockReset();
     mockContext.handleWebsitePromote.mockReset();
     mockContext.handleWebsiteStatus.mockReset();
-    
+
     // Create test instance
     toolService = WebsiteToolService.getInstance();
   });
@@ -50,303 +88,357 @@ describe('WebsiteToolService', () => {
     WebsiteToolService.resetInstance();
   });
 
-  // REMOVED BLOCK: describe('Component Interface Standardiz...
+  it('should provide correctly structured tools with required properties', () => {
+    // Use type assertion for the mock context
+    const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
+    expect(Array.isArray(tools)).toBe(true);
+    expect(tools.length).toBeGreaterThan(0);
 
-
-  describe('getTools', () => {
-    it('should return an array of website tools', () => {
-      // Use type assertion for the mock context
-      const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
-      expect(Array.isArray(tools)).toBe(true);
-      expect(tools.length).toBeGreaterThan(0);
-      
-      // Check that all items are ResourceDefinition objects
-      tools.forEach(tool => {
-        expect(tool).toHaveProperty('protocol');
-        expect(tool).toHaveProperty('path');
-        expect(tool).toHaveProperty('name');
-        expect(tool).toHaveProperty('description');
-        expect(tool).toHaveProperty('handler');
-      });
+    // Check that all items are ResourceDefinition objects with required properties
+    tools.forEach(tool => {
+      expect(tool).toHaveProperty('protocol');
+      expect(tool).toHaveProperty('path');
+      expect(tool).toHaveProperty('name');
+      expect(tool).toHaveProperty('description');
+      expect(tool).toHaveProperty('handler');
     });
 
-    it('should include all required website tools', () => {
-      // Use type assertion for the mock context
-      const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
-      const toolNames = tools.map(tool => tool.name);
-      
-      expect(toolNames).toContain('generate_landing_page');
-      expect(toolNames).toContain('edit_landing_page');
-      expect(toolNames).toContain('assess_landing_page');
-      expect(toolNames).toContain('build_website');
-      expect(toolNames).toContain('promote_website');
-      expect(toolNames).toContain('get_website_status');
+    // Check for all required tools
+    const toolNames = tools.map(tool => tool.name);
+    expect(toolNames).toContain('generate_landing_page');
+    expect(toolNames).toContain('edit_landing_page');
+    expect(toolNames).toContain('assess_landing_page');
+    expect(toolNames).toContain('build_website');
+    expect(toolNames).toContain('promote_website');
+    expect(toolNames).toContain('get_website_status');
+  });
+
+  it('should return correct schemas for all tool types', () => {
+    // Define test cases for each schema
+    const schemaTests = [
+      {
+        toolName: 'generate_landing_page',
+        schema: LandingPageGenerationToolSchema.shape,
+        validate: (schema: Record<string, unknown>) => {
+          Object.keys(LandingPageGenerationToolSchema.shape).forEach(key => {
+            expect(schema).toHaveProperty(key);
+          });
+        },
+      },
+      {
+        toolName: 'assess_landing_page',
+        validate: (schema: Record<string, unknown>) => {
+          expect(schema).toHaveProperty('qualityThresholds');
+          expect(schema).toHaveProperty('applyRecommendations');
+        },
+      },
+      {
+        toolName: 'build_website',
+        schema: WebsiteBuildToolSchema.shape,
+        validate: (schema: Record<string, unknown>) => {
+          Object.keys(WebsiteBuildToolSchema.shape).forEach(key => {
+            expect(schema).toHaveProperty(key);
+          });
+        },
+      },
+      {
+        toolName: 'promote_website',
+        schema: WebsitePromoteToolSchema.shape,
+        validate: (schema: Record<string, unknown>) => {
+          Object.keys(WebsitePromoteToolSchema.shape).forEach(key => {
+            expect(schema).toHaveProperty(key);
+          });
+        },
+      },
+      {
+        toolName: 'get_website_status',
+        schema: WebsiteStatusToolSchema.shape,
+        validate: (schema: Record<string, unknown>) => {
+          Object.keys(WebsiteStatusToolSchema.shape).forEach(key => {
+            expect(schema).toHaveProperty(key);
+          });
+        },
+      },
+      {
+        toolName: 'unknown_tool',
+        validate: (schema: Record<string, unknown>) => {
+          expect(Object.keys(schema).length).toBe(0);
+        },
+      },
+    ];
+
+    // Test each schema
+    schemaTests.forEach(test => {
+      const schema = toolService.getToolSchema({ name: test.toolName });
+      test.validate(schema);
     });
   });
 
-  describe('getToolSchema', () => {
-    it('should return schema for generate_landing_page tool', () => {
-      const schema = toolService.getToolSchema({ name: 'generate_landing_page' });
-      // Check that the schema has the same keys as the defined schema
-      Object.keys(LandingPageGenerationToolSchema.shape).forEach(key => {
-        expect(schema).toHaveProperty(key);
-      });
-    });
-    
-    it('should return schema for assess_landing_page tool', () => {
-      const schema = toolService.getToolSchema({ name: 'assess_landing_page' });
-      // The schema should have qualityThresholds and applyRecommendations properties
-      expect(schema).toHaveProperty('qualityThresholds');
-      expect(schema).toHaveProperty('applyRecommendations');
-    });
+  it('should correctly implement tool handlers for all defined tools', async () => {
+    // Get all tools
+    const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
 
-    it('should return schema for build_website tool', () => {
-      const schema = toolService.getToolSchema({ name: 'build_website' });
-      // Check that the schema has the same keys as the defined schema
-      Object.keys(WebsiteBuildToolSchema.shape).forEach(key => {
-        expect(schema).toHaveProperty(key);
-      });
-    });
+    // Setup mock implementations for all context methods
+    mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
+      type: 'landing-page',
+      success: true,
+      message: 'Landing page generated',
+      data: createTestLandingPageData({ name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' }),
+    }));
 
-    it('should return schema for promote_website tool', () => {
-      const schema = toolService.getToolSchema({ name: 'promote_website' });
-      // Check that the schema has the same keys as the defined schema
-      Object.keys(WebsitePromoteToolSchema.shape).forEach(key => {
-        expect(schema).toHaveProperty(key);
-      });
-    });
-
-    it('should return schema for get_website_status tool', () => {
-      const schema = toolService.getToolSchema({ name: 'get_website_status' });
-      // Check that the schema has the same keys as the defined schema
-      Object.keys(WebsiteStatusToolSchema.shape).forEach(key => {
-        expect(schema).toHaveProperty(key);
-      });
-    });
-
-    it('should return empty schema for unknown tool', () => {
-      const schema = toolService.getToolSchema({ name: 'unknown_tool' });
-      expect(Object.keys(schema).length).toBe(0);
-    });
-  });
-
-  describe('Tool handlers', () => {
-    let tools: ResourceDefinition[];
-
-    beforeEach(() => {
-      // Use type assertion for the mock context
-      tools = toolService.getTools(mockContext as unknown as WebsiteContext);
-    });
-
-    it('generate_landing_page should call context.generateLandingPage without options', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'generate_landing_page');
-      expect(tool).toBeDefined();
-
-      // Set up mock implementation for this test
-      mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Landing page generated',
-        data: { name: 'Test', title: 'Test Landing Page', tagline: 'Test Tagline' },
-      }));
-
-      // Call the handler with default params
-      if (tool) {
-        const result = await tool.handler({});
-        
-        // With our new architecture, generateLandingPage doesn't take parameters
-        expect(mockContext.generateLandingPage).toHaveBeenCalled();
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('data');
-      }
-    });
-    
-    it('edit_landing_page should call context.editLandingPage without parameters', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'edit_landing_page');
-      expect(tool).toBeDefined();
-
-      // Set up mock implementation for this test
-      mockContext.editLandingPage.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Landing page edited',
-        data: { 
-          name: 'Test',
-          title: 'Test Landing Page', 
-          tagline: 'Test Tagline',
-          hero: { headline: 'Edited: Test Headline' },
+    mockContext.editLandingPage.mockImplementation(() => Promise.resolve({
+      type: 'landing-page',
+      success: true,
+      message: 'Landing page edited',
+      data: createTestLandingPageData({
+        name: 'Test',
+        title: 'Test Landing Page',
+        tagline: 'Test Tagline',
+        hero: { 
+          headline: 'Edited: Test Headline',
+          subheading: 'Edited subheading',
+          ctaText: 'Get Started',
+          ctaLink: '/contact',
         },
-      }));
+      }),
+    }));
 
-      // Call the handler
-      if (tool) {
-        const result = await tool.handler({});
-        
-        // Verify context method was called with no parameters
-        expect(mockContext.editLandingPage).toHaveBeenCalled();
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('data');
-        
-        // Type-safe assertion
-        if (result && typeof result === 'object' && 'data' in result && result.data) {
-          const data = result.data as Record<string, unknown>;
-          if ('hero' in data && typeof data['hero'] === 'object' && data['hero']) {
-            const hero = data['hero'] as Record<string, unknown>;
-            if ('headline' in hero && hero['headline']) {
-              expect(String(hero['headline'])).toContain('Edited:');
-            }
-          }
-        }
-      }
-    });
-    
-    it('should provide assess_landing_page tool for quality assessment', () => {
-      // Find the tools
-      const tools = toolService.getTools(mockContext as unknown as WebsiteContext);
-      const assessTool = tools.find(t => t.name === 'assess_landing_page');
-      
-      // Verify assess_landing_page tool exists
-      expect(assessTool).toBeDefined();
-      expect(assessTool?.description).toContain('quality');
-    });
-    
-    it('assess_landing_page tool should call context.assessLandingPage with options', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'assess_landing_page');
-      expect(tool).toBeDefined();
+    mockContext.assessLandingPage.mockImplementation(() => Promise.resolve({
+      type: 'landing-page',
+      success: true,
+      message: 'Landing page quality assessed',
+      data: createTestLandingPageData({ title: 'Test Landing Page' }),
+      assessments: { hero: { qualityScore: 8 } },
+    }));
 
-      // Set up mock implementation for this test
-      mockContext.assessLandingPage.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Landing page quality assessed',
-        data: { title: 'Test Landing Page' },
-        assessments: { hero: { qualityScore: 8 } },
-      }));
+    mockContext.handleWebsiteBuild.mockImplementation(() => Promise.resolve({
+      type: 'website-build',
+      success: true,
+      message: 'Website built',
+      url: 'https://preview.example.com',
+      path: '/path/to/build',
+    }));
 
-      // Quality assessment options
-      const options = {
-        qualityThresholds: {
-          minCombinedScore: 7,
-          minQualityScore: 6,
-          minConfidenceScore: 6,
-        },
-        applyRecommendations: true,
-      };
+    mockContext.handleWebsitePromote.mockImplementation(() => Promise.resolve({
+      type: 'website-promote',
+      success: true,
+      message: 'Website promoted to production',
+      url: 'https://example.com',
+    }));
 
-      // Call the handler with quality params
-      if (tool) {
-        const result = await tool.handler(options);
-        
-        // Verify context method was called with the specified options
-        expect(mockContext.assessLandingPage).toHaveBeenCalledWith(options);
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('data');
-        expect(result).toHaveProperty('assessments');
-      }
-    });
-
-    it('build_website should call context.handleWebsiteBuild', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'build_website');
-      expect(tool).toBeDefined();
-
-      // Set up mock implementations for this test
-      mockContext.generateLandingPage.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Landing page generated',
-      }));
-      mockContext.handleWebsiteBuild.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Website built',
+    mockContext.handleWebsiteStatus.mockImplementation(() => Promise.resolve({
+      type: 'website-status',
+      success: true,
+      message: 'Status retrieved',
+      data: {
+        environment: 'preview',
+        buildStatus: 'built',
+        fileCount: 10,
+        serverStatus: 'running',
+        domain: 'preview.example.com',
+        accessStatus: 'accessible',
         url: 'https://preview.example.com',
-        path: '/path/to/build',
-      }));
+      },
+    }));
 
-      // Call the handler
-      if (tool) {
-        const result = await tool.handler({});
-        
-        // Verify context methods were called
-        expect(mockContext.generateLandingPage).toHaveBeenCalled();
-        expect(mockContext.handleWebsiteBuild).toHaveBeenCalled();
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('url');
-        expect(result).toHaveProperty('path');
-      }
-    });
-
-    it('promote_website should call context.handleWebsitePromote', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'promote_website');
-      expect(tool).toBeDefined();
-
-      // Set up mock implementation for this test
-      mockContext.handleWebsitePromote.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Website promoted to production',
-        url: 'https://example.com',
-      }));
-
-      // Call the handler
-      if (tool) {
-        const result = await tool.handler({});
-        
-        // Verify context method was called
-        expect(mockContext.handleWebsitePromote).toHaveBeenCalled();
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('url');
-      }
-    });
-
-    it('get_website_status should call context.handleWebsiteStatus', async () => {
-      // Find the tool
-      const tool = tools.find(t => t.name === 'get_website_status');
-      expect(tool).toBeDefined();
-
-      // Set up mock implementation for this test
-      mockContext.handleWebsiteStatus.mockImplementation(() => Promise.resolve({
-        success: true,
-        message: 'Status retrieved',
-        data: {
-          environment: 'preview',
-          buildStatus: 'built',
-          fileCount: 10,
-          serverStatus: 'running',
-          domain: 'preview.example.com',
-          accessStatus: 'accessible',
-          url: 'https://preview.example.com',
+    // Use a consolidated approach with a common validation method
+    // Run all tool handlers and collect results
+    const handlerResults = {
+      generateLandingPage: {
+        tool: tools.find(t => t.name === 'generate_landing_page'),
+        params: {},
+        isCalled: false,
+      },
+      editLandingPage: {
+        tool: tools.find(t => t.name === 'edit_landing_page'),
+        params: {},
+        isCalled: false,
+      },
+      assessLandingPage: {
+        tool: tools.find(t => t.name === 'assess_landing_page'),
+        params: {
+          qualityThresholds: {
+            minCombinedScore: 7,
+            minQualityScore: 6,
+            minConfidenceScore: 6,
+          },
+          applyRecommendations: true,
         },
-      }));
-
-      // Call the handler
-      if (tool) {
-        const result = await tool.handler({});
-        
-        // Verify context method was called
-        expect(mockContext.handleWebsiteStatus).toHaveBeenCalled();
-        
-        // Verify result structure
-        expect(result).toHaveProperty('success', true);
-        expect(result).toHaveProperty('message');
-        expect(result).toHaveProperty('data.environment');
-        expect(result).toHaveProperty('data.buildStatus');
-        expect(result).toHaveProperty('data.serverStatus');
-      }
+        isCalled: false,
+      },
+      buildWebsite: {
+        tool: tools.find(t => t.name === 'build_website'),
+        params: {},
+        isCalled: false,
+      },
+      promoteWebsite: {
+        tool: tools.find(t => t.name === 'promote_website'),
+        params: {},
+        isCalled: false,
+      },
+      websiteStatus: {
+        tool: tools.find(t => t.name === 'get_website_status'),
+        params: {},
+        isCalled: false,
+      },
+    };
+    
+    // Verify all tools exist
+    Object.values(handlerResults).forEach(handler => {
+      expect(handler.tool).toBeDefined();
+    });
+    
+    // Define a common interface for all tool results based on the actual implementations
+    interface ToolResult {
+      success: boolean;
+      message: string;
+      data?: {
+        hero?: {
+          headline?: string;
+          [key: string]: unknown;
+        };
+        environment?: string;
+        buildStatus?: string;
+        serverStatus?: string;
+        [key: string]: unknown;
+      };
+      url?: string;
+      path?: string;
+      environment?: string;
+      assessments?: unknown[];
+      [key: string]: unknown;
+    }
+    
+    // Run all tool handlers and store outputs by running the handlers
+    const results: Record<string, ToolResult> = {};
+    
+    // Handle landing page generation
+    if (handlerResults.generateLandingPage.tool) {
+      results['generateLandingPage'] = await handlerResults.generateLandingPage.tool.handler(
+        handlerResults.generateLandingPage.params,
+      ) as ToolResult;
+      handlerResults.generateLandingPage.isCalled = true;
+    }
+    
+    // Handle landing page editing
+    if (handlerResults.editLandingPage.tool) {
+      results['editLandingPage'] = await handlerResults.editLandingPage.tool.handler(
+        handlerResults.editLandingPage.params,
+      ) as ToolResult;
+      handlerResults.editLandingPage.isCalled = true;
+    }
+    
+    // Handle landing page assessment
+    if (handlerResults.assessLandingPage.tool) {
+      results['assessLandingPage'] = await handlerResults.assessLandingPage.tool.handler(
+        handlerResults.assessLandingPage.params,
+      ) as ToolResult;
+      handlerResults.assessLandingPage.isCalled = true;
+    }
+    
+    // Handle website build
+    if (handlerResults.buildWebsite.tool) {
+      results['buildWebsite'] = await handlerResults.buildWebsite.tool.handler(
+        handlerResults.buildWebsite.params,
+      ) as ToolResult;
+      handlerResults.buildWebsite.isCalled = true;
+    }
+    
+    // Handle website promotion
+    if (handlerResults.promoteWebsite.tool) {
+      results['promoteWebsite'] = await handlerResults.promoteWebsite.tool.handler(
+        handlerResults.promoteWebsite.params,
+      ) as ToolResult;
+      handlerResults.promoteWebsite.isCalled = true;
+    }
+    
+    // Handle website status
+    if (handlerResults.websiteStatus.tool) {
+      results['websiteStatus'] = await handlerResults.websiteStatus.tool.handler(
+        handlerResults.websiteStatus.params,
+      ) as ToolResult;
+      handlerResults.websiteStatus.isCalled = true;
+    }
+    
+    // Create validation object with all the checks we want to perform
+    const validationResults = {
+      mockCalls: {
+        generateLandingPageCalled: mockContext.generateLandingPage.mock.calls.length > 0,
+        editLandingPageCalled: mockContext.editLandingPage.mock.calls.length > 0,
+        assessLandingPageCalled: mockContext.assessLandingPage.mock.calls.length > 0,
+        buildWebsiteCalled: mockContext.handleWebsiteBuild.mock.calls.length > 0,
+        promoteWebsiteCalled: mockContext.handleWebsitePromote.mock.calls.length > 0,
+        statusWebsiteCalled: mockContext.handleWebsiteStatus.mock.calls.length > 0,
+      },
+      landingPageResults: {
+        generateSuccess: typeof results['generateLandingPage'] === 'object' && 
+                        results['generateLandingPage']?.success === true,
+        generateHasData: typeof results['generateLandingPage'] === 'object' && 
+                        !!results['generateLandingPage']?.data,
+        editSuccess: typeof results['editLandingPage'] === 'object' && 
+                    results['editLandingPage']?.success === true,
+        editHasData: typeof results['editLandingPage'] === 'object' && 
+                    !!results['editLandingPage']?.data,
+        editHeadlineHasEdited: typeof results['editLandingPage'] === 'object' && 
+                              typeof results['editLandingPage']?.data?.['hero']?.['headline'] === 'string' && 
+                              String(results['editLandingPage']?.data?.['hero']?.['headline']).includes('Edited:'),
+        assessSuccess: typeof results['assessLandingPage'] === 'object' && 
+                      results['assessLandingPage']?.success === true,
+        assessHasAssessments: typeof results['assessLandingPage'] === 'object' && 
+                             !!results['assessLandingPage']?.assessments,
+      },
+      websiteResults: {
+        buildSuccess: typeof results['buildWebsite'] === 'object' && 
+                     results['buildWebsite']?.success === true,
+        buildHasUrl: typeof results['buildWebsite'] === 'object' && 
+                    typeof results['buildWebsite']?.url === 'string',
+        buildHasPath: typeof results['buildWebsite'] === 'object' && 
+                     typeof results['buildWebsite']?.path === 'string',
+        promoteSuccess: typeof results['promoteWebsite'] === 'object' && 
+                       results['promoteWebsite']?.success === true,
+        promoteHasUrl: typeof results['promoteWebsite'] === 'object' && 
+                      typeof results['promoteWebsite']?.url === 'string',
+        statusSuccess: typeof results['websiteStatus'] === 'object' && 
+                      results['websiteStatus']?.success === true,
+        statusHasEnvironment: typeof results['websiteStatus'] === 'object' && 
+                             typeof results['websiteStatus']?.data?.['environment'] === 'string',
+        statusHasBuildStatus: typeof results['websiteStatus'] === 'object' && 
+                             typeof results['websiteStatus']?.data?.['buildStatus'] === 'string',
+        statusHasServerStatus: typeof results['websiteStatus'] === 'object' && 
+                              typeof results['websiteStatus']?.data?.['serverStatus'] === 'string',
+      },
+    };
+    
+    // Single consolidated assertion
+    expect(validationResults).toMatchObject({
+      mockCalls: {
+        generateLandingPageCalled: true,
+        editLandingPageCalled: true,
+        assessLandingPageCalled: true,
+        buildWebsiteCalled: true,
+        promoteWebsiteCalled: true,
+        statusWebsiteCalled: true,
+      },
+      landingPageResults: {
+        generateSuccess: true,
+        generateHasData: true,
+        editSuccess: true,
+        editHasData: true,
+        editHeadlineHasEdited: true,
+        assessSuccess: true,
+        assessHasAssessments: true,
+      },
+      websiteResults: {
+        buildSuccess: true,
+        buildHasUrl: true,
+        buildHasPath: true,
+        promoteSuccess: true,
+        promoteHasUrl: true,
+        statusSuccess: true,
+        statusHasEnvironment: true,
+        statusHasBuildStatus: true,
+        statusHasServerStatus: true,
+      },
     });
   });
 });

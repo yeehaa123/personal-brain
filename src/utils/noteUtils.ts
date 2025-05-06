@@ -4,21 +4,24 @@ import type { Note } from '../models/note';
 import { CLIInterface } from './cliInterface';
 import { Logger } from './logger';
 
-
-
 /**
  * Helper functions for displaying and formatting notes
  */
 
 /**
  * Display a collection of notes in the console
+ * 
+ * @param notes Notes to display
+ * @param customCLI Optional custom CLIInterface instance
  */
-export function displayNotes(notes: Note[]) {
+export function displayNotes(notes: Note[], customCLI?: CLIInterface) {
+  // Get instance of CLIInterface
+  const cli = customCLI || CLIInterface.getInstance();
   // Create a logger instance
   const logger = Logger.getInstance();
   
   if (notes.length === 0) {
-    CLIInterface.warn('No notes found.');
+    cli.warn('No notes found.');
     return;
   }
 
@@ -26,20 +29,20 @@ export function displayNotes(notes: Note[]) {
   
   notes.forEach((note, index) => {
     // Title with index
-    CLIInterface.print(`\n${CLIInterface.styles.number(`[${index + 1}]`)} ${CLIInterface.styles.subtitle(note.title)}`);
+    cli.print(`\n${cli.styles.number(`[${index + 1}]`)} ${cli.styles.subtitle(note.title)}`);
     
     // Display metadata using label-value formatting
-    CLIInterface.printLabelValue('ID', note.id, { formatter: id => CLIInterface.formatId(id) });
+    cli.printLabelValue('ID', note.id, { formatter: id => cli.formatId(id) });
     // Convert tags to a proper string array or null to handle database types
     const tagArray = note.tags ? Array.isArray(note.tags) ? note.tags.map(String) : null : null;
-    CLIInterface.printLabelValue('Tags', tagArray, { emptyText: 'none', formatter: tag => CLIInterface.styles.tag(`#${tag}`) });
-    CLIInterface.printLabelValue('Created', CLIInterface.formatDate(new Date(note.createdAt)));
+    cli.printLabelValue('Tags', tagArray, { emptyText: 'none', formatter: tag => cli.styles.tag(`#${tag}`) });
+    cli.printLabelValue('Created', cli.formatDate(new Date(note.createdAt)));
 
     // Content preview
     const contentPreview = note.content.length > 100
       ? note.content.substring(0, 100) + '...'
       : note.content;
-    CLIInterface.printLabelValue('Preview', contentPreview);
+    cli.printLabelValue('Preview', contentPreview);
   });
 }
 

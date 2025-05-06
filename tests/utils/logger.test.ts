@@ -12,41 +12,9 @@ describe('Logger', () => {
     Logger.resetInstance();
   });
 
-  test('should implement the singleton pattern correctly', () => {
-    // Get first instance
-    const logger1 = Logger.getInstance();
-    
-    // Get second instance - should be the same object
-    const logger2 = Logger.getInstance();
-    
-    // Verify singleton behavior
-    expect(logger1).toBe(logger2);
-    
-    // Reset the instance
-    Logger.resetInstance();
-    
-    // Get new instance - should be a different object
-    const logger3 = Logger.getInstance();
-    expect(logger3).not.toBe(logger1);
-  });
-  
-  test('should create fresh instances with createFresh', () => {
-    // Create multiple fresh instances
-    const fresh1 = Logger.createFresh();
-    const fresh2 = Logger.createFresh();
-    
-    // Verify they are different instances
-    expect(fresh1).not.toBe(fresh2);
-    
-    // Verify they are different from the singleton
-    const singleton = Logger.getInstance();
-    expect(fresh1).not.toBe(singleton);
-    expect(fresh2).not.toBe(singleton);
-  });
-  
-  test('should initialize with custom config when provided', () => {
-    // Define custom config
-    const config: LoggerConfig = {
+  test('should implement the Component Interface Standardization pattern correctly', () => {
+    // Define a custom config for testing
+    const customConfig: LoggerConfig = {
       consoleLevel: 'debug',
       fileLevel: 'silly',
       errorLogPath: 'custom-error.log',
@@ -54,34 +22,80 @@ describe('Logger', () => {
       debugLogPath: 'custom-debug.log',
     };
     
-    // Create logger with custom config
-    const logger = Logger.createFresh(config);
+    // Execute multiple operations that exercise the component's behavior
+    const patterns = (() => {
+      // Get first instance and compare with second instance
+      const logger1 = Logger.getInstance();
+      const logger2 = Logger.getInstance();
+      
+      // Reset and get new instance
+      Logger.resetInstance();
+      const logger3 = Logger.getInstance();
+      
+      // Create fresh instances
+      const fresh1 = Logger.createFresh();
+      const fresh2 = Logger.createFresh();
+      
+      // Create with custom config
+      const customLogger = Logger.createFresh(customConfig);
+      
+      return {
+        // Singleton pattern verification
+        singletonImplemented: logger1 === logger2,
+        
+        // Reset functionality
+        resetCreatesNewInstance: logger3 !== logger1,
+        
+        // Fresh instance behavior
+        freshInstancesAreDifferent: fresh1 !== fresh2,
+        freshInstancesDifferFromSingleton: fresh1 !== logger3 && fresh2 !== logger3,
+        
+        // Custom configuration handling
+        acceptsCustomConfig: customLogger instanceof Logger,
+      };
+    })();
     
-    // Just verify logger was created
-    expect(logger).toBeInstanceOf(Logger);
+    // Assert all pattern implementations at once
+    expect(patterns).toMatchObject({
+      singletonImplemented: true,
+      resetCreatesNewInstance: true,
+      freshInstancesAreDifferent: true,
+      freshInstancesDifferFromSingleton: true,
+      acceptsCustomConfig: true,
+    });
   });
-  
-  test('should expose logging methods', () => {
+
+  test('should provide complete logging functionality', () => {
     const logger = Logger.getInstance();
-    
-    // Verify logger has expected methods (non-functional test)
-    expect(typeof logger.info).toBe('function');
-    expect(typeof logger.warn).toBe('function');
-    expect(typeof logger.error).toBe('function');
-    expect(typeof logger.debug).toBe('function');
-    expect(typeof logger.verbose).toBe('function');
-    expect(typeof logger.silly).toBe('function');
-    expect(typeof logger.child).toBe('function');
-  });
-  
-  test('should support child loggers', () => {
-    const logger = Logger.getInstance();
-    
-    // Create a child logger
     const childLogger = logger.child({ module: 'TestModule' });
     
-    // Child logger should be a new Logger instance
-    expect(childLogger).toBeInstanceOf(Logger);
-    expect(childLogger).not.toBe(logger);
+    // Verify logger interface and behavior
+    const loggerCapabilities = {
+      // Method existence and types
+      hasInfoMethod: typeof logger.info === 'function',
+      hasWarnMethod: typeof logger.warn === 'function',
+      hasErrorMethod: typeof logger.error === 'function',
+      hasDebugMethod: typeof logger.debug === 'function',
+      hasVerboseMethod: typeof logger.verbose === 'function',
+      hasSillyMethod: typeof logger.silly === 'function',
+      hasChildMethod: typeof logger.child === 'function',
+      
+      // Child logger behavior
+      childLoggerIsInstance: childLogger instanceof Logger,
+      childLoggerIsDifferentInstance: childLogger !== logger,
+    };
+    
+    // Assert all capabilities at once
+    expect(loggerCapabilities).toMatchObject({
+      hasInfoMethod: true,
+      hasWarnMethod: true,
+      hasErrorMethod: true,
+      hasDebugMethod: true,
+      hasVerboseMethod: true,
+      hasSillyMethod: true,
+      hasChildMethod: true,
+      childLoggerIsInstance: true,
+      childLoggerIsDifferentInstance: true,
+    });
   });
 });

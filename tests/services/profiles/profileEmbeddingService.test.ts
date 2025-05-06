@@ -1,3 +1,9 @@
+/**
+ * Profile Embedding Service Tests
+ * 
+ * Tests the service responsible for generating and managing
+ * embeddings for user profiles.
+ */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { Profile } from '@/models/profile';
@@ -8,149 +14,181 @@ import { MockProfile } from '@test/__mocks__/models/profile';
 import { MockProfileRepository } from '@test/__mocks__/repositories/profileRepository';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
-// Mock the EmbeddingService directly
+// Mock the embedding service
 mock.module('@/resources/ai/embedding', () => ({
   EmbeddingService: MockEmbeddingService,
 }));
 
-// Will be initialized in beforeEach
-let mockProfile: Profile;
-let mockRepository: ProfileRepository;
-
-// No need to add the static factory method as the class doesn't have one - we'll handle this in the test
-
 describe('ProfileEmbeddingService', () => {
+  // Test state
+  let mockProfile: Profile;
+  let mockRepository: ProfileRepository;
   let embeddingService: ProfileEmbeddingService;
+  let mockEmbeddingService: EmbeddingService;
 
+  // Setup before each test
   beforeEach(async () => {
-    // Reset singleton instances to ensure test isolation
+    // Reset singletons for test isolation
     ProfileEmbeddingService.resetInstance();
     MockEmbeddingService.resetInstance();
     MockProfileRepository.resetInstance();
     
-    // Create a dev profile which already has appropriate fields for tests
+    // Create test data
     mockProfile = await MockProfile.createDeveloperProfile('profile-1');
-    
-    // Create the repository with our mock profile
     mockRepository = MockProfileRepository.createFresh([mockProfile]);
+    mockEmbeddingService = MockEmbeddingService.createFresh() as unknown as EmbeddingService;
     
-    // Create the embedding service using the standardized factory method
-    const mockEmbeddingService = MockEmbeddingService.createFresh();
-    
-    // Use createFresh to create a new instance with our dependencies
+    // Create service instance with dependencies
     embeddingService = ProfileEmbeddingService.createFresh(
-      mockEmbeddingService as unknown as EmbeddingService,
+      mockEmbeddingService,
       mockRepository as unknown as ProfileRepository,
     );
   });
 
-  test('should properly initialize', () => {
-    expect(embeddingService).toBeDefined();
-  });
-
-  test('should create instance with dependency injection', () => {
-    const mockEmbedding = MockEmbeddingService.createFresh();
-    const service = ProfileEmbeddingService.createFresh(mockEmbedding as unknown as EmbeddingService);
-    expect(service).toBeDefined();
-    expect(service).toBeInstanceOf(ProfileEmbeddingService);
-  });
-
-  test('should generate embedding for text', async () => {
-    const text = 'This is a profile description for embedding generation';
-    const embedding = await embeddingService.generateEmbedding(text);
-
-    expect(embedding).toBeDefined();
-    expect(Array.isArray(embedding)).toBe(true);
-    expect(embedding.length).toBeGreaterThan(0);
-  });
-
-  test('should determine when to regenerate embeddings', () => {
-    // Should regenerate when important profile fields change
-    const changes1: Partial<Profile> = {
-      summary: 'New summary content',
-    };
-    expect(embeddingService.shouldRegenerateEmbedding(changes1)).toBe(true);
-
-    const changes2: Partial<Profile> = {
-      experiences: [
-        {
-          title: 'New Job',
-          company: 'New Company',
-          description: 'New role',
-          starts_at: { day: 1, month: 1, year: 2023 },
-          ends_at: null,
-          company_linkedin_profile_url: null,
-          company_facebook_profile_url: null,
-          location: null,
-          logo_url: null,
-        },
+  test('correctly initializes, generates embeddings, and handles profile changes', async () => {
+    // Test text to embed
+    const testText = 'This is a profile description for embedding generation';
+    
+    // Create test profile variations
+    const profileChanges = {
+      important: [
+        { summary: 'New summary content' } as Partial<Profile>,
+        { 
+          experiences: [{
+            title: 'New Job',
+            company: 'New Company',
+            description: 'New role',
+            starts_at: { day: 1, month: 1, year: 2023 },
+            ends_at: null,
+            company_linkedin_profile_url: null,
+            company_facebook_profile_url: null,
+            location: null,
+            logo_url: null,
+          }],
+        } as Partial<Profile>,
       ],
+      nonEssential: { updatedAt: new Date() } as Partial<Profile>,
+      
+      minimal: { fullName: 'John Smith' } as Partial<Profile>,
+      
+      partial: {
+        fullName: 'John Smith',
+        occupation: null,
+        summary: undefined,
+        headline: 'Developer',
+      } as Partial<Profile>,
     };
-    expect(embeddingService.shouldRegenerateEmbedding(changes2)).toBe(true);
-
-    // Should not regenerate for non-essential fields
-    const changes3: Partial<Profile> = {
-      updatedAt: new Date(),
-    };
-    expect(embeddingService.shouldRegenerateEmbedding(changes3)).toBe(false);
-  });
-
-  test('should generate profile text for embedding', () => {
-    const profileText = embeddingService.getProfileTextForEmbedding(mockProfile);
-
-    expect(profileText).toBeDefined();
-    expect(typeof profileText).toBe('string');
-    expect(profileText.length).toBeGreaterThan(0);
-
-    // Should include important profile information
-    expect(profileText).toContain('Jane Smith');
-    // Update the expected text to match what's actually generated
-    expect(profileText).toContain('Senior Software Engineer');
-    expect(profileText).toContain('Senior Developer');
-    expect(profileText).toContain('TechCorp');
-    expect(profileText).toContain('University of Innovation');
-  });
-
-  test('should generate embedding for profile', async () => {
-    // Mock the repository's getProfile and updateProfile methods
+    
+    // Mock repository methods for profile embedding generation
     mockRepository.getProfile = async () => mockProfile;
     mockRepository.updateProfile = async () => true;
-
-    const result = await embeddingService.generateEmbeddingForProfile();
-
-    expect(result).toBeDefined();
-    expect(result.updated).toBe(true);
-  });
-
-  test('should handle profile with minimal information', () => {
-    const minimalProfile: Partial<Profile> = {
-      fullName: 'John Smith',
-      // Missing most fields
-    };
-
-    const profileText = embeddingService.getProfileTextForEmbedding(minimalProfile);
-
-    expect(profileText).toBeDefined();
-    expect(typeof profileText).toBe('string');
-    expect(profileText.length).toBeGreaterThan(0);
-    expect(profileText).toContain('John Smith');
-  });
-
-  test('should skip undefined or null fields', () => {
-    const partialProfile: Partial<Profile> = {
-      fullName: 'John Smith',
-      occupation: null,
-      summary: undefined,
-      headline: 'Developer',
-    };
-
-    const profileText = embeddingService.getProfileTextForEmbedding(partialProfile);
-
-    expect(profileText).toBeDefined();
-    expect(profileText).toContain('John Smith');
-    expect(profileText).toContain('Developer');
-    // Should not include null or undefined fields
-    expect(profileText).not.toContain('null');
-    expect(profileText).not.toContain('undefined');
+    
+    // Generate text embedding and profile embedding
+    const textEmbedding = await embeddingService.generateEmbedding(testText);
+    const profileText = embeddingService.getProfileTextForEmbedding(mockProfile);
+    const profileResult = await embeddingService.generateEmbeddingForProfile();
+    
+    // Execute tests for minimal and partial profiles
+    const minimalProfileText = embeddingService.getProfileTextForEmbedding(profileChanges.minimal);
+    const partialProfileText = embeddingService.getProfileTextForEmbedding(profileChanges.partial);
+    
+    // Comprehensive assertion validating all embedding functionality
+    expect({
+      initialization: {
+        serviceInitialized: embeddingService !== undefined,
+        implementsCorrectClass: embeddingService instanceof ProfileEmbeddingService,
+      },
+      
+      embeddingGeneration: {
+        textEmbedding: {
+          embedsText: textEmbedding !== undefined,
+          returnsArray: Array.isArray(textEmbedding),
+          hasValues: textEmbedding.length > 0,
+        },
+        
+        profileEmbedding: {
+          generatesResult: profileResult !== undefined,
+          marksAsUpdated: profileResult.updated === true,
+        },
+      },
+      
+      regenerationLogic: {
+        detectsImportantChanges: profileChanges.important.every(
+          change => embeddingService.shouldRegenerateEmbedding(change),
+        ),
+        ignoresNonEssentialChanges: !embeddingService.shouldRegenerateEmbedding(profileChanges.nonEssential),
+      },
+      
+      profileTextGeneration: {
+        fullProfile: {
+          returnsString: typeof profileText === 'string',
+          hasContent: profileText.length > 0,
+          includesName: profileText.includes('Jane Smith'),
+          includesOccupation: profileText.includes('Senior Software Engineer'),
+          includesExperience: profileText.includes('Senior Developer') && profileText.includes('TechCorp'),
+          includesEducation: profileText.includes('University of Innovation'),
+        },
+        
+        minimalProfile: {
+          returnsString: typeof minimalProfileText === 'string',
+          hasContent: minimalProfileText.length > 0,
+          includesName: minimalProfileText.includes('John Smith'),
+        },
+        
+        partialProfile: {
+          includesName: partialProfileText.includes('John Smith'),
+          includesHeadline: partialProfileText.includes('Developer'),
+          skipsNullFields: !partialProfileText.includes('null'),
+          skipsUndefinedFields: !partialProfileText.includes('undefined'),
+        },
+      },
+    }).toMatchObject({
+      initialization: {
+        serviceInitialized: true,
+        implementsCorrectClass: true,
+      },
+      
+      embeddingGeneration: {
+        textEmbedding: {
+          embedsText: true,
+          returnsArray: true,
+          hasValues: true,
+        },
+        
+        profileEmbedding: {
+          generatesResult: true,
+          marksAsUpdated: true,
+        },
+      },
+      
+      regenerationLogic: {
+        detectsImportantChanges: true,
+        ignoresNonEssentialChanges: true,
+      },
+      
+      profileTextGeneration: {
+        fullProfile: {
+          returnsString: true,
+          hasContent: true,
+          includesName: true,
+          includesOccupation: true,
+          includesExperience: true,
+          includesEducation: true,
+        },
+        
+        minimalProfile: {
+          returnsString: true,
+          hasContent: true,
+          includesName: true,
+        },
+        
+        partialProfile: {
+          includesName: true,
+          includesHeadline: true,
+          skipsNullFields: true,
+          skipsUndefinedFields: true,
+        },
+      },
+    });
   });
 });

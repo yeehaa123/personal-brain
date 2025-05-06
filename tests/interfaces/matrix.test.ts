@@ -27,7 +27,7 @@ import type { IBrainProtocol } from '@/protocol/types';
 import type { Logger } from '@/utils/logger';
 import { MockCommandHandler } from '@test/__mocks__/commands/commandHandler';
 import { MockLogger } from '@test/__mocks__/core/logger';
-import { createMockNote } from '@test/__mocks__/models/note';
+import { createTestNote } from '@test/__mocks__/models/note';
 import { MockBrainProtocol } from '@test/__mocks__/protocol/brainProtocol';
 
 // ==================================
@@ -352,11 +352,12 @@ describe('Matrix Formatters', () => {
 // ==================================
 
 // Mock conversation note data
-const mockConversationNote = createMockNote(
-  'note-conv1', 
-  'What is ecosystem architecture?', 
-  ['ecosystem-architecture', 'systems-thinking'],
-);
+const mockConversationNote = createTestNote({
+  id: 'note-conv1', 
+  title: 'What is ecosystem architecture?', 
+  tags: ['ecosystem-architecture', 'systems-thinking'],
+  content: 'Mock note content about ecosystem architecture',
+});
 
 // Create a mock brain protocol for testing
 const mockBrainProtocol = {

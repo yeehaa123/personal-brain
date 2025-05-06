@@ -36,10 +36,10 @@ async function main() {
   logger.info('BrainProtocol initialization complete');
 
   const commandHandler = createCommandHandler(brainProtocol);
-  const renderer = new CLIRenderer();
+  const renderer = CLIRenderer.getInstance();
 
   // Create CLI application with dependencies
-  const cliApp = new CLIApp({
+  const cliApp = CLIApp.getInstance({
     commandHandler,
     renderer,
   });

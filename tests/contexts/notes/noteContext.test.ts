@@ -32,40 +32,51 @@ describe('NoteContext', () => {
     MockNoteStorageAdapter.resetInstance();
   });
 
-  test('should extend BaseContext', () => {
-    // No need to create mock instances for this test
-
+  test('basic functionality - inheritance, initialization, and status', async () => {
+    // Group related basic functionality tests into one
     // Create context with mocked dependencies
     const noteContext = NoteContext.createFresh({
       name: 'TestNoteBrain',
       version: '1.0.0-test',
       apiKey: 'mock-api-key',
     });
-
-    expect(noteContext).toBeInstanceOf(BaseContext);
-  });
-
-  test('initialize should set readyState to true', async () => {
-    const context = NoteContext.createFresh();
-    const result = await context.initialize();
-
-    expect(result).toBe(true);
-    expect(context.isReady()).toBe(true);
-  });
-
-  test('getStatus should return correct status object', () => {
-    const context = NoteContext.createFresh({
-      name: 'TestNoteBrain',
-      version: '1.0.0-test',
+    
+    // Initialize the context
+    const initResult = await noteContext.initialize();
+    
+    // Get status
+    const status = noteContext.getStatus();
+    
+    // Single consolidated assertion for all basic functionality
+    expect({
+      inheritance: noteContext instanceof BaseContext,
+      initialization: {
+        result: initResult,
+        isReady: noteContext.isReady(),
+      },
+      status: {
+        name: status.name,
+        version: status.version,
+        hasReady: 'ready' in status,
+        resourceCount: status && typeof status === 'object' && 'resourceCount' in status && 
+                    (status['resourceCount'] as number) > 0,
+        toolCount: status && typeof status === 'object' && 'toolCount' in status && 
+                  (status['toolCount'] as number) > 0,
+      },
+    }).toMatchObject({
+      inheritance: true,
+      initialization: {
+        result: true,
+        isReady: true,
+      },
+      status: {
+        name: 'TestNoteBrain',
+        version: '1.0.0-test',
+        hasReady: true,
+        resourceCount: true,
+        toolCount: true,
+      },
     });
-
-    const status = context.getStatus();
-
-    expect(status.name).toBe('TestNoteBrain');
-    expect(status.version).toBe('1.0.0-test');
-    expect(status.ready).toBeDefined();
-    expect(status['resourceCount']).toBeGreaterThan(0);
-    expect(status['toolCount']).toBeGreaterThan(0);
   });
 
   test('registerOnServer registers resources and tools', () => {
@@ -74,36 +85,52 @@ describe('NoteContext', () => {
     const context = NoteContext.createFresh();
 
     const result = context.registerOnServer(mockServer);
-
-    expect(result).toBe(true);
-
+    
     // Verify resources and tools were registered
     const registeredResources = mockServer.getRegisteredResources();
     const registeredTools = mockServer.getRegisteredTools();
+    
+    // Expected resources and tools
+    const expectedResourcePaths = [':id', 'search', 'recent', 'related/:id'];
+    const expectedToolPaths = [
+      'create_note', 'generate_embeddings', 'search_with_embedding', 
+      'search_notes', 'get_note',
+    ];
 
-    // NoteContext should register 4 resources and multiple tools
-    expect(registeredResources.length).toBe(4);
-    expect(registeredTools.length).toBeGreaterThanOrEqual(5); // At least 5 tools should be registered
-
-    // Check that specific resource and tool paths are registered
-    expect(registeredResources.some(r => r.path === ':id')).toBe(true);
-    expect(registeredResources.some(r => r.path === 'search')).toBe(true);
-    expect(registeredResources.some(r => r.path === 'recent')).toBe(true);
-    expect(registeredResources.some(r => r.path === 'related/:id')).toBe(true);
-
-    // Verify essential tools are present
-    expect(registeredTools.some(t => t.path === 'create_note')).toBe(true);
-    expect(registeredTools.some(t => t.path === 'generate_embeddings')).toBe(true);
-    expect(registeredTools.some(t => t.path === 'search_with_embedding')).toBe(true);
-    expect(registeredTools.some(t => t.path === 'search_notes')).toBe(true);
-    expect(registeredTools.some(t => t.path === 'get_note')).toBe(true);
+    // Single consolidated assertion for registration validation
+    expect({
+      registrationResult: result,
+      resources: {
+        count: registeredResources.length,
+        paths: expectedResourcePaths.map(path => 
+          registeredResources.some(r => r.path === path),
+        ),
+      },
+      tools: {
+        count: registeredTools.length,
+        paths: expectedToolPaths.map(path => 
+          registeredTools.some(t => t.path === path),
+        ),
+      },
+    }).toMatchObject({
+      registrationResult: true,
+      resources: {
+        count: 4,
+        paths: expectedResourcePaths.map(() => true),
+      },
+      tools: {
+        count: expect.any(Number),
+        paths: expectedToolPaths.map(() => true),
+      },
+    });
   });
 
-  test('getStorage should return storage adapter', () => {
+  test('getStorage provides access to storage adapter', () => {
     const context = NoteContext.createFresh();
     const storage = context.getStorage();
 
-    expect(storage).toBeDefined();
+    // Simple assertion
+    expect(storage !== undefined).toBe(true);
   });
 
   test('searchWithEmbedding should work with tags filtering', async () => {
@@ -119,10 +146,8 @@ describe('NoteContext', () => {
       ];
     };
 
-    // Create standardized mock repository
+    // Create standardized mock repository and search service
     const repository = MockNoteRepository.createFresh();
-
-    // Create standardized mock search service
     const searchService = MockNoteSearchService.createFresh();
 
     // Create the context with our mock dependencies
@@ -138,12 +163,29 @@ describe('NoteContext', () => {
     // Call the method under test with tag filtering
     const results = await context.searchWithEmbedding('test query', 5, ['test']);
 
-    // Verify the results
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(2); // Should only include notes with 'test' tag
-    expect(results[0].id).toBe('note-1');
-    expect(results[1].id).toBe('note-3');
-    expect(results.every(note => note.tags?.includes('test'))).toBe(true);
+    // Single consolidated assertion for search results validation
+    expect({
+      basics: {
+        isDefined: results !== undefined,
+        isArray: Array.isArray(results),
+        filteredLength: results.length,
+      },
+      content: {
+        firstNoteId: results[0]?.id,
+        secondNoteId: results[1]?.id,
+        allHaveTestTag: results.every(note => note.tags?.includes('test')),
+      },
+    }).toMatchObject({
+      basics: {
+        isDefined: true,
+        isArray: true,
+        filteredLength: 2,  // Should only include notes with 'test' tag
+      },
+      content: {
+        firstNoteId: 'note-1',
+        secondNoteId: 'note-3',
+        allHaveTestTag: true,
+      },
+    });
   });
 });

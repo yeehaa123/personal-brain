@@ -8,8 +8,10 @@
  * - Input/output handling
  * - Error handling
  * 
- * TODO: This class will be updated as part of the CLI/logger separation initiative
- * See planning/cli-logger-separation.md for the detailed plan
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
 
 import chalk from 'chalk';
@@ -27,18 +29,84 @@ interface ParsedCommand {
 }
 
 export interface CLIAppOptions {
+  /** Command handler for processing user input */
   commandHandler: CommandHandler;
+  /** CLI renderer for displaying command results */
   renderer: CLIRenderer;
+  /** Optional custom CLIInterface to use */
+  cliInterface?: CLIInterface;
+  /** Optional custom logger to use */
+  logger?: typeof logger;
 }
 
+/**
+ * CLIApp provides the main command-line application for the Personal Brain.
+ * 
+ * This class follows the Component Interface Standardization pattern with singleton
+ * management via getInstance(), resetInstance(), and createFresh().
+ */
 export class CLIApp {
-  private commandHandler: CommandHandler;
-  private renderer: CLIRenderer;
+  /** The singleton instance */
+  private static instance: CLIApp | null = null;
+  
+  /** Command handler for processing user commands */
+  private readonly commandHandler: CommandHandler;
+  
+  /** CLI renderer for displaying results */
+  private readonly renderer: CLIRenderer;
+  
+  /** CLIInterface for user interaction */
+  private readonly cli: CLIInterface;
+  
+  /** Logger for application logging */
+  private readonly logger: typeof logger;
+  
+  /** Whether the application is currently running */
   private running = false;
 
-  constructor(options: CLIAppOptions) {
+  /**
+   * Get the singleton instance of CLIApp
+   * 
+   * @param options Options for configuring the application
+   * @returns The shared CLIApp instance
+   */
+  public static getInstance(options: CLIAppOptions): CLIApp {
+    if (!CLIApp.instance) {
+      CLIApp.instance = new CLIApp(options);
+    }
+    return CLIApp.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance to ensure test isolation
+   */
+  public static resetInstance(): void {
+    CLIApp.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param options Options for configuring the application
+   * @returns A new CLIApp instance
+   */
+  public static createFresh(options: CLIAppOptions): CLIApp {
+    return new CLIApp(options);
+  }
+
+  /**
+   * Private constructor to enforce the use of getInstance()
+   * 
+   * @param options Configuration options
+   */
+  private constructor(options: CLIAppOptions) {
     this.commandHandler = options.commandHandler;
     this.renderer = options.renderer;
+    this.cli = options.cliInterface || CLIInterface.getInstance();
+    this.logger = options.logger || logger;
+    
     // Connect the command handler to the renderer for interactive commands
     this.renderer.setCommandHandler(this.commandHandler);
   }
@@ -64,7 +132,7 @@ export class CLIApp {
     const command = process.argv[2].toLowerCase();
     const args = process.argv.slice(3).join(' ');
 
-    logger.info(`Running command: ${command} ${args}`);
+    this.logger.info(`Running command: ${command} ${args}`);
 
     if (command === 'help') {
       this.renderer.renderHelp(this.commandHandler.getCommands());
@@ -75,8 +143,8 @@ export class CLIApp {
       const result = await this.commandHandler.processCommand(command, args);
       this.renderer.render(result);
     } catch (error) {
-      CLIInterface.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
-      logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
+      this.cli.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
     } finally {
       // Always stop the CLI application when done with the command
       // Note: Actual cleanup is handled by the CLI main function
@@ -88,8 +156,8 @@ export class CLIApp {
    * Run interactive mode with command prompt
    */
   private async runInteractiveMode(): Promise<void> {
-    CLIInterface.displayTitle('Personal Brain CLI');
-    CLIInterface.info('Type "help" to see available commands, or "exit" to quit');
+    this.cli.displayTitle('Personal Brain CLI');
+    this.cli.info('Type "help" to see available commands, or "exit" to quit');
 
     this.running = true;
     while (this.running) {
@@ -104,12 +172,12 @@ export class CLIApp {
         const { command, args } = this.parseCommand(input);
         await this.executeCommand(command, args);
       } catch (error) {
-        CLIInterface.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
-        logger.error(`Interactive mode error: ${error instanceof Error ? error.stack : String(error)}`);
+        this.cli.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+        this.logger.error(`Interactive mode error: ${error instanceof Error ? error.stack : String(error)}`);
       }
     }
 
-    CLIInterface.success('Goodbye!');
+    this.cli.success('Goodbye!');
   }
 
   /**
@@ -123,7 +191,7 @@ export class CLIApp {
     });
 
     const input = action.trim();
-    logger.info(`User entered: ${input}`);
+    this.logger.info(`User entered: ${input}`);
     return input;
   }
 
@@ -170,7 +238,7 @@ export class CLIApp {
     try {
       // Show a spinner for commands that might take time
       if (['search', 'ask', 'profile'].includes(command) && args) {
-        await CLIInterface.withSpinner(`Processing ${command} command...`, async () => {
+        await this.cli.withSpinner(`Processing ${command} command...`, async () => {
           const result = await this.commandHandler.processCommand(command, args);
           this.renderer.render(result);
           return null;
@@ -180,8 +248,8 @@ export class CLIApp {
         this.renderer.render(result);
       }
     } catch (error) {
-      CLIInterface.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
-      logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
+      this.cli.error(`Error executing command: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(`Command error: ${error instanceof Error ? error.stack : String(error)}`);
     }
   }
 
@@ -191,7 +259,7 @@ export class CLIApp {
    * actual cleanup is handled by the CLI main function
    */
   async stop(): Promise<void> {
-    logger.info('Stopping CLI application...');
+    this.logger.info('Stopping CLI application...');
     this.running = false;
     
     // Do not perform any cleanup here, as it's handled by the main CLI function

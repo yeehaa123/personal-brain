@@ -30,8 +30,9 @@ import { MockContextMediator } from '@test/__mocks__/protocol/messaging/contextM
 import { MockQueryProcessor } from '@test/__mocks__/protocol/pipeline/queryProcessor';
 
 // Add a debug check to see what's being imported
-console.log('Imported BrainProtocol:', BrainProtocol);
-console.log('BrainProtocol.resetInstance exists:', Boolean(BrainProtocol.resetInstance));
+// Using a comment instead of console.log to avoid interfering with other tests
+// that capture console output
+// BrainProtocol info: resetInstance exists: boolean
 
 /**
  * Create a set of mock dependencies for BrainProtocol

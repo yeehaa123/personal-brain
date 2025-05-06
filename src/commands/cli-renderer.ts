@@ -1,9 +1,9 @@
 /**
  * CLI Renderer for command results
- * This module handles formatting and displaying command results in the CLI
  * 
- * TODO: This class will be updated as part of the CLI/logger separation initiative
- * See planning/cli-logger-separation.md for the detailed plan
+ * This module handles formatting and displaying command results in the CLI.
+ * It follows the Component Interface Standardization pattern with
+ * getInstance(), resetInstance(), and createFresh().
  */
 /* global setTimeout */
 
@@ -16,30 +16,95 @@ import { displayNotes } from '../utils/noteUtils';
 import type { CommandHandler } from '.';
 import type { CommandInfo, CommandResult } from './index';
 
+/**
+ * Options for configuring the CLIRenderer
+ */
+export interface CLIRendererOptions {
+  /** Custom CLI interface to use for rendering */
+  cliInterface?: CLIInterface;
+  /** Custom logger to use (instance or class) */
+  logger?: Logger;
+}
 
 /**
- * Render command results for the CLI
+ * CLI Renderer for displaying command results
+ * 
+ * This class follows the Component Interface Standardization pattern with singleton
+ * management via getInstance(), resetInstance(), and createFresh().
  */
 export class CLIRenderer {
-  private logger = Logger.getInstance();
+  /** The singleton instance */
+  private static instance: CLIRenderer | null = null;
   
-  /**
-   * Render help command
-   */
-  renderHelp(commands: CommandInfo[]): void {
-    CLIInterface.displayTitle('Available Commands');
-
-    commands.forEach(cmd => {
-      CLIInterface.print(CLIInterface.formatCommand(cmd.usage, cmd.description, cmd.examples));
-    });
-
-    CLIInterface.print(''); // Add space after commands
-  }
-
+  /** Logger instance */
+  private readonly logger: Logger;
+  
+  /** CLI interface for user interaction */
+  private readonly cli: CLIInterface;
+  
+  /** Command handler for interactive operations */
   private commandHandler?: CommandHandler;
   
   /**
+   * Get the singleton instance of CLIRenderer
+   * 
+   * @param options Configuration options
+   * @returns The shared CLIRenderer instance
+   */
+  public static getInstance(options?: CLIRendererOptions): CLIRenderer {
+    if (!CLIRenderer.instance) {
+      CLIRenderer.instance = new CLIRenderer(options);
+    }
+    return CLIRenderer.instance;
+  }
+  
+  /**
+   * Reset the singleton instance
+   * This clears the instance for clean test isolation
+   */
+  public static resetInstance(): void {
+    CLIRenderer.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance without affecting the singleton
+   * 
+   * @param options Configuration options
+   * @returns A new CLIRenderer instance
+   */
+  public static createFresh(options?: CLIRendererOptions): CLIRenderer {
+    return new CLIRenderer(options);
+  }
+  
+  /**
+   * Private constructor to enforce the use of getInstance()
+   * 
+   * @param options Configuration options
+   */
+  private constructor(options?: CLIRendererOptions) {
+    this.cli = options?.cliInterface || CLIInterface.getInstance();
+    this.logger = options?.logger || Logger.createFresh();
+  }
+  
+  /**
+   * Render help command
+   * 
+   * @param commands List of available commands to display
+   */
+  renderHelp(commands: CommandInfo[]): void {
+    this.cli.displayTitle('Available Commands');
+
+    commands.forEach(cmd => {
+      this.cli.print(this.cli.formatCommand(cmd.usage, cmd.description, cmd.examples));
+    });
+
+    this.cli.print(''); // Add space after commands
+  }
+
+  /**
    * Set the command handler for interactive confirmation
+   * 
+   * @param handler The command handler to use for interactive operations
    */
   setCommandHandler(handler: CommandHandler): void {
     this.commandHandler = handler;
@@ -47,31 +112,33 @@ export class CLIRenderer {
   
   /**
    * Render a command result
+   * 
+   * @param result The command result to render
    */
   render(result: CommandResult): void {
     switch (result.type) {
     case 'error':
-      CLIInterface.error(result.message);
+      this.cli.error(result.message);
       break;
 
     case 'search':
-      CLIInterface.displayTitle(`Search Results for "${result.query}"`);
+      this.cli.displayTitle(`Search Results for "${result.query}"`);
       this.logger.info(`Searching for: ${result.query}`);
 
       if (result.notes.length === 0) {
-        CLIInterface.warn('No results found.');
+        this.cli.warn('No results found.');
       } else {
-        displayNotes(result.notes);
+        displayNotes(result.notes, this.cli);
       }
       break;
 
     case 'notes':
-      CLIInterface.displayTitle(result.title || 'Notes');
+      this.cli.displayTitle(result.title || 'Notes');
 
       if (result.notes.length === 0) {
-        CLIInterface.warn('No notes found.');
+        this.cli.warn('No notes found.');
       } else {
-        displayNotes(result.notes);
+        displayNotes(result.notes, this.cli);
       }
       break;
 
@@ -80,14 +147,14 @@ export class CLIRenderer {
       break;
 
     case 'tags':
-      CLIInterface.displayTitle('Available Tags');
+      this.cli.displayTitle('Available Tags');
 
       if (result.tags.length === 0) {
-        CLIInterface.warn('No tags found in the system.');
+        this.cli.warn('No tags found in the system.');
       } else {
-        CLIInterface.displayList(
+        this.cli.displayList(
           result.tags,
-          ({ tag, count }) => `${CLIInterface.styles.tag(tag)} (${CLIInterface.styles.dim(count.toString())})`,
+          ({ tag, count }) => `${this.cli.styles.tag(tag)} (${this.cli.styles.dim(count.toString())})`,
         );
       }
       break;
@@ -99,8 +166,8 @@ export class CLIRenderer {
     case 'profile-related':
       this.renderProfile(result.profile as EnhancedProfile);
 
-      CLIInterface.info('Finding notes related to your profile...');
-      CLIInterface.displayTitle('Notes Related to Your Profile');
+      this.cli.info('Finding notes related to your profile...');
+      this.cli.displayTitle('Notes Related to Your Profile');
 
       if (result.relatedNotes.length > 0) {
         // Explain how we found the notes
@@ -116,59 +183,59 @@ export class CLIRenderer {
           matchDescription = 'Matched by keyword similarity';
           break;
         }
-        CLIInterface.print(CLIInterface.styles.dim(`(${matchDescription})\n`));
+        this.cli.print(this.cli.styles.dim(`(${matchDescription})\n`));
 
-        displayNotes(result.relatedNotes);
+        displayNotes(result.relatedNotes, this.cli);
       } else {
-        CLIInterface.warn('No related notes found. Try generating embeddings and tags for your notes and profile.');
-        CLIInterface.info('You can run "bun run tag:profile" to generate profile tags.');
+        this.cli.warn('No related notes found. Try generating embeddings and tags for your notes and profile.');
+        this.cli.info('You can run "bun run tag:profile" to generate profile tags.');
       }
       break;
 
     case 'ask':
-      CLIInterface.displayTitle('Answer');
-      CLIInterface.print(result.answer);
+      this.cli.displayTitle('Answer');
+      this.cli.print(result.answer);
 
       if (result.citations && result.citations.length > 0) {
-        CLIInterface.displayTitle('Sources');
-        CLIInterface.displayList(
+        this.cli.displayTitle('Sources');
+        this.cli.displayList(
           result.citations,
-          (citation) => `${CLIInterface.styles.subtitle(citation.noteTitle)} (${CLIInterface.formatId(citation.noteId)})`,
+          (citation) => `${this.cli.styles.subtitle(citation.noteTitle)} (${this.cli.formatId(citation.noteId)})`,
         );
       }
 
       if (result.externalSources && result.externalSources.length > 0) {
-        CLIInterface.displayTitle('External Sources');
-        CLIInterface.displayList(
+        this.cli.displayTitle('External Sources');
+        this.cli.displayList(
           result.externalSources,
           (source) => {
-            const title = CLIInterface.styles.subtitle(source.title);
-            const sourceInfo = CLIInterface.styles.highlight(source.source);
-            const url = CLIInterface.styles.url(source.url);
+            const title = this.cli.styles.subtitle(source.title);
+            const sourceInfo = this.cli.styles.highlight(source.source);
+            const url = this.cli.styles.url(source.url);
             return `${title} - ${sourceInfo}\n  ${url}`;
           },
         );
       }
 
       if (result.relatedNotes.length > 0) {
-        CLIInterface.displayTitle('Related Notes');
-        displayNotes(result.relatedNotes);
+        this.cli.displayTitle('Related Notes');
+        displayNotes(result.relatedNotes, this.cli);
       }
 
       // Display profile if it was included in the response
       if (result.profile) {
-        CLIInterface.displayTitle('Profile Information');
-        CLIInterface.printLabelValue('Name', result.profile.fullName);
-        if (result.profile.occupation) CLIInterface.printLabelValue('Occupation', result.profile.occupation);
-        if (result.profile.headline) CLIInterface.printLabelValue('Headline', result.profile.headline);
+        this.cli.displayTitle('Profile Information');
+        this.cli.printLabelValue('Name', result.profile.fullName);
+        if (result.profile.occupation) this.cli.printLabelValue('Occupation', result.profile.occupation);
+        if (result.profile.headline) this.cli.printLabelValue('Headline', result.profile.headline);
       }
       break;
 
     case 'external':
       if (result.enabled) {
-        CLIInterface.success(result.message);
+        this.cli.success(result.message);
       } else {
-        CLIInterface.warn(result.message);
+        this.cli.warn(result.message);
       }
       break;
       
@@ -187,14 +254,14 @@ export class CLIRenderer {
     // Website commands
     case 'website-config':
       if (result.success !== undefined) {
-        CLIInterface.displayTitle('Updated Configuration');
+        this.cli.displayTitle('Updated Configuration');
         if (result.success) {
-          CLIInterface.success(result.message);
+          this.cli.success(result.message);
         } else {
-          CLIInterface.error(result.message);
+          this.cli.error(result.message);
         }
       } else {
-        CLIInterface.displayTitle('Website Configuration');
+        this.cli.displayTitle('Website Configuration');
       }
       
       if (result.config) {
@@ -202,133 +269,132 @@ export class CLIRenderer {
           key, 
           value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value), 
         }));
-        CLIInterface.displayList(configItems, item => `${CLIInterface.styles.subtitle(item.key)}: ${item.value}`);
+        this.cli.displayList(configItems, item => `${this.cli.styles.subtitle(item.key)}: ${item.value}`);
       }
       break;
       
     case 'landing-page':
       if (result.success !== undefined && result.message) {
         if (result.success) {
-          CLIInterface.success(result.message);
+          this.cli.success(result.message);
         } else {
-          CLIInterface.error(result.message);
+          this.cli.error(result.message);
         }
       }
       
       if (result.data) {
-        CLIInterface.displayTitle('Landing Page Content');
+        this.cli.displayTitle('Landing Page Content');
         
         // Display each field from the landing page data
         Object.entries(result.data).forEach(([key, value]) => {
-          CLIInterface.displaySubtitle(key.charAt(0).toUpperCase() + key.slice(1));
-          CLIInterface.print(String(value));
+          this.cli.displaySubtitle(key.charAt(0).toUpperCase() + key.slice(1));
+          this.cli.print(String(value));
         });
       }
       break;
       
-      
     case 'website-build':
       if (result.success) {
-        CLIInterface.success(result.message);
+        this.cli.success(result.message);
         
         if (result.url) {
-          CLIInterface.info('Website preview available at:');
-          CLIInterface.print(result.url);
+          this.cli.info('Website preview available at:');
+          this.cli.print(result.url);
         }
         
         // Show helpful next steps
-        CLIInterface.info('To promote to production:');
-        CLIInterface.print('website-promote');
+        this.cli.info('To promote to production:');
+        this.cli.print('website-promote');
       } else {
-        CLIInterface.error(result.message);
+        this.cli.error(result.message);
       }
       break;
       
     case 'website-promote':
       if (result.success) {
-        CLIInterface.success(result.message);
+        this.cli.success(result.message);
         
         if (result.url) {
-          CLIInterface.info('Production site available at:');
-          CLIInterface.print(result.url);
+          this.cli.info('Production site available at:');
+          this.cli.print(result.url);
         }
       } else {
-        CLIInterface.error(result.message);
+        this.cli.error(result.message);
       }
       break;
       
     case 'website-status':
       if (result.success) {
-        CLIInterface.displayTitle('Website Status');
-        CLIInterface.success(result.message);
+        this.cli.displayTitle('Website Status');
+        this.cli.success(result.message);
         
         if (result.data) {
           // Display detailed status information
           const { environment, buildStatus, fileCount, serverStatus, domain, accessStatus, url } = result.data;
           
-          CLIInterface.printLabelValue('Environment', environment);
-          CLIInterface.printLabelValue('Build Status', buildStatus);
-          CLIInterface.printLabelValue('File Count', String(fileCount));
-          CLIInterface.printLabelValue('Server Status', serverStatus);
-          CLIInterface.printLabelValue('Domain', domain);
-          CLIInterface.printLabelValue('Access Status', accessStatus);
+          this.cli.printLabelValue('Environment', environment);
+          this.cli.printLabelValue('Build Status', buildStatus);
+          this.cli.printLabelValue('File Count', String(fileCount));
+          this.cli.printLabelValue('Server Status', serverStatus);
+          this.cli.printLabelValue('Domain', domain);
+          this.cli.printLabelValue('Access Status', accessStatus);
           
           if (url) {
-            CLIInterface.info('Website URL:');
-            CLIInterface.print(url);
+            this.cli.info('Website URL:');
+            this.cli.print(url);
           }
         }
       } else {
-        CLIInterface.error(result.message || 'Failed to check website status');
+        this.cli.error(result.message || 'Failed to check website status');
       }
       break;
 
     case 'status':
-      CLIInterface.displayTitle('System Status');
+      this.cli.displayTitle('System Status');
 
       // API Connection
-      CLIInterface.printLabelValue(
+      this.cli.printLabelValue(
         'API Connection',
         result.status.apiConnected ? 'Connected' : 'Disconnected',
-        { formatter: val => result.status.apiConnected ? CLIInterface.styles.success(val) : CLIInterface.styles.error(val) },
+        { formatter: val => result.status.apiConnected ? this.cli.styles.success(val) : this.cli.styles.error(val) },
       );
 
       // Database Connection
-      CLIInterface.printLabelValue(
+      this.cli.printLabelValue(
         'Database',
         result.status.dbConnected ? 'Connected' : 'Disconnected',
-        { formatter: val => result.status.dbConnected ? CLIInterface.styles.success(val) : CLIInterface.styles.error(val) },
+        { formatter: val => result.status.dbConnected ? this.cli.styles.success(val) : this.cli.styles.error(val) },
       );
 
       // Note Count
-      CLIInterface.printLabelValue('Notes', result.status.noteCount.toString());
+      this.cli.printLabelValue('Notes', result.status.noteCount.toString());
 
       // External Sources Status
-      CLIInterface.printLabelValue(
+      this.cli.printLabelValue(
         'External Sources',
         result.status.externalSourcesEnabled ? 'Enabled' : 'Disabled',
         {
           formatter: val => result.status.externalSourcesEnabled ?
-            CLIInterface.styles.success(val) : CLIInterface.styles.warn(val),
+            this.cli.styles.success(val) : this.cli.styles.warn(val),
         },
       );
 
       // External Sources Availability
       if (Object.keys(result.status.externalSources).length > 0) {
-        CLIInterface.displaySubtitle('Available External Sources');
+        this.cli.displaySubtitle('Available External Sources');
 
         Object.entries(result.status.externalSources).forEach(([name, available]) => {
-          CLIInterface.printLabelValue(
+          this.cli.printLabelValue(
             name,
             available ? 'Available' : 'Unavailable',
             {
               formatter: val => available ?
-                CLIInterface.styles.success(val) : CLIInterface.styles.error(val),
+                this.cli.styles.success(val) : this.cli.styles.error(val),
             },
           );
         });
       } else {
-        CLIInterface.warn('No external sources configured');
+        this.cli.warn('No external sources configured');
       }
       break;
     }
@@ -336,38 +402,40 @@ export class CLIRenderer {
 
   /**
    * Render save-note preview with options to edit or confirm
+   * 
+   * @param result Note preview information
    */
   private renderSaveNotePreview(result: { noteContent: string; title: string; conversationId: string }): void {
-    CLIInterface.displayTitle('Note Preview');
-    CLIInterface.printLabelValue('Title', result.title);
+    this.cli.displayTitle('Note Preview');
+    this.cli.printLabelValue('Title', result.title);
     
-    CLIInterface.displaySubtitle('Content Preview');
+    this.cli.displaySubtitle('Content Preview');
     // Display first 300 characters of content
     const previewContent = result.noteContent.length > 300
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
-    CLIInterface.print(previewContent);
+    this.cli.print(previewContent);
     
-    CLIInterface.info('');
-    CLIInterface.info('This is a preview of the note that will be created from your conversation.');
-    CLIInterface.info('To save this note, type "y". To cancel, type "n".');
-    CLIInterface.info('You can also edit the title by typing "title: New Title"');
+    this.cli.info('');
+    this.cli.info('This is a preview of the note that will be created from your conversation.');
+    this.cli.info('To save this note, type "y". To cancel, type "n".');
+    this.cli.info('You can also edit the title by typing "title: New Title"');
     
     // Collect user input for confirmation
     // In a real implementation, we would set up an event listener for user input
     // and call confirmSaveNote when the user confirms
     // For demo purposes, we'll just provide instructions
-    CLIInterface.print('');
-    CLIInterface.info('Since this is a CLI interface, in a real implementation you would:');
-    CLIInterface.info('1. Type "y" to confirm and save the note');
-    CLIInterface.info('2. Type "n" to cancel');
-    CLIInterface.info('3. Type "title: New Title" to change the title');
+    this.cli.print('');
+    this.cli.info('Since this is a CLI interface, in a real implementation you would:');
+    this.cli.info('1. Type "y" to confirm and save the note');
+    this.cli.info('2. Type "n" to cancel');
+    this.cli.info('3. Type "title: New Title" to change the title');
     
     // If we have a commandHandler, we can handle the confirmation directly
     // In a real implementation, this would be connected to user input handling
     if (this.commandHandler) {
-      CLIInterface.print('');
-      CLIInterface.info('For demo purposes, automatically confirming...');
+      this.cli.print('');
+      this.cli.info('For demo purposes, automatically confirming...');
       // Simulate confirmation by calling the confirmSaveNote method
       setTimeout(async () => {
         if (this.commandHandler) {
@@ -380,117 +448,125 @@ export class CLIRenderer {
   
   /**
    * Render save-note confirmation
+   * 
+   * @param result Note creation result
    */
   private renderSaveNoteConfirm(result: { noteId: string; title: string }): void {
-    CLIInterface.success(`Note "${result.title}" saved successfully!`);
-    CLIInterface.info(`Note ID: ${CLIInterface.formatId(result.noteId)}`);
-    CLIInterface.info('To view the note, use the command:');
-    CLIInterface.print(`  note ${result.noteId}`);
+    this.cli.success(`Note "${result.title}" saved successfully!`);
+    this.cli.info(`Note ID: ${this.cli.formatId(result.noteId)}`);
+    this.cli.info('To view the note, use the command:');
+    this.cli.print(`  note ${result.noteId}`);
   }
   
   /**
    * Render conversation notes list
+   * 
+   * @param result Notes created from conversations
    */
   private renderConversationNotes(result: { notes: Note[] }): void {
-    CLIInterface.displayTitle('Notes Created from Conversations');
+    this.cli.displayTitle('Notes Created from Conversations');
     
     if (result.notes.length === 0) {
-      CLIInterface.warn('No conversation notes found.');
+      this.cli.warn('No conversation notes found.');
       return;
     }
     
-    displayNotes(result.notes);
+    displayNotes(result.notes, this.cli);
   }
 
   /**
-   * Render a note
+   * Render a single note with metadata and content
+   * 
+   * @param note The note to render
    */
   private renderNote(note: Note): void {
-    CLIInterface.displayTitle(note.title);
+    this.cli.displayTitle(note.title);
 
     // Print metadata using label-value formatting
-    CLIInterface.printLabelValue('ID', note.id, { formatter: CLIInterface.formatId });
-    CLIInterface.printLabelValue('Tags', note.tags as string[], { emptyText: 'None' });
-    CLIInterface.printLabelValue('Created', CLIInterface.formatDate(new Date(note.createdAt)));
-    CLIInterface.printLabelValue('Updated', CLIInterface.formatDate(new Date(note.updatedAt)));
+    this.cli.printLabelValue('ID', note.id, { formatter: id => this.cli.formatId(id) });
+    this.cli.printLabelValue('Tags', note.tags as string[], { emptyText: 'None' });
+    this.cli.printLabelValue('Created', this.cli.formatDate(new Date(note.createdAt)));
+    this.cli.printLabelValue('Updated', this.cli.formatDate(new Date(note.updatedAt)));
 
     // Display content
-    CLIInterface.displaySubtitle('Content');
-    CLIInterface.print(note.content);
+    this.cli.displaySubtitle('Content');
+    this.cli.print(note.content);
   }
 
   /**
    * Render profile information
+   * 
+   * @param profile The profile to render
    */
   private renderProfile(profile: EnhancedProfile): void {
-    CLIInterface.displayTitle('Profile Information');
+    this.cli.displayTitle('Profile Information');
 
     // Print basic information using label-value formatting
-    CLIInterface.printLabelValue('Name', profile.fullName);
-    if (profile.headline) CLIInterface.printLabelValue('Headline', profile.headline);
-    if (profile.occupation) CLIInterface.printLabelValue('Occupation', profile.occupation);
+    this.cli.printLabelValue('Name', profile.fullName);
+    if (profile.headline) this.cli.printLabelValue('Headline', profile.headline);
+    if (profile.occupation) this.cli.printLabelValue('Occupation', profile.occupation);
 
     // Display location
     const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
-    if (location) CLIInterface.printLabelValue('Location', location);
+    if (location) this.cli.printLabelValue('Location', location);
 
     // Display summary
     if (profile.summary) {
-      CLIInterface.displaySubtitle('Summary');
-      CLIInterface.print(profile.summary);
+      this.cli.displaySubtitle('Summary');
+      this.cli.print(profile.summary);
     }
 
     // Display current experience
     if (profile.experiences && profile.experiences.length > 0) {
-      CLIInterface.displaySubtitle('Current Work');
+      this.cli.displaySubtitle('Current Work');
       const experiences = profile.experiences as ProfileExperience[];
       const currentExperiences = experiences.filter(exp => !exp.ends_at);
 
       if (currentExperiences.length > 0) {
         currentExperiences.forEach((exp: ProfileExperience) => {
-          const title = CLIInterface.styles.subtitle(exp.title);
-          const company = CLIInterface.styles.highlight(exp.company);
-          CLIInterface.print(`- ${title} at ${company}`);
+          const title = this.cli.styles.subtitle(exp.title);
+          const company = this.cli.styles.highlight(exp.company);
+          this.cli.print(`- ${title} at ${company}`);
 
           if (exp.description) {
             // Trim long descriptions
             const desc = exp.description.length > 100
               ? exp.description.substring(0, 100) + '...'
               : exp.description;
-            CLIInterface.print(`  ${CLIInterface.styles.dim(desc)}`);
+            this.cli.print(`  ${this.cli.styles.dim(desc)}`);
           }
         });
       } else {
-        CLIInterface.print(CLIInterface.styles.dim('No current work experiences found.'));
+        this.cli.print(this.cli.styles.dim('No current work experiences found.'));
       }
     }
 
     // Display skills
     if (profile.languages && profile.languages.length > 0) {
-      CLIInterface.displaySubtitle('Languages');
-      CLIInterface.printLabelValue('Skills', profile.languages as string[]);
+      this.cli.displaySubtitle('Languages');
+      this.cli.printLabelValue('Skills', profile.languages as string[]);
     }
 
     // Check for embedding
-    CLIInterface.print('');
+    this.cli.print('');
     if (profile.embedding) {
-      CLIInterface.printLabelValue('Profile has embeddings', 'Yes', {
-        formatter: val => CLIInterface.styles.success(val),
+      this.cli.printLabelValue('Profile has embeddings', 'Yes', {
+        formatter: val => this.cli.styles.success(val),
       });
     } else {
-      CLIInterface.printLabelValue('Profile has embeddings', 'No', {
-        formatter: val => CLIInterface.styles.error(val),
+      this.cli.printLabelValue('Profile has embeddings', 'No', {
+        formatter: val => this.cli.styles.error(val),
       });
-      CLIInterface.print(CLIInterface.styles.dim('Run "bun run embed:profile" to generate embeddings.'));
+      this.cli.print(this.cli.styles.dim('Run "bun run embed:profile" to generate embeddings.'));
     }
 
     // Display tags if available
-    CLIInterface.displaySubtitle('Profile Tags');
+    this.cli.displaySubtitle('Profile Tags');
     if (profile.tags && profile.tags.length > 0) {
-      CLIInterface.printLabelValue('Tags', profile.tags);
+      this.cli.printLabelValue('Tags', profile.tags);
     } else {
-      CLIInterface.printLabelValue('Tags', '', { emptyText: 'None' });
-      CLIInterface.print(CLIInterface.styles.dim('Run "bun run tag:profile" to generate tags.'));
+      this.cli.printLabelValue('Tags', '', { emptyText: 'None' });
+      this.cli.print(this.cli.styles.dim('Run "bun run tag:profile" to generate tags.'));
     }
   }
 }

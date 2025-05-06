@@ -1,159 +1,176 @@
-import { describe, expect, test } from 'bun:test';
+/**
+ * Tests for CLIInterface
+ * 
+ * These tests verify that CLIInterface implements the Component Interface Standardization pattern
+ * and that its instance methods work correctly.
+ */
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { CLIInterface } from '@utils/cliInterface';
-
+import { CLIInterface } from '@/utils/cliInterface';
+import type { CLIInterfaceOptions } from '@/utils/cliInterface';
+import { MockLogger } from '@test/__mocks__/core/logger';
 
 describe('CLIInterface', () => {
-
-  describe('styles', () => {
-    test('should have tag style defined', () => {
-      expect(CLIInterface.styles.tag).toBeDefined();
-      const styledTag = CLIInterface.styles.tag('test-tag');
-      expect(styledTag).toBeTypeOf('string');
-      expect(styledTag).toContain('test-tag'); // The original tag should be in the result
-    });
-
-    test('should have other necessary styles defined', () => {
-      // Check that all styles mentioned in our fix are defined
-      expect(CLIInterface.styles.number).toBeDefined();
-      expect(CLIInterface.styles.subtitle).toBeDefined();
-      expect(CLIInterface.styles.id).toBeDefined();
-    });
+  // Mock for stdout.write to verify output without capturing it directly
+  const mockWrite = mock((_: string | Uint8Array) => true);
+  let originalStdoutWrite: typeof process.stdout.write;
+  let mockLogger: ReturnType<typeof MockLogger.createFresh>;
+  
+  // Before each test, set up mocks
+  beforeEach(() => {
+    // Reset singletons before each test for isolation
+    CLIInterface.resetInstance();
+    MockLogger.resetInstance();
+    
+    // Create a fresh mock logger
+    mockLogger = MockLogger.createFresh();
+    
+    // Store original stdout.write and replace with mock
+    originalStdoutWrite = process.stdout.write;
+    process.stdout.write = mockWrite;
   });
-
-  describe('formatting methods', () => {
-    test('formatId should properly format an ID', () => {
-      const id = 'test-id-123';
-      const formatted = CLIInterface.formatId(id);
-      expect(formatted).toContain(id);
-    });
-
-    test('formatTags should handle array of tags', () => {
-      // Save original function
-      const original = CLIInterface.formatTags;
-
-      // Replace with test-specific implementation
-      CLIInterface.formatTags = function(tags: string[] | null | undefined) {
-        if (!tags || tags.length === 0) {
-          return 'No tags';
-        }
-        return tags.map(tag => `#${tag}`).join(' ');
-      };
-
-      try {
-        const tags = ['tag1', 'tag2', 'tag3'];
-        const formatted = CLIInterface.formatTags(tags);
-
-        // The formatted string should contain all tags
-        tags.forEach(tag => {
-          expect(formatted).toContain(`#${tag}`);
-        });
-      } finally {
-        // Restore original implementation
-        CLIInterface.formatTags = original;
-      }
-    });
-
-    test('formatTags should handle empty tags', () => {
-      // Save original function
-      const original = CLIInterface.formatTags;
-
-      // Replace with test-specific implementation
-      CLIInterface.formatTags = function(tags: string[] | null | undefined) {
-        if (!tags || tags.length === 0) {
-          return 'No tags';
-        }
-        return tags.map(tag => `#${tag}`).join(' ');
-      };
-
-      try {
-        const formatted = CLIInterface.formatTags([]);
-        expect(formatted).toContain('No tags');
-      } finally {
-        // Restore original implementation
-        CLIInterface.formatTags = original;
-      }
-    });
-
-    test('formatTags should handle null/undefined', () => {
-      // Save original function
-      const original = CLIInterface.formatTags;
-
-      // Replace with test-specific implementation
-      CLIInterface.formatTags = function(tags: string[] | null | undefined) {
-        if (!tags || tags.length === 0) {
-          return 'No tags';
-        }
-        return tags.map(tag => `#${tag}`).join(' ');
-      };
-
-      try {
-        expect(CLIInterface.formatTags(null)).toContain('No tags');
-        expect(CLIInterface.formatTags(undefined)).toContain('No tags');
-      } finally {
-        // Restore original implementation
-        CLIInterface.formatTags = original;
-      }
-    });
+  
+  // After each test, restore stdout
+  afterEach(() => {
+    // Restore original stdout.write
+    process.stdout.write = originalStdoutWrite;
   });
-
-  describe('printLabelValue option handling', () => {
-    test('should handle formatter option for arrays', () => {
-      const options = {
-        formatter: (tag: string) => `#${tag}`,
-        emptyText: 'none',
-      };
-
-      // Verify formatter works
-      expect(options.formatter('tag1')).toBe('#tag1');
-
-      // Verify emptyText is set
-      expect(options.emptyText).toBe('none');
+  
+  test('should implement Component Interface Standardization pattern', () => {
+    // Verify singleton pattern
+    const instance1 = CLIInterface.getInstance();
+    const instance2 = CLIInterface.getInstance();
+    expect(instance1).toBe(instance2);
+    
+    // Verify resetInstance
+    CLIInterface.resetInstance();
+    const instance3 = CLIInterface.getInstance();
+    expect(instance3).not.toBe(instance1);
+    
+    // Verify createFresh
+    const freshInstance = CLIInterface.createFresh();
+    expect(freshInstance).not.toBe(instance3);
+    
+    // Verify options are passed correctly
+    const options: CLIInterfaceOptions = { silent: true };
+    const silentInstance = CLIInterface.createFresh(options);
+    
+    // Reset mock for this specific test
+    mockWrite.mockClear();
+    
+    // Test silent mode by outputting something - should not call write
+    silentInstance.print('This should not be output');
+    expect(mockWrite).not.toHaveBeenCalled();
+  });
+  
+  test('should have accessible styles via instance', () => {
+    const cli = CLIInterface.getInstance();
+    
+    // Verify styles are accessible
+    expect(cli.styles).toBeDefined();
+    
+    // Check a few representative style functions
+    expect(typeof cli.styles.title).toBe('function');
+    expect(typeof cli.styles.tag).toBe('function');
+    expect(typeof cli.styles.error).toBe('function');
+    
+    // Check a few icon strings
+    expect(typeof cli.styles.successIcon).toBe('string');
+    expect(typeof cli.styles.errorIcon).toBe('string');
+  });
+  
+  test('should output formatted messages', () => {
+    // Cast the mockLogger to access its internal properties
+    const mockLoggerImpl = mockLogger as unknown as MockLogger;
+    
+    // Create CLI instance with our mock logger
+    const cli = CLIInterface.createFresh({
+      customLogger: mockLogger,
     });
-
-    test('should handle emptyText option for empty arrays', () => {
-      const options = { emptyText: 'No tags available' };
-      expect(options.emptyText).toBe('No tags available');
+    
+    // Test title formatting
+    cli.displayTitle('Test Title');
+    expect(mockWrite).toHaveBeenCalled();
+    expect(mockLoggerImpl.messages.debug).toContain('Displayed title: Test Title');
+    
+    // Reset mocks
+    mockWrite.mockClear();
+    mockLoggerImpl.clear();
+    
+    // Test subtitle formatting
+    cli.displaySubtitle('Test Subtitle');
+    expect(mockWrite).toHaveBeenCalled();
+    expect(mockLoggerImpl.messages.debug).toContain('Displayed subtitle: Test Subtitle');
+    
+    // Reset mocks
+    mockWrite.mockClear();
+    mockLoggerImpl.clear();
+    
+    // Test success message
+    cli.success('Success Message');
+    expect(mockWrite).toHaveBeenCalled();
+    expect(mockLoggerImpl.messages.info).toContain('[SUCCESS] Success Message');
+    
+    // Reset mocks
+    mockWrite.mockClear();
+    mockLoggerImpl.clear();
+    
+    // Test error message
+    cli.error('Error Message');
+    expect(mockWrite).toHaveBeenCalled();
+    expect(mockLoggerImpl.messages.error).toContain('Error Message');
+  });
+  
+  test('should format values correctly', () => {
+    const cli = CLIInterface.getInstance();
+    
+    // Test ID formatting
+    const formattedId = cli.formatId('test-id-123');
+    expect(formattedId).toContain('test-id-123');
+    
+    // Test tag formatting
+    const formattedTags = cli.formatTags(['tag1', 'tag2']);
+    expect(formattedTags).toContain('#tag1');
+    expect(formattedTags).toContain('#tag2'); // This is different from printLabelValue's default behavior
+    
+    // Test empty tag handling
+    expect(cli.formatTags([])).toContain('No tags');
+    expect(cli.formatTags(null)).toContain('No tags');
+    
+    // Test command formatting
+    const formattedCommand = cli.formatCommand('test', 'Test command');
+    expect(formattedCommand).toContain('test');
+    expect(formattedCommand).toContain('Test command');
+    
+    // Test command with examples
+    const withExamples = cli.formatCommand('cmd', 'Command', ['Example 1']);
+    expect(withExamples).toContain('Example 1');
+  });
+  
+  test('should display lists and label-value pairs', () => {
+    // Cast the mockLogger to access its internal properties
+    const mockLoggerImpl = mockLogger as unknown as MockLogger;
+    
+    // Create a fresh instance with our mock logger
+    const cli = CLIInterface.createFresh({
+      customLogger: mockLogger,
     });
-
-    test('should use formatter for values when provided', () => {
-      const formatter = (val: string): string => `[${val}]`;
-      expect(formatter('value')).toBe('[value]');
-    });
-
-    test('should print label and value correctly', () => {
-      // We'll verify this differently - test the options parsing logic
-      // which is key for this method
-
-      const tags = ['tag1', 'tag2'];
-      const options = { formatter: (tag: string) => `#${tag}` };
-
-      // Test the formatter directly
-      const formattedTag = options.formatter('test');
-      expect(formattedTag).toBe('#test');
-
-      // Verify tags can be formatted correctly
-      const formattedTags = tags.map(options.formatter);
-      expect(formattedTags).toContain('#tag1');
-      expect(formattedTags).toContain('#tag2');
-    });
-
-    test('should handle empty values with emptyText', () => {
-      // Test the options parsing logic for empty values
-
-      const emptyArray: string[] = [];
-      const options = { emptyText: 'No tags found' };
-
-      // Verify the empty text option is set correctly
-      expect(options.emptyText).toBe('No tags found');
-
-      // Verify the empty condition logic
-      const isEmpty = emptyArray.length === 0;
-      expect(isEmpty).toBeTrue();
-
-      // In the real function, we would use the emptyText when isEmpty is true
-      const valueToDisplay = isEmpty ? options.emptyText : emptyArray.join(' ');
-      expect(valueToDisplay).toBe('No tags found');
-    });
+    
+    // Test printLabelValue with string
+    mockWrite.mockClear();
+    cli.printLabelValue('Name', 'Test Name');
+    expect(mockWrite).toHaveBeenCalled();
+    
+    // Test printLabelValue with array
+    mockWrite.mockClear();
+    cli.printLabelValue('Tags', ['tag1', 'tag2']);
+    expect(mockWrite).toHaveBeenCalled();
+    
+    // Test displayList
+    mockWrite.mockClear();
+    mockLoggerImpl.clear();
+    cli.displayList(['Item 1', 'Item 2', 'Item 3']);
+    expect(mockWrite).toHaveBeenCalled();
+    expect(mockLoggerImpl.messages.info).toContain('Displaying list of 3 items');
   });
 });

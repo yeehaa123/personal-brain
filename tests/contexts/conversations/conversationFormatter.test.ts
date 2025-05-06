@@ -42,98 +42,212 @@ describe('ConversationFormatter', () => {
   ];
 
   describe('formatTurns', () => {
-    test('should format turns as text by default', () => {
-      const result = formatter.formatTurns(mockTurns);
-      
-      expect(result).toContain('User: Hello');
-      expect(result).toContain('Assistant: Hi there!');
-      expect(result).toContain('User: How are you?');
-      expect(result).toContain('Assistant: I\'m doing well, thanks for asking!');
-    });
+    // Define a table of test cases
+    const formatTurnTestCases = [
+      {
+        name: 'text format (default)',
+        options: {},
+        expectedPatterns: [
+          'User: Hello',
+          'Assistant: Hi there!',
+          'User: How are you?',
+          'Assistant: I\'m doing well, thanks for asking!',
+        ],
+      },
+      {
+        name: 'markdown format',
+        options: { format: 'markdown' as const },
+        expectedPatterns: [
+          '**User**: Hello',
+          '**Assistant**: Hi there!',
+          '**User**: How are you?',
+          '**Assistant**: I\'m doing well, thanks for asking!',
+        ],
+      },
+      {
+        name: 'with timestamps',
+        options: { includeTimestamps: true },
+        expectedPatterns: [
+          '[2023-01-01T10:00:00.000Z]',
+          '[2023-01-01T10:01:00.000Z]',
+        ],
+      },
+      {
+        name: 'with anchor highlighting',
+        options: { 
+          highlightAnchor: true,
+          anchorId: 'user-1',
+          anchorName: 'Host',
+        },
+        expectedPatterns: [
+          'Host (User): Hello',
+          'Host (User): How are you?',
+        ],
+      },
+    ];
     
-    test('should format turns as markdown when specified', () => {
-      const result = formatter.formatTurns(mockTurns, { format: 'markdown' });
-      
-      expect(result).toContain('**User**: Hello');
-      expect(result).toContain('**Assistant**: Hi there!');
-      expect(result).toContain('**User**: How are you?');
-      expect(result).toContain('**Assistant**: I\'m doing well, thanks for asking!');
-    });
-    
-    test('should include timestamps when requested', () => {
-      const result = formatter.formatTurns(mockTurns, { includeTimestamps: true });
-      
-      expect(result).toContain('[2023-01-01T10:00:00.000Z]');
-      expect(result).toContain('[2023-01-01T10:01:00.000Z]');
-    });
-    
-    test('should highlight anchor when requested', () => {
-      const result = formatter.formatTurns(mockTurns, { 
-        highlightAnchor: true,
-        anchorId: 'user-1',
-        anchorName: 'Host',
+    // Run all test cases with a single test
+    test('should format turns correctly with different options', () => {
+      // Map each test case to a result object
+      const results = formatTurnTestCases.map(testCase => {
+        const result = formatter.formatTurns(mockTurns, testCase.options);
+        return {
+          name: testCase.name,
+          containsAllPatterns: testCase.expectedPatterns.every(pattern => 
+            result.includes(pattern),
+          ),
+        };
       });
       
-      expect(result).toContain('Host (User): Hello');
-      expect(result).toContain('Host (User): How are you?');
+      // Single assertion that validates all test cases
+      expect(results).toMatchObject(
+        formatTurnTestCases.map(testCase => ({
+          name: testCase.name,
+          containsAllPatterns: true,
+        })),
+      );
     });
   });
 
   describe('formatSummaries', () => {
-    test('should format summaries as text by default', () => {
-      const result = formatter.formatSummaries(mockSummaries);
-      
-      expect(result).toContain('Summary 1: The user greeted the assistant');
-    });
+    // Define a table of test cases
+    const formatSummaryTestCases = [
+      {
+        name: 'text format (default)',
+        options: {},
+        expectedPatterns: [
+          'Summary 1: The user greeted the assistant',
+        ],
+      },
+      {
+        name: 'markdown format',
+        options: { format: 'markdown' as const },
+        expectedPatterns: [
+          '### Summary 1',
+          'The user greeted the assistant',
+        ],
+      },
+    ];
     
-    test('should format summaries as markdown when specified', () => {
-      const result = formatter.formatSummaries(mockSummaries, { format: 'markdown' });
+    // Run all test cases with a single test
+    test('should format summaries correctly with different options', () => {
+      // Map each test case to a result object
+      const results = formatSummaryTestCases.map(testCase => {
+        const result = formatter.formatSummaries(mockSummaries, testCase.options);
+        return {
+          name: testCase.name,
+          containsAllPatterns: testCase.expectedPatterns.every(pattern => 
+            result.includes(pattern),
+          ),
+        };
+      });
       
-      expect(result).toContain('### Summary 1');
-      expect(result).toContain('The user greeted the assistant');
+      // Single assertion that validates all test cases
+      expect(results).toMatchObject(
+        formatSummaryTestCases.map(testCase => ({
+          name: testCase.name,
+          containsAllPatterns: true,
+        })),
+      );
     });
   });
 
   describe('formatConversation', () => {
-    test('should combine summaries and turns with appropriate headers', () => {
-      const result = formatter.formatConversation(mockTurns, mockSummaries);
-      
-      expect(result).toContain('CONVERSATION SUMMARIES:');
-      expect(result).toContain('Summary 1: The user greeted the assistant');
-      expect(result).toContain('RECENT CONVERSATION:');
-      expect(result).toContain('User: Hello');
-    });
+    // Define a table of test cases
+    const formatConversationTestCases = [
+      {
+        name: 'text format (default)',
+        options: {},
+        expectedPatterns: [
+          'CONVERSATION SUMMARIES:',
+          'Summary 1: The user greeted the assistant',
+          'RECENT CONVERSATION:',
+          'User: Hello',
+        ],
+      },
+      {
+        name: 'markdown format',
+        options: { format: 'markdown' as const },
+        expectedPatterns: [
+          '## Conversation Summaries',
+          '### Summary 1',
+          '## Recent Conversation',
+          '**User**: Hello',
+        ],
+      },
+    ];
     
-    test('should format according to the specified format', () => {
-      const result = formatter.formatConversation(mockTurns, mockSummaries, { format: 'markdown' });
+    // Run all test cases with a single test
+    test('should format conversations correctly with different options', () => {
+      // Map each test case to a result object
+      const results = formatConversationTestCases.map(testCase => {
+        const result = formatter.formatConversation(mockTurns, mockSummaries, testCase.options);
+        return {
+          name: testCase.name,
+          containsAllPatterns: testCase.expectedPatterns.every(pattern => 
+            result.includes(pattern),
+          ),
+        };
+      });
       
-      expect(result).toContain('## Conversation Summaries');
-      expect(result).toContain('### Summary 1');
-      expect(result).toContain('## Recent Conversation');
-      expect(result).toContain('**User**: Hello');
+      // Single assertion that validates all test cases
+      expect(results).toMatchObject(
+        formatConversationTestCases.map(testCase => ({
+          name: testCase.name,
+          containsAllPatterns: true,
+        })),
+      );
     });
   });
 
   describe('formatHistoryForPrompt', () => {
-    test('should format history for inclusion in prompts', () => {
-      const result = formatter.formatHistoryForPrompt(mockTurns, mockSummaries);
-      
-      expect(result).toContain('CONVERSATION SUMMARIES:');
-      expect(result).toContain('Summary 1: The user greeted the assistant');
-      expect(result).toContain('RECENT CONVERSATION:');
-      expect(result).toContain('User: Hello');
-      expect(result).toContain('Assistant: Hi there!');
-    });
+    // Define a table of test cases
+    const formatHistoryTestCases = [
+      {
+        name: 'default format',
+        options: {},
+        expectedPatterns: [
+          'CONVERSATION SUMMARIES:',
+          'Summary 1: The user greeted the assistant',
+          'RECENT CONVERSATION:',
+          'User: Hello',
+          'Assistant: Hi there!',
+        ],
+      },
+      {
+        name: 'with anchor highlighting',
+        options: {
+          highlightAnchor: true,
+          anchorId: 'user-1',
+          anchorName: 'Host',
+        },
+        expectedPatterns: [
+          'Host (User): Hello',
+          'Host (User): How are you?',
+        ],
+      },
+    ];
     
-    test('should highlight anchor when requested', () => {
-      const result = formatter.formatHistoryForPrompt(mockTurns, mockSummaries, {
-        highlightAnchor: true,
-        anchorId: 'user-1',
-        anchorName: 'Host',
+    // Run all test cases with a single test
+    test('should format history correctly with different options', () => {
+      // Map each test case to a result object
+      const results = formatHistoryTestCases.map(testCase => {
+        const result = formatter.formatHistoryForPrompt(mockTurns, mockSummaries, testCase.options);
+        return {
+          name: testCase.name,
+          containsAllPatterns: testCase.expectedPatterns.every(pattern => 
+            result.includes(pattern),
+          ),
+        };
       });
       
-      expect(result).toContain('Host (User): Hello');
-      expect(result).toContain('Host (User): How are you?');
+      // Single assertion that validates all test cases
+      expect(results).toMatchObject(
+        formatHistoryTestCases.map(testCase => ({
+          name: testCase.name,
+          containsAllPatterns: true,
+        })),
+      );
     });
   });
 });

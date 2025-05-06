@@ -200,24 +200,29 @@ describe('BaseSearchService', () => {
   });
 
   test('singleton instance management', () => {
-    // Test getInstance returns same instance
+    // Test getInstance and resetInstance with a single assertion
     const instance1 = TestSearchService.getInstance();
     const instance2 = TestSearchService.getInstance();
-    expect(instance1).toBe(instance2);
-    expect(instance1).toBeInstanceOf(TestSearchService);
-    
-    // Test resetInstance clears instance
     TestSearchService.resetInstance();
     const instance3 = TestSearchService.getInstance();
-    expect(instance1).not.toBe(instance3);
+    
+    expect({
+      instancesMatch: instance1 === instance2,
+      isCorrectType: instance1 instanceof TestSearchService,
+      resetWorks: instance1 !== instance3,
+    }).toMatchObject({
+      instancesMatch: true,
+      isCorrectType: true,
+      resetWorks: true,
+    });
   });
 
   test('search functionality with different modes and options', async () => {
     // Test option validation
-    await expect(
-      searchService.search(null as unknown as BaseSearchOptions),
-    ).rejects.toThrow(ValidationError);
-
+    const validationTest = searchService.search(null as unknown as BaseSearchOptions)
+      .then(() => ({ validationPassed: true }))
+      .catch(error => ({ validationPassed: false, errorType: error instanceof ValidationError }));
+      
     // Set up spies for search methods
     const semanticSearchSpy = mock(searchService.semanticSearch);
     const keywordSearchSpy = mock(searchService.keywordSearch);
@@ -229,7 +234,7 @@ describe('BaseSearchService', () => {
       query: 'test query',
       semanticSearch: true,
     });
-    expect(semanticSearchSpy).toHaveBeenCalled();
+    const semanticSearchCalled = semanticSearchSpy.mock.calls.length > 0;
     
     // Reset spies
     semanticSearchSpy.mockClear();
@@ -240,7 +245,7 @@ describe('BaseSearchService', () => {
       query: 'test query',
       semanticSearch: false,
     });
-    expect(keywordSearchSpy).toHaveBeenCalled();
+    const keywordSearchCalled = keywordSearchSpy.mock.calls.length > 0;
 
     // Test limit parameter by returning a limited set directly
     semanticSearchSpy.mockImplementation(() => Promise.resolve([
@@ -253,20 +258,32 @@ describe('BaseSearchService', () => {
       semanticSearch: true,
     });
 
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBeLessThanOrEqual(1);
+    // Single consolidated assertion for all search functionality tests
+    expect({
+      validation: await validationTest,
+      semanticMode: semanticSearchCalled,
+      keywordMode: keywordSearchCalled,
+      limitResults: {
+        isArray: Array.isArray(results),
+        respectsLimit: results.length <= 1,
+      },
+    }).toMatchObject({
+      validation: { validationPassed: false, errorType: true },
+      semanticMode: true,
+      keywordMode: true,
+      limitResults: {
+        isArray: true,
+        respectsLimit: true,
+      },
+    });
   });
 
   test('related entities and tag matching', async () => {
     // Test findRelated functionality
     const entityId = 'test-123';
     const relatedResults = await searchService.findRelated(entityId, 2);
-
-    expect(Array.isArray(relatedResults)).toBe(true);
-    expect(relatedResults.length).toBeLessThanOrEqual(2);
-    expect(relatedResults[0].id).toContain(entityId);
-
-    // Test tag matching scenarios
+    
+    // Test tag matching scenarios with one consolidated evaluation
     const tagMatchTestCases = [
       // [sourceTags, targetTags, expectedScoreCondition]
       [['test', 'example', 'common'], ['common', 'other'], 'positive'], // Some match
@@ -274,20 +291,42 @@ describe('BaseSearchService', () => {
       [['test'], [], 'zero'],                                           // Empty target
       [[], [], 'zero'],                                                 // Both empty
     ];
-
-    for (const [sourceTags, targetTags, condition] of tagMatchTestCases) {
+    
+    // Calculate all scores at once
+    const scoreResults = tagMatchTestCases.map(([sourceTags, targetTags, condition]) => {
       const score = searchService.calculateTagMatchScore(
         sourceTags as string[], 
         targetTags as string[],
       );
       
-      expect(typeof score).toBe('number');
-      
-      if (condition === 'positive') {
-        expect(score).toBeGreaterThan(0);
-      } else if (condition === 'zero') {
-        expect(score).toBe(0);
-      }
-    }
+      return {
+        score,
+        isNumber: typeof score === 'number',
+        meetsCondition: condition === 'positive' ? score > 0 : score === 0,
+      };
+    });
+    
+    // Single consolidated assertion
+    expect({
+      relatedResults: {
+        isArray: Array.isArray(relatedResults),
+        respectsLimit: relatedResults.length <= 2,
+        containsEntityId: relatedResults.length > 0 && relatedResults[0].id.includes(entityId),
+      },
+      tagMatching: scoreResults.map(result => ({
+        isNumber: result.isNumber,
+        meetsCondition: result.meetsCondition,
+      })),
+    }).toMatchObject({
+      relatedResults: {
+        isArray: true,
+        respectsLimit: true,
+        containsEntityId: true,
+      },
+      tagMatching: tagMatchTestCases.map(() => ({
+        isNumber: true,
+        meetsCondition: true,
+      })),
+    });
   });
 });

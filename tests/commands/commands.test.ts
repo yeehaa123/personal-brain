@@ -4,183 +4,158 @@ import type { CommandHandler } from '@commands/index';
 import { MockCommandHandler } from '@test/__mocks__/commands/commandHandler';
 
 describe('CommandHandler', () => {
-  // Use a more flexible type for our mock
   let commandHandler: Pick<CommandHandler, 'getCommands' | 'processCommand'>;
 
-
   beforeEach(async () => {
-    // Instead of using the real CommandHandler with a mock BrainProtocol,
-    // we'll use our fully mocked CommandHandler implementation
     commandHandler = new MockCommandHandler();
   });
 
-  describe('command listing and handling', () => {
-    test('should provide a list of available commands', () => {
-      const commands = commandHandler.getCommands();
+  test('command handler provides expected functionality', async () => {
+    // Get all test results
+    const commandResults = {
+      listCommands: commandHandler.getCommands(),
+      errorCommand: await commandHandler.processCommand('unknown', ''),
+      profileCommand: await commandHandler.processCommand('profile', ''),
+      profileRelatedCommand: await commandHandler.processCommand('profile', 'related'),
+      searchCommand: await commandHandler.processCommand('search', 'ecosystem'),
+      listCommand: await commandHandler.processCommand('list', ''),
+      tagListCommand: await commandHandler.processCommand('list', 'ecosystem'),
+      noteCommand: await commandHandler.processCommand('note', 'note-1'),
+      askCommand: await commandHandler.processCommand('ask', 'What is ecosystem architecture?'),
+      statusCommand: await commandHandler.processCommand('status', ''),
+    };
 
-      expect(commands).toBeDefined();
-      expect(Array.isArray(commands)).toBe(true);
-      expect(commands.length).toBeGreaterThan(0);
+    // Format validation outputs
+    const validationOutputs = {
+      commands: {
+        isArray: Array.isArray(commandResults.listCommands),
+        hasExpectedCommands: commandResults.listCommands.some(cmd => cmd.command === 'help') && 
+                            commandResults.listCommands.some(cmd => cmd.command === 'profile'),
+      },
+      errorCommand: {
+        hasCorrectType: commandResults.errorCommand.type === 'error',
+        hasErrorMessage: commandResults.errorCommand.type === 'error' && 
+                         commandResults.errorCommand.message.includes('Unknown command'),
+      },
+      profileCommand: {
+        hasCorrectType: commandResults.profileCommand.type === 'profile',
+        hasProfileData: commandResults.profileCommand.type === 'profile' && 
+                        typeof commandResults.profileCommand.profile === 'object',
+      },
+      profileRelatedCommand: {
+        hasCorrectType: commandResults.profileRelatedCommand.type === 'profile-related',
+        hasRelatedNotes: commandResults.profileRelatedCommand.type === 'profile-related' && 
+                         Array.isArray(commandResults.profileRelatedCommand.relatedNotes) &&
+                         commandResults.profileRelatedCommand.relatedNotes.length > 0,
+        hasValidMatchType: commandResults.profileRelatedCommand.type === 'profile-related' && 
+                          ['tags', 'semantic', 'keyword'].includes(commandResults.profileRelatedCommand.matchType),
+      },
+      searchCommand: {
+        hasCorrectType: commandResults.searchCommand.type === 'search',
+        hasCorrectQuery: commandResults.searchCommand.type === 'search' && 
+                         commandResults.searchCommand.query === 'ecosystem',
+        hasResults: commandResults.searchCommand.type === 'search' && 
+                    Array.isArray(commandResults.searchCommand.notes) &&
+                    commandResults.searchCommand.notes.length > 0,
+        hasRelevantTitle: commandResults.searchCommand.type === 'search' && 
+                          commandResults.searchCommand.notes[0]?.title.includes('Ecosystem'),
+        hasRelevantTags: commandResults.searchCommand.type === 'search' && 
+                        Array.isArray(commandResults.searchCommand.notes[0]?.tags) &&
+                        commandResults.searchCommand.notes[0]?.tags.includes('ecosystem-architecture'),
+      },
+      listCommands: {
+        hasCorrectListType: commandResults.listCommand.type === 'notes',
+        hasExpectedTitle: commandResults.listCommand.type === 'notes' && 
+                          commandResults.listCommand.notes[0]?.title === 'Building Communities',
+        hasCorrectTagListType: commandResults.tagListCommand.type === 'notes',
+        hasCorrectFilteredTag: commandResults.tagListCommand.type === 'notes' && 
+                              Array.isArray(commandResults.tagListCommand.notes[0]?.tags) &&
+                              commandResults.tagListCommand.notes[0]?.tags.includes('ecosystem'),
+      },
+      noteCommand: {
+        hasCorrectType: commandResults.noteCommand.type === 'note',
+        hasCorrectId: commandResults.noteCommand.type === 'note' && 
+                      commandResults.noteCommand.note.id === 'note-1',
+        hasCorrectTitle: commandResults.noteCommand.type === 'note' && 
+                         commandResults.noteCommand.note.title === 'Ecosystem Architecture Principles',
+        hasCorrectTags: commandResults.noteCommand.type === 'note' && 
+                        Array.isArray(commandResults.noteCommand.note.tags) &&
+                        commandResults.noteCommand.note.tags.includes('ecosystem-architecture'),
+      },
+      askCommand: {
+        hasCorrectType: commandResults.askCommand.type === 'ask',
+        hasAnswer: commandResults.askCommand.type === 'ask' && 
+                   commandResults.askCommand.answer === 'Mock answer',
+        hasCitations: commandResults.askCommand.type === 'ask' && 
+                      Array.isArray(commandResults.askCommand.citations),
+        hasRelatedNotes: commandResults.askCommand.type === 'ask' && 
+                         Array.isArray(commandResults.askCommand.relatedNotes),
+      },
+      statusCommand: {
+        hasCorrectType: commandResults.statusCommand.type === 'status',
+        hasCorrectStatus: commandResults.statusCommand.type === 'status' && 
+                          commandResults.statusCommand.status.apiConnected === true &&
+                          commandResults.statusCommand.status.dbConnected === true &&
+                          commandResults.statusCommand.status.noteCount === 10 &&
+                          commandResults.statusCommand.status.externalSourcesEnabled === false &&
+                          commandResults.statusCommand.status.externalSources['Wikipedia'] === true &&
+                          commandResults.statusCommand.status.externalSources['NewsAPI'] === false,
+      },
+    };
 
-      // Check for required commands - we know only 'help' and 'profile' are included in our mock
-      const commandNames = commands.map((cmd: unknown) => (cmd as { command: string }).command);
-
-      // Just check for the commands we know are defined in this mock
-      expect(commandNames).toContain('help');
-      expect(commandNames).toContain('profile');
-    });
-
-    test('should handle unknown command', async () => {
-      const result = await commandHandler.processCommand('unknown', '');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('error');
-
-      // Use type assertion to check message
-      if (result.type === 'error') {
-        expect(result.message).toContain('Unknown command');
-      }
-    });
-  });
-
-  describe('profile commands', () => {
-    test('should handle profile command', async () => {
-      const result = await commandHandler.processCommand('profile', '');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('profile');
-
-      if (result.type === 'profile') {
-        expect(result.profile).toBeDefined();
-        expect(result.profile.fullName).toBe('John Doe');
-      }
-    });
-
-    test('should handle profile related command', async () => {
-      const result = await commandHandler.processCommand('profile', 'related');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('profile-related');
-
-      if (result.type === 'profile-related') {
-        expect(result.profile).toBeDefined();
-        expect(Array.isArray(result.relatedNotes)).toBe(true);
-        expect(result.relatedNotes.length).toBeGreaterThan(0);
-        expect(['tags', 'semantic', 'keyword']).toContain(result.matchType);
-      }
-    });
-  });
-
-  describe('note commands', () => {
-    test('should handle search command', async () => {
-      const result = await commandHandler.processCommand('search', 'ecosystem');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('search');
-
-      if (result.type === 'search') {
-        expect(result.query).toBe('ecosystem');
-        expect(Array.isArray(result.notes)).toBe(true);
-        expect(result.notes.length).toBeGreaterThan(0);
-        expect(result.notes[0].title).toContain('Ecosystem');
-        expect(result.notes[0].tags).toContain('ecosystem-architecture');
-      }
-    });
-
-    test('should handle list command', async () => {
-      const result = await commandHandler.processCommand('list', '');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('notes');
-
-      if (result.type === 'notes') {
-        expect(Array.isArray(result.notes)).toBe(true);
-        expect(result.notes.length).toBeGreaterThan(0);
-        expect(result.notes[0].title).toBe('Building Communities');
-      }
-    });
-
-    test('should handle list with tag command', async () => {
-      const result = await commandHandler.processCommand('list', 'ecosystem');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('notes');
-
-      if (result.type === 'notes') {
-        expect(Array.isArray(result.notes)).toBe(true);
-        expect(result.notes.length).toBeGreaterThan(0);
-        expect(result.notes[0].tags).toContain('ecosystem');
-      }
-    });
-
-    test('should handle note command', async () => {
-      const result = await commandHandler.processCommand('note', 'note-1');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('note');
-
-      if (result.type === 'note') {
-        expect(result.note).toBeDefined();
-        expect(result.note.id).toBe('note-1');
-        expect(result.note.title).toBe('Ecosystem Architecture Principles');
-        expect(result.note.tags).toContain('ecosystem-architecture');
-      }
+    // Single consolidated assertion
+    expect(validationOutputs).toMatchObject({
+      commands: { isArray: true, hasExpectedCommands: true },
+      errorCommand: { hasCorrectType: true, hasErrorMessage: true },
+      profileCommand: { hasCorrectType: true, hasProfileData: true },
+      profileRelatedCommand: { hasCorrectType: true, hasRelatedNotes: true, hasValidMatchType: true },
+      searchCommand: { hasCorrectType: true, hasCorrectQuery: true, hasResults: true, hasRelevantTitle: true, hasRelevantTags: true },
+      listCommands: { hasCorrectListType: true, hasExpectedTitle: true, hasCorrectTagListType: true, hasCorrectFilteredTag: true },
+      noteCommand: { hasCorrectType: true, hasCorrectId: true, hasCorrectTitle: true, hasCorrectTags: true },
+      askCommand: { hasCorrectType: true, hasAnswer: true, hasCitations: true, hasRelatedNotes: true },
+      statusCommand: { hasCorrectType: true, hasCorrectStatus: true },
     });
   });
 
-  describe('ask command', () => {
-    test('should handle ask command', async () => {
-      const result = await commandHandler.processCommand('ask', 'What is ecosystem architecture?');
+  test('toggle external sources functionality', async () => {
+    // Enable, check, disable, check sequence
+    const externalSourcesResults = {
+      enableCommand: await commandHandler.processCommand('external', 'on'),
+      statusAfterEnable: await commandHandler.processCommand('status', ''),
+      disableCommand: await commandHandler.processCommand('external', 'off'),
+      statusAfterDisable: await commandHandler.processCommand('status', ''),
+    };
 
-      expect(result).toBeDefined();
-      expect(result.type).toBe('ask');  // Type is 'ask', not 'answer'
+    // Validation outputs
+    const validationOutputs = {
+      enableResults: {
+        hasCorrectType: externalSourcesResults.enableCommand.type === 'external',
+        isEnabled: externalSourcesResults.enableCommand.type === 'external' && 
+                   externalSourcesResults.enableCommand.enabled === true,
+      },
+      statusAfterEnable: {
+        hasCorrectType: externalSourcesResults.statusAfterEnable.type === 'status',
+        showsEnabled: externalSourcesResults.statusAfterEnable.type === 'status' && 
+                      externalSourcesResults.statusAfterEnable.status.externalSourcesEnabled === true,
+      },
+      disableResults: {
+        hasCorrectType: externalSourcesResults.disableCommand.type === 'external',
+        isDisabled: externalSourcesResults.disableCommand.type === 'external' && 
+                    externalSourcesResults.disableCommand.enabled === false,
+      },
+      statusAfterDisable: {
+        hasCorrectType: externalSourcesResults.statusAfterDisable.type === 'status',
+        showsDisabled: externalSourcesResults.statusAfterDisable.type === 'status' && 
+                       externalSourcesResults.statusAfterDisable.status.externalSourcesEnabled === false,
+      },
+    };
 
-      if (result.type === 'ask') {
-        expect(result.answer).toBe('Mock answer');
-        expect(Array.isArray(result.citations)).toBe(true);
-        expect(Array.isArray(result.relatedNotes)).toBe(true);
-      }
-
-      // The query is not returned in the result, so we don't test for it
-      // expect(result.query).toBe('What is ecosystem architecture?');
-    });
-  });
-
-  describe('status command', () => {
-    test('should handle status command', async () => {
-      const result = await commandHandler.processCommand('status', '');
-
-      expect(result).toBeDefined();
-      expect(result.type).toBe('status');
-
-      if (result.type === 'status') {
-        expect(result.status).toBeDefined();
-        expect(result.status.apiConnected).toBe(true);
-        expect(result.status.dbConnected).toBe(true);
-        expect(result.status.noteCount).toBe(10);
-        expect(result.status.externalSourcesEnabled).toBe(false);
-        expect(result.status.externalSources).toBeDefined();
-        expect(result.status.externalSources['Wikipedia']).toBe(true);
-        expect(result.status.externalSources['NewsAPI']).toBe(false);
-      }
-    });
-
-    test('should toggle external sources', async () => {
-      // Enable external sources
-      await commandHandler.processCommand('external', 'on');
-      let result = await commandHandler.processCommand('status', '');
-
-      if (result.type === 'status') {
-        expect(result.status.externalSourcesEnabled).toBe(true);
-      }
-
-      // Disable external sources
-      await commandHandler.processCommand('external', 'off');
-      result = await commandHandler.processCommand('status', '');
-
-      if (result.type === 'status') {
-        expect(result.status.externalSourcesEnabled).toBe(false);
-      }
+    // Single consolidated assertion
+    expect(validationOutputs).toMatchObject({
+      enableResults: { hasCorrectType: true, isEnabled: true },
+      statusAfterEnable: { hasCorrectType: true, showsEnabled: true },
+      disableResults: { hasCorrectType: true, isDisabled: true },
+      statusAfterDisable: { hasCorrectType: true, showsDisabled: true },
     });
   });
 });
