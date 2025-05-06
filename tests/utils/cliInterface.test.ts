@@ -37,49 +37,99 @@ describe('CLIInterface', () => {
   });
   
   test('should implement Component Interface Standardization pattern', () => {
-    // Verify singleton pattern
-    const instance1 = CLIInterface.getInstance();
-    const instance2 = CLIInterface.getInstance();
-    expect(instance1).toBe(instance2);
+    // Test cases for the Component Interface Standardization pattern
+    const cisPatternCases = [
+      {
+        name: 'singleton pattern',
+        test: () => {
+          const instance1 = CLIInterface.getInstance();
+          const instance2 = CLIInterface.getInstance();
+          expect(instance1).toBe(instance2);
+        },
+      },
+      {
+        name: 'resetInstance method',
+        test: () => {
+          const instance1 = CLIInterface.getInstance();
+          CLIInterface.resetInstance();
+          const instance3 = CLIInterface.getInstance();
+          expect(instance3).not.toBe(instance1);
+        },
+      },
+      {
+        name: 'createFresh method',
+        test: () => {
+          const instance = CLIInterface.getInstance();
+          const freshInstance = CLIInterface.createFresh();
+          expect(freshInstance).not.toBe(instance);
+        },
+      },
+      {
+        name: 'custom options',
+        test: () => {
+          // Reset mock for this specific test
+          mockWrite.mockClear();
+          
+          const options: CLIInterfaceOptions = { silent: true };
+          const silentInstance = CLIInterface.createFresh(options);
+          
+          // Test silent mode by outputting something - should not call write
+          silentInstance.print('This should not be output');
+          expect(mockWrite).not.toHaveBeenCalled();
+        },
+      },
+    ];
     
-    // Verify resetInstance
-    CLIInterface.resetInstance();
-    const instance3 = CLIInterface.getInstance();
-    expect(instance3).not.toBe(instance1);
-    
-    // Verify createFresh
-    const freshInstance = CLIInterface.createFresh();
-    expect(freshInstance).not.toBe(instance3);
-    
-    // Verify options are passed correctly
-    const options: CLIInterfaceOptions = { silent: true };
-    const silentInstance = CLIInterface.createFresh(options);
-    
-    // Reset mock for this specific test
-    mockWrite.mockClear();
-    
-    // Test silent mode by outputting something - should not call write
-    silentInstance.print('This should not be output');
-    expect(mockWrite).not.toHaveBeenCalled();
+    // Run all test cases
+    cisPatternCases.forEach(({ test: testFn }) => {
+      testFn();
+    });
   });
   
-  test('should have accessible styles via instance', () => {
+  test('should have correct style functionality', () => {
     const cli = CLIInterface.getInstance();
     
-    // Verify styles are accessible
-    expect(cli.styles).toBeDefined();
+    // Test cases for styles
+    const styleCases = [
+      {
+        name: 'styles object defined',
+        property: cli.styles,
+        expectation: (styles: unknown) => expect(styles).toBeDefined(),
+      },
+      {
+        name: 'title style function',
+        property: cli.styles.title,
+        expectation: (style: unknown) => expect(typeof style).toBe('function'),
+      },
+      {
+        name: 'tag style function',
+        property: cli.styles.tag,
+        expectation: (style: unknown) => expect(typeof style).toBe('function'),
+      },
+      {
+        name: 'error style function',
+        property: cli.styles.error,
+        expectation: (style: unknown) => expect(typeof style).toBe('function'),
+      },
+      {
+        name: 'success icon string',
+        property: cli.styles.successIcon,
+        expectation: (icon: unknown) => expect(typeof icon).toBe('string'),
+      },
+      {
+        name: 'error icon string',
+        property: cli.styles.errorIcon,
+        expectation: (icon: unknown) => expect(typeof icon).toBe('string'),
+      },
+    ];
     
-    // Check a few representative style functions
-    expect(typeof cli.styles.title).toBe('function');
-    expect(typeof cli.styles.tag).toBe('function');
-    expect(typeof cli.styles.error).toBe('function');
-    
-    // Check a few icon strings
-    expect(typeof cli.styles.successIcon).toBe('string');
-    expect(typeof cli.styles.errorIcon).toBe('string');
+    // Run all test cases
+    styleCases.forEach(({ property, expectation }) => {
+      expectation(property);
+    });
   });
   
-  test('should output formatted messages', () => {
+  test('should output formatted messages correctly', () => {
     // Cast the mockLogger to access its internal properties
     const mockLoggerImpl = mockLogger as unknown as MockLogger;
     
@@ -88,63 +138,107 @@ describe('CLIInterface', () => {
       customLogger: mockLogger,
     });
     
-    // Test title formatting
-    cli.displayTitle('Test Title');
-    expect(mockWrite).toHaveBeenCalled();
-    expect(mockLoggerImpl.messages.debug).toContain('Displayed title: Test Title');
+    // Test cases for formatted output methods
+    const outputCases = [
+      {
+        name: 'title formatting',
+        method: () => cli.displayTitle('Test Title'),
+        checkOutput: () => expect(mockWrite).toHaveBeenCalled(),
+        checkLog: () => expect(mockLoggerImpl.messages.debug).toContain('Displayed title: Test Title'),
+      },
+      {
+        name: 'subtitle formatting',
+        method: () => cli.displaySubtitle('Test Subtitle'),
+        checkOutput: () => expect(mockWrite).toHaveBeenCalled(),
+        checkLog: () => expect(mockLoggerImpl.messages.debug).toContain('Displayed subtitle: Test Subtitle'),
+      },
+      {
+        name: 'success message',
+        method: () => cli.success('Success Message'),
+        checkOutput: () => expect(mockWrite).toHaveBeenCalled(),
+        checkLog: () => expect(mockLoggerImpl.messages.info).toContain('[SUCCESS] Success Message'),
+      },
+      {
+        name: 'error message',
+        method: () => cli.error('Error Message'),
+        checkOutput: () => expect(mockWrite).toHaveBeenCalled(),
+        checkLog: () => expect(mockLoggerImpl.messages.error).toContain('Error Message'),
+      },
+    ];
     
-    // Reset mocks
-    mockWrite.mockClear();
-    mockLoggerImpl.clear();
-    
-    // Test subtitle formatting
-    cli.displaySubtitle('Test Subtitle');
-    expect(mockWrite).toHaveBeenCalled();
-    expect(mockLoggerImpl.messages.debug).toContain('Displayed subtitle: Test Subtitle');
-    
-    // Reset mocks
-    mockWrite.mockClear();
-    mockLoggerImpl.clear();
-    
-    // Test success message
-    cli.success('Success Message');
-    expect(mockWrite).toHaveBeenCalled();
-    expect(mockLoggerImpl.messages.info).toContain('[SUCCESS] Success Message');
-    
-    // Reset mocks
-    mockWrite.mockClear();
-    mockLoggerImpl.clear();
-    
-    // Test error message
-    cli.error('Error Message');
-    expect(mockWrite).toHaveBeenCalled();
-    expect(mockLoggerImpl.messages.error).toContain('Error Message');
+    // Run all test cases
+    outputCases.forEach(({ method, checkOutput, checkLog }) => {
+      // Reset mocks before each case
+      mockWrite.mockClear();
+      mockLoggerImpl.clear();
+      
+      // Run the method
+      method();
+      
+      // Check expectations
+      checkOutput();
+      checkLog();
+    });
   });
   
   test('should format values correctly', () => {
     const cli = CLIInterface.getInstance();
     
-    // Test ID formatting
-    const formattedId = cli.formatId('test-id-123');
-    expect(formattedId).toContain('test-id-123');
+    // Test cases for value formatting methods
+    const formatCases = [
+      {
+        name: 'ID formatting',
+        input: 'test-id-123',
+        method: (input: string) => cli.formatId(input),
+        check: (result: string) => expect(result).toContain('test-id-123'),
+      },
+      {
+        name: 'tag formatting with tags',
+        input: ['tag1', 'tag2'],
+        method: (input: string[]) => cli.formatTags(input),
+        check: (result: string) => {
+          expect(result).toContain('#tag1');
+          expect(result).toContain('#tag2');
+        },
+      },
+      {
+        name: 'empty tag handling',
+        input: [],
+        method: (input: string[]) => cli.formatTags(input),
+        check: (result: string) => expect(result).toContain('No tags'),
+      },
+      {
+        name: 'null tag handling',
+        input: null,
+        method: (input: string[] | null) => cli.formatTags(input),
+        check: (result: string) => expect(result).toContain('No tags'),
+      },
+      {
+        name: 'command formatting basic',
+        input: { command: 'test', description: 'Test command' },
+        method: (input: { command: string, description: string }) => 
+          cli.formatCommand(input.command, input.description),
+        check: (result: string) => {
+          expect(result).toContain('test');
+          expect(result).toContain('Test command');
+        },
+      },
+      {
+        name: 'command formatting with examples',
+        input: { command: 'cmd', description: 'Command', examples: ['Example 1'] },
+        method: (input: { command: string, description: string, examples: string[] }) => 
+          cli.formatCommand(input.command, input.description, input.examples),
+        check: (result: string) => expect(result).toContain('Example 1'),
+      },
+    ];
     
-    // Test tag formatting
-    const formattedTags = cli.formatTags(['tag1', 'tag2']);
-    expect(formattedTags).toContain('#tag1');
-    expect(formattedTags).toContain('#tag2'); // This is different from printLabelValue's default behavior
-    
-    // Test empty tag handling
-    expect(cli.formatTags([])).toContain('No tags');
-    expect(cli.formatTags(null)).toContain('No tags');
-    
-    // Test command formatting
-    const formattedCommand = cli.formatCommand('test', 'Test command');
-    expect(formattedCommand).toContain('test');
-    expect(formattedCommand).toContain('Test command');
-    
-    // Test command with examples
-    const withExamples = cli.formatCommand('cmd', 'Command', ['Example 1']);
-    expect(withExamples).toContain('Example 1');
+    // Run all test cases
+    formatCases.forEach((testCase) => {
+      // Call the method with the input using type-specific handling
+      // @ts-expect-error - We know these combinations are valid at runtime
+      const result = testCase.method(testCase.input);
+      testCase.check(result);
+    });
   });
   
   test('should display lists and label-value pairs', () => {
@@ -156,21 +250,39 @@ describe('CLIInterface', () => {
       customLogger: mockLogger,
     });
     
-    // Test printLabelValue with string
-    mockWrite.mockClear();
-    cli.printLabelValue('Name', 'Test Name');
-    expect(mockWrite).toHaveBeenCalled();
+    // Test cases for display methods
+    const displayCases = [
+      {
+        name: 'printLabelValue with string',
+        method: () => cli.printLabelValue('Name', 'Test Name'),
+        check: () => expect(mockWrite).toHaveBeenCalled(),
+      },
+      {
+        name: 'printLabelValue with array',
+        method: () => cli.printLabelValue('Tags', ['tag1', 'tag2']),
+        check: () => expect(mockWrite).toHaveBeenCalled(),
+      },
+      {
+        name: 'displayList',
+        method: () => cli.displayList(['Item 1', 'Item 2', 'Item 3']),
+        check: () => {
+          expect(mockWrite).toHaveBeenCalled();
+          expect(mockLoggerImpl.messages.info).toContain('Displaying list of 3 items');
+        },
+      },
+    ];
     
-    // Test printLabelValue with array
-    mockWrite.mockClear();
-    cli.printLabelValue('Tags', ['tag1', 'tag2']);
-    expect(mockWrite).toHaveBeenCalled();
-    
-    // Test displayList
-    mockWrite.mockClear();
-    mockLoggerImpl.clear();
-    cli.displayList(['Item 1', 'Item 2', 'Item 3']);
-    expect(mockWrite).toHaveBeenCalled();
-    expect(mockLoggerImpl.messages.info).toContain('Displaying list of 3 items');
+    // Run all test cases
+    displayCases.forEach(({ method, check }) => {
+      // Reset mocks before each case
+      mockWrite.mockClear();
+      mockLoggerImpl.clear();
+      
+      // Run the method
+      method();
+      
+      // Check expectations
+      check();
+    });
   });
 });

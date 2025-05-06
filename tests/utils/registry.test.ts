@@ -4,7 +4,7 @@
  * These tests verify that the base Registry class provides the expected
  * functionality for extension by more specific registry implementations.
  */
-import { describe, expect, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { SimpleContainer } from '@/utils/container';
 import { Registry, type RegistryConfig, type RegistryDependencies } from '@/utils/registry';
@@ -91,134 +91,130 @@ class TestRegistry extends Registry {
 }
 
 describe('Registry', () => {
-  describe('Base class functionality', () => {
-    test('should initialize with default config', () => {
-      const registry = TestRegistry.createFresh();
+  // Reset the singleton before each test suite
+  beforeEach(() => {
+    TestRegistry.resetInstance();
+  });
 
-      expect(registry.getName()).toBe('TestRegistry');
-      expect(registry.getConfig()).toEqual({ name: 'TestRegistry', silent: true });
-    });
+  test('initialization with configuration', () => {
+    // Test case table for initialization scenarios
+    const initCases = [
+      {
+        name: 'default config',
+        config: {},
+        expectedName: 'TestRegistry',
+        expectedConfig: { name: 'TestRegistry', silent: true },
+      },
+      {
+        name: 'custom name in config',
+        config: { name: 'CustomName' },
+        expectedName: 'CustomName',
+        expectedConfig: { name: 'CustomName', silent: true },
+      },
+    ];
 
-    test('should allow custom name in config', () => {
-      const registry = TestRegistry.createFresh({ name: 'CustomName' });
-
-      expect(registry.getName()).toBe('CustomName');
-    });
-
-    test('should initialize logger', () => {
-      const registry = TestRegistry.createFresh();
-
-      expect(registry.getLogger()).toBeDefined();
+    initCases.forEach(({ name, config, expectedName, expectedConfig }) => {
+      const registry = TestRegistry.createFresh(config);
+      expect(registry.getName(), `should set correct name with ${name}`).toBe(expectedName);
+      expect(registry.getConfig(), `should set correct config with ${name}`).toEqual(expectedConfig);
+      expect(registry.getLogger(), `should initialize logger with ${name}`).toBeDefined();
     });
   });
 
-  describe('Registry operations', () => {
-    test('should register and resolve a component', () => {
-      const registry = TestRegistry.createFresh();
-      const mockComponent = { value: 'test' };
+  test('registry component operations', () => {
+    const registry = TestRegistry.createFresh();
+    
+    // Test register and resolve
+    const mockComponent = { value: 'test' };
+    registry.register<typeof mockComponent>('test.component', () => mockComponent);
+    
+    // Test has component
+    expect(registry.has('test.component')).toBe(true);
+    expect(registry.has('nonexistent.component')).toBe(false);
+    
+    // Test resolve component
+    const resolved = registry.resolve('test.component');
+    expect(resolved).toBe(mockComponent);
+    
+    // Test unregister component
+    registry.unregister('test.component');
+    expect(registry.has('test.component')).toBe(false);
+    
+    // Test clear all components
+    registry.register<{ value: string }>('test.component1', () => ({ value: 'test1' }));
+    registry.register<{ value: string }>('test.component2', () => ({ value: 'test2' }));
+    expect(registry.has('test.component1')).toBe(true);
+    expect(registry.has('test.component2')).toBe(true);
+    
+    registry.clear();
+    expect(registry.has('test.component1')).toBe(false);
+    expect(registry.has('test.component2')).toBe(false);
+  });
 
-      registry.register<typeof mockComponent>('test.component', () => mockComponent);
-      const resolved = registry.resolve('test.component');
+  test('config management', () => {
+    // Test case table for config updates
+    const configCases = [
+      {
+        name: 'simple update',
+        initial: { customOption: 'initial' },
+        update: { customOption: 'updated' },
+        expected: { name: 'TestRegistry', customOption: 'updated', silent: true },
+      },
+      {
+        name: 'merge with existing',
+        initial: { option1: 'value1', option2: 'value2' },
+        update: { option2: 'updated' },
+        expected: { name: 'TestRegistry', option1: 'value1', option2: 'updated', silent: true },
+      },
+    ];
 
-      expect(resolved).toBe(mockComponent);
-    });
-
-    test('should check if a component is registered', () => {
-      const registry = TestRegistry.createFresh();
-      registry.register<{ value: string }>('test.component', () => ({ value: 'test' }));
-
-      expect(registry.has('test.component')).toBe(true);
-      expect(registry.has('nonexistent.component')).toBe(false);
-    });
-
-    test('should unregister a component', () => {
-      const registry = TestRegistry.createFresh();
-      registry.register<{ value: string }>('test.component', () => ({ value: 'test' }));
-
-      expect(registry.has('test.component')).toBe(true);
-
-      registry.unregister('test.component');
-
-      expect(registry.has('test.component')).toBe(false);
-    });
-
-    test('should clear all components', () => {
-      const registry = TestRegistry.createFresh();
-      registry.register<{ value: string }>('test.component1', () => ({ value: 'test1' }));
-      registry.register<{ value: string }>('test.component2', () => ({ value: 'test2' }));
-
-      expect(registry.has('test.component1')).toBe(true);
-      expect(registry.has('test.component2')).toBe(true);
-
-      registry.clear();
-
-      expect(registry.has('test.component1')).toBe(false);
-      expect(registry.has('test.component2')).toBe(false);
-    });
-
-    test('should support updating config', () => {
-      const registry = TestRegistry.createFresh({ customOption: 'initial' });
-
-      expect(registry.getConfig()['customOption']).toBe('initial');
-
-      registry.updateConfig({ customOption: 'updated' });
-
-      expect(registry.getConfig()['customOption']).toBe('updated');
-    });
-
-    test('should merge new config with existing config', () => {
-      const registry = TestRegistry.createFresh({
-        option1: 'value1',
-        option2: 'value2',
-      });
-
-      registry.updateConfig({ option2: 'updated' });
-
-      expect(registry.getConfig()).toEqual({
-        name: 'TestRegistry',
-        option1: 'value1',
-        option2: 'updated',
-        silent: true,
-      });
+    configCases.forEach(({ name, initial, update, expected }) => {
+      const registry = TestRegistry.createFresh(initial);
+      registry.updateConfig(update);
+      expect(registry.getConfig(), `should correctly update config for ${name}`).toEqual(expected);
     });
   });
 
-  // REMOVED BLOCK: describe('Component Interface Standardiz...
+  test('initialization behavior', () => {
+    // Test case table for initialization behavior
+    const initBehaviorCases = [
+      {
+        name: 'getInstance initialization',
+        setupFn: () => {
+          TestRegistry.resetInstance();
+          return TestRegistry.getInstance();
+        },
+        expectInitialized: true,
+        expectComponentsRegistered: true,
+      },
+      {
+        name: 'createFresh initialization',
+        setupFn: () => TestRegistry.createFresh(),
+        expectInitialized: true,
+        expectComponentsRegistered: true,
+      },
+      {
+        name: 'clear affects initialization',
+        setupFn: () => {
+          const registry = TestRegistry.createFresh();
+          registry.clear();
+          return registry;
+        },
+        expectInitialized: false,
+        expectComponentsRegistered: true, // clear doesn't reset componentsRegistered flag
+      },
+    ];
 
-
-  describe('Initialization pattern', () => {
-    test('should initialize components on getInstance', () => {
-      TestRegistry.resetInstance();
-      const registry = TestRegistry.getInstance();
-
-      expect(registry.isInitialized()).toBe(true);
-      expect(registry.areComponentsRegistered()).toBe(true);
+    initBehaviorCases.forEach(({ name, setupFn, expectInitialized, expectComponentsRegistered }) => {
+      const registry = setupFn();
+      expect(registry.isInitialized(), `isInitialized should be ${expectInitialized} for ${name}`).toBe(expectInitialized);
+      expect(registry.areComponentsRegistered(), `componentsRegistered should be ${expectComponentsRegistered} for ${name}`).toBe(expectComponentsRegistered);
     });
 
-    test('should initialize components on createFresh', () => {
-      const registry = TestRegistry.createFresh();
-
-      expect(registry.isInitialized()).toBe(true);
-      expect(registry.areComponentsRegistered()).toBe(true);
-    });
-
-    test('should reset initialization state on clear', () => {
-      const registry = TestRegistry.createFresh();
-      expect(registry.isInitialized()).toBe(true);
-
-      registry.clear();
-      expect(registry.isInitialized()).toBe(false);
-    });
-
-    test('should register default components on initialization', () => {
-      const registry = TestRegistry.createFresh();
-
-      // Default component should exist after initialization
-      expect(registry.has('test.default')).toBe(true);
-
-      // Component should be resolvable
-      const component = registry.resolve('test.default');
-      expect(component).toEqual({ value: 'default' });
-    });
+    // Specific test for default components
+    const registry = TestRegistry.createFresh();
+    expect(registry.has('test.default')).toBe(true);
+    const component = registry.resolve('test.default');
+    expect(component).toEqual({ value: 'default' });
   });
 });

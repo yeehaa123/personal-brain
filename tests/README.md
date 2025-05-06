@@ -1,174 +1,300 @@
 # Personal Brain Test Suite
 
-This directory contains unit and integration tests for the Personal Brain project.
+This directory contains unit tests for the Personal Brain project. Our testing strategy focuses on isolated, efficient tests with clear maintainability goals.
+
+## Recent Changes
+
+We've been refactoring the test suite to:
+- Reduce test count and file count
+- Lower expect call count to improve TypeScript checking performance
+- Consolidate similar tests using table-driven test patterns
+- Focus on critical functionality while removing duplicate test assertions
+- Improve test isolation and mock consistency
 
 ## Running Tests
 
-To run all tests:
-
 ```bash
+# Run all tests
 bun test
-```
 
-To run specific test files:
-
-```bash
+# Run specific test file(s)
 bun test tests/services/notes/noteRepository.test.ts
-```
 
-To run tests with the global setup file (required for some tests):
-
-```bash
-bun test --preload tests/setup.ts tests/path/to/file.test.ts
-```
-
-To generate test coverage report:
-
-```bash
+# Run tests with coverage report
 bun test --coverage
 ```
 
 ## Test Organization
 
-Tests are organized to mirror the source code structure:
+Tests mirror the source code structure:
 
-- `/tests/commands` - CLI command tests
-- `/tests/interfaces` - Interface implementation tests
-- `/tests/mcp` - Model-Context-Protocol pattern tests
-  - `/contexts` - Context layer tests
-  - `/model` - Model layer tests
-  - `/protocol` - Protocol layer tests
-- `/tests/models` - Data model tests
-- `/tests/services` - Service layer tests
-- `/tests/utils` - Utility function tests
+```
+tests/
+├── __mocks__/             # Centralized mock implementations
+│   ├── contexts/          # Context mock implementations
+│   ├── core/              # Core service mock implementations
+│   ├── models/            # Model mock implementations
+│   ├── protocol/          # Protocol component mock implementations
+│   ├── repositories/      # Repository mock implementations
+│   ├── services/          # Service mock implementations
+│   ├── storage/           # Storage mock implementations
+│   └── utils/             # Utility mock implementations
+├── helpers/               # Test helper functions
+│   ├── di/                # Dependency injection helpers
+│   ├── envUtils.ts        # Environment variable test utilities
+│   ├── index.ts           # Main helper exports
+│   └── outputUtils.ts     # Console/output capture utilities
+├── commands/              # Command tests
+├── contexts/              # Context tests
+├── interfaces/            # Interface tests
+├── models/                # Model tests
+├── protocol/              # Protocol tests
+├── resources/             # Resource tests
+├── services/              # Service tests
+└── utils/                 # Utility tests
+```
 
-## Utility Files
+## Testing Standards
 
-- `setup.ts` - Global test setup that runs automatically
-- `index.ts` - Central export point for all test utilities
-- `test-utils.ts` - Common test helper functions
-- `mocks.ts` - Mock data and factory functions
-- `utils/` directory - Specialized test utilities by category
+### Component Interface Standardization Pattern
 
-## Adding New Tests
+All testable components follow this pattern:
 
-1. Create a new `.test.ts` file in the appropriate directory
-2. Import utilities from the centralized location: `import { ... } from '@test'`
-3. Write test cases using the Bun test framework
-4. Run with `bun test`
-
-## Mocking
-
-The tests use several mocking approaches:
-
-1. **Module Mocks**: Using Bun's `mock.module()` to replace entire modules
-2. **Function Mocks**: Replacing individual functions with tracked versions
-3. **Service Mocks**: Providing test implementations of services
-4. **Dependency Injection**: Configuring the container with mock services
+```typescript
+export class MyComponent {
+  // Singleton instance
+  private static instance: MyComponent | null = null;
+  
+  // Get singleton instance
+  public static getInstance(config?, dependencies?): MyComponent {
+    if (!MyComponent.instance) {
+      MyComponent.instance = new MyComponent(config, dependencies);
+    }
+    return MyComponent.instance;
+  }
+  
+  // Reset for test isolation
+  public static resetInstance(): void {
+    MyComponent.instance = null;
+  }
+  
+  // Create fresh instance for specific tests
+  public static createFresh(config?, dependencies?): MyComponent {
+    return new MyComponent(config, dependencies);
+  }
+}
+```
 
 ### Standardized Mock System
 
-We've implemented a standardized mock system for consistency across tests:
+We have two primary mock patterns:
 
-1. **Centralized Location**: All mocks are in the `tests/__mocks__` directory
-2. **Consistent Pattern**: All mocks follow the singleton pattern with:
-   - `getInstance()` - Get the singleton instance
-   - `resetInstance()` - Reset the singleton for test isolation
-   - `createFresh()` - Create a new instance for specific test needs
-
-3. **Mock Categories**:
-   - **Storage Mocks**: `__mocks__/storage` - Mock storage implementations
-   - **Context Mocks**: `__mocks__/contexts` - Mock context implementations
-   - **Model Mocks**: `__mocks__/models` - Mock data model factories
-   - **Service Mocks**: `__mocks__/services` - Mock service implementations
-
-4. **Usage**:
+1. **Class-based Mocks** - For services, repositories, contexts:
 ```typescript
-import { MockConversationContext } from '@test/__mocks__/contexts';
+export class MockSearchService implements SearchService {
+  private static instance: MockSearchService | null = null;
+  
+  static getInstance(): MockSearchService {
+    if (!MockSearchService.instance) {
+      MockSearchService.instance = new MockSearchService();
+    }
+    return MockSearchService.instance;
+  }
+  
+  static resetInstance(): void {
+    MockSearchService.instance = null;
+  }
+  
+  static createFresh(options?: MockOptions): MockSearchService {
+    const service = new MockSearchService();
+    if (options?.results) {
+      service.mockResults = options.results;
+    }
+    return service;
+  }
+  
+  // Mock state and implementations...
+}
+```
 
-// Get singleton instance
-const context = MockConversationContext.getInstance();
+2. **Factory Functions** - For data objects:
+```typescript
+export function createMockNote(
+  id = 'mock-note-id',
+  title = 'Mock Note Title',
+  tags = ['mock', 'test'],
+  content = 'Mock note content'
+): Note {
+  return {
+    id, title, tags, content,
+    created: new Date().toISOString(),
+    updated: new Date().toISOString(),
+  };
+}
+```
 
-// Reset before/after tests
+### Test Isolation Guidelines
+
+1. **Reset Singletons** in `beforeEach`:
+```typescript
 beforeEach(() => {
-  MockConversationContext.resetInstance();
-});
-
-// Create a fresh instance for specific test
-const customContext = MockConversationContext.createFresh({
-  // Custom options
+  // Reset singleton instances
+  MyService.resetInstance();
+  DependencyService.resetInstance();
 });
 ```
 
-## Recent Test Fixes
+2. **Use createFresh** for isolated testing:
+```typescript
+test('specific configuration', () => {
+  // Create isolated instance with specific config
+  const service = MyService.createFresh({
+    specialMode: true,
+  });
+  
+  // Test with this isolated instance
+});
+```
 
-We identified and fixed several test isolation issues:
+3. **Inject Dependencies** for controlled testing:
+```typescript
+test('with mock dependencies', () => {
+  // Create mocks
+  const mockLogger = MockLogger.createFresh({ silent: true });
+  const mockRepo = MockRepository.createFresh([initialData]);
+  
+  // Inject mocks into component under test
+  const service = MyService.createFresh({}, { 
+    logger: mockLogger,
+    repository: mockRepo 
+  });
+  
+  // Test with controlled dependencies
+});
+```
 
-1. **ProfileTagService Tests**
-   - Replaced repository instances with clean mocks for each test
-   - Fixed constructor parameter usage to match implementation
-   - Ensured test data had necessary fields for keyword extraction
+### Table-Driven Test Pattern
 
-2. **ProfileEmbeddingService Tests**
-   - Fixed constructor parameter usage
-   - Properly injected mock repositories into services
-   - Created isolated service instances for each test
+For testing similar scenarios:
 
-3. **External Source Tests**
-   - Created isolated instances per test instead of shared ones
-   - Mocked methods directly instead of relying on fetch mocking
-   - Added proper afterEach cleanup
-   - Temporarily skipped problematic tests to unblock CI
+```typescript
+// Test data
+const testCases = [
+  { 
+    name: 'simple query', 
+    input: 'test query', 
+    expected: ['result1', 'result2'] 
+  },
+  { 
+    name: 'empty query', 
+    input: '', 
+    expected: [] 
+  },
+  // More test cases...
+];
 
-4. **Global Test Setup**
-   - Added consistent embedding mocks in beforeEach hooks
-   - Reset fetch mocks between tests
-   - Implemented better cleanup to prevent state leakage
+// Single test function that runs all cases
+testCases.forEach(({ name, input, expected }) => {
+  test(`search handles ${name}`, async () => {
+    const results = await searchService.search(input);
+    expect(results).toEqual(expected);
+  });
+});
+```
 
-## Test Isolation Guidelines
+## Best Practices
 
-When writing tests:
+1. **Use TypeScript Path Aliases**:
+```typescript
+// Good:
+import { createMockNote } from '@test/__mocks__/models/note';
+import { MockLogger } from '@test/__mocks__/core/logger';
 
-1. **Avoid Shared State** - Create fresh instances in each test
-   ```typescript
-   test('my test', () => {
-     // Create a new instance for this test
-     const instance = new MyService();
-     // Test with this isolated instance
-   });
-   ```
+// Bad:
+import { createMockNote } from '../../../__mocks__/models/note';
+```
 
-2. **Mock Dependencies** - Inject mocks rather than relying on global singletons
-   ```typescript
-   // Replace internal dependencies with mocks
-   Object.defineProperty(service, 'repository', {
-     value: mockRepository,
-     writable: true
-   });
-   ```
+2. **Test Reset and Cleanup**:
+```typescript
+describe('My Test Suite', () => {
+  // Reset before each test
+  beforeEach(() => {
+    MyService.resetInstance();
+    MockLogger.resetInstance();
+  });
+  
+  // Tests with clean state...
+});
+```
 
-3. **Reset Global Mocks** - In `beforeEach` and `afterEach` hooks
-   ```typescript
-   beforeEach(() => {
-     // Reset mocks before each test
-     mock.resetAll();
-   });
-   ```
+3. **Descriptive Test Names**:
+```typescript
+// Good:
+test('should calculate embedding similarity within expected range', () => {});
 
-4. **Avoid Test Interference** - Tests should not depend on each other's state or execution order
-   - Each test should set up its own complete environment
-   - Avoid side effects that persist between tests
+// Bad:
+test('similarity works', () => {});
+```
 
-### Common Issues to Avoid
+4. **Group Related Tests** with describe blocks:
+```typescript
+describe('NoteService', () => {
+  describe('search functionality', () => {
+    test('should find notes by keyword', () => {});
+    test('should return empty array when no matches', () => {});
+  });
+  
+  describe('embedding generation', () => {
+    test('should generate embeddings for notes', () => {});
+  });
+});
+```
 
-- **Singleton Services** - Replace with mocked instances for each test
-- **Network Requests** - Mock all external API calls
-- **Database Access** - Use in-memory repositories with fresh data for each test
-- **Global State** - Reset before/after each test
+5. **Minimize Expect Calls**:
+```typescript
+// Good - focused assertion:
+expect(result.items).toHaveLength(3);
+expect(result.items[0].title).toBe('Expected Title');
 
-### Best Practices
+// Bad - redundant assertions:
+expect(result).toBeDefined();
+expect(result.items).toBeDefined();
+expect(Array.isArray(result.items)).toBe(true);
+expect(result.items.length).toBe(3);
+expect(result.items[0]).toBeDefined();
+expect(result.items[0].title).toBeDefined();
+expect(result.items[0].title).toBe('Expected Title');
+```
 
-- **Setup Helper Functions** - Create reusable functions for common setup
-- **Test in Isolation** - Each test should be able to run independently
-- **Consistent Mocking** - Use the same mock implementation across tests
-- **Clear Assertions** - Make assertions clear and specific to what's being tested
+## Mocking Dependencies
+
+Prefer explicit dependency injection over global mocks:
+
+```typescript
+// GOOD: Explicit dependency injection
+const mockLogger = MockLogger.createFresh({ silent: true });
+const service = new Service({}, { logger: mockLogger });
+
+// AVOID: Global monkey patching
+jest.spyOn(global, 'fetch').mockImplementation(() => Promise.resolve({
+  json: () => Promise.resolve({ data: 'test' }),
+}));
+```
+
+## Environment Helpers
+
+Use standardized environment setup:
+
+```typescript
+import { setMockEnv, clearMockEnv } from '@test/helpers/envUtils';
+
+describe('Your Test Suite', () => {
+  beforeAll(() => {
+    setMockEnv(); // Sets up standard test environment
+  });
+  
+  afterAll(() => {
+    clearMockEnv(); // Cleans up environment
+  });
+});
+```
