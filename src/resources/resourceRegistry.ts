@@ -11,7 +11,12 @@
  */
 
 import { getEnv } from '@/utils/configUtils';
-import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
+import { SimpleContainer } from '@/utils/container';
+import { 
+  Registry, 
+  type RegistryConfig, 
+  type RegistryDependencies, 
+} from '@/utils/registry';
 
 import { ClaudeModel } from './ai/claude';
 import { EmbeddingService } from './ai/embedding';
@@ -26,12 +31,18 @@ export type ResourceRegistryInterface = {
 /**
  * ResourceRegistry configuration options
  */
-export interface ResourceRegistryOptions extends RegistryOptions {
+export interface ResourceRegistryConfig extends RegistryConfig {
   /** Anthropic API key for Claude */
   anthropicApiKey?: string;
   /** OpenAI API key for embeddings */
   openAiApiKey?: string;
 }
+
+/**
+ * ResourceRegistry dependencies
+ */
+// We extend RegistryDependencies without adding new properties for now
+export type ResourceRegistryDependencies = RegistryDependencies;
 
 /**
  * Resource identifiers for consistent naming across the application
@@ -68,7 +79,7 @@ export const ResourceIdentifiers = {
  * 3. Resource dependencies are managed centrally
  * 4. Resources can be mocked in tests without changing client code
  */
-export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
+export class ResourceRegistry extends Registry {
   /** Singleton instance storage */
   private static instance: ResourceRegistry | null = null;
   
@@ -81,18 +92,22 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   /**
    * Get the singleton instance of the ResourceRegistry
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    * @returns The shared instance
    */
-  public static override getInstance(options?: ResourceRegistryOptions): ResourceRegistry {
+  public static override getInstance(
+    config: Partial<ResourceRegistryConfig> = {}, 
+    dependencies: Partial<ResourceRegistryDependencies> = {},
+  ): ResourceRegistry {
     if (!ResourceRegistry.instance) {
-      ResourceRegistry.instance = new ResourceRegistry(options || {});
+      ResourceRegistry.instance = new ResourceRegistry(config, dependencies);
       ResourceRegistry.instance.logger.debug('ResourceRegistry singleton instance created');
       // Auto-initialize on getInstance
       ResourceRegistry.instance.initialize();
-    } else if (options) {
-      // Update options if instance exists but options were provided
-      ResourceRegistry.instance.updateOptions(options);
+    } else if (config && Object.keys(config).length > 0) {
+      // Update config if provided
+      ResourceRegistry.instance.updateConfig(config);
     }
     
     return ResourceRegistry.instance;
@@ -113,11 +128,15 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    * @returns A new instance
    */
-  public static override createFresh(options?: ResourceRegistryOptions): ResourceRegistry {
-    const registry = new ResourceRegistry(options || {});
+  public static override createFresh(
+    config: Partial<ResourceRegistryConfig> = {}, 
+    dependencies: Partial<ResourceRegistryDependencies> = {},
+  ): ResourceRegistry {
+    const registry = new ResourceRegistry(config, dependencies);
     registry.initialize();
     return registry;
   }
@@ -125,13 +144,17 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
   /**
    * Protected constructor to enforce the use of getInstance() or createFresh()
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    */
-  protected constructor(options: ResourceRegistryOptions) {
+  protected constructor(
+    config: Partial<ResourceRegistryConfig> = {}, 
+    dependencies: Partial<ResourceRegistryDependencies> = {},
+  ) {
     super({
       name: 'ResourceRegistry',
-      ...options,
-    });
+      ...config,
+    }, dependencies);
   }
   
   /**
@@ -140,7 +163,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * @returns A new SimpleContainer
    */
   protected override createContainer(): SimpleContainer {
-    return new SimpleContainer();
+    return SimpleContainer.createFresh();
   }
   
   /**
@@ -207,7 +230,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * @throws Error if API key is missing
    */
   protected validateAnthropicApiKey(): string {
-    const anthropicApiKey = this.options.anthropicApiKey || getEnv('ANTHROPIC_API_KEY');
+    const anthropicApiKey = (this.config as ResourceRegistryConfig).anthropicApiKey || getEnv('ANTHROPIC_API_KEY');
     if (!anthropicApiKey) {
       const error = new Error('ANTHROPIC API key is required but not provided');
       this.logger.error('Missing Anthropic API key', { error });
@@ -224,7 +247,7 @@ export class ResourceRegistry extends Registry<ResourceRegistryOptions> {
    * @throws Error if API key is missing
    */
   protected validateOpenAiApiKey(): string {
-    const openAiApiKey = this.options.openAiApiKey || getEnv('OPENAI_API_KEY');
+    const openAiApiKey = (this.config as ResourceRegistryConfig).openAiApiKey || getEnv('OPENAI_API_KEY');
     if (!openAiApiKey) {
       const error = new Error('OPENAI API key is required but not provided');
       this.logger.error('Missing OpenAI API key', { error });

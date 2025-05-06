@@ -50,7 +50,7 @@ export class SectionQualityService {
    */
   private constructor(
     config?: SectionQualityServiceConfig,
-    dependencies?: SectionQualityServiceDependencies
+    dependencies?: SectionQualityServiceDependencies,
   ) {
     // Set dependencies
     this.logger = dependencies?.logger || Logger.getInstance();
@@ -68,7 +68,7 @@ export class SectionQualityService {
    */
   static getInstance(
     config?: SectionQualityServiceConfig,
-    dependencies?: SectionQualityServiceDependencies
+    dependencies?: SectionQualityServiceDependencies,
   ): SectionQualityService {
     if (!SectionQualityService.instance) {
       SectionQualityService.instance = new SectionQualityService(config, dependencies);
@@ -91,7 +91,7 @@ export class SectionQualityService {
    */
   static createFresh(
     config?: SectionQualityServiceConfig, 
-    dependencies?: SectionQualityServiceDependencies
+    dependencies?: SectionQualityServiceDependencies,
   ): SectionQualityService {
     return new SectionQualityService(config, dependencies);
   }

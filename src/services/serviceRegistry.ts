@@ -22,8 +22,9 @@ import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { ResourceRegistry } from '@/resources/resourceRegistry';
+import { SimpleContainer } from '@/utils/container';
 import { Logger } from '@/utils/logger';
-import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
+import { Registry, type RegistryConfig, type RegistryDependencies } from '@/utils/registry';
 import { TextUtils } from '@/utils/textUtils';
 
 import type { IEmbeddingService } from './interfaces/IEmbeddingService';
@@ -40,11 +41,17 @@ import { ProfileTagService } from './profiles/profileTagService';
 /**
  * ServiceRegistry configuration options
  */
-export interface ServiceRegistryOptions extends RegistryOptions {
-  /** Optional ResourceRegistry instance to use */
-  resourceRegistry?: ResourceRegistry;
+export interface ServiceRegistryConfig extends RegistryConfig {
   /** API key for services that require it */
   apiKey?: string;
+}
+
+/**
+ * ServiceRegistry dependencies
+ */
+export interface ServiceRegistryDependencies extends RegistryDependencies {
+  /** Optional ResourceRegistry instance to use */
+  resourceRegistry?: ResourceRegistry;
 }
 
 /**
@@ -90,7 +97,7 @@ export const ServiceIdentifiers = {
  * This registry provides a single point of access for all application services,
  * ensuring consistent initialization and configuration.
  */
-export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
+export class ServiceRegistry extends Registry {
   /** Singleton instance storage */
   private static instance: ServiceRegistry | null = null;
 
@@ -106,18 +113,22 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   /**
    * Get the singleton instance of the ServiceRegistry
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    * @returns The shared instance
    */
-  public static override getInstance(options?: ServiceRegistryOptions): ServiceRegistry {
+  public static override getInstance(
+    config: Partial<ServiceRegistryConfig> = {}, 
+    dependencies: Partial<ServiceRegistryDependencies> = {},
+  ): ServiceRegistry {
     if (!ServiceRegistry.instance) {
-      ServiceRegistry.instance = new ServiceRegistry(options || {});
+      ServiceRegistry.instance = new ServiceRegistry(config, dependencies);
       ServiceRegistry.instance.logger.debug('ServiceRegistry singleton instance created');
       // Auto-initialize on getInstance
       ServiceRegistry.instance.initialize();
-    } else if (options) {
-      // Update options if instance exists but options were provided
-      ServiceRegistry.instance.updateOptions(options);
+    } else if (config && Object.keys(config).length > 0) {
+      // Update config if provided
+      ServiceRegistry.instance.updateConfig(config);
     }
 
     return ServiceRegistry.instance;
@@ -138,11 +149,15 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    * @returns A new instance
    */
-  public static override createFresh(options?: ServiceRegistryOptions): ServiceRegistry {
-    const registry = new ServiceRegistry(options || {});
+  public static override createFresh(
+    config: Partial<ServiceRegistryConfig> = {}, 
+    dependencies: Partial<ServiceRegistryDependencies> = {},
+  ): ServiceRegistry {
+    const registry = new ServiceRegistry(config, dependencies);
     registry.initialize();
     return registry;
   }
@@ -150,18 +165,22 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
   /**
    * Protected constructor to enforce the use of getInstance() or createFresh()
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    */
-  protected constructor(options: ServiceRegistryOptions) {
+  protected constructor(
+    config: Partial<ServiceRegistryConfig> = {}, 
+    dependencies: Partial<ServiceRegistryDependencies> = {},
+  ) {
     super({
       name: 'ServiceRegistry',
-      ...options,
-    });
+      ...config,
+    }, dependencies);
 
     // Initialize or reference the resource registry
-    this.resourceRegistry = options.resourceRegistry || ResourceRegistry.getInstance({
-      anthropicApiKey: options.apiKey,
-      openAiApiKey: options.apiKey,
+    this.resourceRegistry = dependencies.resourceRegistry || ResourceRegistry.getInstance({
+      anthropicApiKey: config.apiKey,
+      openAiApiKey: config.apiKey,
     });
 
     // Ensure ResourceRegistry is initialized
@@ -180,7 +199,7 @@ export class ServiceRegistry extends Registry<ServiceRegistryOptions> {
    * @returns A new SimpleContainer
    */
   protected override createContainer(): SimpleContainer {
-    return new SimpleContainer();
+    return SimpleContainer.createFresh();
   }
 
   /**

@@ -42,7 +42,7 @@ describe('SectionQualityService', () => {
       {    // Dependencies
         logger: mockLogger,
         brainProtocol: mockBrainProtocol as unknown as BrainProtocol,
-      }
+      },
     );
   });
 

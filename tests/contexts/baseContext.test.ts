@@ -8,7 +8,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { afterAll, afterEach, describe, expect, test } from 'bun:test';
 
 import { BaseContext } from '@/contexts/baseContext';
-import { Registry, type RegistryOptions } from '@/utils/registry';
+import { Registry, type RegistryConfig, type RegistryDependencies } from '@/utils/registry';
 import { MockConversationFormatter } from '@test/__mocks__/contexts/conversationFormatter';
 import { MockStorageInterface } from '@test/__mocks__/storage/baseStorageInterface';
 import { MockRegistry } from '@test/__mocks__/utils/registry';
@@ -32,7 +32,10 @@ function applyRegistryMock() {
   
   // Patch the Registry's getInstance method during tests
   const originalGetInstance = Registry.getInstance;
-  Registry.getInstance = function(_options?: RegistryOptions) {
+  Registry.getInstance = function(
+    _config?: Partial<RegistryConfig>, 
+    _dependencies?: Partial<RegistryDependencies>,
+  ) {
     return mockRegistryInstance as unknown as Registry;
   };
   

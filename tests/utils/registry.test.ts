@@ -6,7 +6,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 
-import { Registry, type RegistryOptions, SimpleContainer } from '@/utils/registry';
+import { SimpleContainer } from '@/utils/container';
+import { Registry, type RegistryConfig, type RegistryDependencies } from '@/utils/registry';
 
 // Concrete implementation for testing the abstract Registry class
 class TestRegistry extends Registry {
@@ -19,9 +20,12 @@ class TestRegistry extends Registry {
   // Track components registration
   private componentsRegistered = false;
 
-  public static override getInstance(options?: RegistryOptions): TestRegistry {
+  public static override getInstance(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ): TestRegistry {
     if (!TestRegistry.instance) {
-      TestRegistry.instance = new TestRegistry(options || {});
+      TestRegistry.instance = new TestRegistry(config, dependencies);
       // Auto-initialize on getInstance
       TestRegistry.instance.initialize();
     }
@@ -32,17 +36,23 @@ class TestRegistry extends Registry {
     TestRegistry.instance = null;
   }
 
-  public static override createFresh(options?: RegistryOptions): TestRegistry {
-    const registry = new TestRegistry(options || {});
+  public static override createFresh(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ): TestRegistry {
+    const registry = new TestRegistry(config, dependencies);
     registry.initialize();
     return registry;
   }
 
-  protected constructor(options: RegistryOptions) {
+  protected constructor(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ) {
     super({
       name: 'TestRegistry',
-      ...options,
-    });
+      ...config,
+    }, dependencies);
   }
 
   // Required implementation of abstract registerComponents method
@@ -56,7 +66,7 @@ class TestRegistry extends Registry {
   }
 
   protected override createContainer(): SimpleContainer {
-    return new SimpleContainer();
+    return SimpleContainer.createFresh();
   }
 
   // Add a public method to access the protected logger
@@ -69,9 +79,9 @@ class TestRegistry extends Registry {
     return this.name;
   }
 
-  // Add a public method to access the protected options
-  public getOptions() {
-    return this.options;
+  // Add a public method to access the protected config
+  public getConfig() {
+    return this.config;
   }
 
   // Add method to check if components are registered
@@ -82,14 +92,14 @@ class TestRegistry extends Registry {
 
 describe('Registry', () => {
   describe('Base class functionality', () => {
-    test('should initialize with default options', () => {
+    test('should initialize with default config', () => {
       const registry = TestRegistry.createFresh();
 
       expect(registry.getName()).toBe('TestRegistry');
-      expect(registry.getOptions()).toEqual({ name: 'TestRegistry' });
+      expect(registry.getConfig()).toEqual({ name: 'TestRegistry', silent: true });
     });
 
-    test('should allow custom name in options', () => {
+    test('should allow custom name in config', () => {
       const registry = TestRegistry.createFresh({ name: 'CustomName' });
 
       expect(registry.getName()).toBe('CustomName');
@@ -146,28 +156,29 @@ describe('Registry', () => {
       expect(registry.has('test.component2')).toBe(false);
     });
 
-    test('should support updating options', () => {
+    test('should support updating config', () => {
       const registry = TestRegistry.createFresh({ customOption: 'initial' });
 
-      expect(registry.getOptions()['customOption']).toBe('initial');
+      expect(registry.getConfig()['customOption']).toBe('initial');
 
-      registry.updateOptions({ customOption: 'updated' });
+      registry.updateConfig({ customOption: 'updated' });
 
-      expect(registry.getOptions()['customOption']).toBe('updated');
+      expect(registry.getConfig()['customOption']).toBe('updated');
     });
 
-    test('should merge new options with existing options', () => {
+    test('should merge new config with existing config', () => {
       const registry = TestRegistry.createFresh({
         option1: 'value1',
         option2: 'value2',
       });
 
-      registry.updateOptions({ option2: 'updated' });
+      registry.updateConfig({ option2: 'updated' });
 
-      expect(registry.getOptions()).toEqual({
+      expect(registry.getConfig()).toEqual({
         name: 'TestRegistry',
         option1: 'value1',
         option2: 'updated',
+        silent: true,
       });
     });
   });

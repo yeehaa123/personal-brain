@@ -1,31 +1,39 @@
 /**
  * Mock Registry implementation for testing
  */
+import { SimpleContainer } from '@/utils/container';
 import type { Logger } from '@/utils/logger';
-import { Registry, SimpleContainer } from '@/utils/registry';
-import type { RegistryFactory, RegistryOptions } from '@/utils/registry';
+import { Registry, type RegistryConfig, type RegistryDependencies, type RegistryFactory } from '@/utils/registry';
 import { MockLogger } from '@test/__mocks__/core/logger';
 
 /**
  * Mock Registry class that follows the Component Interface Standardization pattern
  * Extends abstract Registry class instead of implementing IRegistry directly
  */
-export class MockRegistry extends Registry<RegistryOptions> {
+export class MockRegistry extends Registry {
   private static instance: MockRegistry | null = null;
 
   // Mock implementation tracking
   private registrations = new Map<string, { factory: RegistryFactory; singleton: boolean }>();
   private instances = new Map<string, unknown>();
+  
+  // No need for a separate mock logger property
 
   /** Registry type */
   protected override readonly registryType: 'resource' | 'service' = 'service';
 
   /**
    * Get the singleton instance
+   * 
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    */
-  public static override getInstance(options: RegistryOptions = {}): MockRegistry {
+  public static override getInstance(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ): MockRegistry {
     if (!MockRegistry.instance) {
-      MockRegistry.instance = new MockRegistry(options);
+      MockRegistry.instance = new MockRegistry(config, dependencies);
     }
     return MockRegistry.instance;
   }
@@ -42,20 +50,35 @@ export class MockRegistry extends Registry<RegistryOptions> {
 
   /**
    * Create a fresh instance
+   * 
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    */
-  public static override createFresh(options: RegistryOptions = {}): MockRegistry {
-    return new MockRegistry(options);
+  public static override createFresh(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ): MockRegistry {
+    return new MockRegistry(config, dependencies);
   }
 
   /**
-   * Private constructor to enforce singleton pattern
+   * Protected constructor to enforce singleton pattern
+   * 
+   * @param config Configuration options
+   * @param dependencies Dependencies such as logger
    */
-  protected constructor(options: RegistryOptions = {}) {
+  protected constructor(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ) {
     // Call parent constructor
-    super(options);
+    super(config, dependencies);
 
-    // Replace logger with mock implementation
-    (this.logger as Logger) = MockLogger.createFresh({ silent: true }) as unknown as Logger;
+    // Create silent mock logger for testing if not provided
+    if (!dependencies.logger) {
+      // Replace logger with mock implementation
+      (this.logger as Logger) = MockLogger.createFresh({ silent: true }) as unknown as Logger;
+    }
   }
 
   /**
@@ -129,10 +152,10 @@ export class MockRegistry extends Registry<RegistryOptions> {
   }
 
   /**
-   * Update registry options
+   * Update registry config
    */
-  public override updateOptions(options: Partial<RegistryOptions>): void {
-    Object.assign(this.options, options);
+  public override updateConfig(newConfig: Partial<RegistryConfig>): void {
+    Object.assign(this.config, newConfig);
   }
 
   /**
@@ -146,7 +169,7 @@ export class MockRegistry extends Registry<RegistryOptions> {
    * Create container - override from Registry
    */
   protected override createContainer(): SimpleContainer {
-    return new SimpleContainer();
+    return SimpleContainer.createFresh();
   }
 
   /**

@@ -123,11 +123,17 @@ describe('ServiceRegistry Class', () => {
 
   test('should handle ResourceRegistry integration', () => {
     // Test with provided ResourceRegistry
-    const resourceRegistry = ResourceRegistry.createFresh({
-      anthropicApiKey: 'test-api-key',
-      openAiApiKey: 'test-openai-key',
-    });
-    const registryWithProvided = ServiceRegistry.createFresh({ resourceRegistry });
+    const resourceRegistry = ResourceRegistry.createFresh(
+      {
+        anthropicApiKey: 'test-api-key',
+        openAiApiKey: 'test-openai-key',
+      },
+    );
+    // Pass resourceRegistry as a dependency
+    const registryWithProvided = ServiceRegistry.createFresh(
+      {}, // Config
+      { resourceRegistry }, // Dependencies
+    );
     
     // @ts-expect-error - Accessing private property for testing
     expect(registryWithProvided.resourceRegistry).toBe(resourceRegistry);

@@ -9,105 +9,13 @@
  * and lifecycle management.
  */
 
+import { SimpleContainer } from './container';
 import { Logger } from './logger';
 
 /**
- * Type for a factory function that creates a service instance
+ * Registry configuration options
  */
-export type ServiceFactory<T = unknown> = (container: SimpleContainer) => T;
-
-/**
- * Configuration for a service registration
- */
-export interface ServiceConfig<T = unknown> {
-  factory: ServiceFactory<T>;
-  singleton?: boolean;
-}
-
-/**
- * Simple container implementation to replace DependencyContainer
- * Provides the same interface but with a simplified implementation
- */
-export class SimpleContainer {
-  private services = new Map<string, ServiceConfig<unknown>>();
-  private instances = new Map<string, unknown>();
-  private logger: Logger = Logger.getInstance();
-  
-  /**
-   * Register a service with the container
-   * @param name Unique service identifier
-   * @param factory Factory function to create the service
-   * @param singleton Whether to create only one instance (default: true)
-   */
-  register<T>(name: string, factory: ServiceFactory<T>, singleton = true): void {
-    if (this.services.has(name)) {
-      this.logger.warn(`Service '${name}' is already registered. Overwriting previous registration.`);
-    }
-    this.services.set(name, { factory, singleton });
-    // Clear instance if service is re-registered
-    this.instances.delete(name);
-  }
-
-  /**
-   * Get a service instance from the container
-   * @param name Service identifier
-   * @returns Service instance
-   * @throws Error if service is not registered
-   */
-  resolve<T>(name: string): T {
-    const serviceConfig = this.services.get(name);
-    
-    if (!serviceConfig) {
-      throw new Error(`Service '${name}' is not registered in the container`);
-    }
-    
-    // For singletons, return the cached instance if available
-    if (serviceConfig.singleton && this.instances.has(name)) {
-      return this.instances.get(name) as T;
-    }
-    
-    // Create a new instance
-    const instance = serviceConfig.factory(this);
-    
-    // Cache the instance if it's a singleton
-    if (serviceConfig.singleton) {
-      this.instances.set(name, instance);
-    }
-    
-    return instance as T;
-  }
-
-  /**
-   * Check if a service is registered
-   * @param name Service identifier
-   * @returns True if service is registered
-   */
-  has(name: string): boolean {
-    return this.services.has(name);
-  }
-
-  /**
-   * Remove a service registration
-   * @param name Service identifier
-   */
-  unregister(name: string): void {
-    this.services.delete(name);
-    this.instances.delete(name);
-  }
-
-  /**
-   * Clear all service registrations and instances
-   */
-  clear(): void {
-    this.services.clear();
-    this.instances.clear();
-  }
-}
-
-/**
- * Basic options for Registry configuration
- */
-export interface RegistryOptions {
+export interface RegistryConfig {
   /**
    * Name of the registry for logging purposes
    */
@@ -119,15 +27,27 @@ export interface RegistryOptions {
   silent?: boolean;
   
   /**
-   * Optional container to use
-   * If not provided, each Registry will create its own container
-   */
-  container?: SimpleContainer;
-  
-  /**
    * Additional configuration properties
    */
   [key: string]: unknown;
+}
+
+// No backward compatibility interface needed
+
+/**
+ * Registry dependencies
+ */
+export interface RegistryDependencies {
+  /**
+   * Logger instance to use
+   */
+  logger?: Logger;
+  
+  /**
+   * Container to use
+   * If not provided, each Registry will create its own container
+   */
+  container?: SimpleContainer;
 }
 
 /**
@@ -139,7 +59,7 @@ export type RegistryFactory<T = unknown> = (container: SimpleContainer) => T;
 /**
  * Registry interface to ensure consistent implementation
  */
-export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
+export interface IRegistry {
   // Core methods
   initialize(): boolean;
   isInitialized(): boolean;
@@ -152,7 +72,7 @@ export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
   clear(): void;
   
   // Configuration
-  updateOptions(options: Partial<T>): void;
+  updateConfig(config: Partial<RegistryConfig>): void;
 }
 
 /**
@@ -162,17 +82,21 @@ export interface IRegistry<T extends RegistryOptions = RegistryOptions> {
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-export abstract class Registry<TOptions extends RegistryOptions = RegistryOptions> implements IRegistry<TOptions> {
+export abstract class Registry implements IRegistry {
   // No static _instance - each derived class should have its own
   
   /**
    * Get the singleton instance
    * This implementation should be overridden by derived classes but provides a default
    * 
-   * @param _options Optional configuration options
+   * @param _config Optional configuration options
+   * @param _dependencies Optional dependencies
    * @returns The singleton instance
    */
-  public static getInstance(_options?: RegistryOptions): Registry {
+  public static getInstance(
+    _config?: Partial<RegistryConfig>, 
+    _dependencies?: Partial<RegistryDependencies>,
+  ): Registry {
     // This is abstract and should be implemented by subclasses
     // We provide a default implementation that throws an error if not properly implemented
     throw new Error('getInstance must be implemented by derived classes');
@@ -191,10 +115,14 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * Create a fresh instance without affecting the singleton
    * This is primarily for testing purposes
    * 
-   * @param _options Optional configuration options
+   * @param _config Optional configuration options
+   * @param _dependencies Optional dependencies
    * @returns A new registry instance
    */
-  public static createFresh(_options?: RegistryOptions): Registry {
+  public static createFresh(
+    _config?: Partial<RegistryConfig>,
+    _dependencies?: Partial<RegistryDependencies>,
+  ): Registry {
     // This is abstract and should be implemented by subclasses
     throw new Error('createFresh must be implemented by derived classes');
   }
@@ -215,9 +143,9 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   protected readonly logger: Logger;
   
   /**
-   * Registry configuration options
+   * Registry configuration
    */
-  protected options: TOptions;
+  protected config: RegistryConfig;
   
   /**
    * Internal container for dependency management
@@ -231,12 +159,27 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   
   /**
    * Protected constructor to enforce singleton pattern
+   * 
+   * @param config Configuration options
+   * @param dependencies Dependencies like logger and container
    */
-  protected constructor(options: TOptions) {
-    this.options = options;
-    this.name = options.name || this.constructor.name;
-    this.logger = Logger.getInstance();
-    this.container = options.container || this.createContainer();
+  protected constructor(
+    config: Partial<RegistryConfig> = {}, 
+    dependencies: Partial<RegistryDependencies> = {},
+  ) {
+    this.config = {
+      name: config.name || this.constructor.name,
+      silent: config.silent !== undefined ? config.silent : true, // Default to true for silent logging in tests
+      ...config,
+    };
+    
+    this.name = this.config.name || this.constructor.name;
+    
+    // Use provided logger or create default one
+    this.logger = dependencies.logger || Logger.getInstance();
+    
+    // Use provided container or create a new one
+    this.container = dependencies.container || this.createContainer();
     
     this.logger.debug(`${this.name} constructed`);
   }
@@ -246,7 +189,7 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
    * Override this method if you need a different container implementation
    */
   protected createContainer(): SimpleContainer {
-    return new SimpleContainer();
+    return SimpleContainer.createFresh();
   }
   
   /**
@@ -361,13 +304,13 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
   }
   
   /**
-   * Updates registry options
+   * Updates registry configuration
    * 
-   * @param options New options to merge with existing options
+   * @param config New configuration to merge with existing config
    */
-  public updateOptions(options: Partial<TOptions>): void {
-    this.options = { ...this.options, ...options };
-    this.logger.debug(`Updated options for ${this.name}`);
+  public updateConfig(config: Partial<RegistryConfig>): void {
+    this.config = { ...this.config, ...config };
+    this.logger.debug(`Updated configuration for ${this.name}`);
   }
 }
 
@@ -376,13 +319,20 @@ export abstract class Registry<TOptions extends RegistryOptions = RegistryOption
  * Creates a singleton instance of a registry if it doesn't exist
  * 
  * @param registryClass Registry class to instantiate
- * @param options Options to pass to the constructor
+ * @param config Configuration options to pass
+ * @param dependencies Dependencies to pass
  * @returns Whether the registry was initialized
  */
-export function ensureRegistryInitialized<T extends Registry, O extends RegistryOptions>(
-  registryClass: { getInstance: (options?: O) => T },
-  options?: O,
+export function ensureRegistryInitialized<T extends Registry>(
+  registryClass: { 
+    getInstance: (
+      config?: Partial<RegistryConfig>, 
+      dependencies?: Partial<RegistryDependencies>
+    ) => T 
+  },
+  config?: Partial<RegistryConfig>,
+  dependencies?: Partial<RegistryDependencies>,
 ): boolean {
-  const registry = registryClass.getInstance(options);
+  const registry = registryClass.getInstance(config, dependencies);
   return !!registry;
 }

@@ -35,9 +35,10 @@ export class MockLogger {
   };
 
   constructor(config: MockLoggerConfig = {}) {
-    // Store config
+    // Store config - default to silent true for tests
     this.config = {
-      silent: config.silent || false,
+      // Force silent mode by default in tests
+      silent: config.silent !== undefined ? config.silent : true,
       ...config,
     };
 
@@ -58,7 +59,12 @@ export class MockLogger {
    */
   public static getInstance(config?: MockLoggerConfig): Logger {
     if (!MockLogger.instance) {
-      MockLogger.instance = new MockLogger(config);
+      // Ensure silent mode is enabled by default for tests
+      const silentConfig = {
+        ...config,
+        silent: config?.silent !== undefined ? config.silent : true,
+      };
+      MockLogger.instance = new MockLogger(silentConfig);
     } else if (config && Object.keys(config).length > 0) {
       // Update existing instance config
       MockLogger.instance.updateConfig(config);
@@ -78,7 +84,12 @@ export class MockLogger {
    * @param config Configuration options
    */
   public static createFresh(config?: MockLoggerConfig): Logger {
-    return new MockLogger(config) as unknown as Logger;
+    // Ensure silent mode is enabled by default for tests
+    const silentConfig = {
+      ...config,
+      silent: config?.silent !== undefined ? config.silent : true,
+    };
+    return new MockLogger(silentConfig) as unknown as Logger;
   }
 
   /**
@@ -94,40 +105,67 @@ export class MockLogger {
 
   /**
    * Mock logger methods
+   * 
+   * Always store messages for testing purposes even when in silent mode,
+   * but don't output to console when silent is true
    */
   info(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.info.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.info.push(message);
+      console.info(`[info]: ${message}`);
     }
   }
 
   debug(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.debug.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.debug.push(message);
+      console.debug(`[debug]: ${message}`);
     }
   }
 
   warn(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.warn.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.warn.push(message);
+      console.warn(`[warn]: ${message}`);
     }
   }
 
   error(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.error.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.error.push(message);
+      console.error(`[error]: ${message}`);
     }
   }
 
   verbose(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.verbose.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.verbose.push(message);
+      console.log(`[verbose]: ${message}`);
     }
   }
 
   silly(message: string, ..._args: unknown[]): void {
+    // Always store the message for testing assertions
+    this.messages.silly.push(message);
+    
+    // Only log to console if not in silent mode
     if (!this.config.silent) {
-      this.messages.silly.push(message);
+      console.log(`[silly]: ${message}`);
     }
   }
 
