@@ -7,15 +7,13 @@
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance 
  * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates an instance with explicit dependencies
+ * - createFresh(config, dependencies): Creates a new instance without affecting the singleton
  * 
  * Implements standardized interfaces:
  * - CoreContextInterface: Core context functionality
  * - StorageAccess: Standardized storage access
  * - FormatterAccess: Standardized formatter access
  * - ServiceAccess: Standardized service resolution
- * - ExtendedContextInterface: Dependency injection support
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -186,26 +184,15 @@ export abstract class BaseContext<
    * 
    * This creates a new instance without affecting the singleton
    * 
-   * @param options Configuration options for the context
+   * @param config Configuration options for the context
+   * @param dependencies Optional dependencies for the context
    * @returns A new instance of the derived class
    */
-  static createFresh(_options?: Record<string, unknown>): BaseContext {
+  static createFresh(
+    _config?: Record<string, unknown>,
+    _dependencies?: Record<string, unknown>,
+  ): BaseContext {
     throw new Error('createFresh must be implemented by derived classes');
-  }
-  
-  /**
-   * Create a new instance with explicit dependencies
-   * This is an abstract method that derived classes must implement
-   * 
-   * @param _config Configuration options
-   * @param _dependencies Optional dependencies for the context
-   * @returns A new instance with the specified dependencies
-   */
-  static createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(_config: Record<string, unknown>, _dependencies?: ContextDependencies<TStorage, TFormatter>): BaseContext {
-    throw new Error('createWithDependencies must be implemented by derived classes');
   }
   
   /**

@@ -15,7 +15,9 @@ describe('AstroContentService', () => {
   beforeEach(async () => {
     tempDir = path.join(os.tmpdir(), `astro-test-${Date.now()}`);
     await fs.mkdir(tempDir, { recursive: true });
-    service = new AstroContentService(tempDir);
+    service = AstroContentService.createFresh({
+      astroProjectPath: tempDir,
+    });
   });
   
   // Clean up after tests

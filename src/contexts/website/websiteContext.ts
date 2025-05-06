@@ -1,10 +1,10 @@
 import * as path from 'path';
 
+import { websiteConfig } from '@/config';
 import { BaseContext } from '@/contexts/baseContext';
-import type { ContextDependencies, ContextInterface } from '@/contexts/contextInterface';
-import type { FormatterInterface, FormattingOptions } from '@/contexts/formatterInterface';
+import type { ContextInterface } from '@/contexts/contextInterface';
+import type { FormattingOptions } from '@/contexts/formatterInterface';
 import { ProfileContext } from '@/contexts/profiles';
-import type { StorageInterface } from '@/contexts/storageInterface';
 import { Logger } from '@/utils/logger';
 import { getProjectRoot, resolvePath } from '@/utils/pathUtils';
 import { Registry } from '@/utils/registry';
@@ -12,7 +12,6 @@ import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 import { PersistentWebsiteStorageAdapter } from './adapters/persistentWebsiteStorageAdapter';
-import { InMemoryWebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import { type WebsiteData, WebsiteFormatter } from './formatters';
 import { AstroContentService } from './services/astroContentService';
@@ -23,17 +22,42 @@ import { WebsiteToolService } from './tools';
 import type { WebsiteConfig } from './websiteStorage';
 
 /**
- * Options for creating a WebsiteContext instance
+ * Configuration for WebsiteContext
+ * Note: This extends Record<string, unknown> to ensure compatibility with BaseContext
  */
-export interface WebsiteContextOptions {
-  storage?: WebsiteStorageAdapter;
-  formatter?: WebsiteFormatter;
+export interface WebsiteContextConfig extends Record<string, unknown> {
+  /**
+   * Name for the context (defaults to 'website')
+   */
   name?: string;
+
+  /**
+   * Version for the context (defaults to '1.0.0')
+   */
   version?: string;
-  astroContentService?: AstroContentService;
-  landingPageGenerationService?: LandingPageGenerationService;
-  profileContext?: ProfileContext;
-  deploymentManager?: WebsiteDeploymentManager;
+}
+
+/**
+ * Dependencies for WebsiteContext
+ */
+export interface WebsiteContextDependencies {
+  /** Storage adapter instance */
+  storage: WebsiteStorageAdapter;
+  
+  /** Formatter instance */
+  formatter: WebsiteFormatter;
+  
+  /** AstroContentService instance */
+  astroContentService: AstroContentService;
+  
+  /** LandingPageGenerationService instance */
+  landingPageGenerationService: LandingPageGenerationService;
+  
+  /** ProfileContext instance */
+  profileContext: ProfileContext;
+  
+  /** DeploymentManager instance */
+  deploymentManager: WebsiteDeploymentManager;
 }
 
 /**
@@ -68,30 +92,23 @@ export class WebsiteContext extends BaseContext<
   protected storage!: WebsiteStorageAdapter;
   protected formatter!: WebsiteFormatter;
   
-  constructor(options?: WebsiteContextOptions) {
-    super({});
+  constructor(
+    config: WebsiteContextConfig = {},
+    dependencies: WebsiteContextDependencies,
+  ) {
+    super(config);
     
-    this.contextName = options?.name || 'website';
-    this.contextVersion = options?.version || '1.0.0';
-    this.storage = options?.storage || new InMemoryWebsiteStorageAdapter();
-    this.formatter = options?.formatter || WebsiteFormatter.getInstance();
+    // Initialize from config
+    this.contextName = config.name as string || 'website';
+    this.contextVersion = config.version as string || '1.0.0';
     
-    // Initialize services if provided (primarily for testing)
-    if (options?.astroContentService) {
-      this.astroContentService = options.astroContentService;
-    }
-    
-    if (options?.landingPageGenerationService) {
-      this.landingPageGenerationService = options.landingPageGenerationService;
-    }
-    
-    if (options?.profileContext) {
-      this.profileContext = options.profileContext;
-    }
-    
-    if (options?.deploymentManager) {
-      this.deploymentManager = options.deploymentManager;
-    }
+    // Initialize from required dependencies
+    this.storage = dependencies.storage;
+    this.formatter = dependencies.formatter;
+    this.astroContentService = dependencies.astroContentService;
+    this.landingPageGenerationService = dependencies.landingPageGenerationService;
+    this.profileContext = dependencies.profileContext;
+    this.deploymentManager = dependencies.deploymentManager;
   }
   
   /**
@@ -126,11 +143,27 @@ export class WebsiteContext extends BaseContext<
   
   /**
    * Get the singleton instance of WebsiteContext
+   * 
+   * @param config Configuration options
+   * @param dependencies Optional dependencies (will use defaults if not provided)
+   * @returns The singleton instance
    */
-  static override getInstance(options?: WebsiteContextOptions): WebsiteContext {
+  static override getInstance(
+    config: WebsiteContextConfig = {},
+    dependencies?: Partial<WebsiteContextDependencies>,
+  ): WebsiteContext {
     if (!WebsiteContext.instance) {
-      WebsiteContext.instance = options ? new WebsiteContext(options) : WebsiteContext.createWithDependencies();
+      // Create a new instance with the provided config and dependencies (or defaults)
+      WebsiteContext.instance = WebsiteContext.createFresh(config, dependencies);
+      
+      const logger = Logger.getInstance();
+      logger.debug('WebsiteContext singleton instance created');
+    } else if (Object.keys(config).length > 0) {
+      // Log at debug level if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.debug('getInstance called with config but instance already exists. Config ignored.');
     }
+    
     return WebsiteContext.instance;
   }
   
@@ -158,46 +191,63 @@ export class WebsiteContext extends BaseContext<
   
   /**
    * Create a fresh instance without affecting the singleton
-   */
-  static override createFresh(options?: WebsiteContextOptions): WebsiteContext {
-    return new WebsiteContext(options);
-  }
-  
-  /**
-   * Factory method for creating an instance with proper dependencies
-   * This is the preferred way to create a new instance with all required dependencies
    * 
-   * @param configOrDependencies Configuration or dependencies for the context
-   * @returns A new WebsiteContext instance with resolved dependencies
+   * @param config Configuration options
+   * @param dependencies Dependencies for the context (will use defaults if not provided)
+   * @returns A new WebsiteContext instance
    */
-  public static override createWithDependencies(
-    configOrDependencies: WebsiteContextOptions | Record<string, unknown> = {},
+  static override createFresh(
+    config: WebsiteContextConfig = {},
+    partialDependencies?: Partial<WebsiteContextDependencies>,
   ): WebsiteContext {
-    // Handle the case where this is called with a dependencies object that has specific properties
-    if ('storage' in configOrDependencies || 'formatter' in configOrDependencies) {
-      const dependencies = configOrDependencies as WebsiteContextOptions;
-      
-      // Create and return context with explicit dependencies
-      return new WebsiteContext(dependencies);
-    }
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh WebsiteContext instance');
     
-    // Create persistent storage (this approach avoids circular dependencies)
-    // We'll implement a static method to create the storage
-    const storage = this.createPersistentStorage();
+    // Get default dependencies
+    const defaultDependencies = WebsiteContext.createDefaultDependencies();
     
-    // Create context with persistent storage and any other options
-    return new WebsiteContext({
-      storage,
-      ...configOrDependencies as WebsiteContextOptions,
-    });
+    // Merge with provided dependencies if any
+    const dependencies = partialDependencies 
+      ? { ...defaultDependencies, ...partialDependencies }
+      : defaultDependencies;
+    
+    // Create and return a new instance with the config and dependencies
+    return new WebsiteContext(config, dependencies);
   }
   
   /**
-   * Create a persistent storage adapter for the website context
-   * This is a helper method to avoid circular dependencies
+   * Create default dependencies for WebsiteContext
+   * This helps with creating instances without having to specify all dependencies
+   * @returns Default WebsiteContextDependencies
    */
-  private static createPersistentStorage(): WebsiteStorageAdapter {
-    return PersistentWebsiteStorageAdapter.getInstance();
+  private static createDefaultDependencies(): WebsiteContextDependencies {
+    // Create storage and formatter
+    const storage = PersistentWebsiteStorageAdapter.getInstance();
+    const formatter = WebsiteFormatter.getInstance();
+    
+    // Get the astro project path from config
+    const astroProjectPath = websiteConfig.astroProjectPath;
+    
+    // Create service instances
+    const astroContentService = AstroContentService.getInstance({
+      astroProjectPath,
+    });
+    const landingPageGenerationService = LandingPageGenerationService.getInstance();
+    const profileContext = ProfileContext.getInstance();
+    
+    // Create deployment manager using config
+    const deploymentManager = DeploymentManagerFactory.getInstance().create({
+      deploymentType: websiteConfig.deployment.type,
+    });
+    
+    return {
+      storage,
+      formatter,
+      astroContentService,
+      landingPageGenerationService,
+      profileContext,
+      deploymentManager,
+    };
   }
 
   /**
@@ -325,6 +375,7 @@ export class WebsiteContext extends BaseContext<
     return this.formatter.format(data, options);
   }
   
+  
   /**
    * Get a service by type
    * Implements ServiceAccess interface
@@ -403,16 +454,16 @@ export class WebsiteContext extends BaseContext<
     }
     
     try {
-      // Get configuration to determine Astro project path
-      const config = await this.getConfig();
-      // Create a new service instance
-      this.astroContentService = new AstroContentService(config.astroProjectPath);
+      // Get or create an instance using the standardized pattern and config
+      this.astroContentService = AstroContentService.getInstance({
+        astroProjectPath: websiteConfig.astroProjectPath,
+      });
       
       // Verify Astro project exists
       const exists = await this.astroContentService.verifyAstroProject();
       if (!exists) {
         this.logger.warn('Astro project not found at configured path', {
-          path: config.astroProjectPath,
+          path: websiteConfig.astroProjectPath,
           context: 'WebsiteContext',
         });
       }
@@ -825,57 +876,4 @@ export class WebsiteContext extends BaseContext<
     }
   }
 
-  /**
-   * Instance method that delegates to static getInstance
-   * Required by FullContextInterface
-   * @returns The singleton instance
-   */
-  getInstance(): WebsiteContext {
-    return WebsiteContext.getInstance();
-  }
-  
-  /**
-   * Instance method that delegates to static resetInstance
-   * Required by FullContextInterface
-   */
-  resetInstance(): void {
-    WebsiteContext.resetInstance();
-  }
-  
-  /**
-   * Instance method that delegates to static createFresh
-   * Required by FullContextInterface
-   * @param options Optional configuration
-   * @returns A new instance
-   */
-  createFresh(options?: WebsiteContextOptions): WebsiteContext {
-    return WebsiteContext.createFresh(options);
-  }
-  
-  /**
-   * Instance method that delegates to static createWithDependencies
-   * Required by FullContextInterface
-   * 
-   * @param config Configuration options
-   * @param dependencies Optional dependencies for the context
-   * @returns A new instance with the provided dependencies
-   */
-  createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(
-    config: Record<string, unknown>,
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
-  ): WebsiteContext {
-    // Convert the parameters to WebsiteContextOptions for backward compatibility
-    const options: WebsiteContextOptions = { ...config };
-    if (dependencies?.storage) {
-      options.storage = dependencies.storage as unknown as WebsiteStorageAdapter;
-    }
-    if (dependencies?.formatter) {
-      options.formatter = dependencies.formatter as unknown as WebsiteFormatter;
-    }
-    
-    return WebsiteContext.createWithDependencies(options);
-  }
 }

@@ -23,7 +23,7 @@ async function runMigration() {
     
     // Generate embeddings for existing notes
     logger.info('Generating embeddings for existing notes...', { context: 'DBMigration' });
-    const context = NoteContext.createWithDependencies();
+    const context = NoteContext.createFresh();
     const result = await context.generateEmbeddingsForAllNotes();
     
     logger.info('Embedding generation complete', { 

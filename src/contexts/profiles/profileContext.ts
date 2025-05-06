@@ -12,11 +12,8 @@
 
 import { BaseContext } from '@/contexts/baseContext';
 import type {
-  ContextDependencies,
   ContextInterface,
 } from '@/contexts/contextInterface';
-import type { FormatterInterface } from '@/contexts/formatterInterface';
-import type { StorageInterface } from '@/contexts/storageInterface';
 import type {
   Profile,
 } from '@/models/profile';
@@ -26,7 +23,6 @@ import {
   ProfileSearchService,
   ProfileTagService,
 } from '@/services/profiles';
-import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
 
 
@@ -35,7 +31,8 @@ import { ProfileStorageAdapter } from './profileStorageAdapter';
 import type { NoteContext, NoteWithSimilarity, ProfileFormattingOptions } from './profileTypes';
 
 /**
- * Configuration for the ProfileContext
+ * Configuration for ProfileContext
+ * Note: This extends Record<string, unknown> to ensure compatibility with BaseContext
  */
 export interface ProfileContextConfig extends Record<string, unknown> {
   /**
@@ -56,8 +53,9 @@ export interface ProfileContextConfig extends Record<string, unknown> {
 
 /**
  * Dependencies for ProfileContext
+ * Note: This extends Record<string, unknown> to ensure compatibility with BaseContext
  */
-export interface ProfileContextDependencies {
+export interface ProfileContextDependencies extends Record<string, unknown> {
   /** Profile repository instance */
   repository: ProfileRepository;
   /** Profile embedding service instance */
@@ -122,7 +120,7 @@ export class ProfileContext extends BaseContext<
       const config = options || {};
 
       // Use the config directly - ProfileContextConfig extends Record<string, unknown>
-      ProfileContext.instance = ProfileContext.createWithDependencies(config);
+      ProfileContext.instance = ProfileContext.createFresh(config);
 
       const logger = Logger.getInstance();
       logger.debug('ProfileContext singleton instance created');
@@ -153,63 +151,34 @@ export class ProfileContext extends BaseContext<
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Optional dependencies
    * @returns A new ProfileContext instance
    */
-  static override createFresh(options: ProfileContextConfig = {}): ProfileContext {
+  static override createFresh(
+    config: ProfileContextConfig = {},
+    dependencies?: ProfileContextDependencies,
+  ): ProfileContext {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ProfileContext instance');
 
-    // Prepare config with defaults
-    const config = options || {};
-
-    // Use the config directly - ProfileContextConfig extends Record<string, unknown>
-    return ProfileContext.createWithDependencies(config);
-  }
-
-  /**
-   * Factory method for creating an instance with explicit dependencies
-   * This implementation matches the BaseContext abstract method signature
-   * 
-   * @param config Configuration options object
-   * @param dependencies Optional dependencies for the context
-   * @returns A new ProfileContext instance with the provided dependencies
-   */
-  public static override createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(
-    config: Record<string, unknown> = {},
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
-  ): ProfileContext {
-    // Convert the generic config to our specific config type
+    // Use the config directly - ensure default values are set
     const profileConfig: ProfileContextConfig = {
-      name: config['name'] as string || 'ProfileBrain',
-      version: config['version'] as string || '1.0.0',
-      apiKey: config['apiKey'] as string,
+      name: config.name || 'ProfileBrain',
+      version: config.version || '1.0.0',
+      apiKey: config.apiKey,
     };
 
-    // If dependencies are provided, use them with proper casting
     if (dependencies) {
-      // Get the repository from the storage adapter or create one
-      const typedStorage = dependencies.storage as unknown as ProfileStorageAdapter;
-      const repository = typedStorage?.repository || ProfileRepository.getInstance();
-
-      // Create service instances from registry or defaults
-      const serviceRegistry = (dependencies.registry || ServiceRegistry.getInstance()) as ServiceRegistry;
-      const embeddingService = serviceRegistry.getProfileEmbeddingService() as unknown as ProfileEmbeddingService;
-      const tagService = serviceRegistry.getProfileTagService() as unknown as ProfileTagService;
-      const searchService = serviceRegistry.getProfileSearchService() as unknown as ProfileSearchService;
-
-      // Create context with provided dependencies
+      // If dependencies are provided, use them
       return new ProfileContext(
         profileConfig,
         {
-          repository,
-          embeddingService,
-          tagService,
-          searchService,
-          storageAdapter: typedStorage,
+          repository: dependencies.repository || ProfileRepository.getInstance(),
+          embeddingService: dependencies.embeddingService || ProfileEmbeddingService.getInstance(),
+          tagService: dependencies.tagService || ProfileTagService.getInstance(),
+          searchService: dependencies.searchService || ProfileSearchService.getInstance(),
+          storageAdapter: dependencies.storageAdapter,
         },
       );
     } else {
@@ -223,11 +192,11 @@ export class ProfileContext extends BaseContext<
       // Create tag service
       const tagService = ProfileTagService.getInstance();
 
-      // Create search service with explicit dependencies using the updated interface
+      // Create search service
       const searchService = ProfileSearchService.getInstance();
 
-      // Create storage adapter with explicit repository dependency
-      const storageAdapter = ProfileStorageAdapter.createWithDependencies({
+      // Create storage adapter with repository dependency
+      const storageAdapter = ProfileStorageAdapter.getInstance({
         repository,
       });
 
@@ -264,7 +233,7 @@ export class ProfileContext extends BaseContext<
 
     // Initialize storage adapter (use provided one or create new one with the repository)
     this.storage = dependencies.storageAdapter ||
-      ProfileStorageAdapter.createWithDependencies({ repository: dependencies.repository });
+      ProfileStorageAdapter.createFresh({ repository: dependencies.repository });
 
     // Initialize formatter
     this.formatter = ProfileFormatter.getInstance();
@@ -429,50 +398,6 @@ export class ProfileContext extends BaseContext<
     }
 
     throw new Error(`Service not found: ${serviceType.name}`);
-  }
-
-  /**
-   * Instance method that delegates to the static method
-   * Required by FullContextInterface
-   * @returns The singleton instance
-   */
-  getInstance(): ProfileContext {
-    return ProfileContext.getInstance();
-  }
-
-  /**
-   * Instance method that delegates to the static method
-   * Required by FullContextInterface
-   */
-  resetInstance(): void {
-    ProfileContext.resetInstance();
-  }
-
-  /**
-   * Instance method that delegates to the static method
-   * Required by FullContextInterface
-   * @param options Optional configuration
-   * @returns A new instance
-   */
-  createFresh(options?: Record<string, unknown>): ProfileContext {
-    return ProfileContext.createFresh(options as ProfileContextConfig);
-  }
-
-  /**
-   * Instance method that delegates to the static method
-   * Required by ExtendedContextInterface
-   * @param config Configuration options
-   * @param dependencies Optional dependencies for the context
-   * @returns A new instance with the provided dependencies
-   */
-  createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(
-    config: Record<string, unknown>,
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
-  ): ProfileContext {
-    return ProfileContext.createWithDependencies(config, dependencies);
   }
 
   /**

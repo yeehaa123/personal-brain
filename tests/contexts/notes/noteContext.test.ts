@@ -151,7 +151,7 @@ describe('NoteContext', () => {
     const searchService = MockNoteSearchService.createFresh();
 
     // Create the context with our mock dependencies
-    const context = NoteContext.createWithDependencies(
+    const context = NoteContext.createFresh(
       { name: 'TestNoteBrain' },
       {
         repository,

@@ -1,25 +1,21 @@
 import { mock } from 'bun:test';
 
-import type { AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
+import type { 
+  AstroContentServiceConfig,
+  AstroContentServiceTestHelpers, 
+  SpawnFunction, 
+} from '@/contexts/website/services/astroContentService';
 import type { LandingPageData } from '@/contexts/website/websiteStorage';
-import { MockLogger } from '@test/__mocks__/core/logger';
 import { createTestLandingPageData } from '@test/helpers';
 
 /**
  * Mock implementation of AstroContentService for tests
+ * Follows the Component Interface Standardization pattern
  */
 export class MockAstroContentService implements AstroContentServiceTestHelpers {
   private static instance: MockAstroContentService | null = null;
   
-  // Properties needed to match the interface
-  astroProjectPath: string = '/mock/astro/path';
-  contentCollectionPath: string = '/mock/astro/path/src/content';
-  logger = MockLogger.createFresh({ silent: true });
-  spawnFunction = () => ({ 
-    exited: Promise.resolve(0),
-    stdout: new ReadableStream(),
-    stderr: new ReadableStream(),
-  });
+  // Mock implementation doesn't need to store these properties
   
   // Mock methods with default implementations that work well for tests
   verifyAstroProject = mock(() => Promise.resolve(true));
@@ -31,15 +27,18 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
     return Promise.resolve({ success: true, output: `Command ${command} executed successfully` });
   });
   getBuildDir = mock(() => '/mock/astro/path/dist');
+  getAstroProjectPath = mock(() => '/mock/astro/path');
   killProcess = mock(() => Promise.resolve(true));
-  
   
   /**
    * Get the singleton instance
+   * 
+   * @param config Optional configuration options
+   * @returns The singleton instance
    */
-  static getInstance(): MockAstroContentService {
+  static getInstance(config: AstroContentServiceConfig = {}): MockAstroContentService {
     if (!MockAstroContentService.instance) {
-      MockAstroContentService.instance = new MockAstroContentService();
+      MockAstroContentService.instance = new MockAstroContentService(config);
     }
     return MockAstroContentService.instance;
   }
@@ -54,6 +53,7 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
       MockAstroContentService.instance.readLandingPageContent.mockClear();
       MockAstroContentService.instance.runAstroCommand.mockClear();
       MockAstroContentService.instance.getBuildDir.mockClear();
+      MockAstroContentService.instance.getAstroProjectPath.mockClear();
       MockAstroContentService.instance.killProcess.mockClear();
     }
     MockAstroContentService.instance = null;
@@ -61,9 +61,24 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
   
   /**
    * Create a fresh instance
+   * 
+   * @param config Optional configuration options
+   * @returns A new instance
    */
-  static createFresh(): MockAstroContentService {
-    return new MockAstroContentService();
+  static createFresh(config: AstroContentServiceConfig = {}): MockAstroContentService {
+    return new MockAstroContentService(config);
+  }
+  
+  /**
+   * Constructor
+   * @param config Configuration options (optional)
+   */
+  protected constructor(config: AstroContentServiceConfig = {}) {
+    // If a specific project path was provided, update mock values
+    if (config.astroProjectPath) {
+      this.getBuildDir = mock(() => `${config.astroProjectPath}/dist`);
+      this.getAstroProjectPath = mock(() => config.astroProjectPath as string);
+    }
   }
   
   /**
@@ -74,10 +89,9 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
   }
 
   /**
-   * Mock implementation of setSpawnFunction (no-op in mock)
+   * Mock implementation of setSpawnFunction
    */
-  setSpawnFunction = mock(() => {
-    // No-op in mock
+  setSpawnFunction = mock((_fn: SpawnFunction) => {
+    // No-op in mock implementation
   });
-  
 }

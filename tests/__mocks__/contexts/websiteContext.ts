@@ -1,11 +1,14 @@
 import { mock } from 'bun:test';
 
 import { WebsiteContext } from '@/contexts/website';
-import type { WebsiteContextOptions } from '@/contexts/website';
+import type { WebsiteContextConfig, WebsiteContextDependencies } from '@/contexts/website';
 import type { WebsiteStorageAdapter } from '@/contexts/website/adapters/websiteStorageAdapter';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { LandingPageData } from '@/contexts/website/websiteStorage';
+
+import { MockWebsiteStorageAdapter } from './website/adapters/websiteStorageAdapter';
+
 
 /**
  * Mock implementation of WebsiteContext for testing
@@ -26,11 +29,12 @@ export class MockWebsiteContext extends WebsiteContext {
   // For testing - allows changing the storage adapter
   override setStorage = mock((storage: WebsiteStorageAdapter) => { 
     // Recreate the context with the new storage
-    const options = {
-      storage: storage,
-    };
+    const config = {};
+    const dependencies = {
+      storage,
+    } as WebsiteContextDependencies;
     // Apply properties from this instance to the new instance
-    Object.assign(this, new MockWebsiteContext(options));
+    Object.assign(this, new MockWebsiteContext(config, dependencies));
   });
   override getDeploymentManager = mock(() => Promise.resolve(super.getDeploymentManager()));
   override getAstroContentService = mock(() => Promise.resolve(super.getAstroContentService()));
@@ -105,9 +109,22 @@ export class MockWebsiteContext extends WebsiteContext {
   /**
    * Get the singleton instance
    */
-  static override getInstance(options?: WebsiteContextOptions): MockWebsiteContext {
+  static override getInstance(
+    config?: WebsiteContextConfig,
+    dependencies?: Partial<WebsiteContextDependencies>,
+  ): MockWebsiteContext {
     if (!MockWebsiteContext.mockInstance) {
-      MockWebsiteContext.mockInstance = new MockWebsiteContext(options);
+      // Create mock dependencies with minimal requirements
+      const storage = dependencies?.storage || MockWebsiteStorageAdapter.getInstance();
+
+      // Create with minimal mock dependencies
+      MockWebsiteContext.mockInstance = new MockWebsiteContext(
+        config || {},
+        { 
+          storage,
+          ...dependencies,
+        } as WebsiteContextDependencies,
+      );
     }
     return MockWebsiteContext.mockInstance;
   }
@@ -145,8 +162,21 @@ export class MockWebsiteContext extends WebsiteContext {
   /**
    * Create a fresh instance
    */
-  static override createFresh(options?: WebsiteContextOptions): MockWebsiteContext {
-    return new MockWebsiteContext(options);
+  static override createFresh(
+    config?: WebsiteContextConfig,
+    dependencies?: Partial<WebsiteContextDependencies>,
+  ): MockWebsiteContext {
+    // Create mock dependencies with minimal requirements
+    const storage = dependencies?.storage || MockWebsiteStorageAdapter.createFresh();
+
+    // Create with minimal mock dependencies
+    return new MockWebsiteContext(
+      config || {},
+      { 
+        storage,
+        ...dependencies,
+      } as WebsiteContextDependencies,
+    );
   }
   
   /**

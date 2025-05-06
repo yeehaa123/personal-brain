@@ -5,40 +5,40 @@
  */
 
 import type { Note } from '@/models/note';
+import type { NoteSearchService } from '@/services/notes';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
 import { createMockNote } from '@test/__mocks__/models/note';
-import { MockBaseSearchService } from '@test/__mocks__/services/common/baseSearchService';
 
 /**
  * Standardized mock implementation for NoteSearchService
  * Implements the Component Interface Standardization pattern
  */
-export class MockNoteSearchService extends MockBaseSearchService {
+export class MockNoteSearchService {
   /** Singleton instance - use a different name to avoid property shadowing from parent class */
   private static noteSearchInstance: MockNoteSearchService | null = null;
 
   /**
    * Get the singleton instance
    */
-  public static override getInstance(): MockNoteSearchService {
+  public static getInstance(): NoteSearchService {
     if (!MockNoteSearchService.noteSearchInstance) {
       MockNoteSearchService.noteSearchInstance = new MockNoteSearchService();
     }
-    return MockNoteSearchService.noteSearchInstance;
+    return MockNoteSearchService.noteSearchInstance as unknown as NoteSearchService;
   }
 
   /**
    * Reset the singleton instance
    */
-  public static override resetInstance(): void {
+  public static resetInstance(): void {
     MockNoteSearchService.noteSearchInstance = null;
   }
 
   /**
    * Create a fresh instance
    */
-  public static override createFresh(): MockNoteSearchService {
-    return new MockNoteSearchService();
+  public static createFresh(): NoteSearchService {
+    return new MockNoteSearchService() as unknown as NoteSearchService;
   }
 
   /**

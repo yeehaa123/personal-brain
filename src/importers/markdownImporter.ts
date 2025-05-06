@@ -23,7 +23,7 @@ interface ParsedMarkdown {
   content: string;
 }
 
-const context = NoteContext.createWithDependencies();
+const context = NoteContext.createFresh();
 const embeddingService = EmbeddingService.getInstance();
 
 /**

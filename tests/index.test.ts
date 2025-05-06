@@ -5,19 +5,19 @@ import { ExternalSourceContext, NoteContext, ProfileContext } from '@/contexts';
 
 describe('MCP SDK', () => {
   test('NoteContext can be imported and instantiated', () => {
-    const noteContext = NoteContext.createWithDependencies({ apiKey: 'mock-api-key' });
+    const noteContext = NoteContext.createFresh({ apiKey: 'mock-api-key' });
     expect(noteContext).toBeDefined();
     expect(noteContext).toBeInstanceOf(NoteContext);
   });
   
   test('ProfileContext can be imported and instantiated', () => {
-    const profileContext = ProfileContext.createWithDependencies({ apiKey: 'mock-api-key' });
+    const profileContext = ProfileContext.createFresh({ apiKey: 'mock-api-key' });
     expect(profileContext).toBeDefined();
     expect(profileContext).toBeInstanceOf(ProfileContext);
   });
   
   test('ExternalSourceContext can be imported and instantiated', () => {
-    const externalSourceContext = ExternalSourceContext.createWithDependencies({ 
+    const externalSourceContext = ExternalSourceContext.createFresh({ 
       apiKey: 'mock-api-key', 
       newsApiKey: 'mock-newsapi-key',
     });
@@ -26,9 +26,9 @@ describe('MCP SDK', () => {
   });
   
   test('All contexts return MCP servers', () => {
-    const noteContext = NoteContext.createWithDependencies({ apiKey: 'mock-api-key' });
-    const profileContext = ProfileContext.createWithDependencies({ apiKey: 'mock-api-key' });
-    const externalSourceContext = ExternalSourceContext.createWithDependencies({ 
+    const noteContext = NoteContext.createFresh({ apiKey: 'mock-api-key' });
+    const profileContext = ProfileContext.createFresh({ apiKey: 'mock-api-key' });
+    const externalSourceContext = ExternalSourceContext.createFresh({ 
       apiKey: 'mock-api-key', 
       newsApiKey: 'mock-newsapi-key',
     });

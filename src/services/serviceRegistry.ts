@@ -18,8 +18,6 @@ import { ConversationMemoryService, ConversationQueryService } from '@/contexts/
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
 import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
-import type { Note } from '@/models/note';
-import type { Profile } from '@/models/profile';
 import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { ResourceRegistry } from '@/resources/resourceRegistry';
 import { SimpleContainer } from '@/utils/container';
@@ -27,9 +25,6 @@ import { Logger } from '@/utils/logger';
 import { Registry, type RegistryConfig, type RegistryDependencies } from '@/utils/registry';
 import { TextUtils } from '@/utils/textUtils';
 
-import type { IEmbeddingService } from './interfaces/IEmbeddingService';
-import type { IRepository } from './interfaces/IRepository';
-import type { ISearchService } from './interfaces/ISearchService';
 import { NoteEmbeddingService } from './notes/noteEmbeddingService';
 import { NoteRepository } from './notes/noteRepository';
 import { NoteSearchService } from './notes/noteSearchService';
@@ -214,18 +209,18 @@ export class ServiceRegistry extends Registry {
     this.logger.debug('Registering standard services');
 
     // Register repositories
-    this.register<IRepository<Note>>(
+    this.register<NoteRepository>(
       ServiceIdentifiers.NoteRepository,
       () => NoteRepository.getInstance(),
     );
 
-    this.register<IRepository<Profile>>(
+    this.register<ProfileRepository>(
       ServiceIdentifiers.ProfileRepository,
       () => ProfileRepository.getInstance(),
     );
 
     // Register embedding services
-    this.register<IEmbeddingService>(
+    this.register<NoteEmbeddingService>(
       ServiceIdentifiers.NoteEmbeddingService,
       () => {
         // Get embedding service from resource registry (used internally by NoteEmbeddingService)
@@ -234,7 +229,7 @@ export class ServiceRegistry extends Registry {
       },
     );
 
-    this.register<IEmbeddingService>(
+    this.register<ProfileEmbeddingService>(
       ServiceIdentifiers.ProfileEmbeddingService,
       () => {
         // Get embedding service from resource registry (used internally by ProfileEmbeddingService)
@@ -266,7 +261,7 @@ export class ServiceRegistry extends Registry {
     );
 
     // Register search services with dependencies
-    this.registerService<ISearchService<Note>>(
+    this.registerService<NoteSearchService>(
       ServiceIdentifiers.NoteSearchService,
       (container) => {
         // Get dependencies from container
@@ -294,7 +289,7 @@ export class ServiceRegistry extends Registry {
       ],
     );
 
-    this.registerService<ISearchService<Profile>>(
+    this.registerService<ProfileSearchService>(
       ServiceIdentifiers.ProfileSearchService,
       (container) => {
         // Get dependencies from container
@@ -397,8 +392,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Note repository
    */
-  public getNoteRepository(): IRepository<Note> {
-    return this.resolve<IRepository<Note>>(ServiceIdentifiers.NoteRepository);
+  public getNoteRepository(): NoteRepository {
+    return this.resolve<NoteRepository>(ServiceIdentifiers.NoteRepository);
   }
 
   /**
@@ -406,8 +401,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Profile repository
    */
-  public getProfileRepository(): IRepository<Profile> {
-    return this.resolve<IRepository<Profile>>(ServiceIdentifiers.ProfileRepository);
+  public getProfileRepository(): ProfileRepository {
+    return this.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
   }
 
   /**
@@ -415,8 +410,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Note embedding service
    */
-  public getNoteEmbeddingService(): IEmbeddingService {
-    return this.resolve<IEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
+  public getNoteEmbeddingService(): NoteEmbeddingService {
+    return this.resolve<NoteEmbeddingService>(ServiceIdentifiers.NoteEmbeddingService);
   }
 
   /**
@@ -424,8 +419,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Profile embedding service
    */
-  public getProfileEmbeddingService(): IEmbeddingService {
-    return this.resolve<IEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
+  public getProfileEmbeddingService(): ProfileEmbeddingService {
+    return this.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
   }
 
   /**
@@ -433,8 +428,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Note search service
    */
-  public getNoteSearchService(): ISearchService<Note> {
-    return this.resolve<ISearchService<Note>>(ServiceIdentifiers.NoteSearchService);
+  public getNoteSearchService(): NoteSearchService {
+    return this.resolve<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
   }
 
   /**
@@ -442,8 +437,8 @@ export class ServiceRegistry extends Registry {
    * 
    * @returns Profile search service
    */
-  public getProfileSearchService(): ISearchService<Profile> {
-    return this.resolve<ISearchService<Profile>>(ServiceIdentifiers.ProfileSearchService);
+  public getProfileSearchService(): ProfileSearchService {
+    return this.resolve<ProfileSearchService>(ServiceIdentifiers.ProfileSearchService);
   }
 
   /**

@@ -2,8 +2,20 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { Logger } from '@/utils/logger';
+import { getProjectRoot } from '@/utils/pathUtils';
 // Import LandingPageData type from schema
 import type { LandingPageData } from '@website/schemas';
+
+/**
+ * Configuration options for AstroContentService
+ */
+export interface AstroContentServiceConfig {
+  /**
+   * Path to the Astro project root
+   * If not provided, will default to the website directory in the project root
+   */
+  astroProjectPath?: string;
+}
 
 // Type for the spawn function we'll use to run Astro commands
 export type SpawnFunction = (options: {
@@ -25,18 +37,82 @@ export interface AstroContentServiceTestHelpers {
 
 /**
  * Service for managing Astro project and content collections
+ * Follows the Component Interface Standardization pattern with 
+ * getInstance/resetInstance/createFresh methods
  */
 export class AstroContentService {
+  /**
+   * Singleton instance
+   */
+  private static instance: AstroContentService | null = null;
+  
+  /**
+   * Path to content collection directory
+   */
   private contentCollectionPath: string;
+  
+  /**
+   * Logger instance
+   */
   private logger = Logger.getInstance();
+  
+  /**
+   * Function for spawning child processes
+   */
   private spawnFunction: SpawnFunction;
   
   /**
-   * Create a new AstroContentService
-   * @param astroProjectPath Path to the Astro project root
+   * Get the singleton instance
+   * 
+   * @param config Optional configuration options
+   * @returns The singleton instance
    */
-  constructor(private astroProjectPath: string) {
-    this.contentCollectionPath = path.join(this.astroProjectPath, 'src', 'content');
+  public static getInstance(config: AstroContentServiceConfig = {}): AstroContentService {
+    if (!AstroContentService.instance) {
+      AstroContentService.instance = new AstroContentService(config);
+      const logger = Logger.getInstance();
+      logger.debug('AstroContentService singleton instance created');
+    } else if (Object.keys(config).length > 0) {
+      // Log at debug level if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.debug('getInstance called with config but instance already exists. Config ignored.');
+    }
+    
+    return AstroContentService.instance;
+  }
+  
+  /**
+   * Reset the singleton instance (primarily for testing)
+   * This clears the instance and any resources it holds
+   */
+  public static resetInstance(): void {
+    AstroContentService.instance = null;
+  }
+  
+  /**
+   * Create a fresh instance (primarily for testing)
+   * This creates a new instance without affecting the singleton
+   * 
+   * @param config Configuration options
+   * @returns A new instance
+   */
+  public static createFresh(config: AstroContentServiceConfig = {}): AstroContentService {
+    const logger = Logger.getInstance();
+    logger.debug('Creating fresh AstroContentService instance');
+    
+    return new AstroContentService(config);
+  }
+  
+  /**
+   * Protected constructor to prevent direct instantiation
+   * @param config Configuration options
+   */
+  protected constructor(config: AstroContentServiceConfig = {}) {
+    // Determine Astro project path
+    const astroProjectPath = config.astroProjectPath || 
+      path.join(getProjectRoot(), 'src', 'website');
+    
+    this.contentCollectionPath = path.join(astroProjectPath, 'src', 'content');
     
     // Default implementation using Bun.spawn with adapter for our SpawnFunction type
     this.spawnFunction = (options: { cmd: string[]; cwd: string; stdout: 'pipe'; stderr: 'pipe'; }) => {
@@ -51,6 +127,20 @@ export class AstroContentService {
         stderr: process.stderr,
       };
     };
+    
+    this.logger.debug('AstroContentService initialized', {
+      astroProjectPath,
+      contentCollectionPath: this.contentCollectionPath,
+    });
+  }
+  
+  /**
+   * Get the Astro project path
+   * @returns The path to the Astro project
+   */
+  getAstroProjectPath(): string {
+    // Extract the project path from the content collection path
+    return path.dirname(path.dirname(this.contentCollectionPath));
   }
   
   /**
@@ -66,7 +156,8 @@ export class AstroContentService {
   async verifyAstroProject(): Promise<boolean> {
     try {
       // Check for key Astro files
-      const astroConfigPath = path.join(this.astroProjectPath, 'astro.config.mjs');
+      const astroProjectPath = this.getAstroProjectPath();
+      const astroConfigPath = path.join(astroProjectPath, 'astro.config.mjs');
       const contentConfigPath = path.join(this.contentCollectionPath, 'config.ts');
       
       const astroConfigExists = await fs.access(astroConfigPath)
@@ -142,8 +233,9 @@ export class AstroContentService {
       }
       
       // Use Bun to run the Astro command
+      const astroProjectPath = this.getAstroProjectPath();
       const proc = this.spawnFunction({
-        cmd: ['bunx', 'astro', command, '--root', this.astroProjectPath],
+        cmd: ['bunx', 'astro', command, '--root', astroProjectPath],
         cwd: process.cwd(),
         stdout: 'pipe',
         stderr: 'pipe',
@@ -184,7 +276,7 @@ export class AstroContentService {
    * Returns the appropriate build output directory for Astro
    */
   getBuildDir(): string {
-    return path.join(this.astroProjectPath, 'dist');
+    return path.join(this.getAstroProjectPath(), 'dist');
   }
 }
 

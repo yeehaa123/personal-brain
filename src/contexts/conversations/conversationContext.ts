@@ -15,7 +15,6 @@ import { nanoid } from 'nanoid';
 
 import { BaseContext } from '@/contexts/baseContext';
 import type { 
-  ContextDependencies,
   ContextInterface,
   ResourceDefinition,
 } from '@/contexts/contextInterface';
@@ -37,8 +36,6 @@ import type {
 } from '@/contexts/conversations/storage/conversationStorage';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ConversationToolService } from '@/contexts/conversations/tools';
-import type { FormatterInterface } from '@/contexts/formatterInterface';
-import type { StorageInterface } from '@/contexts/storageInterface';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 // No need to import logConfig anymore
 import { Logger } from '@/utils/logger';
@@ -184,7 +181,7 @@ export class ConversationContext extends BaseContext<
    */
   static override getInstance(options: Record<string, unknown> = {}): ConversationContext {
     if (!ConversationContext.instance) {
-      ConversationContext.instance = ConversationContext.createWithDependencies(options);
+      ConversationContext.instance = ConversationContext.createFresh(options);
       
       const logger = Logger.getInstance();
       logger.debug('ConversationContext singleton instance created');
@@ -215,42 +212,17 @@ export class ConversationContext extends BaseContext<
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
    * 
-   * @param options Configuration options
+   * @param config Configuration options
+   * @param dependencies Optional explicit dependencies
    * @returns A new ConversationContext instance
    */
-  static override createFresh(options: Record<string, unknown> = {}): ConversationContext {
+  static override createFresh(
+    config: Record<string, unknown> = {},
+    dependencies?: Partial<ConversationContextDependencies>,
+  ): ConversationContext {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationContext instance');
     
-    return ConversationContext.createWithDependencies(options);
-  }
-
-  /**
-   * Initialize MCP components (resources and tools)
-   * Required by BaseContext - called from BaseContext constructor
-   */
-  protected initializeMcpComponents(): void {
-    // Placeholder implementation - resources and tools will be set in the constructor
-    // after services are initialized
-    this.resources = [];
-    this.tools = [];
-  }
-
-  /**
-   * Factory method for creating an instance with explicit dependencies
-   * This implementation matches the BaseContext abstract method signature
-   * 
-   * @param config Configuration options object
-   * @param dependencies Optional dependencies for the context
-   * @returns A new ConversationContext instance with the provided dependencies
-   */
-  public static override createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(
-    config: Record<string, unknown>,
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
-  ): ConversationContext {
     // Create standard config with defaults
     const contextConfig: Required<ConversationContextConfig> = {
       name: 'ConversationBrain',
@@ -270,6 +242,7 @@ export class ConversationContext extends BaseContext<
       if ('name' in config) contextConfig.name = config['name'] as string;
       if ('version' in config) contextConfig.version = config['version'] as string;
       if ('tieredMemoryConfig' in config) contextConfig.tieredMemoryConfig = config['tieredMemoryConfig'] as Record<string, unknown>;
+      if ('storage' in config) contextConfig.storage = config['storage'] as ConversationStorageAdapter;
       
       // Handle display properties
       if ('display' in config && typeof config['display'] === 'object') {
@@ -281,45 +254,35 @@ export class ConversationContext extends BaseContext<
       }
     }
     
-    // Get storage adapter - either from dependencies or create default
-    let storageAdapter: ConversationStorageAdapter;
-    if (dependencies?.storage) {
-      storageAdapter = dependencies.storage as unknown as ConversationStorageAdapter;
-    } else {
-      storageAdapter = ConversationStorageAdapter.getInstance(InMemoryStorage.getInstance());
-    }
-    
-    // Get formatter - either from dependencies or create default
-    let formatter: ConversationFormatter;
-    if (dependencies?.formatter) {
-      formatter = dependencies.formatter as unknown as ConversationFormatter;
-    } else {
-      formatter = ConversationFormatter.getInstance();
-    }
-    
-    // Create remaining services
-    const mcpFormatter = ConversationMcpFormatter.getInstance();
-    const resourceService = ConversationResourceService.getInstance();
-    const toolService = ConversationToolService.getInstance();
-    const queryService = ConversationQueryService.getInstance(storageAdapter);
-    const memoryService = ConversationMemoryService.getInstance(
-      storageAdapter,
-      contextConfig.tieredMemoryConfig,
-    );
+    // Get dependencies - either from passed dependencies or create defaults
+    const deps: ConversationContextDependencies = {
+      storageAdapter: dependencies?.storageAdapter || contextConfig.storage,
+      formatter: dependencies?.formatter || ConversationFormatter.getInstance(),
+      mcpFormatter: dependencies?.mcpFormatter || ConversationMcpFormatter.getInstance(),
+      resourceService: dependencies?.resourceService || ConversationResourceService.getInstance(),
+      toolService: dependencies?.toolService || ConversationToolService.getInstance(),
+      queryService: dependencies?.queryService || ConversationQueryService.getInstance(
+        dependencies?.storageAdapter || contextConfig.storage,
+      ),
+      memoryService: dependencies?.memoryService || ConversationMemoryService.getInstance(
+        dependencies?.storageAdapter || contextConfig.storage,
+        contextConfig.tieredMemoryConfig,
+      ),
+    };
     
     // Create context with explicit dependencies
-    return new ConversationContext(
-      contextConfig,
-      {
-        storageAdapter,
-        formatter,
-        mcpFormatter,
-        resourceService,
-        toolService,
-        queryService,
-        memoryService,
-      },
-    );
+    return new ConversationContext(contextConfig, deps);
+  }
+
+  /**
+   * Initialize MCP components (resources and tools)
+   * Required by BaseContext - called from BaseContext constructor
+   */
+  protected initializeMcpComponents(): void {
+    // Placeholder implementation - resources and tools will be set in the constructor
+    // after services are initialized
+    this.resources = [];
+    this.tools = [];
   }
   
   /**
@@ -823,26 +786,14 @@ export class ConversationContext extends BaseContext<
   /**
    * Instance method that delegates to static createFresh
    * (Required for interface compatibility)
-   * @param options Optional configuration
+   * @param config Optional configuration
+   * @param dependencies Optional dependencies
    * @returns A new instance
    */
-  createFresh(options?: Record<string, unknown>): ConversationContext {
-    return ConversationContext.createFresh(options);
-  }
-  
-  /**
-   * Instance method that delegates to static createWithDependencies
-   * (Required for interface compatibility)
-   * @param dependencies Dependencies for the context
-   * @returns A new instance with the specified dependencies
-   */
-  createWithDependencies<
-    TStorage extends StorageInterface<unknown, unknown>,
-    TFormatter extends FormatterInterface<unknown, unknown>
-  >(
-    config: Record<string, unknown>,
-    dependencies?: ContextDependencies<TStorage, TFormatter>,
+  createFresh(
+    config?: Record<string, unknown>,
+    dependencies?: Partial<ConversationContextDependencies>,
   ): ConversationContext {
-    return ConversationContext.createWithDependencies(config, dependencies);
+    return ConversationContext.createFresh(config, dependencies);
   }
 }

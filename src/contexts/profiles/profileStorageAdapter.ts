@@ -8,7 +8,6 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 
 import type { ListOptions, SearchCriteria, StorageInterface } from '@/contexts/storageInterface';
@@ -41,12 +40,15 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
   constructor(public readonly repository: ProfileRepository) {}
   
   /**
-   * Factory method for creating an instance with explicit dependencies
+   * Create a fresh instance with explicit dependencies
+   * Primarily used for testing
    * 
-   * @param config Configuration with dependencies
-   * @returns A new ProfileStorageAdapter instance with resolved dependencies
+   * @param config Configuration with repository dependency
+   * @returns A new ProfileStorageAdapter instance
    */
-  public static createWithDependencies(config: ProfileStorageAdapterConfig = {}): ProfileStorageAdapter {
+  public static createFresh(
+    config: ProfileStorageAdapterConfig = {},
+  ): ProfileStorageAdapter {
     // Create repository if not provided
     const repository = config.repository || ProfileRepository.getInstance();
     
@@ -57,18 +59,16 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
   /**
    * Get the singleton instance of ProfileStorageAdapter
    * 
-   * @param repository The repository implementation to use (only used when creating a new instance)
+   * @param config Configuration options (only used when creating a new instance)
    * @returns The shared ProfileStorageAdapter instance
    */
-  public static getInstance(repository?: ProfileRepository): ProfileStorageAdapter {
+  public static getInstance(config: ProfileStorageAdapterConfig = {}): ProfileStorageAdapter {
     if (!ProfileStorageAdapter.instance) {
-      ProfileStorageAdapter.instance = ProfileStorageAdapter.createWithDependencies({
-        repository,
-      });
-    } else if (repository) {
-      // Log at debug level if trying to get instance with different repository
+      ProfileStorageAdapter.instance = ProfileStorageAdapter.createFresh(config);
+    } else if (Object.keys(config).length > 0) {
+      // Log at debug level if trying to get instance with different config
       const logger = Logger.getInstance();
-      logger.debug('getInstance called with repository but instance already exists. Repository ignored');
+      logger.debug('getInstance called with config but instance already exists. Config ignored');
     }
     return ProfileStorageAdapter.instance;
   }
@@ -81,17 +81,6 @@ export class ProfileStorageAdapter implements StorageInterface<Profile> {
     ProfileStorageAdapter.instance = null;
   }
   
-  /**
-   * Create a fresh instance (primarily for testing)
-   * This creates a new instance without affecting the singleton
-   * 
-   * @param repository The repository implementation to use
-   * @returns A new ProfileStorageAdapter instance
-   */
-  public static createFresh(repository?: ProfileRepository): ProfileStorageAdapter {
-    return ProfileStorageAdapter.createWithDependencies({ repository });
-  }
-
   /**
    * Create a new profile (equivalent to insertProfile)
    * @param item The profile data to create

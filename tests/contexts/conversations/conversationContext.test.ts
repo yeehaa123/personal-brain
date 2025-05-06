@@ -156,216 +156,235 @@ describe('ConversationContext', () => {
     storage.clear();
   });
 
+  describe('Component Interface Standardization pattern implementation', () => {
+    test('should implement static getInstance returning a singleton instance', () => {
+      const instance1 = ConversationContext.getInstance();
+      const instance2 = ConversationContext.getInstance();
+      expect(instance1).toBe(instance2);
+      
+      // Also test class instance methods
+      const instanceFromMethod = conversationContext.getInstance();
+      expect(instanceFromMethod).toBe(ConversationContext.getInstance());
+    });
+
+    test('should implement static resetInstance clearing the singleton', () => {
+      const instance1 = ConversationContext.getInstance();
+      ConversationContext.resetInstance();
+      const instance2 = ConversationContext.getInstance();
+      expect(instance1).not.toBe(instance2);
+      
+      // Also test class instance methods
+      const instance3 = ConversationContext.getInstance();
+      conversationContext.resetInstance();
+      const instance4 = ConversationContext.getInstance();
+      expect(instance3).not.toBe(instance4);
+    });
+
+    test('should implement static createFresh with config and dependencies', () => {
+      // Test creating with just config
+      const configInstance = ConversationContext.createFresh({
+        name: 'CustomName',
+        version: '2.0.0',
+      });
+      expect(configInstance).toBeInstanceOf(ConversationContext);
+      expect(configInstance.getContextName()).toBe('CustomName');
+      expect(configInstance.getContextVersion()).toBe('2.0.0');
+      
+      // Test creating with config and dependencies
+      const customFormatter = MockConversationFormatter.createFresh();
+      const customAdapter = new ConversationStorageAdapter(MockConversationStorage.createFresh());
+      
+      const fullInstance = ConversationContext.createFresh(
+        {
+          name: 'FullConfig',
+          version: '3.0.0',
+          storage: customAdapter,  // Need to set storage in config
+        },
+        {
+          storageAdapter: customAdapter,
+          formatter: customFormatter as unknown as ConversationFormatter,
+        },
+      );
+      
+      expect(fullInstance).toBeInstanceOf(ConversationContext);
+      expect(fullInstance.getContextName()).toBe('FullConfig');
+      expect(fullInstance.getContextVersion()).toBe('3.0.0');
+      
+      // Storage will come from the config.storage
+      expect(fullInstance.getStorage()).not.toBeUndefined();
+      
+      // Also test class instance method
+      const instanceFromMethod = conversationContext.createFresh({
+        name: 'InstanceMethod',
+        version: '4.0.0',
+      });
+      expect(instanceFromMethod.getContextName()).toBe('InstanceMethod');
+      expect(instanceFromMethod).not.toBe(conversationContext);
+    });
+  });
+
   describe('BaseContext implementation', () => {
-    test('extends BaseContext', () => {
+    test('should extend BaseContext with correct inheritance', () => {
       expect(conversationContext).toBeInstanceOf(BaseContext);
     });
-
-    test('implements getContextName() correctly', () => {
+    
+    test('should implement contextName and version correctly', () => {
       expect(conversationContext.getContextName()).toBe('ConversationBrain');
-    });
-
-    test('implements getContextVersion() correctly', () => {
       expect(conversationContext.getContextVersion()).toBe('1.0.0');
     });
-
-    test('initializes MCP components correctly', () => {
+    
+    test('should initialize MCP capabilities', () => {
       const capabilities = conversationContext.getCapabilities();
-
       expect(capabilities.resources).toBeDefined();
       expect(capabilities.tools).toBeDefined();
       expect(capabilities.features).toBeDefined();
     });
-
-    test('registers on an MCP server successfully', () => {
+    
+    test('should register on MCP server successfully', () => {
       // Clear collections before testing
       mockMcpServer.clearRegistrations();
-
+      
       const result = conversationContext.registerOnServer(mockMcpServer);
+      
       expect(result).toBe(true);
       expect(mockMcpServer.getRegisteredResources().length).toBeGreaterThan(0);
       expect(mockMcpServer.getRegisteredTools().length).toBeGreaterThan(0);
     });
-  });
-
-  describe('Singleton pattern with dependency injection', () => {
-    test('getInstance() returns the same instance', () => {
-      const instance1 = ConversationContext.getInstance();
-      const instance2 = ConversationContext.getInstance();
-
-      expect(instance1).toBe(instance2);
-    });
-
-    test('createFresh() creates a new instance', () => {
-      const instance1 = ConversationContext.createFresh();
-      const instance2 = ConversationContext.createFresh();
-
-      expect(instance1).not.toBe(instance2);
-    });
-
-    test('resetInstance() clears the singleton instance', () => {
-      const instance1 = ConversationContext.getInstance();
-      ConversationContext.resetInstance();
-      const instance2 = ConversationContext.getInstance();
-
-      expect(instance1).not.toBe(instance2);
-    });
-
-    test('createWithDependencies() creates an instance with resolved dependencies', () => {
-      const instance = ConversationContext.createWithDependencies({
-        name: 'CustomName',
-        version: '2.0.0',
-      });
-
-      expect(instance).toBeInstanceOf(ConversationContext);
-      expect(instance.getContextName()).toBe('CustomName');
-      expect(instance.getContextVersion()).toBe('2.0.0');
-    });
-  });
-
-  describe('Core functionality', () => {
-    test('createConversation() creates a conversation', async () => {
-      // Call the method
-      const id = await conversationContext.createConversation('cli', 'test-room');
-
-      // Verify it delegates to the query service
-      expect(id).toBe('test-id');
-      expect(queryService.createConversation).toHaveBeenCalledWith('cli', 'test-room');
-    });
-
-    test('addTurn() adds a turn to a conversation', async () => {
-      // Call the method
-      const turnId = await conversationContext.addTurn('test-id', 'Hello', 'Hi there!');
-
-      // Verify it delegates to the memory service
-      expect(turnId).toBe('turn-id');
-      expect(queryService.getConversation).toHaveBeenCalledWith('test-id');
-      expect(memoryService.addTurn).toHaveBeenCalledWith(
-        'test-id',
-        expect.objectContaining({
-          query: 'Hello',
-          response: 'Hi there!',
-        }),
-      );
-    });
-
-    test('getConversationHistory() retrieves formatted conversation history', async () => {
-      // Call the method
-      const history = await conversationContext.getConversationHistory('test-id');
-
-      // Verify it delegates to services and returns the result
-      expect(history).toBe('Formatted conversation');
-      expect(memoryService.getTurns).toHaveBeenCalledWith('test-id', undefined);
-      expect(formatter.formatConversation).toHaveBeenCalled();
-    });
-
-    test('getStorage() returns a storage adapter instance', () => {
-      const storageAdapter = conversationContext.getStorage();
-      expect(storageAdapter).toBeInstanceOf(ConversationStorageAdapter);
-    });
-
-    test('setStorage() updates the storage adapter', () => {
-      const newAdapter = new ConversationStorageAdapter(MockConversationStorage.createFresh());
-      conversationContext.setStorage(newAdapter);
-
-      expect(conversationContext.getStorage()).toBe(newAdapter);
-    });
-  });
-
-  describe('Extended functionality', () => {
-    test('getOrCreateConversationForRoom() returns existing conversation ID', async () => {
-      // Call the method
-      const id = await conversationContext.getOrCreateConversationForRoom('test-room', 'cli');
-
-      // Verify it delegates to the query service
-      expect(id).toBe('test-id');
-      expect(queryService.getOrCreateConversationForRoom).toHaveBeenCalledWith('test-room', 'cli');
-    });
-
-    test('findConversations() correctly passes search criteria to query service', async () => {
-      // Search criteria
-      const criteria = {
-        interfaceType: 'cli' as const,
-        query: 'test query',
-        limit: 10,
-        offset: 5,
-      };
-
-      // Call the method
-      await conversationContext.findConversations(criteria);
-
-      // Verify it delegates to the query service
-      expect(queryService.findConversations).toHaveBeenCalledWith(criteria);
-    });
-
-    test('getConversationsByRoom() correctly calls query service', async () => {
-      // Call the method with parameters
-      await conversationContext.getConversationsByRoom('test-room', 'cli');
-
-      // Verify it delegates to the query service
-      expect(queryService.getConversationsByRoom).toHaveBeenCalledWith('test-room', 'cli');
-    });
-
-    test('getRecentConversations() correctly calls query service', async () => {
-      // Call the method with parameters
-      await conversationContext.getRecentConversations(10, 'cli');
-
-      // Verify it delegates to the query service
-      expect(queryService.getRecentConversations).toHaveBeenCalledWith(10, 'cli');
-    });
-  });
-
-  describe('MCP integration', () => {
-    test('ConversationContext properly initializes MCP components', () => {
-      expect(conversationContext).toBeDefined();
-
-      // Verify MCP server can be obtained
-      const mcpServer = conversationContext.getMcpServer();
-      expect(mcpServer).toBeDefined();
-
-      // Check that capabilities are available
-      const capabilities = conversationContext.getCapabilities();
-
-      expect(capabilities.resources).toBeDefined();
-      expect(capabilities.resources.length).toBeGreaterThan(0);
-      expect(capabilities.tools).toBeDefined();
-      expect(capabilities.tools.length).toBeGreaterThan(0);
-    });
-
-    test('registerOnServer returns false with undefined server', () => {
-      // The BaseContext implementation has error handling that catches the error when
-      // trying to use an undefined server and returns false
+    
+    test('should handle undefined server gracefully', () => {
       const result = conversationContext.registerOnServer(undefined as unknown as McpServer);
-
-      // Expect it to return false when the server is undefined
       expect(result).toBe(false);
     });
+  });
 
-    test('MCP Server can create a conversation through tool invocation', async () => {
-      // Set up the server
-      const registered = conversationContext.registerOnServer(mockMcpServer);
-      expect(registered).toBe(true);
+  describe('Conversation management operations', () => {
+    // Group the operations by functionality in a table-driven approach
+    test('query operations', async () => {
+      const queryOperationCases = [
+        {
+          name: 'createConversation creates a conversation',
+          test: async () => {
+            const id = await conversationContext.createConversation('cli', 'test-room');
+            expect(id).toBe('test-id');
+            expect(queryService.createConversation).toHaveBeenCalledWith('cli', 'test-room');
+          },
+        },
+        {
+          name: 'getOrCreateConversationForRoom returns existing conversation ID',
+          test: async () => {
+            const id = await conversationContext.getOrCreateConversationForRoom('test-room', 'cli');
+            expect(id).toBe('test-id');
+            expect(queryService.getOrCreateConversationForRoom).toHaveBeenCalledWith('test-room', 'cli');
+          },
+        },
+        {
+          name: 'findConversations correctly passes search criteria',
+          test: async () => {
+            const criteria = {
+              interfaceType: 'cli' as const,
+              query: 'test query',
+              limit: 10,
+              offset: 5,
+            };
+            await conversationContext.findConversations(criteria);
+            expect(queryService.findConversations).toHaveBeenCalledWith(criteria);
+          },
+        },
+        {
+          name: 'getConversationsByRoom correctly calls query service',
+          test: async () => {
+            await conversationContext.getConversationsByRoom('test-room', 'cli');
+            expect(queryService.getConversationsByRoom).toHaveBeenCalledWith('test-room', 'cli');
+          },
+        },
+        {
+          name: 'getRecentConversations correctly calls query service',
+          test: async () => {
+            await conversationContext.getRecentConversations(10, 'cli');
+            expect(queryService.getRecentConversations).toHaveBeenCalledWith(10, 'cli');
+          },
+        },
+      ];
 
-      // Call the method directly
-      const conversationId = await conversationContext.createConversation('cli', 'test-room');
-
-      // Verify the result
-      expect(conversationId).toBe('test-id');
-      expect(queryService.createConversation).toHaveBeenCalledWith('cli', 'test-room');
+      // Run all query operation tests
+      for (const { test: testFn } of queryOperationCases) {
+        await testFn();
+      }
     });
+    
+    test('memory operations', async () => {
+      const memoryOperationCases = [
+        {
+          name: 'addTurn adds a turn to a conversation',
+          test: async () => {
+            const turnId = await conversationContext.addTurn('test-id', 'Hello', 'Hi there!');
+            expect(turnId).toBe('turn-id');
+            expect(queryService.getConversation).toHaveBeenCalledWith('test-id');
+            expect(memoryService.addTurn).toHaveBeenCalledWith(
+              'test-id',
+              expect.objectContaining({
+                query: 'Hello',
+                response: 'Hi there!',
+              }),
+            );
+          },
+        },
+        {
+          name: 'getConversationHistory retrieves formatted conversation history',
+          test: async () => {
+            const history = await conversationContext.getConversationHistory('test-id');
+            expect(history).toBe('Formatted conversation');
+            expect(memoryService.getTurns).toHaveBeenCalledWith('test-id', undefined);
+            expect(formatter.formatConversation).toHaveBeenCalled();
+          },
+        },
+        {
+          name: 'getFormattedConversationForMcp returns properly formatted data',
+          test: async () => {
+            const formatted = await conversationContext.getFormattedConversationForMcp('test-id', {
+              includeFullTurns: true,
+            });
+            expect(formatted).toBeDefined();
+            expect(formatted?.id).toBe('test-id');
+            expect(formatted?.roomId).toBe('test-room');
+            expect(formatted?.interfaceType).toBe('cli');
+            expect(mcpFormatter.formatConversationForMcp).toHaveBeenCalled();
+          },
+        },
+      ];
 
-    test('getFormattedConversationForMcp returns properly formatted data', async () => {
-      // Call the method
-      const formatted = await conversationContext.getFormattedConversationForMcp('test-id', {
-        includeFullTurns: true,
+      // Run all memory operation tests
+      for (const { test: testFn } of memoryOperationCases) {
+        await testFn();
+      }
+    });
+  });
+
+  describe('Storage operations', () => {
+    test('should handle storage operations correctly', () => {
+      // Test cases for synchronous storage operations
+      const storageCases = [
+        {
+          name: 'getStorage returns a storage adapter instance',
+          test: () => {
+            const storageAdapter = conversationContext.getStorage();
+            expect(storageAdapter).toBeInstanceOf(ConversationStorageAdapter);
+          },
+        },
+        {
+          name: 'setStorage updates the storage adapter',
+          test: () => {
+            const newAdapter = new ConversationStorageAdapter(MockConversationStorage.createFresh());
+            conversationContext.setStorage(newAdapter);
+            expect(conversationContext.getStorage()).toBe(newAdapter);
+          },
+        },
+      ];
+
+      // Run all storage operation tests
+      storageCases.forEach(({ test: testFn }) => {
+        testFn();
       });
-
-      // Verify the result
-      expect(formatted).toBeDefined();
-      expect(formatted?.id).toBe('test-id');
-      expect(formatted?.roomId).toBe('test-room');
-      expect(formatted?.interfaceType).toBe('cli');
-      expect(mcpFormatter.formatConversationForMcp).toHaveBeenCalled();
     });
   });
 });

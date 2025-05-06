@@ -133,20 +133,7 @@ export interface ContextCapabilities {
   features: string[];
 }
 
-/**
- * Extended context interface with dependency management
- */
-export interface ExtendedContextInterface<
-  TStorage extends StorageInterface<unknown, unknown>,
-  TFormatter extends FormatterInterface<unknown, unknown>
-> {
-  /**
-   * Create a new instance with explicit dependencies
-   * @param dependencies Dependencies for the context
-   * @returns A new instance with the specified dependencies
-   */
-  createWithDependencies(dependencies: ContextDependencies<TStorage, TFormatter>): unknown;
-}
+// Removed ExtendedContextInterface since we're now using createFresh with config and dependencies
 
 /**
  * Core context interface - fundamental functionality for all contexts
@@ -219,26 +206,10 @@ export interface ContextInterface<
   CoreContextInterface, 
   StorageAccess<TStorage>,
   FormatterAccess<TFormatter, TInputData, TOutputData>,
-  ServiceAccess,
-  ExtendedContextInterface<TStorage, TFormatter> 
+  ServiceAccess
 {
-  /**
-   * Factory method to get the singleton instance
-   * @returns The singleton instance
-   */
-  getInstance(): unknown;
-  
-  /**
-   * Reset the singleton instance (primarily for testing)
-   */
-  resetInstance(): void;
-  
-  /**
-   * Create a fresh instance (primarily for testing)
-   * @param options Optional configuration
-   * @returns A new instance
-   */
-  createFresh(options?: Record<string, unknown>): unknown;
+  // No additional methods required
+  // getInstance and resetInstance should be implemented as static methods on the class
 }
 
 // We've simplified the interface hierarchy by removing the redundant McpContextInterface<T,F,I,O>
