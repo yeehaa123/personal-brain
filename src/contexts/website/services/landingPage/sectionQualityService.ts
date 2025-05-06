@@ -18,26 +18,60 @@ import sectionQualityAssessmentPrompt from '../prompts/section-quality-assessmen
  * Service for assessing and improving the quality of landing page sections
  * Implements the Component Interface Standardization pattern
  */
+/**
+ * Configuration options for SectionQualityService
+ */
+export interface SectionQualityServiceConfig {
+  /** Optional quality thresholds */
+  qualityThresholds?: Partial<QualityThresholds>;
+}
+
+/**
+ * Dependencies for SectionQualityService
+ */
+export interface SectionQualityServiceDependencies {
+  /** Logger instance */
+  logger?: Logger;
+  /** Brain protocol instance */
+  brainProtocol?: BrainProtocol;
+}
+
 export class SectionQualityService {
   private static instance: SectionQualityService | null = null;
   private brainProtocol: BrainProtocol | null = null;
-  private logger = Logger.getInstance();
+  private logger: Logger;
   private qualityThresholds: QualityThresholds;
 
   /**
    * Private constructor initializes dependencies
+   * 
+   * @param config Optional configuration
+   * @param dependencies Optional service dependencies
    */
-  private constructor() {
-    // Set default quality thresholds
-    this.qualityThresholds = QualityThresholdsSchema.parse({});
+  private constructor(
+    config?: SectionQualityServiceConfig,
+    dependencies?: SectionQualityServiceDependencies
+  ) {
+    // Set dependencies
+    this.logger = dependencies?.logger || Logger.getInstance();
+    this.brainProtocol = dependencies?.brainProtocol || null;
+    
+    // Set configuration
+    this.qualityThresholds = QualityThresholdsSchema.parse(config?.qualityThresholds || {});
   }
 
   /**
    * Get singleton instance of SectionQualityService
+   * 
+   * @param config Optional configuration
+   * @param dependencies Optional service dependencies
    */
-  static getInstance(): SectionQualityService {
+  static getInstance(
+    config?: SectionQualityServiceConfig,
+    dependencies?: SectionQualityServiceDependencies
+  ): SectionQualityService {
     if (!SectionQualityService.instance) {
-      SectionQualityService.instance = new SectionQualityService();
+      SectionQualityService.instance = new SectionQualityService(config, dependencies);
     }
     return SectionQualityService.instance;
   }
@@ -51,9 +85,15 @@ export class SectionQualityService {
 
   /**
    * Create a fresh instance (primarily for testing)
+   * 
+   * @param config Optional configuration
+   * @param dependencies Optional service dependencies
    */
-  static createFresh(): SectionQualityService {
-    return new SectionQualityService();
+  static createFresh(
+    config?: SectionQualityServiceConfig, 
+    dependencies?: SectionQualityServiceDependencies
+  ): SectionQualityService {
+    return new SectionQualityService(config, dependencies);
   }
 
   /**
@@ -298,18 +338,23 @@ Combined Score: ${assessment.combinedScore}/10`;
    */
   public getBrainProtocol(): BrainProtocol {
     if (!this.brainProtocol) {
-      // If not explicitly set, use the singleton instance
+      // If not explicitly set, use the singleton instance from the service registry
       this.brainProtocol = BrainProtocol.getInstance();
     }
     return this.brainProtocol;
   }
 
   /**
-   * Set the Brain Protocol instance
-   * @param protocol The brain protocol instance to use
+   * Set the dependencies
+   * @param dependencies The dependencies to set
    */
-  public setBrainProtocol(protocol: BrainProtocol): void {
-    this.brainProtocol = protocol;
+  public setDependencies(dependencies: Partial<SectionQualityServiceDependencies>): void {
+    if (dependencies.logger) {
+      this.logger = dependencies.logger;
+    }
+    if (dependencies.brainProtocol) {
+      this.brainProtocol = dependencies.brainProtocol;
+    }
   }
 }
 

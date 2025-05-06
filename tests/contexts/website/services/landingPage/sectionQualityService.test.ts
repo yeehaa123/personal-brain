@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { SectionQualityService } from '@/contexts/website/services/landingPage/sectionQualityService';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import type { SectionQualityAssessment } from '@website/schemas/sectionQualitySchema';
 
 // Mock BrainProtocol for testing
@@ -27,13 +28,22 @@ describe('SectionQualityService', () => {
   let service: SectionQualityService;
 
   beforeEach(() => {
-    // Reset singleton and mocks before each test
+    // Reset singletons and mocks before each test
     SectionQualityService.resetInstance();
+    MockLogger.resetInstance();
     mockBrainProtocol.processQuery.mockClear();
     
-    // Create fresh instance and set mocked BrainProtocol
-    service = SectionQualityService.createFresh();
-    service.setBrainProtocol(mockBrainProtocol as unknown as BrainProtocol);
+    // Create a silent mock logger for testing
+    const mockLogger = MockLogger.createFresh({ silent: true });
+    
+    // Create fresh instance with silent logger and mock brain protocol
+    service = SectionQualityService.createFresh(
+      {},  // Config
+      {    // Dependencies
+        logger: mockLogger,
+        brainProtocol: mockBrainProtocol as unknown as BrainProtocol,
+      }
+    );
   });
 
   test('should successfully assess section quality', async () => {
