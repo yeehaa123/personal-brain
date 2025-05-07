@@ -32,7 +32,7 @@ export class MockCLIInterface {
   public error = mock((_message: string) => {});
   public warn = mock(() => {});
   public info = mock(() => {});
-  public print = mock(() => {});
+  public print = mock((_message: string, _options?: { renderMarkdown?: boolean }) => {});
   public printLabelValue = mock((_label: string, _value: string | number | string[] | null, _options?: {
     emptyText?: string;
     formatter?: (val: string) => string;
@@ -44,6 +44,7 @@ export class MockCLIInterface {
   public formatId = mock((id: string) => id);
   public formatTags = mock((tags: string[] | null | undefined) => tags && tags.length > 0 ? tags.join(' ') : 'No tags');
   public formatDate = mock((date: Date | string | number) => date.toString());
+  public renderMarkdown = mock((markdown: string) => markdown);
   // We need to use 'any' for select to match the CLIInterface's generic definition
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public select<T = any>(_message: string, choices: Array<{ name: string, value: T }>): Promise<T> {

@@ -251,11 +251,123 @@ export class CLIInterface {
   /**
    * Print text to console without logging
    * @param message The message to print
+   * @param options Optional formatting options
    */
-  public print(message: string): void {
+  public print(
+    message: string, 
+    options?: { 
+      renderMarkdown?: boolean
+    },
+  ): void {
     if (this.silent) return;
 
-    process.stdout.write(message + '\n');
+    if (options?.renderMarkdown) {
+      process.stdout.write(this.renderMarkdown(message) + '\n');
+    } else {
+      process.stdout.write(message + '\n');
+    }
+  }
+  
+  /**
+   * Render markdown text with terminal formatting
+   * @param markdown The markdown text to render
+   * @returns Formatted text for terminal display
+   */
+  public renderMarkdown(markdown: string): string {
+    let lines = markdown.split('\n');
+    const processedLines: string[] = [];
+    
+    // Process each line individually for better control
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i];
+      let nextLine = i < lines.length - 1 ? lines[i + 1] : '';
+      
+      // Handle headers
+      if (line.match(/^### /)) {
+        processedLines.push(''); // Add extra line before header
+        processedLines.push(this.styles.subtitle(line.substring(4)));
+        // If next line doesn't have its own spacing, add a blank line
+        if (nextLine && nextLine.trim() !== '') {
+          processedLines.push('');
+        }
+      } 
+      else if (line.match(/^## /)) {
+        processedLines.push(''); // Add extra line before header
+        processedLines.push(this.styles.title(line.substring(3)));
+        // If next line doesn't have its own spacing, add a blank line
+        if (nextLine && nextLine.trim() !== '') {
+          processedLines.push('');
+        }
+      }
+      else if (line.match(/^# /)) {
+        processedLines.push(''); // Add extra line before header
+        processedLines.push(this.styles.title(line.substring(2)));
+        // If next line doesn't have its own spacing, add a blank line
+        if (nextLine && nextLine.trim() !== '') {
+          processedLines.push('');
+        }
+      }
+      // Handle bold and italic (process within the line)
+      else {
+        // Bold and italic
+        line = line.replace(/\*\*\*(.*?)\*\*\*/g, (_, text) => chalk.bold.italic(text));
+        line = line.replace(/\*\*(.*?)\*\*/g, (_, text) => chalk.bold(text));
+        line = line.replace(/\*(.*?)\*/g, (_, text) => chalk.italic(text));
+        line = line.replace(/_(.*?)_/g, (_, text) => chalk.italic(text));
+        
+        // Inline code
+        line = line.replace(/`(.*?)`/g, (_, code) => chalk.gray.bgBlackBright(` ${code} `));
+        
+        // Lists
+        if (line.match(/^- /)) {
+          line = `${this.styles.info('•')} ${line.substring(2)}`;
+        } else if (line.match(/^  - /)) {
+          line = `  ${this.styles.info('◦')} ${line.substring(4)}`;
+        } else if (line.match(/^    - /)) {
+          line = `    ${this.styles.info('▪')} ${line.substring(6)}`;
+        }
+        
+        // Numbered lists
+        const numberedListMatch = line.match(/^(\d+)\. (.*$)/);
+        if (numberedListMatch) {
+          const [, num, text] = numberedListMatch;
+          line = `${this.styles.number(num + '.')} ${text}`;
+        }
+        
+        // Blockquotes
+        if (line.match(/^> /)) {
+          line = this.styles.dim(`│ ${line.substring(2)}`);
+        }
+        
+        // Links
+        line = line.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => 
+          `${text} (${this.styles.url(url)})`);
+        
+        // Horizontal rules
+        if (line === '---') {
+          line = this.styles.separator('─'.repeat(80));
+        }
+        
+        // Tables (simple)
+        const tableMatch = line.match(/\| (.*) \|/);
+        if (tableMatch) {
+          const [, content] = tableMatch;
+          const cells = content.split(' | ');
+          line = '| ' + cells.map((cell: string) => this.styles.value(cell.trim())).join(' | ') + ' |';
+        }
+        
+        processedLines.push(line);
+      }
+    }
+    
+    // Process code blocks which can span multiple lines
+    let result = processedLines.join('\n');
+    result = result.replace(/```(?:.*?)\n([\s\S]*?)```/g, (_, code) => {
+      const lines = code.split('\n');
+      return '\n' + lines.map((line: string) => this.styles.dim('  ' + line)).join('\n') + '\n';
+    });
+    
+    return result;
   }
 
   /**

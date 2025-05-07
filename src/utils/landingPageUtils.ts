@@ -148,7 +148,7 @@ export function formatLandingPageToMarkdown(landingPage: LandingPageData): strin
           markdown += `**Client:** ${item.client || 'Unknown'}\n`;
           markdown += `**Challenge:** ${item.challenge}\n`;
           markdown += `**Approach:** ${item.approach}\n`;
-          markdown += `**Results:** ${item.results}\n`;
+          markdown += `**Results:** ${item.results}\n\n`;
         });
       }
       break;
@@ -198,7 +198,7 @@ export function formatLandingPageToMarkdown(landingPage: LandingPageData): strin
           tier.features.forEach(feature => {
             markdown += `- ${feature}\n`;
           });
-          markdown += `CTA: [${tier.ctaText}](${tier.ctaLink})\n`;
+          markdown += `CTA: [${tier.ctaText}](${tier.ctaLink})\n\n\n`;
         });
       }
       break;

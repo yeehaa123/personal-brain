@@ -37,8 +37,11 @@ describe('noteUtils', () => {
       // Only check if calls exist first to prevent array indexing errors
       if (labelCalls.length > 0) {
         const calledLabels = labelCalls.map(call => call[0]);
-        expect(calledLabels).toEqual(expect.arrayContaining(['ID', 'Tags', 'Created', 'Preview']));
+        expect(calledLabels).toEqual(expect.arrayContaining(['ID', 'Tags', 'Created']));
       }
+      
+      // We now use print with renderMarkdown for preview instead of printLabelValue
+      expect(mockCLI.renderMarkdown).toHaveBeenCalled();
     });
 
     test('should handle empty notes array', () => {

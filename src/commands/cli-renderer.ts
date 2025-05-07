@@ -289,7 +289,7 @@ export class CLIRenderer {
         
         // Format landing page data as markdown for better readability
         const markdown = formatLandingPageToMarkdown(result.data);
-        this.cli.print(markdown);
+        this.cli.print(markdown, { renderMarkdown: true });
         
         // If there are assessments, display them
         if (result.assessments && Object.keys(result.assessments).length > 0) {
@@ -443,11 +443,11 @@ export class CLIRenderer {
     this.cli.printLabelValue('Title', result.title);
     
     this.cli.displaySubtitle('Content Preview');
-    // Display first 300 characters of content
+    // Display first 300 characters of content with markdown rendering
     const previewContent = result.noteContent.length > 300
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
-    this.cli.print(previewContent);
+    this.cli.print(previewContent, { renderMarkdown: true });
     
     this.cli.info('');
     this.cli.info('This is a preview of the note that will be created from your conversation.');
@@ -521,9 +521,9 @@ export class CLIRenderer {
     this.cli.printLabelValue('Created', this.cli.formatDate(new Date(note.createdAt)));
     this.cli.printLabelValue('Updated', this.cli.formatDate(new Date(note.updatedAt)));
 
-    // Display content
+    // Display content with markdown rendering
     this.cli.displaySubtitle('Content');
-    this.cli.print(note.content);
+    this.cli.print(note.content, { renderMarkdown: true });
   }
 
   /**

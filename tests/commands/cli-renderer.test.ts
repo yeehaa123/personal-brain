@@ -82,7 +82,7 @@ describe('CLIRenderer', () => {
     // The CLIRenderer calls renderNote which uses formatId
     expect(mockCLI.printLabelValue).toHaveBeenCalledTimes(4);
     expect(mockCLI.displaySubtitle).toHaveBeenCalledWith('Content');
-    expect(mockCLI.print).toHaveBeenCalledWith(note.content);
+    expect(mockCLI.print).toHaveBeenCalledWith(note.content, { renderMarkdown: true });
   });
 
   test('renders error message correctly', () => {

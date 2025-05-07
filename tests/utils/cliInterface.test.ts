@@ -270,6 +270,11 @@ describe('CLIInterface', () => {
           expect(mockLoggerImpl.messages.info).toContain('Displaying list of 3 items');
         },
       },
+      {
+        name: 'print with renderMarkdown',
+        method: () => cli.print('# Heading\n**Bold** and *Italic*', { renderMarkdown: true }),
+        check: () => expect(mockWrite).toHaveBeenCalled(),
+      },
     ];
     
     // Run all test cases
@@ -283,6 +288,34 @@ describe('CLIInterface', () => {
       
       // Check expectations
       check();
+    });
+  });
+  
+  test('should correctly render markdown', () => {
+    const cli = CLIInterface.getInstance();
+    const result = cli.renderMarkdown('# Heading\n\n**Bold** text and `code`');
+    
+    // We can't check the exact formatting with chalk, but we can check that the result
+    // is a string and that it's different from the input (meaning some transformation occurred)
+    expect(typeof result).toBe('string');
+    expect(result).not.toBe('# Heading\n\n**Bold** text and `code`');
+    
+    // Test different markdown elements
+    const markdownElements = [
+      { input: '### Heading 3', expectChanged: true },
+      { input: '**Bold Text**', expectChanged: true },
+      { input: '*Italic Text*', expectChanged: true },
+      { input: '- List item', expectChanged: true },
+      { input: '```\ncode block\n```', expectChanged: true },
+      { input: '> Blockquote', expectChanged: true },
+      { input: '---', expectChanged: true },
+    ];
+    
+    markdownElements.forEach(({ input, expectChanged }) => {
+      const formatted = cli.renderMarkdown(input);
+      if (expectChanged) {
+        expect(formatted).not.toBe(input);
+      }
     });
   });
 });
