@@ -208,7 +208,22 @@ describe('WebsiteToolService', () => {
       success: true,
       message: 'Landing page quality assessed',
       data: createTestLandingPageData({ title: 'Test Landing Page' }),
-      assessments: { hero: { qualityScore: 8 } },
+      assessments: { 
+        hero: { 
+          content: { title: 'Hero Title' },
+          assessment: { 
+            qualityScore: 8,
+            qualityJustification: 'Good quality',
+            confidenceScore: 7,
+            confidenceJustification: 'Reasonably confident',
+            combinedScore: 7.5,
+            enabled: true,
+            suggestedImprovements: 'None',
+            improvementsApplied: false,
+          },
+          isRequired: true,
+        },
+      },
     }));
 
     mockContext.handleWebsiteBuild.mockImplementation(() => Promise.resolve({

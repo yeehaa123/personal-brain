@@ -4,6 +4,7 @@
 
 import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
+import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 // Note model properties we need for formatting
 
@@ -119,7 +120,7 @@ export interface LandingPageResult {
   success?: boolean;
   message?: string;
   data?: LandingPageData;
-  assessments?: Record<string, unknown>;
+  assessments?: Record<string, AssessedSection<unknown>>;
   action?: 'generate' | 'edit' | 'assess' | 'apply' | 'view';
 }
 

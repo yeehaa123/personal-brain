@@ -9,7 +9,9 @@
 
 import type { Note } from '../models/note';
 import type { EnhancedProfile, ProfileExperience } from '../models/profile';
+// Import types and interfaces
 import { CLIInterface } from '../utils/cliInterface';
+import { formatLandingPageToMarkdown } from '../utils/landingPageUtils';
 import { Logger } from '../utils/logger';
 import { displayNotes } from '../utils/noteUtils';
 
@@ -285,11 +287,42 @@ export class CLIRenderer {
       if (result.data) {
         this.cli.displayTitle('Landing Page Content');
         
-        // Display each field from the landing page data
-        Object.entries(result.data).forEach(([key, value]) => {
-          this.cli.displaySubtitle(key.charAt(0).toUpperCase() + key.slice(1));
-          this.cli.print(String(value));
-        });
+        // Format landing page data as markdown for better readability
+        const markdown = formatLandingPageToMarkdown(result.data);
+        this.cli.print(markdown);
+        
+        // If there are assessments, display them
+        if (result.assessments && Object.keys(result.assessments).length > 0) {
+          this.cli.displayTitle('Quality Assessments');
+          
+          Object.entries(result.assessments).forEach(([sectionType, assessedSection]) => {
+            if (assessedSection && assessedSection.assessment) {
+              const qualityScore = assessedSection.assessment.qualityScore;
+              const confidenceScore = assessedSection.assessment.confidenceScore;
+              const combinedScore = assessedSection.assessment.combinedScore;
+              const enabled = assessedSection.assessment.enabled;
+              
+              // Format the section name
+              const formattedSectionType = sectionType.charAt(0).toUpperCase() + sectionType.slice(1)
+                .replace(/([A-Z])/g, ' $1').trim();
+              
+              this.cli.displaySubtitle(formattedSectionType);
+              this.cli.printLabelValue('Quality', `${qualityScore}/10`);
+              this.cli.printLabelValue('Confidence', `${confidenceScore}/10`);
+              this.cli.printLabelValue('Combined', `${combinedScore}/10`);
+              this.cli.printLabelValue('Enabled', enabled ? 'Yes' : 'No', {
+                formatter: val => enabled ? this.cli.styles.success(val) : this.cli.styles.error(val),
+              });
+              
+              if (assessedSection.assessment.suggestedImprovements) {
+                this.cli.print('\n' + this.cli.styles.dim('Suggested Improvements:'));
+                this.cli.print(assessedSection.assessment.suggestedImprovements);
+              }
+              
+              this.cli.print('');
+            }
+          });
+        }
       }
       break;
       

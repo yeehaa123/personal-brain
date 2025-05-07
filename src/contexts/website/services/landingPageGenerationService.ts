@@ -21,7 +21,8 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
 
 import { SectionQualityService } from './landingPage/sectionQualityService';
-import contentReviewPrompt from './prompts/content-review.txt';
+// We're now using section-by-section approach instead of holistic content review
+import sectionContentReviewPrompt from './prompts/section-content-review.txt';
 import aboutPrompt from './prompts/sections/about.txt';
 import caseStudiesPrompt from './prompts/sections/case-studies.txt';
 import ctaPrompt from './prompts/sections/cta.txt';
@@ -602,6 +603,7 @@ Return only these four fields formatted as JSON.`;
   /**
    * Edit a landing page for consistency across sections
    * This is a separate operation that can be run after generation
+   * Uses a section-by-section approach to avoid schema validation issues
    * 
    * @param landingPage - The landing page to edit
    * @returns The edited landing page with improved consistency
@@ -612,25 +614,22 @@ Return only these four fields formatted as JSON.`;
     });
     
     try {
-      // Create a prompt with the current landing page content
-      const prompt = contentReviewPrompt
-        .replace('{{CONTENT_TO_REVIEW}}', JSON.stringify(landingPage, null, 2));
+      // Create a working copy of the landing page
+      const editedLandingPage = { ...landingPage };
       
-      // Process the review
-      const result = await this.getBrainProtocol().processQuery(prompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: LandingPageSchema,
-      });
+      // Edit basic information (title, description, name, tagline)
+      await this.editBasicInfo(editedLandingPage);
       
-      // Return the reviewed landing page if successful
-      if (result.object) {
-        // Validate with the schema
-        return LandingPageSchema.parse(result.object);
+      // Process individual sections that need content review
+      for (const sectionType of editedLandingPage.sectionOrder) {
+        await this.editSectionContent(editedLandingPage, sectionType);
       }
       
-      // If no object is returned, return the original
-      return landingPage;
+      this.logger.info('Successfully edited landing page for consistency', {
+        context: 'LandingPageGenerationService',
+      });
+      
+      return editedLandingPage;
     } catch (error) {
       this.logger.error('Error during holistic content review', {
         error: error instanceof Error ? error.message : String(error),
@@ -639,6 +638,124 @@ Return only these four fields formatted as JSON.`;
       
       // Return the original if there's an error
       return landingPage;
+    }
+  }
+  
+  /**
+   * Edit basic information fields (title, description, name, tagline)
+   * @param landingPage - Landing page to update
+   */
+  private async editBasicInfo(landingPage: LandingPageData): Promise<void> {
+    this.logger.debug('Editing basic information', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    const basicInfoPrompt = `Review and improve the following basic information for a professional landing page:
+
+Title: ${landingPage.title}
+Description: ${landingPage.description}
+Name: ${landingPage.name}
+Tagline: ${landingPage.tagline}
+
+Focus on clarity, professionalism, and persuasiveness. Make the description more SEO-friendly.
+Keep the tone consistent across all items. Return only these four fields in JSON format.`;
+    
+    try {
+      const result = await this.getBrainProtocol().processQuery(basicInfoPrompt, {
+        userId: 'system',
+        userName: 'System',
+      });
+      
+      if (result.object) {
+        const identityInfo = result.object as Partial<LandingPageData>;
+        
+        // Update fields with type checking
+        if (typeof identityInfo.title === 'string') landingPage.title = identityInfo.title;
+        if (typeof identityInfo.description === 'string') landingPage.description = identityInfo.description;
+        if (typeof identityInfo.name === 'string') landingPage.name = identityInfo.name;
+        if (typeof identityInfo.tagline === 'string') landingPage.tagline = identityInfo.tagline;
+        
+        this.logger.debug('Edited basic information', {
+          context: 'LandingPageGenerationService',
+        });
+      }
+    } catch (error) {
+      this.logger.error('Error editing basic information', {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'LandingPageGenerationService',
+      });
+      // Continue with other edits if this fails
+    }
+  }
+  
+  /**
+   * Edit content for a specific section
+   * @param landingPage - Landing page to update
+   * @param sectionType - Type of section to edit
+   */
+  private async editSectionContent(landingPage: LandingPageData, sectionType: string): Promise<void> {
+    this.logger.debug(`Editing content for section: ${sectionType}`, {
+      context: 'LandingPageGenerationService',
+    });
+    
+    // Skip non-section properties
+    if (['title', 'description', 'name', 'tagline', 'sectionOrder'].includes(sectionType)) {
+      return;
+    }
+    
+    // Skip if section schema doesn't exist
+    const schema = this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas];
+    if (!schema) {
+      this.logger.warn(`No schema found for section: ${sectionType}`, {
+        context: 'LandingPageGenerationService',
+      });
+      return;
+    }
+    
+    // Get the current section
+    const sectionKey = sectionType as keyof LandingPageData;
+    const section = landingPage[sectionKey];
+    if (!section) {
+      return;
+    }
+    
+    const sectionContent = JSON.stringify(section, null, 2);
+    
+    // Create a prompt using the section content review template
+    const sectionPrompt = sectionContentReviewPrompt.replace(
+      '{{SECTION_TYPE}}', 
+      sectionType,
+    ).replace(
+      '{{SECTION_CONTENT}}', 
+      sectionContent,
+    );
+    
+    try {
+      // Process the review with the section-specific schema
+      const result = await this.getBrainProtocol().processQuery(sectionPrompt, {
+        userId: 'system',
+        userName: 'System',
+        schema,
+      });
+      
+      // Update the section if successful
+      if (result.object) {
+        // Validate with the section schema
+        const validatedContent = schema.parse(result.object);
+        
+        // Update the landing page with the validated content
+        (landingPage as Partial<LandingPageData>)[sectionKey] = validatedContent;
+        
+        this.logger.debug(`Edited content for section: ${sectionType}`, {
+          context: 'LandingPageGenerationService',
+        });
+      }
+    } catch (error) {
+      this.logger.error(`Error editing section: ${sectionType}`, {
+        error: error instanceof Error ? error.message : String(error),
+        context: 'LandingPageGenerationService',
+      });
+      // Continue with other sections even if one fails
     }
   }
 

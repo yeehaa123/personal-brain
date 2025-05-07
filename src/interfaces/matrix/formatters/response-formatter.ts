@@ -4,6 +4,7 @@
  * Creates consistent, structured responses for different result types
  */
 
+import { formatLandingPageToMarkdown } from '@/utils/landingPageUtils';
 import logger from '@/utils/logger';
 import { getExcerpt } from '@/utils/noteUtils';
 
@@ -870,22 +871,16 @@ export class MatrixResponseFormatter {
         // View mode - display landing page content
         builder.addHeader('Landing Page Content');
         
-        // Format data properties
-        Object.entries(result.data).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            builder.addSection(`**${key}**: ${value}`);
-          } else if (Array.isArray(value)) {
-            builder.addSection(`**${key}**:`);
-            const items = (value as unknown[]).map(item => `- ${typeof item === 'string' ? item : JSON.stringify(item)}`).join('\n');
-            builder.addSection(items);
-          } else if (typeof value === 'object' && value !== null) {
-            builder.addSection(`**${key}**:`);
-            const items = Object.entries(value as Record<string, unknown>)
-              .map(([subKey, subValue]) => `- **${subKey}**: ${subValue}`)
-              .join('\n');
-            builder.addSection(items);
+        // Use the formatLandingPageToMarkdown utility and add it as sections
+        const markdown = formatLandingPageToMarkdown(result.data);
+        
+        // Split the markdown by double newline to create sections
+        const sections = markdown.split('\n\n');
+        for (const section of sections) {
+          if (section.trim()) {
+            builder.addSection(section.trim());
           }
-        });
+        }
       } else if (result.action === 'edit') {
         // Edit mode - display edit success message
         builder.addHeader('Landing Page Editing');
@@ -910,18 +905,16 @@ export class MatrixResponseFormatter {
         // Display assessment results for each section
         builder.addSection('#### Section Assessments:');
         
-        Object.entries(result.assessments).forEach(([section, assessment]) => {
-          const assessmentData = assessment as Record<string, unknown>;
-          if (assessmentData['assessment']) {
-            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
-            const quality = sectionAssessment['qualityScore'] || 'N/A';
-            const confidence = sectionAssessment['confidenceScore'] || 'N/A';
-            const combined = sectionAssessment['combinedScore'] || 'N/A';
-            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+        Object.entries(result.assessments).forEach(([section, assessedSection]) => {
+          if (assessedSection.assessment) {
+            const quality = assessedSection.assessment.qualityScore || 'N/A';
+            const confidence = assessedSection.assessment.confidenceScore || 'N/A';
+            const combined = assessedSection.assessment.combinedScore || 'N/A';
+            const enabled = assessedSection.assessment.enabled ? '✅ Enabled' : '❌ Disabled';
             
             let sectionText = `**${section}**: Score: ${combined}/10 (Quality: ${quality}, Confidence: ${confidence}) - ${enabled}`;
-            if (sectionAssessment['suggestedImprovements']) {
-              sectionText += `\n  _Suggestions: ${sectionAssessment['suggestedImprovements']}_`;
+            if (assessedSection.assessment.suggestedImprovements) {
+              sectionText += `\n  _Suggestions: ${assessedSection.assessment.suggestedImprovements}_`;
             }
             builder.addSection(sectionText);
           }
@@ -941,11 +934,9 @@ export class MatrixResponseFormatter {
         builder.addSection('#### Section Status After Changes:');
         
         const sectionStatuses: string[] = [];
-        Object.entries(result.assessments).forEach(([section, assessment]) => {
-          const assessmentData = assessment as Record<string, unknown>;
-          if (assessmentData['assessment']) {
-            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
-            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+        Object.entries(result.assessments).forEach(([section, assessedSection]) => {
+          if (assessedSection.assessment) {
+            const enabled = assessedSection.assessment.enabled ? '✅ Enabled' : '❌ Disabled';
             sectionStatuses.push(`**${section}**: ${enabled}`);
           }
         });
@@ -983,24 +974,8 @@ export class MatrixResponseFormatter {
           '',
         ];
         
-        // Format data properties
-        Object.entries(result.data).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            message.push(`**${key}**: ${value}`);
-          } else if (Array.isArray(value)) {
-            message.push(`**${key}**:`);
-            (value as unknown[]).forEach(item => {
-              message.push(`- ${typeof item === 'string' ? item : JSON.stringify(item)}`);
-            });
-          } else if (typeof value === 'object' && value !== null) {
-            message.push(`**${key}**:`);
-            Object.entries(value as Record<string, unknown>).forEach(([subKey, subValue]) => {
-              message.push(`- **${subKey}**: ${subValue}`);
-            });
-          }
-          
-          message.push('');
-        });
+        // Use the formatLandingPageToMarkdown utility
+        message.push(formatLandingPageToMarkdown(result.data));
       } else if (result.action === 'edit') {
         // Edit mode - display edit success message
         message = [
@@ -1033,18 +1008,16 @@ export class MatrixResponseFormatter {
         message.push('#### Section Assessments:');
         message.push('');
         
-        Object.entries(result.assessments).forEach(([section, assessment]) => {
-          const assessmentData = assessment as Record<string, unknown>;
-          if (assessmentData['assessment']) {
-            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
-            const quality = sectionAssessment['qualityScore'] || 'N/A';
-            const confidence = sectionAssessment['confidenceScore'] || 'N/A';
-            const combined = sectionAssessment['combinedScore'] || 'N/A';
-            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+        Object.entries(result.assessments).forEach(([section, assessedSection]) => {
+          if (assessedSection.assessment) {
+            const quality = assessedSection.assessment.qualityScore || 'N/A';
+            const confidence = assessedSection.assessment.confidenceScore || 'N/A';
+            const combined = assessedSection.assessment.combinedScore || 'N/A';
+            const enabled = assessedSection.assessment.enabled ? '✅ Enabled' : '❌ Disabled';
             
             message.push(`**${section}**: Score: ${combined}/10 (Quality: ${quality}, Confidence: ${confidence}) - ${enabled}`);
-            if (sectionAssessment['suggestedImprovements']) {
-              message.push(`  _Suggestions: ${sectionAssessment['suggestedImprovements']}_`);
+            if (assessedSection.assessment.suggestedImprovements) {
+              message.push(`  _Suggestions: ${assessedSection.assessment.suggestedImprovements}_`);
             }
             message.push('');
           }
@@ -1068,11 +1041,9 @@ export class MatrixResponseFormatter {
         message.push('#### Section Status After Changes:');
         message.push('');
         
-        Object.entries(result.assessments).forEach(([section, assessment]) => {
-          const assessmentData = assessment as Record<string, unknown>;
-          if (assessmentData['assessment']) {
-            const sectionAssessment = assessmentData['assessment'] as Record<string, unknown>;
-            const enabled = sectionAssessment['enabled'] ? '✅ Enabled' : '❌ Disabled';
+        Object.entries(result.assessments).forEach(([section, assessedSection]) => {
+          if (assessedSection.assessment) {
+            const enabled = assessedSection.assessment.enabled ? '✅ Enabled' : '❌ Disabled';
             message.push(`**${section}**: ${enabled}`);
           }
         });
