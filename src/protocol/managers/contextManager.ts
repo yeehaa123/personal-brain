@@ -16,6 +16,7 @@ import {
 } from '@/contexts';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
+import { RendererRegistry } from '@/utils/registry/rendererRegistry';
 import { isDefined } from '@/utils/safeAccessUtils';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
@@ -58,6 +59,9 @@ export class ContextManager implements IContextManager {
   private useExternalSources: boolean;
   private initialized: boolean = false;
   private initializationError: Error | null = null;
+  
+  // Reference to the configuration for getting the interface type
+  private config: BrainProtocolConfig;
   
   // Logger instance
   private logger = Logger.getInstance();
@@ -116,6 +120,9 @@ export class ContextManager implements IContextManager {
    * @param config - Configuration for the brain protocol
    */
   private constructor(config: BrainProtocolConfig) {
+    // Store config for later use
+    this.config = config;
+    
     const apiKey = config.getApiKey();
     const newsApiKey = config.newsApiKey;
     const interfaceType = config.interfaceType || 'cli';
@@ -276,6 +283,32 @@ export class ContextManager implements IContextManager {
       this.logger.debug('Context links initialized');
     } else {
       this.logger.warn('Cannot initialize context links: contexts not ready');
+    }
+  }
+  
+  /**
+   * Get the renderer for the current interface type
+   * This provides a standardized way to access the renderer from any context
+   * 
+   * @returns The renderer instance for the current interface type
+   */
+  getRenderer(): unknown {
+    try {
+      // Get the configured interface type from our stored config
+      const interfaceType = this.config.interfaceType || 'cli';
+      
+      // Get the renderer from the registry
+      const registry = RendererRegistry.getInstance();
+      const renderer = registry.getRenderer(interfaceType);
+      
+      if (!renderer) {
+        this.logger.warn(`No renderer found for interface type: ${interfaceType}`);
+      }
+      
+      return renderer;
+    } catch (error) {
+      this.logger.error('Error getting renderer:', error);
+      return null;
     }
   }
 

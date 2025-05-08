@@ -202,6 +202,12 @@ export interface IContextManager {
   
   /** Initialize links between contexts (if needed after initialization) */
   initializeContextLinks(): void;
+  
+  /** 
+   * Get the current renderer for the active interface type
+   * This is used for rendering progress steps and other UI elements
+   */
+  getRenderer(): unknown;
 }
 
 /**
@@ -210,6 +216,7 @@ export interface IContextManager {
 export interface IConversationManager {
   getConversationContext(): ConversationContext;
   setCurrentRoom(roomId: string): Promise<void>;
+  getCurrentRoom(): string | null;
   initializeConversation(): Promise<void>;
   hasActiveConversation(): boolean;
   getCurrentConversationId(): string | null;
@@ -291,4 +298,7 @@ export interface IBrainProtocol {
   
   /** Process a natural language query with optional schema for structured responses */
   processQuery<T = unknown>(query: string, options?: QueryOptions<T>): Promise<QueryResult<T>>;
+  
+  /** Get the current interface type (CLI or Matrix) */
+  getInterfaceType(): InterfaceType;
 }

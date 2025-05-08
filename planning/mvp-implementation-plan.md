@@ -176,6 +176,7 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - ⏳ Implement two-phase editorial process (framework in place, needs integration)
    - ⏳ Add quality and confidence metrics (schema defined, needs UI integration)
    - 🔜 Improve responsive design for mobile compatibility
+   - 🔜 Implement progress tracking in Matrix interface (see [matrix-progress-tracking-implementation.md](matrix-progress-tracking-implementation.md))
 
 7. **Website Identity Service** (Days 6-8) 🔜 Upcoming
    - 🔜 Implement WebsiteIdentityService following Component Interface Standardization pattern
@@ -258,6 +259,8 @@ For the MVP to be considered complete, all the following criteria must be met:
 - ⏳ Two-phase editorial process (framework implemented, needs final integration)
 - ⏳ Quality and confidence metrics for content evaluation (schema defined)
 - 🔜 All profile sections render properly with responsive design
+- 🔜 Progress step tracking for long-running operations in CLI interface
+- 🔜 Progress step tracking for long-running operations in Matrix interface
 
 ### Website Identity Service
 - 🔜 WebsiteIdentityService implemented following Component Interface Standardization pattern

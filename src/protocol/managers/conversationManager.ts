@@ -160,6 +160,14 @@ export class ConversationManager implements IConversationManager {
     
     this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId} using interface: ${this.interfaceType}`);
   }
+  
+  /**
+   * Get the current room ID
+   * @returns The current room ID or null if not set
+   */
+  getCurrentRoom(): string | null {
+    return this.currentRoomId || null;
+  }
 
 
   /**

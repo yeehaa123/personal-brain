@@ -11,6 +11,7 @@ import { getExcerpt } from '@/utils/noteUtils';
 import { MatrixBlockBuilder } from './block-formatter';
 import { MatrixCitationFormatter } from './citation-formatter';
 import { MatrixMarkdownFormatter } from './markdown-formatter';
+import type { ProgressData, ProgressStep } from './progress-types';
 import type { 
   CitationReference, 
   LandingPageResult, 
@@ -79,7 +80,7 @@ export type ResponseType =
   'ask' | 'error' | 'status' | 'tags' |
   'save-note-preview' | 'save-note-confirm' | 'conversation-notes' |
   'website-config' | 'landing-page' |
-  'website-build' | 'website-promote' | 'website-status';
+  'website-build' | 'website-promote' | 'website-status' | 'progress';
 
 // Response formatter options
 export interface ResponseFormatterOptions {
@@ -1162,6 +1163,84 @@ export class MatrixResponseFormatter {
       if (result.success && result.url) {
         message.push('', `Preview available at: ${result.url}`);
         message.push('', `To promote to production, use: \`${this.commandPrefix} website-promote\``);
+      }
+      
+      return this.markdown.format(message.join('\n'));
+    }
+  }
+  
+  /**
+   * Build profile message lines
+   * 
+   * @param profile Profile object
+   * @returns Array of message lines
+   */
+  /**
+   * Format progress tracker output for Matrix
+   * 
+   * @param progressData Progress tracking data
+   * @returns Formatted progress message
+   */
+  formatProgress(progressData: ProgressData): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader(progressData.title);
+      
+      // Add status indicator and count
+      const statusIcon = progressData.status === 'in_progress' ? '⏳' : 
+        progressData.status === 'complete' ? '✅' : '❌';
+      
+      // Format steps as a progress bar
+      builder.addSection(`${statusIcon} Progress: Step ${progressData.currentStep + 1}/${progressData.totalSteps}`);
+      
+      // Create a progress list showing completed and current steps
+      const progressSteps = progressData.steps.map((step: ProgressStep) => {
+        if (step.complete) {
+          return `✅ ${step.label}`;
+        } else if (step.active) {
+          return `🔵 **${step.label}** (current)`;
+        } else {
+          return `⬜ ${step.label}`;
+        }
+      }).join('\n');
+      
+      builder.addSection(progressSteps);
+      
+      // Add error message if there is one
+      if (progressData.error) {
+        builder.addSection(`❌ **Error**: ${progressData.error}`);
+      }
+      
+      return builder.build() as string;
+    } else {
+      const message: string[] = [];
+      
+      message.push(`### ${progressData.title}`);
+      message.push('');
+      
+      // Add status indicator and count
+      const statusIcon = progressData.status === 'in_progress' ? '⏳' : 
+        progressData.status === 'complete' ? '✅' : '❌';
+      
+      message.push(`${statusIcon} **Progress**: Step ${progressData.currentStep + 1}/${progressData.totalSteps}`);
+      message.push('');
+      
+      // Create a progress list showing completed and current steps
+      progressData.steps.forEach((step: ProgressStep) => {
+        if (step.complete) {
+          message.push(`✅ ${step.label}`);
+        } else if (step.active) {
+          message.push(`🔵 **${step.label}** (current)`);
+        } else {
+          message.push(`⬜ ${step.label}`);
+        }
+      });
+      
+      // Add error message if there is one
+      if (progressData.error) {
+        message.push('');
+        message.push(`❌ **Error**: ${progressData.error}`);
       }
       
       return this.markdown.format(message.join('\n'));

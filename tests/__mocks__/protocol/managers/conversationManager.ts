@@ -16,6 +16,7 @@ export class MockConversationManager implements IConversationManager {
   private conversationContext: ConversationContext;
   private hasActive = true;
   private currentConversationId = 'mock-conversation-1';
+  private currentRoomId = 'mock-room-1';
   private conversationHistory = 'User: Test query\nAssistant: Test response';
 
   /**
@@ -53,7 +54,9 @@ export class MockConversationManager implements IConversationManager {
       this.hasActive = false;
     }
 
-    // Removed currentRoomId handling
+    if (options && typeof options['currentRoomId'] === 'string') {
+      this.currentRoomId = options['currentRoomId'] as string;
+    }
 
     if (options && typeof options['currentConversationId'] === 'string') {
       this.currentConversationId = options['currentConversationId'] as string;
@@ -69,8 +72,13 @@ export class MockConversationManager implements IConversationManager {
   }
 
   async setCurrentRoom(roomId: string): Promise<void> {
-    // Just update the conversation ID based on room
+    // Set the room ID and update the conversation ID based on room
+    this.currentRoomId = roomId;
     this.currentConversationId = `mock-conversation-${roomId}`;
+  }
+  
+  getCurrentRoom(): string | null {
+    return this.currentRoomId;
   }
 
   initializeConversation = mock(async () => {

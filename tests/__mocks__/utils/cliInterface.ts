@@ -131,6 +131,15 @@ export class MockCLIInterface implements MockableCLIInterface {
       });
   }
   
+  public async withProgress<T = unknown>(
+    _title: string,
+    steps: string[],
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>,
+  ): Promise<T> {
+    // For CLI, we ignore the title and just use the withProgressSpinner implementation
+    return this.withProgressSpinner(steps, task);
+  }
+  
   // Static methods
   public static error = mock((_message: string) => {});
 

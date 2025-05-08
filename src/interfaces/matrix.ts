@@ -15,6 +15,7 @@ import type { CommandHandler } from '../commands';
 import { MatrixRenderer } from '../commands/matrix-renderer';
 import { getEnv } from '../utils/configUtils';
 import { Logger } from '../utils/logger';
+import { RendererRegistry } from '../utils/registry/rendererRegistry';
 
 import { MatrixMarkdownFormatter } from './matrix/formatters';
 
@@ -188,6 +189,10 @@ export class MatrixBrainInterface {
 
     // Set the renderer
     this.renderer = renderer;
+    
+    // Register Matrix renderer in the renderer registry
+    // This allows other parts of the application to access the Matrix renderer
+    RendererRegistry.getInstance().registerRenderer('matrix', renderer);
   }
 
   // Renderer is initialized in constructor

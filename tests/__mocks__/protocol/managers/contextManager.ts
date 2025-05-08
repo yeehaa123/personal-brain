@@ -36,6 +36,7 @@ export class MockContextManager implements IContextManager {
   private conversationContext = MockConversationContext.createFresh();
   private externalSourceContext = MockExternalSourceContext.createFresh();
   private websiteContext = MockWebsiteContext.createFresh();
+  private renderer = null;
 
   /**
    * Get the singleton instance
@@ -109,5 +110,9 @@ export class MockContextManager implements IContextManager {
 
   initializeContextLinks(): void {
     // Nothing to do in the mock
+  }
+  
+  getRenderer(): unknown {
+    return this.renderer;
   }
 }

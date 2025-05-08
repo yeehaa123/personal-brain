@@ -21,6 +21,7 @@ import type { CommandHandler } from '../commands';
 import type { CLIRenderer } from '../commands/cli-renderer';
 import { CLIInterface } from '../utils/cliInterface';
 import logger from '../utils/logger';
+import { RendererRegistry } from '../utils/registry/rendererRegistry';
 
 // Command parsing types
 interface ParsedCommand {
@@ -109,6 +110,11 @@ export class CLIApp {
     
     // Connect the command handler to the renderer for interactive commands
     this.renderer.setCommandHandler(this.commandHandler);
+    
+    // Register CLI interface in the renderer registry
+    // This allows other parts of the application to access the CLI interface
+    RendererRegistry.getInstance().registerRenderer('cli', this.cli);
+    this.logger.debug('Registered CLI interface in renderer registry');
   }
 
   /**

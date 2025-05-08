@@ -14,6 +14,7 @@ import ora from 'ora';
 import type { Ora } from 'ora';
 
 import logger from './logger';
+import type { IProgressTracker } from './registry/rendererRegistry';
 
 /**
  * Configuration options for CLIInterface
@@ -65,7 +66,7 @@ export interface CLIStyles {
  * This class follows the Component Interface Standardization pattern with singleton
  * management via getInstance(), resetInstance(), and createFresh().
  */
-export class CLIInterface {
+export class CLIInterface implements IProgressTracker {
   /** The singleton instance */
   private static instance: CLIInterface | null = null;
 
@@ -605,6 +606,24 @@ export class CLIInterface {
     
     this.spinner = null;
     this.logger.debug('Stopped spinner');
+  }
+
+  /**
+   * Implementation of IProgressTracker interface
+   * Execute a task with progress tracking compatible with the common interface
+   * 
+   * @param title Operation title (ignored in CLI, used only in Matrix)
+   * @param steps Array of step descriptions
+   * @param task The async task to execute
+   * @returns The result of the task
+   */
+  public async withProgress<T>(
+    _title: string,
+    steps: string[],
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>,
+  ): Promise<T> {
+    // For CLI, we ignore the title and just use the withProgressSpinner implementation
+    return this.withProgressSpinner(steps, task);
   }
 
   /**

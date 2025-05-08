@@ -1,6 +1,7 @@
 import type { WebsiteContext } from '@/contexts/website';
 import type { IBrainProtocol } from '@/protocol/types';
 import { CLIInterface } from '@/utils/cliInterface';
+import { RendererRegistry } from '@/utils/registry/rendererRegistry';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 // Direct file access replaced with WebsiteContext delegation
@@ -274,10 +275,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Generate landing page
     if (action === 'generate') {
       try {
-        // Get CLI interface for status updates with spinner
-        const cli = CLIInterface.getInstance();
-        
-        // Define steps for the progress spinner
+        // Define steps for the progress tracking
         const steps = [
           'Retrieving website identity',
           'Analyzing site requirements',
@@ -292,31 +290,60 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           'Finalizing content',
         ];
         
-        // Use the progress spinner with steps
-        const result = await cli.withProgressSpinner(steps, async (updateStep) => {
-          // Launch the actual generation process with our step progress tracking
-          // The generateLandingPage method will call updateStep at appropriate times
-          
-          // If the context is not available, handle gracefully
-          if (!this.websiteContext) {
-            return {
-              success: false,
-              message: 'Website context not available',
-            };
+        // Get the unified progress tracker through the context manager
+        const interfaceType = this.brainProtocol.getInterfaceType();
+        
+        // Import the renderer registry
+        // Get the progress tracker from the registry
+        const progressTracker = RendererRegistry.getInstance().getProgressTracker(interfaceType);
+        
+        if (!progressTracker) {
+          this.logger.error(`No progress tracker available for interface type: ${interfaceType}`);
+          throw new Error(`No progress tracker available for interface type: ${interfaceType}`);
+        }
+        
+        // For Matrix interface, we need the room ID
+        let roomId: string | undefined;
+        if (interfaceType === 'matrix') {
+          const currentRoom = this.brainProtocol.getConversationManager().getCurrentRoom();
+          if (!currentRoom) {
+            this.logger.error('Room ID not available for progress tracking in Matrix');
+            throw new Error('Room ID not available for progress tracking in Matrix');
           }
-          
-          // The website context and service will call updateStep with the right indices
-          return await this.websiteContext.generateLandingPage({
-            useIdentity: true,
-            regenerateIdentity: false,
-            onProgress: (_step, index) => {
-              // Simply use the index provided by the progress callback
-              if (index >= 0 && index < steps.length) {
-                updateStep(index);
-              }
-            },
-          });
-        });
+          roomId = currentRoom;
+        }
+        
+        // Use the unified progress tracking interface
+        this.logger.debug(`Using ${interfaceType} progress tracker`);
+        
+        // Call withProgress with the appropriate parameters
+        // For Matrix, we pass the extra roomId parameter
+        const result = await progressTracker.withProgress(
+          'Generating Landing Page',
+          steps,
+          async (updateStep: (index: number) => void) => {
+            // If the context is not available, handle gracefully
+            if (!this.websiteContext) {
+              return {
+                success: false,
+                message: 'Website context not available',
+              };
+            }
+            
+            // The website context and service will call updateStep with the right indices
+            return await this.websiteContext.generateLandingPage({
+              useIdentity: true,
+              regenerateIdentity: false,
+              onProgress: (_step, index) => {
+                // Simply use the index provided by the progress callback
+                if (index >= 0 && index < steps.length) {
+                  updateStep(index);
+                }
+              },
+            });
+          },
+          roomId, // This parameter is only used by Matrix, and ignored by CLI
+        );
         
         return {
           type: 'landing-page',

@@ -37,7 +37,20 @@ export type WebsiteCommandResult =
       accessStatus: string;
       url: string;
     } }
-  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' };
+  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' }
+  | { type: 'progress'; progressData: {
+      title: string;
+      steps: Array<{
+        label: string;
+        complete: boolean;
+        active: boolean;
+        index: number;
+      }>;
+      currentStep: number;
+      totalSteps: number;
+      status: 'in_progress' | 'complete' | 'error';
+      error?: string;
+    } };
 
 /**
  * Union type for all possible command result types
@@ -78,4 +91,17 @@ export type CommandResult =
       accessStatus: string;
       url: string;
     } }
-  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' };
+  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' }
+  | { type: 'progress'; progressData: {
+      title: string;
+      steps: Array<{
+        label: string;
+        complete: boolean;
+        active: boolean;
+        index: number;
+      }>;
+      currentStep: number;
+      totalSteps: number;
+      status: 'in_progress' | 'complete' | 'error';
+      error?: string;
+    } };

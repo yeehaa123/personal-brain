@@ -330,4 +330,12 @@ export class BrainProtocol implements IBrainProtocol {
   getMessagingProfileContext() {
     return this.contextIntegrator.getProfileContext();
   }
+  
+  /**
+   * Get the current interface type (CLI or Matrix)
+   * @returns Interface type string
+   */
+  getInterfaceType(): 'cli' | 'matrix' {
+    return this.configManager.getInterfaceType();
+  }
 }
