@@ -9,6 +9,8 @@
  * TODO: This class will be updated as part of the CLI/logger separation initiative
  * See planning/cli-logger-separation.md for the detailed plan
  */
+import fs from 'fs';
+import path from 'path';
 import winston from 'winston';
 
 import { getEnv, isProductionEnvironment, isTestEnvironment } from '@/utils/configUtils';
@@ -54,6 +56,21 @@ export class Logger {
   private winstonLogger: winston.Logger;
 
   /**
+   * Ensure the logs directory exists
+   * @param logPath The path to the log file
+   */
+  private ensureLogDirectory(logPath: string): void {
+    try {
+      const logDir = path.dirname(logPath);
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+    } catch (error) {
+      console.error(`Failed to create log directory for ${logPath}:`, error);
+    }
+  }
+
+  /**
    * Private constructor to enforce the use of getInstance() or createFresh()
    * 
    * @param config Optional configuration to override default settings
@@ -73,12 +90,17 @@ export class Logger {
     
     // Default config values
     const defaultConfig = {
-      consoleLevel: getEnv('LOG_CONSOLE_LEVEL', isProductionEnvironment() ? 'info' : 'debug'),
+      consoleLevel: getEnv('LOG_CONSOLE_LEVEL', isProductionEnvironment() ? 'warn' : 'warn'),
       fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
-      errorLogPath: getEnv('ERROR_LOG_PATH', 'error.log'),
-      combinedLogPath: getEnv('COMBINED_LOG_PATH', 'combined.log'),
-      debugLogPath: getEnv('DEBUG_LOG_PATH', 'debug.log'),
+      errorLogPath: getEnv('ERROR_LOG_PATH', 'logs/error.log'),
+      combinedLogPath: getEnv('COMBINED_LOG_PATH', 'logs/combined.log'),
+      debugLogPath: getEnv('DEBUG_LOG_PATH', 'logs/debug.log'),
     };
+    
+    // Ensure log directories exist
+    this.ensureLogDirectory(defaultConfig.errorLogPath);
+    this.ensureLogDirectory(defaultConfig.combinedLogPath);
+    this.ensureLogDirectory(defaultConfig.debugLogPath);
     
     // Merge provided config with defaults
     const mergedConfig = {
@@ -114,6 +136,11 @@ export class Logger {
       return info;
     })();
     
+    // Filter to only include error messages
+    const errorsOnly = winston.format((info) => {
+      return info.level === 'error' ? info : false;
+    })();
+    
     // Create the Winston logger
     this.winstonLogger = winston.createLogger({
       levels: logLevels,
@@ -127,18 +154,21 @@ export class Logger {
             consoleFormat,
           ),
         }),
-        // File transport for errors
+        // File transport for errors - ONLY logs error level messages
         new winston.transports.File({
           filename: mergedConfig.errorLogPath,
-          level: 'error',
-          format: fileFormat,
+          format: winston.format.combine(
+            errorsOnly,
+            fileFormat,
+          ),
         }),
-        // File transport for combined logs
+        // File transport for combined logs - logs all levels up to fileLevel
         new winston.transports.File({
           filename: mergedConfig.combinedLogPath,
+          level: mergedConfig.fileLevel, // Use the specified file level
           format: fileFormat,
         }),
-        // File transport specifically for debug logs
+        // File transport specifically for debug logs - includes all debug messages
         new winston.transports.File({
           filename: mergedConfig.debugLogPath,
           level: 'debug',
@@ -147,8 +177,9 @@ export class Logger {
       ],
     });
     
-    // Set console log level based on configuration
-    this.winstonLogger.level = mergedConfig.consoleLevel;
+    // Note: We don't need to set the overall logger level here
+    // Each transport's level is now set independently
+    // Setting this would override individual transport levels, so we're removing it
   }
 
   /**

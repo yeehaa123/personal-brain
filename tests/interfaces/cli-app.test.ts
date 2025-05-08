@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { CommandHandler } from '@/commands';
+import type { CLIInterface } from '@/utils/cliInterface';
 import type { CLIRenderer } from '@/commands/cli-renderer';
 import { CLIApp } from '@/interfaces/cli-app';
 import { MockLogger } from '@test/__mocks__/core/logger';
@@ -53,7 +54,7 @@ describe('CLIApp', () => {
     cliApp = CLIApp.createFresh({
       commandHandler: mockCommandHandler,
       renderer: mockRenderer,
-      cliInterface: mockCLI,
+      cliInterface: mockCLI as unknown as CLIInterface,
       logger: mockLogger,
     });
   });
@@ -84,7 +85,7 @@ describe('CLIApp', () => {
     const testApp = CLIApp.createFresh({
       commandHandler: mockHandler,
       renderer: mockRender,
-      cliInterface: mockCLI,
+      cliInterface: mockCLI as unknown as CLIInterface,
       logger: mockLogger,
     });
     
@@ -124,7 +125,7 @@ describe('CLIApp', () => {
     const testApp = CLIApp.createFresh({
       commandHandler: mockHandler,
       renderer: mockRender,
-      cliInterface: mockCLI,
+      cliInterface: mockCLI as unknown as CLIInterface,
       logger: mockLogger,
     });
     
@@ -176,7 +177,7 @@ describe('CLIApp', () => {
     const testApp = CLIApp.createFresh({
       commandHandler: mockHandler,
       renderer: mockRender,
-      cliInterface: testCLI,
+      cliInterface: testCLI as unknown as CLIInterface,
       logger: testLogger,
     });
     

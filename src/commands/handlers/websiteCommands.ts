@@ -1,5 +1,6 @@
 import type { WebsiteContext } from '@/contexts/website';
 import type { IBrainProtocol } from '@/protocol/types';
+import { CLIInterface } from '@/utils/cliInterface';
 import { BaseCommandHandler } from '@commands/core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 // Direct file access replaced with WebsiteContext delegation
@@ -57,6 +58,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     'website-build',
     'website-promote',
     'website-status',
+    'website-identity',
   ];
   
   // Directory paths now managed by WebsiteContext
@@ -101,6 +103,17 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         usage: 'website-status [preview|live]',
         examples: ['website-status', 'website-status live'],
       },
+      {
+        command: 'website-identity',
+        description: 'Manage website identity information (view, generate, update)',
+        usage: 'website-identity [view|generate|update key=value]',
+        examples: [
+          'website-identity', 
+          'website-identity view', 
+          'website-identity generate', 
+          'website-identity update creativeContent.tagline="New Tagline"',
+        ],
+      },
     ];
   }
   
@@ -129,6 +142,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         return this.handleWebsitePromote();
       case 'website-status':
         return this.handleWebsiteStatus(args);
+      case 'website-identity':
+        return this.handleWebsiteIdentity(args);
       default:
         return {
           type: 'error',
@@ -259,7 +274,29 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Generate landing page
     if (action === 'generate') {
       try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Note: In the future, we could use a progress spinner with steps:
+        // const steps = [
+        //   'Retrieving website identity',
+        //   'Generating hero section',
+        //   ...etc
+        // ];
+        
+        // Since we can't hook into the actual progress events yet,
+        // we'll use the simple spinner approach for now
+        cli.startSpinner('Generating landing page content (this will take a few minutes)...');
+        
+        // Launch the actual generation process
         const result = await this.websiteContext.generateLandingPage();
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', 'Landing page generated successfully');
+        } else {
+          cli.stopSpinner('error', 'Failed to generate landing page');
+        }
         
         return {
           type: 'landing-page',
@@ -268,6 +305,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           data: result.data,
         };
       } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error generating landing page');
+        
         this.logger.error(`Error generating landing page: ${error}`);
         return {
           type: 'error',
@@ -278,7 +321,29 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Edit landing page content
     else if (action === 'edit') {
       try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Note: In the future, we could use a progress spinner with steps:
+        // const steps = [
+        //   'Retrieving website identity and current content',
+        //   'Performing content review across sections',
+        //   ...etc
+        // ];
+        
+        // Since we can't hook into the actual progress events yet,
+        // we'll use the simple spinner approach for now
+        cli.startSpinner('Editing landing page content (this will take a few minutes)...');
+        
+        // Run the actual edit operation
         const result = await this.websiteContext.editLandingPage();
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', 'Landing page edited successfully');
+        } else {
+          cli.stopSpinner('error', 'Failed to edit landing page');
+        }
         
         return {
           type: 'landing-page',
@@ -288,6 +353,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           action: 'edit',
         };
       } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error editing landing page');
+        
         this.logger.error(`Error editing landing page: ${error}`);
         return {
           type: 'error',
@@ -298,9 +369,30 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Assess landing page quality
     else if (action === 'assess' || action === 'qa') {
       try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Note: In the future, we could use a progress spinner with steps:
+        // const steps = [
+        //   'Loading current landing page content',
+        //   'Evaluating overall content quality',
+        //   ...etc
+        // ];
+        
+        // Start a spinner for quality assessment
+        cli.startSpinner('Assessing landing page quality...');
+        
+        // Run the actual assessment
         const result = await this.websiteContext.assessLandingPage({ 
           applyRecommendations: false, 
         });
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', 'Landing page quality assessment completed');
+        } else {
+          cli.stopSpinner('error', 'Failed to assess landing page quality');
+        }
         
         return {
           type: 'landing-page',
@@ -311,6 +403,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           action: 'assess',
         };
       } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error assessing landing page quality');
+        
         this.logger.error(`Error assessing landing page quality: ${error}`);
         return {
           type: 'error',
@@ -321,9 +419,30 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // Apply quality assessment recommendations
     else if (action === 'apply-recommendations' || action === 'apply') {
       try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Note: In the future, we could use a progress spinner with steps:
+        // const steps = [
+        //   'Loading current landing page content',
+        //   'Performing quality assessment',
+        //   ...etc
+        // ];
+        
+        // Start a spinner for applying recommendations
+        cli.startSpinner('Applying quality recommendations to landing page...');
+        
+        // Run the actual operation
         const result = await this.websiteContext.assessLandingPage({ 
           applyRecommendations: true, 
         });
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', 'Quality recommendations applied successfully');
+        } else {
+          cli.stopSpinner('error', 'Failed to apply quality recommendations');
+        }
         
         return {
           type: 'landing-page',
@@ -334,6 +453,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           action: 'apply',
         };
       } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error applying quality recommendations');
+        
         this.logger.error(`Error applying quality recommendations: ${error}`);
         return {
           type: 'error',
@@ -491,6 +616,171 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     }
   }
   
+  /**
+   * Handle website identity command
+   * Manages website branding and identity information
+   */
+  private async handleWebsiteIdentity(args: string): Promise<CommandResult> {
+    if (!this.websiteContext) {
+      return {
+        type: 'website-identity',
+        success: false,
+        message: 'Website context not available',
+      };
+    }
+
+    // Make sure the context is initialized
+    if (!this.websiteContext.isReady()) {
+      try {
+        await this.websiteContext.initialize();
+      } catch (error) {
+        this.logger.error('Failed to initialize website context', { error });
+        return {
+          type: 'website-identity',
+          success: false,
+          message: 'Failed to initialize website context',
+        };
+      }
+    }
+
+    const parts = args.trim().split(/\s+/);
+    const action = parts[0]?.toLowerCase() || 'view';
+    let restArgs = parts.slice(1).join(' ');
+
+    // View identity information
+    if (action === 'view' || action === '') {
+      try {
+        const identityData = await this.websiteContext.getIdentity();
+        
+        return {
+          type: 'website-identity',
+          success: true,
+          message: identityData ? 'Retrieved identity data' : 'No identity data found',
+          data: identityData || undefined, // Convert null to undefined to satisfy TypeScript
+          action: 'view',
+        };
+      } catch (error) {
+        this.logger.error(`Error viewing identity: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to view identity: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    
+    // Generate new identity
+    else if (action === 'generate') {
+      try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Start a spinner to indicate work in progress
+        cli.startSpinner('Generating website identity (this may take a minute)...');
+        
+        // Run the actual generation
+        const result = await this.websiteContext.generateIdentity();
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', 'Website identity generated successfully');
+        } else {
+          cli.stopSpinner('error', 'Failed to generate website identity');
+        }
+        
+        return {
+          type: 'website-identity',
+          success: result.success,
+          message: result.message,
+          data: result.data || undefined, // Convert null to undefined to satisfy TypeScript
+          action: 'generate',
+        };
+      } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error generating identity');
+        
+        this.logger.error(`Error generating identity: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to generate identity: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    
+    // Update identity properties
+    else if (action === 'update') {
+      try {
+        // Parse update arguments similar to config updates
+        const updates: Record<string, unknown> = {};
+        let shallowMerge = false;
+        
+        // Check for shallow merge flag
+        if (restArgs.includes('--shallow')) {
+          shallowMerge = true;
+          // Remove the flag from restArgs
+          const argsWithoutFlag = restArgs.replace(/--shallow\s*/, '');
+          restArgs = argsWithoutFlag;
+        }
+        
+        // Parse key=value pairs with dot notation support
+        const updatePairs = restArgs.match(/([^=\s]+)=(?:"([^"]*)"|([\S]+))/g) || [];
+        
+        for (const pair of updatePairs) {
+          const [keyPath, value] = pair.split('=');
+          const cleanValue = value.replace(/^"(.*)"$/, '$1');
+          
+          // Support for nested properties with dot notation
+          const pathParts = keyPath.split('.');
+          
+          // Build up the updates object structure
+          let current = updates;
+          for (let i = 0; i < pathParts.length - 1; i++) {
+            const part = pathParts[i];
+            if (!current[part] || typeof current[part] !== 'object') {
+              current[part] = {};
+            }
+            current = current[part] as Record<string, unknown>;
+          }
+          
+          // Set the value at the final path part
+          const finalPart = pathParts[pathParts.length - 1];
+          current[finalPart] = cleanValue;
+        }
+        
+        if (Object.keys(updates).length === 0) {
+          return {
+            type: 'error',
+            message: 'Invalid update format. Use key="value" format with dot notation for nested properties.',
+          };
+        }
+        
+        // Apply the updates
+        const result = await this.websiteContext.updateIdentity(updates, shallowMerge);
+        
+        return {
+          type: 'website-identity',
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          action: 'update',
+        };
+      } catch (error) {
+        this.logger.error(`Error updating identity: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to update identity: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    
+    // Unknown action
+    return {
+      type: 'error',
+      message: `Unknown action: ${action}. Available actions: view, generate, update`,
+    };
+  }
   
 // Removed website-deployment-config command as it was redundant with website-config
 }

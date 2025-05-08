@@ -9,7 +9,15 @@ import { mock } from 'bun:test';
 import chalk from 'chalk';
 
 import type { CLIInterfaceOptions, CLIStyles } from '@/utils/cliInterface';
+import type { CLIInterface } from '@/utils/cliInterface';
 import Logger from '@/utils/logger';
+
+/**
+ * Interface for our MockCLIInterface that omits the private members from CLIInterface
+ */
+interface MockableCLIInterface extends Omit<CLIInterface, 'spinner'> {
+  // The interface doesn't need to add anything, just removes the private field
+}
 
 /**
  * MockCLIInterface provides a standardized mock for the CLIInterface class.
@@ -17,7 +25,7 @@ import Logger from '@/utils/logger';
  * This class follows the Component Interface Standardization pattern with singleton
  * management via getInstance(), resetInstance(), and createFresh().
  */
-export class MockCLIInterface {
+export class MockCLIInterface implements MockableCLIInterface {
   /** The singleton instance */
   private static instance: MockCLIInterface | null = null;
   
@@ -45,6 +53,7 @@ export class MockCLIInterface {
   public formatTags = mock((tags: string[] | null | undefined) => tags && tags.length > 0 ? tags.join(' ') : 'No tags');
   public formatDate = mock((date: Date | string | number) => date.toString());
   public renderMarkdown = mock((markdown: string) => markdown);
+  
   // We need to use 'any' for select to match the CLIInterface's generic definition
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public select<T = any>(_message: string, choices: Array<{ name: string, value: T }>): Promise<T> {
@@ -52,9 +61,23 @@ export class MockCLIInterface {
   }
   public input = mock(async (_message: string) => '');
   public confirm = mock(async (_message: string) => true);
+  
+  /** Spinner-related methods */
+  public startSpinner = mock((_text: string) => {});
+  public updateSpinner = mock((_text: string) => {});
+  public stopSpinner = mock((_type?: 'success' | 'error' | 'info', _text?: string) => {});
+  
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public withSpinner<T = any>(_message: string, callback: () => Promise<T>): Promise<T> {
     return callback();
+  }
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public withProgressSpinner<T = any>(
+    _steps: string[], 
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>
+  ): Promise<T> {
+    return task((_stepIndex: number) => {});
   }
   
   // Static methods

@@ -1,8 +1,9 @@
 /**
- * Utility functions for handling landing page data
+ * Utility functions for handling landing page and website identity data
  */
 import type { z } from 'zod';
 
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import type {
   AboutSectionSchema,
   CaseStudiesSectionSchema,
@@ -164,12 +165,8 @@ export function formatLandingPageToMarkdown(landingPage: LandingPageData): strin
           markdown += `- **${item.title}**${item.description ? `: ${item.description}` : ''}\n`;
         });
       }
-      if (expertiseSection.credentials && expertiseSection.credentials.length > 0) {
-        markdown += '**Credentials:**\n';
-        expertiseSection.credentials.forEach(credential => {
-          markdown += `- **${credential.title}**${credential.issuer ? ` from ${credential.issuer}` : ''}${credential.year ? ` (${credential.year})` : ''}\n`;
-        });
-      }
+      // Credentials are no longer part of the expertise section schema
+      // We've simplified the expertise schema to just show expertise items
       break;
     }
       
@@ -261,6 +258,117 @@ export function formatLandingPageToMarkdown(landingPage: LandingPageData): strin
     
     markdown += '\n';
   }
+  
+  return markdown;
+}
+
+/**
+ * Format website identity data as markdown for better CLI display
+ * 
+ * @param identity - Website identity data object
+ * @returns Formatted markdown representation
+ */
+export function formatIdentityToMarkdown(identity: WebsiteIdentityData): string {
+  let markdown = '# Website Identity\n\n';
+
+  // Personal Data
+  markdown += '## Personal Information\n\n';
+  
+  const { personalData } = identity;
+  markdown += `**Name:** ${personalData.name}\n`;
+  markdown += `**Email:** ${personalData.email}\n`;
+  
+  if (personalData.company) markdown += `**Company:** ${personalData.company}\n`;
+  if (personalData.location) markdown += `**Location:** ${personalData.location}\n`;
+  if (personalData.occupation) markdown += `**Occupation:** ${personalData.occupation}\n`;
+  if (personalData.industry) markdown += `**Industry:** ${personalData.industry}\n`;
+  if (personalData.yearsExperience) markdown += `**Years Experience:** ${personalData.yearsExperience}\n`;
+  
+  markdown += '\n';
+  
+  // Creative Content
+  markdown += '## Creative Content\n\n';
+  
+  const { creativeContent } = identity;
+  markdown += `**Title:** ${creativeContent.title}\n`;
+  markdown += `**Tagline:** ${creativeContent.tagline}\n`;
+  markdown += `**Description:** ${creativeContent.description}\n`;
+  
+  if (creativeContent.pitch) markdown += `**Pitch:** ${creativeContent.pitch}\n`;
+  if (creativeContent.uniqueValue) markdown += `**Unique Value:** ${creativeContent.uniqueValue}\n`;
+  
+  if (creativeContent.keyAchievements && creativeContent.keyAchievements.length > 0) {
+    markdown += '\n**Key Achievements:**\n\n';
+    creativeContent.keyAchievements.forEach(achievement => {
+      markdown += `- ${achievement}\n`;
+    });
+  }
+  
+  markdown += '\n';
+  
+  // Brand Identity
+  markdown += '## Brand Identity\n\n';
+  
+  // Tone
+  markdown += '### Tone\n\n';
+  
+  const { tone } = identity.brandIdentity;
+  markdown += `**Formality:** ${tone.formality}\n`;
+  markdown += `**Emotion:** ${tone.emotion}\n`;
+  
+  if (tone.personality && tone.personality.length > 0) {
+    markdown += '\n**Personality:**\n\n';
+    tone.personality.forEach(trait => {
+      markdown += `- ${trait}\n`;
+    });
+  }
+  
+  markdown += '\n';
+  
+  // Content Style
+  markdown += '### Content Style\n\n';
+  
+  const { contentStyle } = identity.brandIdentity;
+  markdown += `**Writing Style:** ${contentStyle.writingStyle}\n`;
+  markdown += `**Sentence Length:** ${contentStyle.sentenceLength}\n`;
+  markdown += `**Vocabulary Level:** ${contentStyle.vocabLevel}\n`;
+  markdown += `**Use Jargon:** ${contentStyle.useJargon ? 'Yes' : 'No'}\n`;
+  markdown += `**Use Humor:** ${contentStyle.useHumor ? 'Yes' : 'No'}\n`;
+  markdown += `**Use Stories:** ${contentStyle.useStories ? 'Yes' : 'No'}\n\n`;
+  
+  // Values
+  markdown += '### Values\n\n';
+  
+  const { values } = identity.brandIdentity;
+  
+  if (values.coreValues && values.coreValues.length > 0) {
+    markdown += '**Core Values:**\n\n';
+    values.coreValues.forEach(value => {
+      markdown += `- ${value}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (values.targetAudience && values.targetAudience.length > 0) {
+    markdown += '**Target Audience:**\n\n';
+    values.targetAudience.forEach(audience => {
+      markdown += `- ${audience}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  if (values.painPoints && values.painPoints.length > 0) {
+    markdown += '**Pain Points:**\n\n';
+    values.painPoints.forEach(point => {
+      markdown += `- ${point}\n`;
+    });
+    markdown += '\n';
+  }
+  
+  markdown += `**Desired Action:** ${values.desiredAction}\n\n`;
+  
+  // Footer
+  markdown += `---\n\n`;
   
   return markdown;
 }

@@ -11,7 +11,7 @@ import type { Note } from '../models/note';
 import type { EnhancedProfile, ProfileExperience } from '../models/profile';
 // Import types and interfaces
 import { CLIInterface } from '../utils/cliInterface';
-import { formatLandingPageToMarkdown } from '../utils/landingPageUtils';
+import { formatIdentityToMarkdown, formatLandingPageToMarkdown } from '../utils/landingPageUtils';
 import { Logger } from '../utils/logger';
 import { displayNotes } from '../utils/noteUtils';
 
@@ -379,6 +379,27 @@ export class CLIRenderer {
         }
       } else {
         this.cli.error(result.message || 'Failed to check website status');
+      }
+      break;
+      
+    case 'website-identity':
+      this.cli.displayTitle('Website Identity');
+      
+      if (result.success === false) {
+        this.cli.error(result.message || 'Failed to process identity command');
+        break;
+      }
+      
+      if (result.message) {
+        this.cli.success(result.message);
+      }
+      
+      if (result.data) {
+        // Format identity data as markdown for better readability
+        const markdown = formatIdentityToMarkdown(result.data);
+        this.cli.print(markdown, { renderMarkdown: true });
+      } else if (result.action === 'view') {
+        this.cli.warn('No identity data found. Generate identity data with "website-identity generate".');
       }
       break;
 

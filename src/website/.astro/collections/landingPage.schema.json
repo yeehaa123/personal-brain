@@ -269,28 +269,9 @@
                   "title"
                 ],
                 "additionalProperties": false
-              }
-            },
-            "credentials": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "title": {
-                    "type": "string"
-                  },
-                  "issuer": {
-                    "type": "string"
-                  },
-                  "year": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "title"
-                ],
-                "additionalProperties": false
-              }
+              },
+              "minItems": 3,
+              "maxItems": 5
             },
             "enabled": {
               "type": "boolean",
@@ -419,7 +400,9 @@
                   "answer"
                 ],
                 "additionalProperties": false
-              }
+              },
+              "minItems": 3,
+              "maxItems": 7
             },
             "enabled": {
               "type": "boolean",

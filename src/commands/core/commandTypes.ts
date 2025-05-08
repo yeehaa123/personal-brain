@@ -4,6 +4,7 @@
  */
 
 import type { LandingPageData, WebsiteConfig } from '@/contexts/website/websiteStorage';
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import type { ExternalCitation } from '@/protocol/types';
@@ -35,7 +36,8 @@ export type WebsiteCommandResult =
       domain: string;
       accessStatus: string;
       url: string;
-    } };
+    } }
+  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' };
 
 /**
  * Union type for all possible command result types
@@ -75,4 +77,5 @@ export type CommandResult =
       domain: string;
       accessStatus: string;
       url: string;
-    } };
+    } }
+  | { type: 'website-identity'; success?: boolean; message?: string; data?: WebsiteIdentityData; action?: 'view' | 'generate' | 'update' };

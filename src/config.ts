@@ -8,13 +8,13 @@ import { getEnv, getEnvAsBool, getEnvAsFloat, getEnvAsInt } from '@utils/configU
 // Log configuration
 export const logConfig = {
   // Log levels
-  consoleLevel: getEnv('LOG_CONSOLE_LEVEL', getEnv('BRAIN_ENV') === 'production' ? 'info' : 'debug'),
+  consoleLevel: getEnv('LOG_CONSOLE_LEVEL', getEnv('BRAIN_ENV') === 'production' ? 'error' : 'error'), // Limiting console output to errors only
   fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
 
   // Log file paths
-  errorLogPath: getEnv('ERROR_LOG_PATH', 'error.log'),
-  combinedLogPath: getEnv('COMBINED_LOG_PATH', 'combined.log'),
-  debugLogPath: getEnv('DEBUG_LOG_PATH', 'debug.log'),
+  errorLogPath: getEnv('ERROR_LOG_PATH', 'logs/error.log'),
+  combinedLogPath: getEnv('COMBINED_LOG_PATH', 'logs/combined.log'),
+  debugLogPath: getEnv('DEBUG_LOG_PATH', 'logs/debug.log'),
   
   // Test mode configuration - used for silencing logs during tests
   isTestMode: getEnvAsBool('TEST_MODE', process.env.NODE_ENV === 'test'),

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Note } from '@models/note';
+import type { CLIInterface } from '@/utils/cliInterface';
 import { createMockNotes } from '@test/__mocks__/models/note';
 import { MockCLIInterface } from '@test/__mocks__/utils/cliInterface';
 import { displayNotes, formatNotePreview, getExcerpt } from '@utils/noteUtils';
@@ -26,7 +27,7 @@ describe('noteUtils', () => {
   describe('displayNotes', () => {
     test('should display notes correctly', () => {
       // Call the function under test with our mock
-      displayNotes(mockNotes, mockCLI);
+      displayNotes(mockNotes, mockCLI as unknown as CLIInterface);
 
       // Use direct expectations instead
       expect(mockCLI.print).toHaveBeenCalled();
@@ -45,7 +46,7 @@ describe('noteUtils', () => {
     });
 
     test('should handle empty notes array', () => {
-      displayNotes([], mockCLI);
+      displayNotes([], mockCLI as unknown as CLIInterface);
       
       // Use consolidated expectations
       // Check if warn was called with the right message

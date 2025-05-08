@@ -19,6 +19,7 @@ import {
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
+import type { WebsiteIdentityData } from '../schemas/websiteIdentitySchema';
 
 import { SectionQualityService } from './landingPage/sectionQualityService';
 // We're now using section-by-section approach instead of holistic content review
@@ -130,11 +131,13 @@ export class LandingPageGenerationService {
    * Generate a complete landing page without holistic editing
    * The editing phase has been separated for better reliability
    * 
+   * @param identity Optional website identity data to use for generation
    * @returns A complete landing page data structure with content
    */
-  async generateLandingPageData(): Promise<LandingPageData> {
+  async generateLandingPageData(identity?: WebsiteIdentityData | null): Promise<LandingPageData> {
     this.logger.info('Starting landing page generation', {
       context: 'LandingPageGenerationService',
+      usingIdentity: !!identity,
     });
     
     // Clear any previous assessment data
@@ -144,8 +147,13 @@ export class LandingPageGenerationService {
       // Create the basic structure for the landing page
       let landingPage = this.createBasicLandingPage();
       
+      // Apply identity data if available
+      if (identity) {
+        this.applyIdentityToLandingPage(landingPage, identity);
+      }
+      
       // Generate content for each section individually
-      landingPage = await this.generateAllSections(landingPage);
+      landingPage = await this.generateAllSections(landingPage, identity);
       
       this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
@@ -227,6 +235,29 @@ export class LandingPageGenerationService {
   }
 
   /**
+   * Apply identity data to a landing page
+   * @param landingPage The landing page to update
+   * @param identity The identity data to apply
+   */
+  private applyIdentityToLandingPage(landingPage: LandingPageData, identity: WebsiteIdentityData): void {
+    // Apply personal data
+    if (identity.personalData) {
+      landingPage.name = identity.personalData.name;
+    }
+    
+    // Apply creative content
+    if (identity.creativeContent) {
+      landingPage.title = identity.creativeContent.title;
+      landingPage.description = identity.creativeContent.description;
+      landingPage.tagline = identity.creativeContent.tagline;
+    }
+    
+    this.logger.debug('Applied identity data to landing page', {
+      context: 'LandingPageGenerationService',
+    });
+  }
+  
+  /**
    * Create the basic structure for a landing page
    */
   private createBasicLandingPage(): LandingPageData {
@@ -282,7 +313,11 @@ export class LandingPageGenerationService {
       },
       expertise: {
         title: 'Expertise',
-        items: [{ title: 'Professional Expertise', description: 'Years of industry experience' }],
+        items: [
+          { title: 'Professional Expertise', description: 'Years of industry experience' },
+          { title: 'Strategic Planning', description: 'Developing effective strategies for success' },
+          { title: 'Project Management', description: 'Delivering projects on time and within budget' },
+        ],
         enabled: true,
       },
       about: {
@@ -297,7 +332,11 @@ export class LandingPageGenerationService {
       },
       faq: {
         title: 'Frequently Asked Questions',
-        items: [{ question: 'What services do you offer?', answer: 'Professional services tailored to your needs.' }],
+        items: [
+          { question: 'What services do you offer?', answer: 'Professional services tailored to your needs.' },
+          { question: 'How long does a typical project take?', answer: 'Project timelines vary based on scope and complexity, but we provide detailed estimates during consultation.' },
+          { question: 'What is your approach to client collaboration?', answer: 'We believe in transparent, regular communication throughout the project lifecycle.' },
+        ],
         enabled: true,
       },
       cta: {
@@ -351,21 +390,31 @@ export class LandingPageGenerationService {
   /**
    * Generate content for all sections
    * @param landingPage - Basic landing page structure
+   * @param identity - Website identity data to use for generation
    */
-  private async generateAllSections(landingPage: LandingPageData): Promise<LandingPageData> {
+  private async generateAllSections(
+    landingPage: LandingPageData,
+    identity?: WebsiteIdentityData | null
+  ): Promise<LandingPageData> {
     this.logger.info('Generating content for each section', {
       context: 'LandingPageGenerationService',
+      usingIdentity: !!identity,
     });
     
     const updatedLandingPage = { ...landingPage };
     
-    // Generate identity information first (title, description, name, tagline)
-    await this.generateIdentityInfo(updatedLandingPage);
+    // Generate identity information only if not provided externally
+    if (!identity) {
+      this.logger.debug('No identity provided, generating basic identity info', {
+        context: 'LandingPageGenerationService',
+      });
+      await this.generateIdentityInfo(updatedLandingPage);
+    }
     
     // Generate each section one by one
     for (const sectionType of updatedLandingPage.sectionOrder) {
       if (this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas]) {
-        await this.generateSectionContent(updatedLandingPage, sectionType);
+        await this.generateSectionContent(updatedLandingPage, sectionType, identity);
       }
     }
     
@@ -420,13 +469,64 @@ Return only these four fields formatted as JSON.`;
   }
 
   /**
+   * Create brand guidelines text from identity
+   * @param identity The website identity data
+   * @returns Text with brand guidelines for AI prompts
+   */
+  private createBrandGuidelinesFromIdentity(identity: WebsiteIdentityData): string {
+    // Extract brand identity information
+    const { brandIdentity, personalData, creativeContent } = identity;
+    
+    // Format tone information
+    const tone = brandIdentity.tone;
+    const toneDescription = `Tone: ${tone.formality} and ${tone.emotion}. Personality traits: ${tone.personality.join(', ')}.`;
+    
+    // Format content style information
+    const style = brandIdentity.contentStyle;
+    const styleDescription = `Style: ${style.writingStyle}. Use ${style.sentenceLength} sentences and ${style.vocabLevel} vocabulary.` +
+      (style.useJargon ? ' Include industry-specific terminology.' : ' Avoid jargon.') +
+      (style.useHumor ? ' Include appropriate humor.' : ' Maintain serious tone.') +
+      (style.useStories ? ' Use storytelling elements.' : ' Focus on facts.');
+    
+    // Format values information
+    const values = brandIdentity.values;
+    const valuesDescription = `Core values: ${values.coreValues.join(', ')}. ` +
+      `Target audience: ${values.targetAudience.join(', ')}. ` +
+      `Pain points to address: ${values.painPoints.join(', ')}. ` +
+      `Desired action: ${values.desiredAction}.`;
+    
+    // Combine into guidelines block
+    return `
+BRAND IDENTITY GUIDELINES:
+
+${toneDescription}
+
+${styleDescription}
+
+${valuesDescription}
+
+NAME: ${personalData.name}
+TAGLINE: ${creativeContent.tagline}
+UNIQUE VALUE: ${creativeContent.uniqueValue || 'Not specified'}
+
+Please ensure all content follows these brand guidelines consistently.
+`;
+  }
+
+  /**
    * Generate content for a specific section
    * @param landingPage - Landing page to update
    * @param sectionType - Type of section to generate
+   * @param identity - Optional website identity data to use for generation
    */
-  private async generateSectionContent(landingPage: LandingPageData, sectionType: string): Promise<void> {
+  private async generateSectionContent(
+    landingPage: LandingPageData, 
+    sectionType: string,
+    identity?: WebsiteIdentityData | null
+  ): Promise<void> {
     this.logger.debug(`Generating content for section: ${sectionType}`, {
       context: 'LandingPageGenerationService',
+      usingIdentity: !!identity,
     });
     
     // Skip if no prompt template exists for this section
@@ -451,9 +551,15 @@ Return only these four fields formatted as JSON.`;
       const promptTemplate = this.sectionPrompts[sectionType];
       
       // Replace placeholders in the prompt
-      const prompt = promptTemplate
+      let prompt = promptTemplate
         .replace(/\{\{name\}\}/g, landingPage.name)
         .replace(/\{\{tagline\}\}/g, landingPage.tagline);
+      
+      // Add brand identity guidelines if available
+      if (identity) {
+        const brandGuidelines = this.createBrandGuidelinesFromIdentity(identity);
+        prompt = `${prompt}\n\n${brandGuidelines}`;
+      }
       
       // Generate content for this section using the appropriate schema
       const result = await this.getBrainProtocol().processQuery(prompt, {
@@ -606,23 +712,36 @@ Return only these four fields formatted as JSON.`;
    * Uses a section-by-section approach to avoid schema validation issues
    * 
    * @param landingPage - The landing page to edit
+   * @param identity - Optional website identity data to use for editing
    * @returns The edited landing page with improved consistency
    */
-  async editLandingPage(landingPage: LandingPageData): Promise<LandingPageData> {
+  async editLandingPage(
+    landingPage: LandingPageData, 
+    identity?: WebsiteIdentityData | null
+  ): Promise<LandingPageData> {
     this.logger.info('Performing holistic content review and editing', {
       context: 'LandingPageGenerationService',
+      usingIdentity: !!identity,
     });
     
     try {
       // Create a working copy of the landing page
       const editedLandingPage = { ...landingPage };
       
+      // Apply identity data if available (to ensure consistency)
+      if (identity) {
+        this.applyIdentityToLandingPage(editedLandingPage, identity);
+      }
+      
       // Edit basic information (title, description, name, tagline)
-      await this.editBasicInfo(editedLandingPage);
+      // Only if we're not using identity, otherwise keep identity values
+      if (!identity) {
+        await this.editBasicInfo(editedLandingPage);
+      }
       
       // Process individual sections that need content review
       for (const sectionType of editedLandingPage.sectionOrder) {
-        await this.editSectionContent(editedLandingPage, sectionType);
+        await this.editSectionContent(editedLandingPage, sectionType, identity);
       }
       
       this.logger.info('Successfully edited landing page for consistency', {
@@ -692,10 +811,16 @@ Keep the tone consistent across all items. Return only these four fields in JSON
    * Edit content for a specific section
    * @param landingPage - Landing page to update
    * @param sectionType - Type of section to edit
+   * @param identity - Optional website identity data to use for editing
    */
-  private async editSectionContent(landingPage: LandingPageData, sectionType: string): Promise<void> {
+  private async editSectionContent(
+    landingPage: LandingPageData, 
+    sectionType: string,
+    identity?: WebsiteIdentityData | null
+  ): Promise<void> {
     this.logger.debug(`Editing content for section: ${sectionType}`, {
       context: 'LandingPageGenerationService',
+      usingIdentity: !!identity,
     });
     
     // Skip non-section properties
@@ -721,14 +846,30 @@ Keep the tone consistent across all items. Return only these four fields in JSON
     
     const sectionContent = JSON.stringify(section, null, 2);
     
-    // Create a prompt using the section content review template
-    const sectionPrompt = sectionContentReviewPrompt.replace(
+    // Base prompt using the section content review template
+    let sectionPrompt = sectionContentReviewPrompt.replace(
       '{{SECTION_TYPE}}', 
       sectionType,
     ).replace(
       '{{SECTION_CONTENT}}', 
       sectionContent,
     );
+    
+    // Add identity information if available
+    if (identity) {
+      // Add brand identity guidelines to the prompt
+      const brandGuidelines = this.createBrandGuidelinesFromIdentity(identity);
+      sectionPrompt = sectionPrompt.replace(
+        '{{ADDITIONAL_GUIDELINES}}',
+        brandGuidelines
+      );
+    } else {
+      // No additional guidelines
+      sectionPrompt = sectionPrompt.replace(
+        '{{ADDITIONAL_GUIDELINES}}',
+        ''
+      );
+    }
     
     try {
       // Process the review with the section-specific schema

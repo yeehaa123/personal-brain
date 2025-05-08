@@ -5,12 +5,15 @@ import type { ProfileContext } from '@/contexts/profiles';
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
+import type { WebsiteIdentityService } from '@/contexts/website/services/websiteIdentityService';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
+import { MockWebsiteIdentityNoteAdapter } from '@test/__mocks__/contexts/website/adapters/websiteIdentityNoteAdapter';
 import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
 import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment/deploymentManager';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
-import { createTestLandingPageData } from '@test/helpers';
+import { MockWebsiteIdentityService } from '@test/__mocks__/contexts/website/services/websiteIdentityService';
+import { createTestLandingPageData, createTestIdentityData } from '@test/helpers';
 
 describe('WebsiteContext', () => {
   // Shared test resources
@@ -19,6 +22,8 @@ describe('WebsiteContext', () => {
   let mockLandingPageService: MockLandingPageGenerationService;
   let mockDeployManager: MockWebsiteDeploymentManager;
   let mockProfileContext: MockProfileContext;
+  let mockIdentityService: MockWebsiteIdentityService;
+  // We use the adapter to create mock dependencies
   let context: WebsiteContext;
   
   // Reset singletons before each test
@@ -30,6 +35,8 @@ describe('WebsiteContext', () => {
     MockLandingPageGenerationService.resetInstance();
     MockWebsiteDeploymentManager.resetInstance();
     MockProfileContext.resetInstance();
+    MockWebsiteIdentityService.resetInstance();
+    MockWebsiteIdentityNoteAdapter.resetInstance();
     
     // Create fresh instances for testing
     mockStorage = MockWebsiteStorageAdapter.createFresh();
@@ -37,6 +44,9 @@ describe('WebsiteContext', () => {
     mockLandingPageService = MockLandingPageGenerationService.createFresh();
     mockDeployManager = MockWebsiteDeploymentManager.createFresh();
     mockProfileContext = MockProfileContext.createFresh();
+    // Create the adapter but we don't directly use it in tests
+    MockWebsiteIdentityNoteAdapter.createFresh();
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
     
     // Set up a default context with all mock services
     context = WebsiteContext.createFresh({}, {
@@ -45,6 +55,7 @@ describe('WebsiteContext', () => {
       landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
       profileContext: mockProfileContext as unknown as ProfileContext,
       deploymentManager: mockDeployManager as unknown as WebsiteDeploymentManager,
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
     });
   });
 
@@ -215,5 +226,106 @@ describe('WebsiteContext', () => {
     // Get manager - it should be auto-created
     const manager = await contextWithoutManager.getDeploymentManager();
     expect(manager).toBeDefined();
+  });
+
+  test('identity service methods properly delegate to the identity service', async () => {
+    // Set up test data
+    const identityData = createTestIdentityData();
+    const updatedIdentity = {
+      ...identityData,
+      creativeContent: {
+        ...identityData.creativeContent,
+        tagline: 'Updated tagline for testing',
+      },
+    };
+
+    // Mock the methods
+    mockIdentityService.getIdentity = mock((forceRegenerate = false) => {
+      return Promise.resolve(forceRegenerate ? updatedIdentity : identityData);
+    });
+    
+    mockIdentityService.generateIdentity = mock(() => {
+      return Promise.resolve(identityData);
+    });
+    
+    mockIdentityService.updateIdentity = mock((updates) => {
+      const result = {
+        ...identityData,
+        ...updates,
+        updatedAt: new Date(),
+      };
+      return Promise.resolve(result);
+    });
+
+    // Test the service getter
+    const service = context.getIdentityService();
+    // Just check that we get a service back, to avoid type issues
+    expect(service).toBeDefined();
+
+    // Test getIdentity method
+    const identity = await context.getIdentity();
+    expect(identity).toEqual(identityData);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+
+    // Test getIdentity with forceRegenerate
+    const regeneratedIdentity = await context.getIdentity(true);
+    expect(regeneratedIdentity).toEqual(updatedIdentity);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(true);
+
+    // Test generateIdentity method
+    const generatedResult = await context.generateIdentity();
+    expect(generatedResult.success).toBe(true);
+    expect(generatedResult.data).toEqual(identityData);
+    expect(mockIdentityService.generateIdentity).toHaveBeenCalled();
+
+    // Test updateIdentity method
+    const updateData = {
+      creativeContent: {
+        title: 'Updated Title',
+        description: 'Updated Description',
+        tagline: 'New test tagline',
+        keyAchievements: ['Updated achievement'],
+      },
+    };
+    
+    const updateResult = await context.updateIdentity(updateData);
+    expect(updateResult.success).toBe(true);
+    expect(mockIdentityService.updateIdentity).toHaveBeenCalledWith(updateData, false);
+  });
+  
+  test('landing page generation uses identity when available', async () => {
+    // Set up test data
+    const landingPageData = createTestLandingPageData();
+    const identityData = createTestIdentityData();
+    
+    // Mock the services
+    mockIdentityService.getIdentity = mock(() => Promise.resolve(identityData));
+    mockLandingPageService.generateLandingPageData = mock(() => Promise.resolve(landingPageData));
+    mockLandingPageService.editLandingPage = mock(() => Promise.resolve(landingPageData));
+    
+    // Test landing page generation with identity
+    await context.generateLandingPage(true, false);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockLandingPageService.generateLandingPageData).toHaveBeenCalledWith(identityData);
+    
+    // Test landing page generation with identity regeneration
+    await context.generateLandingPage(true, true);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(true);
+    
+    // Test landing page generation without identity
+    // Note: we can't check the exact parameter due to mock implementation details
+    mockLandingPageService.generateLandingPageData.mockClear();
+    await context.generateLandingPage(false);
+    expect(mockLandingPageService.generateLandingPageData).toHaveBeenCalled();
+    
+    // Test landing page editing with identity
+    await context.editLandingPage(true);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalled();
+    expect(mockLandingPageService.editLandingPage).toHaveBeenCalled();
+    
+    // Test landing page editing without identity
+    mockLandingPageService.editLandingPage.mockClear();
+    await context.editLandingPage(false);
+    expect(mockLandingPageService.editLandingPage).toHaveBeenCalled();
   });
 });

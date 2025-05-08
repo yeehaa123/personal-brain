@@ -6,10 +6,12 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import { clearInterval, setInterval } from 'timers';
+// No timers import needed
 
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import ora from 'ora';
+import type { Ora } from 'ora';
 
 import logger from './logger';
 
@@ -72,6 +74,9 @@ export class CLIInterface {
 
   /** Logger instance to use */
   public readonly logger: typeof logger;
+  
+  /** Active spinner instance */
+  private spinner: Ora | null = null;
 
   /** Common style configuration */
   private static readonly styleConfig: CLIStyles = {
@@ -274,13 +279,13 @@ export class CLIInterface {
    * @returns Formatted text for terminal display
    */
   public renderMarkdown(markdown: string): string {
-    let lines = markdown.split('\n');
+    const lines = markdown.split('\n');
     const processedLines: string[] = [];
     
     // Process each line individually for better control
     for (let i = 0; i < lines.length; i++) {
       let line = lines[i];
-      let nextLine = i < lines.length - 1 ? lines[i + 1] : '';
+      const nextLine = i < lines.length - 1 ? lines[i + 1] : '';
       
       // Handle headers
       if (line.match(/^### /)) {
@@ -321,9 +326,9 @@ export class CLIInterface {
         // Lists
         if (line.match(/^- /)) {
           line = `${this.styles.info('•')} ${line.substring(2)}`;
-        } else if (line.match(/^  - /)) {
+        } else if (line.match(/^ {2}- /)) {
           line = `  ${this.styles.info('◦')} ${line.substring(4)}`;
-        } else if (line.match(/^    - /)) {
+        } else if (line.match(/^ {4}- /)) {
           line = `    ${this.styles.info('▪')} ${line.substring(6)}`;
         }
         
@@ -551,7 +556,102 @@ export class CLIInterface {
   }
 
   /**
-   * Display a spinner while an async operation is in progress
+   * Start a spinner with a message
+   * @param text The initial spinner text
+   */
+  public startSpinner(text: string): void {
+    if (this.silent) return;
+    
+    // Stop any existing spinner
+    this.stopSpinner();
+    
+    // Create a new spinner
+    this.spinner = ora({
+      text,
+      color: 'cyan',
+    }).start();
+    
+    this.logger.debug(`Started spinner: ${text}`);
+  }
+  
+  /**
+   * Update an active spinner with new text
+   * @param text The new spinner text
+   */
+  public updateSpinner(text: string): void {
+    if (this.silent || !this.spinner) return;
+    
+    this.spinner.text = text;
+    this.logger.debug(`Updated spinner: ${text}`);
+  }
+  
+  /**
+   * Stop the active spinner
+   * @param type Optional completion type (success, error, info)
+   * @param text Optional completion text
+   */
+  public stopSpinner(type?: 'success' | 'error' | 'info', text?: string): void {
+    if (this.silent || !this.spinner) return;
+    
+    if (type === 'success') {
+      this.spinner.succeed(text);
+    } else if (type === 'error') {
+      this.spinner.fail(text);
+    } else if (type === 'info') {
+      this.spinner.info(text);
+    } else {
+      this.spinner.stop();
+    }
+    
+    this.spinner = null;
+    this.logger.debug('Stopped spinner');
+  }
+
+  /**
+   * Execute a task with spinner and step-by-step progress updates
+   * @param steps Array of step descriptions
+   * @param task The async task to execute
+   * @returns The result of the task
+   */
+  public async withProgressSpinner<T>(
+    steps: string[], 
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>
+  ): Promise<T> {
+    if (this.silent) {
+      return task(() => {});
+    }
+    
+    if (steps.length === 0) {
+      return task(() => {});
+    }
+    
+    // Start with first step
+    this.startSpinner(`${steps[0]} (Step 1/${steps.length})`);
+    
+    // Create an update function to pass to the task
+    const updateStep = (stepIndex: number) => {
+      if (stepIndex < 0 || stepIndex >= steps.length) return;
+      
+      this.updateSpinner(`${steps[stepIndex]} (Step ${stepIndex + 1}/${steps.length})`);
+    };
+    
+    try {
+      // Execute the task with the update function
+      const result = await task(updateStep);
+      
+      // Complete the spinner
+      this.stopSpinner('success', 'Process completed successfully');
+      
+      return result;
+    } catch (error) {
+      // Show error in the spinner
+      this.stopSpinner('error', `Process failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Display a spinner while an async operation is in progress (legacy implementation)
    * @param message The message to display
    * @param task The async task to execute
    * @returns The result of the task
@@ -561,33 +661,14 @@ export class CLIInterface {
       return task();
     }
 
-    const spinnerFrames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-    let frameIndex = 0;
-
-    // Start the spinner
-    process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);
-
-    const spinner = setInterval(() => {
-      frameIndex = (frameIndex + 1) % spinnerFrames.length;
-      process.stdout.clearLine(0);
-      process.stdout.cursorTo(0);
-      process.stdout.write(`${chalk.cyan(spinnerFrames[frameIndex])} ${message}`);
-    }, 80);
-
+    this.startSpinner(message);
+    
     try {
       const result = await task();
-      // Stop the spinner and show success
-      clearInterval(spinner);
-      process.stdout.clearLine(0);
-      process.stdout.cursorTo(0);
-      this.success(message + ' Completed!');
+      this.stopSpinner('success', message + ' Completed!');
       return result;
     } catch (error) {
-      // Stop the spinner and show error
-      clearInterval(spinner);
-      process.stdout.clearLine(0);
-      process.stdout.cursorTo(0);
-      this.error(message + ' Failed! ' + (error instanceof Error ? error.message : String(error)));
+      this.stopSpinner('error', message + ' Failed! ' + (error instanceof Error ? error.message : String(error)));
       throw error;
     }
   }

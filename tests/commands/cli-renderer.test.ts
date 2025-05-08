@@ -7,6 +7,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
 import type { Logger } from '@/utils/logger';
+import type { CLIInterface } from '@/utils/cliInterface';
 import { CLIRenderer } from '@commands/cli-renderer';
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { createMockNotes } from '@test/__mocks__/models/note';
@@ -30,7 +31,7 @@ describe('CLIRenderer', () => {
     
     // Create the renderer with mocked dependencies
     renderer = CLIRenderer.createFresh({
-      cliInterface: mockCLI,
+      cliInterface: mockCLI as unknown as CLIInterface,
       logger: mockLogger as unknown as Logger,
     });
   });

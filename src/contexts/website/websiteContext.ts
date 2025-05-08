@@ -13,13 +13,16 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 import { PersistentWebsiteStorageAdapter } from './adapters/persistentWebsiteStorageAdapter';
 import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
+import { WebsiteIdentityNoteAdapter } from './adapters/websiteIdentityNoteAdapter';
 import { type WebsiteData, WebsiteFormatter } from './formatters';
 import { AstroContentService } from './services/astroContentService';
 import { DeploymentManagerFactory } from './services/deployment';
 import type { WebsiteDeploymentManager } from './services/deployment';
 import { LandingPageGenerationService } from './services/landingPageGenerationService';
+import { WebsiteIdentityService } from './services/websiteIdentityService';
 import { WebsiteToolService } from './tools';
 import type { WebsiteConfig } from './websiteStorage';
+import type { WebsiteIdentityData } from './schemas/websiteIdentitySchema';
 
 /**
  * Configuration for WebsiteContext
@@ -58,6 +61,9 @@ export interface WebsiteContextDependencies {
   
   /** DeploymentManager instance */
   deploymentManager: WebsiteDeploymentManager;
+  
+  /** WebsiteIdentityService instance */
+  identityService: WebsiteIdentityService;
 }
 
 /**
@@ -85,6 +91,7 @@ export class WebsiteContext extends BaseContext<
   private landingPageGenerationService: LandingPageGenerationService | null = null;
   private profileContext: ProfileContext | null = null;
   private deploymentManager: WebsiteDeploymentManager | null = null;
+  private identityService: WebsiteIdentityService | null = null;
   
   /**
    * Create a new WebsiteContext instance
@@ -109,6 +116,7 @@ export class WebsiteContext extends BaseContext<
     this.landingPageGenerationService = dependencies.landingPageGenerationService;
     this.profileContext = dependencies.profileContext;
     this.deploymentManager = dependencies.deploymentManager;
+    this.identityService = dependencies.identityService;
   }
   
   /**
@@ -240,6 +248,13 @@ export class WebsiteContext extends BaseContext<
       deploymentType: websiteConfig.deployment.type,
     });
     
+    // Create identity service
+    const identityAdapter = WebsiteIdentityNoteAdapter.getInstance();
+    const identityService = WebsiteIdentityService.getInstance({}, {
+      profileContext,
+      identityAdapter,
+    });
+    
     return {
       storage,
       formatter,
@@ -247,6 +262,7 @@ export class WebsiteContext extends BaseContext<
       landingPageGenerationService,
       profileContext,
       deploymentManager,
+      identityService,
     };
   }
 
@@ -401,6 +417,10 @@ export class WebsiteContext extends BaseContext<
       return WebsiteToolService.getInstance() as unknown as T;
     }
     
+    if (serviceType === WebsiteIdentityService as unknown as new () => T) {
+      return this.getIdentityService() as unknown as T;
+    }
+    
     // Use registry for other service types
     const registry = Registry.getInstance();
     return registry.resolve<T>(serviceType.name);
@@ -513,19 +533,69 @@ export class WebsiteContext extends BaseContext<
   }
   
   /**
+   * Get the WebsiteIdentityService instance
+   * @returns WebsiteIdentityService for managing website identity information
+   */
+  getIdentityService(): WebsiteIdentityService {
+    // Return injected service if available (primarily for testing)
+    if (this.identityService) {
+      return this.identityService;
+    }
+    
+    // Create a new service instance with dependencies
+    const identityAdapter = WebsiteIdentityNoteAdapter.getInstance();
+    this.identityService = WebsiteIdentityService.getInstance({}, {
+      profileContext: this.getProfileContext(),
+      identityAdapter,
+    });
+    
+    this.logger.debug('Initialized WebsiteIdentityService', {
+      context: 'WebsiteContext',
+    });
+    
+    return this.identityService;
+  }
+  
+  /**
    * Generate a landing page from profile data
    * This method generates content without holistic editing
    * 
+   * @param useIdentity Whether to use website identity for generation (default: true)
+   * @param regenerateIdentity Whether to regenerate identity before generating landing page (default: false)
    * @returns Result of the generation operation
    */
-  async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  async generateLandingPage(
+    useIdentity = true,
+    regenerateIdentity = false
+  ): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
+      // Get or generate identity if requested
+      let identity = null;
+      if (useIdentity) {
+        this.logger.debug('Using website identity for landing page generation', {
+          context: 'WebsiteContext',
+          regenerateIdentity,
+        });
+        
+        identity = await this.getIdentity(regenerateIdentity);
+        
+        if (!identity) {
+          this.logger.warn('Failed to get website identity, proceeding without identity information', {
+            context: 'WebsiteContext',
+          });
+        } else {
+          this.logger.debug('Successfully retrieved website identity', {
+            context: 'WebsiteContext',
+          });
+        }
+      }
+      
       // Generate landing page data (no holistic editing)
-      const landingPageData = await landingPageService.generateLandingPageData();
+      const landingPageData = await landingPageService.generateLandingPageData(identity);
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);
@@ -557,9 +627,10 @@ export class WebsiteContext extends BaseContext<
    * Edit a landing page for consistency across sections
    * This is a separate step from generation for better reliability
    * 
+   * @param useIdentity Whether to use website identity for editing (default: true)
    * @returns Result of the editing operation
    */
-  async editLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  async editLandingPage(useIdentity = true): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
@@ -574,8 +645,28 @@ export class WebsiteContext extends BaseContext<
         };
       }
       
+      // Get identity if requested
+      let identity = null;
+      if (useIdentity) {
+        this.logger.debug('Using website identity for landing page editing', {
+          context: 'WebsiteContext',
+        });
+        
+        identity = await this.getIdentity(false);
+        
+        if (!identity) {
+          this.logger.warn('Failed to get website identity, proceeding without identity information', {
+            context: 'WebsiteContext',
+          });
+        } else {
+          this.logger.debug('Successfully retrieved website identity for editing', {
+            context: 'WebsiteContext',
+          });
+        }
+      }
+      
       // Perform holistic editing
-      const editedLandingPage = await landingPageService.editLandingPage(currentLandingPage);
+      const editedLandingPage = await landingPageService.editLandingPage(currentLandingPage, identity);
       
       // Save edited content
       await this.saveLandingPageData(editedLandingPage);
@@ -837,6 +928,90 @@ export class WebsiteContext extends BaseContext<
    */
   setDeploymentManagerForTesting(manager: WebsiteDeploymentManager): void {
     this.deploymentManager = manager;
+  }
+  
+  /**
+   * Get the current website identity information
+   * @param forceRegenerate Whether to force regeneration of identity
+   * @returns The website identity information or null if not available
+   */
+  async getIdentity(forceRegenerate = false): Promise<WebsiteIdentityData | null> {
+    try {
+      const identityService = this.getIdentityService();
+      return await identityService.getIdentity(forceRegenerate);
+    } catch (error) {
+      this.logger.error('Error getting website identity', {
+        error,
+        context: 'WebsiteContext',
+      });
+      return null;
+    }
+  }
+  
+  /**
+   * Generate new website identity
+   * @returns The generated identity data
+   */
+  async generateIdentity(): Promise<{ success: boolean; message: string; data?: WebsiteIdentityData }> {
+    try {
+      const identityService = this.getIdentityService();
+      const identityData = await identityService.generateIdentity();
+      
+      return {
+        success: true,
+        message: 'Successfully generated website identity',
+        data: identityData,
+      };
+    } catch (error) {
+      this.logger.error('Error generating website identity', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error generating website identity',
+      };
+    }
+  }
+  
+  /**
+   * Update website identity with partial new data
+   * @param updates Partial data to update identity with
+   * @param shallow Whether to replace entire sections (shallow=true) or merge properties (shallow=false)
+   * @returns The updated identity data
+   */
+  async updateIdentity(
+    updates: Partial<WebsiteIdentityData>,
+    shallow = false
+  ): Promise<{ success: boolean; message: string; data?: WebsiteIdentityData }> {
+    try {
+      const identityService = this.getIdentityService();
+      const updatedData = await identityService.updateIdentity(updates, shallow);
+      
+      if (!updatedData) {
+        return {
+          success: false,
+          message: 'Failed to update website identity',
+        };
+      }
+      
+      return {
+        success: true,
+        message: 'Successfully updated website identity',
+        data: updatedData,
+      };
+    } catch (error) {
+      this.logger.error('Error updating website identity', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Unknown error updating website identity',
+      };
+    }
   }
 
   /**

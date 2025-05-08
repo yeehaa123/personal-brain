@@ -13,6 +13,11 @@ This document outlines the improvements made to centralize environment variable 
 4. Updated `Logger` class to use `logConfig.isTestMode` instead of direct environment access
 5. Removed explicit `{ silent: process.env.NODE_ENV === 'test' }` from Logger initialization throughout the codebase
 6. Updated path resolution to use the new path utilities
+7. Changed default log file paths to use 'logs/' directory instead of root directory
+8. Added automatic logs directory creation in Logger constructor
+9. Significantly reduced console verbosity by changing default console log level to 'error' (only errors are shown)
+10. Fixed logger transport configuration to ensure error logs are properly separated
+11. Further reduced noisy CLI output during generation of content
 
 ## Problem Addressed
 
@@ -25,18 +30,30 @@ Before these changes, the codebase had many scattered instances of direct enviro
 
 ## Implementation Details
 
-### 1. Test Mode Configuration in `config.ts`
+### 1. Log Configuration Updates in `config.ts`
 
 Added a new parameter to `logConfig` to centralize test mode detection:
 
 ```typescript
 export const logConfig = {
-  // other config...
+  // Log levels
+  consoleLevel: getEnv('LOG_CONSOLE_LEVEL', getEnv('BRAIN_ENV') === 'production' ? 'warn' : 'warn'),
+  fileLevel: getEnv('LOG_FILE_LEVEL', 'debug'),
+
+  // Log file paths
+  errorLogPath: getEnv('ERROR_LOG_PATH', 'logs/error.log'),
+  combinedLogPath: getEnv('COMBINED_LOG_PATH', 'logs/combined.log'),
+  debugLogPath: getEnv('DEBUG_LOG_PATH', 'logs/debug.log'),
   
   // Test mode configuration - used for silencing logs during tests
   isTestMode: getEnvAsBool('TEST_MODE', process.env.NODE_ENV === 'test'),
 };
 ```
+
+Key improvements:
+- Changed default console log level to 'warn' to reduce verbose console output
+- Changed default log file paths to use the 'logs/' directory instead of root directory
+- Used environment variables with sensible defaults for greater flexibility
 
 ### 2. Environment Utility Functions in `configUtils.ts`
 
@@ -92,6 +109,34 @@ if (isSilent) {
   });
   return;
 }
+```
+
+Added logic to automatically create the logs directory if it doesn't exist:
+
+```typescript
+/**
+ * Ensure the logs directory exists
+ * @param logPath The path to the log file
+ */
+private ensureLogDirectory(logPath: string): void {
+  try {
+    const logDir = path.dirname(logPath);
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+  } catch (error) {
+    console.error(`Failed to create log directory for ${logPath}:`, error);
+  }
+}
+```
+
+Using this utility in the Logger constructor to ensure all log directories exist:
+
+```typescript
+// Ensure log directories exist
+this.ensureLogDirectory(defaultConfig.errorLogPath);
+this.ensureLogDirectory(defaultConfig.combinedLogPath);
+this.ensureLogDirectory(defaultConfig.debugLogPath);
 ```
 
 ### 5. Code Refactoring

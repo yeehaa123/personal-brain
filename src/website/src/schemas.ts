@@ -79,16 +79,12 @@ export const ExpertiseItemSchema = z.object({
   description: z.string().optional(),
 });
 
-// Expertise section schema
+// Expertise section schema - simplified to essential content with reasonable limits
 export const ExpertiseSectionSchema = z.object({
   title: z.string().default('Expertise'),
   introduction: z.string().optional(),
-  items: z.array(ExpertiseItemSchema),
-  credentials: z.array(z.object({
-    title: z.string(),
-    issuer: z.string().optional(),
-    year: z.string().optional(),
-  })).optional(),
+  // Limit to between 3-5 items for a focused presentation
+  items: z.array(ExpertiseItemSchema).min(3).max(5),
   enabled: z.boolean().default(true),
 });
 
@@ -127,11 +123,12 @@ export const FaqItemSchema = z.object({
   answer: z.string(),
 });
 
-// FAQ section schema
+// FAQ section schema - simplified with reasonable limits
 export const FaqSectionSchema = z.object({
   title: z.string().default('Frequently Asked Questions'),
   introduction: z.string().optional(),
-  items: z.array(FaqItemSchema),
+  // Limit to between 3-7 items for a good balance of content
+  items: z.array(FaqItemSchema).min(3).max(7),
   enabled: z.boolean().default(true),
 });
 

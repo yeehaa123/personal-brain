@@ -38,11 +38,9 @@ export function displayNotes(notes: Note[], customCLI?: CLIInterface) {
     cli.printLabelValue('Tags', tagArray, { emptyText: 'none', formatter: tag => cli.styles.tag(`#${tag}`) });
     cli.printLabelValue('Created', cli.formatDate(new Date(note.createdAt)));
 
-    // Content preview
-    const contentPreview = note.content.length > 100
-      ? note.content.substring(0, 100) + '...'
-      : note.content;
-    cli.printLabelValue('Preview', contentPreview);
+    // Content preview with markdown rendering
+    const contentPreview = getExcerpt(note.content, 100);
+    cli.print(cli.styles.label('Preview:') + '\n' + cli.renderMarkdown(contentPreview));
   });
 }
 
