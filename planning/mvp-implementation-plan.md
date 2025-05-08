@@ -16,9 +16,10 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 
 1. **Protocol Response Simplification**: Simplify BrainProtocol using Claude's schema capabilities
 2. **Website Landing Page Generation**: Create a professional landing page from profile data
-3. **Caddy Deployment**: Implement flexible deployment architecture with Caddy
-4. **Website Context MCP Tools**: Add MCP Inspector visibility for website operations
-5. **MCP Architecture Refactoring**: Align codebase with MCP architecture principles
+3. **Website Identity Service**: Create a dedicated service for managing website identity information
+4. **Caddy Deployment**: Implement flexible deployment architecture with Caddy
+5. **Website Context MCP Tools**: Add MCP Inspector visibility for website operations
+6. **MCP Architecture Refactoring**: Align codebase with MCP architecture principles
 
 ## Scope Boundaries
 
@@ -38,20 +39,27 @@ This document provides a focused implementation plan for the Personal Brain MVP,
 - 🔜 Preview capability
 - 🔜 CLI and Matrix command parity
 
-#### 3. Flexible Deployment Architecture ✅
+#### 3. Website Identity Service 🔜
+- 🔜 WebsiteIdentityService implementation with Component Interface Standardization pattern
+- 🔜 WebsiteIdentityNoteAdapter for persistent storage
+- 🔜 Separation of factual profile data from creative content
+- 🔜 Integration with landing page generation
+- 🔜 MCP tools for identity management
+
+#### 4. Flexible Deployment Architecture ✅
 - ✅ Provider-agnostic deployment interface
 - ✅ Caddy server integration
 - ✅ Build process automation
 - ✅ Deployment commands for CLI and Matrix
 - ✅ Basic deployment status reporting
 
-#### 4. MCP Architecture Refactoring ✅
+#### 5. MCP Architecture Refactoring ✅
 - ✅ Resource Layer Reorganization (implemented Component Interface Standardization)
 - ✅ Protocol Layer Organization (standardized message handling and interfaces)
 - ✅ BrainProtocol Decomposition (improved communication between components)
 - ✅ Cross-Context Communication Standardization (completed in all messaging components)
 
-#### 5. Website Context MCP Tools ✅
+#### 6. Website Context MCP Tools ✅
 - ✅ WebsiteToolService implementation following Component Interface Standardization pattern
 - ✅ Tools for landing page generation, website build, and deployment
 - ✅ Integration with WebsiteContext
@@ -169,7 +177,14 @@ These features will NOT be included in the MVP, even if they seem tempting or re
    - ⏳ Add quality and confidence metrics (schema defined, needs UI integration)
    - 🔜 Improve responsive design for mobile compatibility
 
-7. **CLI Interface Improvements** (Days 4-5) 🔜 Upcoming
+7. **Website Identity Service** (Days 6-8) 🔜 Upcoming
+   - 🔜 Implement WebsiteIdentityService following Component Interface Standardization pattern
+   - 🔜 Create WebsiteIdentityNoteAdapter for persistent storage
+   - 🔜 Integrate with landing page generation process
+   - 🔜 Add MCP tools for identity management
+   - 🔜 Update tests for new components
+
+8. **CLI Interface Improvements** (Days 8-9) 🔜 Upcoming
    - 🔜 Implement logger separation
    - 🔜 Create visual distinction between logs and content
    - 🔜 Add log visibility controls
@@ -177,18 +192,18 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 
 ### Phase 3: Architecture Refinement and Polish
 
-8. **MCP Architecture Refactoring Phase 3-4** (Days 1-3) ✅ Completed
+9. **MCP Architecture Refactoring Phase 3-4** (Days 1-3) ✅ Completed
    - ✅ BrainProtocol Decomposition (Days 1-2)
    - ✅ Cross-Context Communication (Day 3)
    - ✅ Integration testing of refactored components
 
-9. **Integration & Performance** (Days 3-4) 🔜 Upcoming
+10. **Integration & Performance** (Days 3-4) 🔜 Upcoming
    - 🔜 Optimize build and preview performance
    - 🔜 Enhance error reporting and recovery
    - 🔜 Improve automatic profile data extraction
    - 🔜 Verify MCP Inspector compatibility
 
-10. **Final Integration and Testing** (Day 5) 🔜 Upcoming
+11. **Final Integration and Testing** (Day 5) 🔜 Upcoming
     - 🔜 End-to-end testing
     - 🔜 Bug fixes and refinements
     - 🔜 Documentation
@@ -201,12 +216,13 @@ These features will NOT be included in the MVP, even if they seem tempting or re
 | 0 | 1-3 | Protocol Response Simplification | ✅ Completed |
 | 1 | 1-2 | Website Context Setup | ✅ Completed |
 | 1 | 3 | Basic Astro Setup & Content Services | ✅ Completed |
-| 1 | 4 | Command Interface Integration | ⏳ In Progress |
+| 1 | 4 | Command Interface Integration | ✅ Completed |
 | 1 | 4-5 | Caddy Deployment Integration | ✅ Completed |
 | 2 | 1-2 | MCP Refactoring Phase 1 (Resource Layer) | ✅ Completed |
 | 2 | 3 | MCP Refactoring Phase 2 (Protocol Layer) | ✅ Completed |
 | 2 | 3-6 | Landing Page Refinements | ⏳ In Progress |
-| 2 | 4-5 | CLI Interface Improvements | 🔜 Upcoming |
+| 2 | 6-8 | Website Identity Service | 🔜 Upcoming |
+| 2 | 8-9 | CLI Interface Improvements | 🔜 Upcoming |
 | 3 | 1-2 | MCP Refactoring Phase 3 (BrainProtocol) | ✅ Completed |
 | 3 | 3 | MCP Refactoring Phase 4 (Communication) | ✅ Completed |
 | 3 | 3-4 | Integration & Performance | 🔜 Upcoming |
@@ -242,6 +258,14 @@ For the MVP to be considered complete, all the following criteria must be met:
 - ⏳ Two-phase editorial process (framework implemented, needs final integration)
 - ⏳ Quality and confidence metrics for content evaluation (schema defined)
 - 🔜 All profile sections render properly with responsive design
+
+### Website Identity Service
+- 🔜 WebsiteIdentityService implemented following Component Interface Standardization pattern
+- 🔜 WebsiteIdentityNoteAdapter created for persistent storage as notes
+- 🔜 Separation between factual profile data and generated creative content
+- 🔜 Integration with LandingPageGenerationService
+- 🔜 MCP tools for identity management implemented
+- 🔜 All tests passing for new components
 
 ### Flexible Deployment Architecture
 - ✅ Provider-agnostic architecture implemented
