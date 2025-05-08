@@ -58,22 +58,77 @@ export class MockCLIInterface implements MockableCLIInterface {
   public input = mock(async (_message: string) => '');
   public confirm = mock(async (_message: string) => true);
   
-  /** Spinner-related methods */
-  public startSpinner = mock((_text: string) => {});
-  public updateSpinner = mock((_text: string) => {});
-  public stopSpinner = mock((_type?: 'success' | 'error' | 'info', _text?: string) => {});
+  /** Spinner-related methods with tracking */
+  public spinnerStartCalls: string[] = [];
+  public spinnerUpdateCalls: string[] = [];
+  public spinnerStopCalls: Array<{type?: 'success' | 'error' | 'info', text?: string}> = [];
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public withSpinner<T = any>(_message: string, callback: () => Promise<T>): Promise<T> {
-    return callback();
+  // Mock implementations that track calls
+  public startSpinner = mock((text: string) => {
+    this.spinnerStartCalls.push(text);
+  });
+  
+  public updateSpinner = mock((text: string) => {
+    this.spinnerUpdateCalls.push(text);
+  });
+  
+  public stopSpinner = mock((type?: 'success' | 'error' | 'info', text?: string) => {
+    this.spinnerStopCalls.push({type, text});
+  });
+  
+  public withSpinner<T = unknown>(message: string, callback: () => Promise<T>): Promise<T> {
+    // Start spinner with message
+    this.startSpinner(message);
+    
+    // Execute the task
+    return callback()
+      .then((result) => {
+        // Stop spinner on success
+        this.stopSpinner('success', 'Process completed successfully');
+        return result;
+      })
+      .catch((error) => {
+        // Stop spinner on error
+        this.stopSpinner('error', `Process failed: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      });
   }
   
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public withProgressSpinner<T = any>(
-    _steps: string[], 
+  // Track step progress for testing assertions
+  public currentStep: number = 0;
+  public steps: string[] = [];
+  
+  public withProgressSpinner<T = unknown>(
+    steps: string[], 
     task: (updateStep: (stepIndex: number) => void) => Promise<T>,
   ): Promise<T> {
-    return task((_stepIndex: number) => {});
+    // Store the steps for later assertions
+    this.steps = [...steps];
+    this.currentStep = 0;
+    
+    // Start with first step if there are steps
+    if (steps.length > 0) {
+      this.startSpinner(`${steps[0]} (Step 1/${steps.length})`);
+    }
+    
+    // Create an update function that tracks step changes
+    const updateStep = (stepIndex: number): void => {
+      if (stepIndex < 0 || stepIndex >= steps.length) return;
+      
+      this.currentStep = stepIndex;
+      this.updateSpinner(`${steps[stepIndex]} (Step ${stepIndex + 1}/${steps.length})`);
+    };
+    
+    // Execute the task with our tracking updateStep function
+    return task(updateStep)
+      .then((result) => {
+        this.stopSpinner('success', 'Process completed successfully');
+        return result;
+      })
+      .catch((error) => {
+        this.stopSpinner('error', `Process failed: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      });
   }
   
   // Static methods
