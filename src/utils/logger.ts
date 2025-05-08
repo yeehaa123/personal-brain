@@ -2,9 +2,7 @@
  * Logging utility using Winston for consistent logging across the application
  * 
  * Implements the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
- * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
+ * - getInstance(): Returns the singleton instance resetInstance(): Resets the singleton instance (mainly for testing) createFresh(): Creates a new instance without affecting the singleton
  * 
  * TODO: This class will be updated as part of the CLI/logger separation initiative
  * See planning/cli-logger-separation.md for the detailed plan
@@ -52,7 +50,7 @@ const logLevels = {
 export class Logger {
   /** The singleton instance */
   private static instance: Logger | null = null;
-  
+
   /** The underlying Winston logger */
   private winstonLogger: winston.Logger;
 
@@ -79,7 +77,7 @@ export class Logger {
   private constructor(config?: LoggerConfig) {
     // Check for silent mode first, either from explicit config or from test environment
     const isSilent = config?.silent ?? isTestEnvironment();
-    
+
     if (isSilent) {
       // Create a silent logger with no transports
       this.winstonLogger = winston.createLogger({
@@ -88,7 +86,7 @@ export class Logger {
       });
       return;
     }
-    
+
     // Default config values
     const defaultConfig = {
       consoleLevel: getEnv('LOG_CONSOLE_LEVEL', isProductionEnvironment() ? 'warn' : 'warn'),
@@ -97,12 +95,12 @@ export class Logger {
       combinedLogPath: getEnv('COMBINED_LOG_PATH', 'logs/combined.log'),
       debugLogPath: getEnv('DEBUG_LOG_PATH', 'logs/debug.log'),
     };
-    
+
     // Ensure log directories exist
     this.ensureLogDirectory(defaultConfig.errorLogPath);
     this.ensureLogDirectory(defaultConfig.combinedLogPath);
     this.ensureLogDirectory(defaultConfig.debugLogPath);
-    
+
     // Merge provided config with defaults
     const mergedConfig = {
       consoleLevel: config?.consoleLevel || defaultConfig.consoleLevel,
@@ -122,13 +120,13 @@ export class Logger {
         return `[${timestamp}] ${level}: ${contextStr}${message}${metaStr}`;
       }),
     );
-    
+
     // Create a custom format for file output
     const fileFormat = winston.format.combine(
       winston.format.timestamp(),
       winston.format.json(),
     );
-    
+
     // Filter to exclude debug messages from console
     const excludeDebug = winston.format((info) => {
       if (info.level.includes('debug')) {
@@ -136,12 +134,12 @@ export class Logger {
       }
       return info;
     })();
-    
+
     // Filter to only include error messages
     const errorsOnly = winston.format((info) => {
       return info.level === 'error' ? info : false;
     })();
-    
+
     // Create the Winston logger
     this.winstonLogger = winston.createLogger({
       levels: logLevels,
@@ -177,7 +175,7 @@ export class Logger {
         }),
       ],
     });
-    
+
     // Note: We don't need to set the overall logger level here
     // Each transport's level is now set independently
     // Setting this would override individual transport levels, so we're removing it
@@ -198,7 +196,7 @@ export class Logger {
     }
     return Logger.instance;
   }
-  
+
   /**
    * Reset the singleton instance (primarily for testing)
    * This clears the instance and any resources it holds
@@ -207,7 +205,7 @@ export class Logger {
     // Cleanup not necessary for logger as Winston handles its own cleanup
     Logger.instance = null;
   }
-  
+
   /**
    * Create a fresh instance (primarily for testing)
    * This creates a new instance without affecting the singleton
@@ -218,7 +216,7 @@ export class Logger {
   public static createFresh(config?: LoggerConfig): Logger {
     return new Logger(config);
   }
-  
+
   /**
    * Log a message at the 'info' level
    */
@@ -229,7 +227,7 @@ export class Logger {
       this.winstonLogger.info(message, ...args);
     }
   }
-  
+
   /**
    * Log a message at the 'warn' level
    */
@@ -240,7 +238,7 @@ export class Logger {
       this.winstonLogger.warn(message, ...args);
     }
   }
-  
+
   /**
    * Log a message at the 'error' level
    */
@@ -251,7 +249,7 @@ export class Logger {
       this.winstonLogger.error(message, ...args);
     }
   }
-  
+
   /**
    * Log a message at the 'debug' level
    */
@@ -262,7 +260,7 @@ export class Logger {
       this.winstonLogger.debug(message, ...args);
     }
   }
-  
+
   /**
    * Log a message at the 'verbose' level
    */
@@ -273,7 +271,7 @@ export class Logger {
       this.winstonLogger.verbose(message, ...args);
     }
   }
-  
+
   /**
    * Log a message at the 'silly' level
    */
@@ -284,7 +282,7 @@ export class Logger {
       this.winstonLogger.silly(message, ...args);
     }
   }
-  
+
   /**
    * Create a child logger with additional metadata
    */

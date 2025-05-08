@@ -14,6 +14,7 @@
     "import": "bun run src/import.ts",
     "delete": "bun run src/delete.ts",
     "cli": "bun run src/cli.ts",
+    "cli:debug": "bun run src/cli.ts",
     "embed": "bun run src/embed.ts all",
     "embed:notes": "bun run src/embed.ts notes",
     "embed:profile": "bun run src/embed.ts profile",

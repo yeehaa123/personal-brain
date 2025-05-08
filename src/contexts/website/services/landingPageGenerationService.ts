@@ -135,7 +135,10 @@ export class LandingPageGenerationService {
    * @param identity Optional website identity data to use for generation
    * @returns A complete landing page data structure with content
    */
-  async generateLandingPageData(identity?: WebsiteIdentityData | null): Promise<LandingPageData> {
+  async generateLandingPageData(
+    identity?: WebsiteIdentityData | null,
+    onProgress?: (step: string, index: number) => void,
+  ): Promise<LandingPageData> {
     this.logger.info('Starting landing page generation', {
       context: 'LandingPageGenerationService',
       usingIdentity: !!identity,
@@ -154,7 +157,7 @@ export class LandingPageGenerationService {
       }
       
       // Generate content for each section individually
-      landingPage = await this.generateAllSections(landingPage, identity);
+      landingPage = await this.generateAllSections(landingPage, identity, onProgress);
       
       this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
@@ -396,6 +399,7 @@ export class LandingPageGenerationService {
   private async generateAllSections(
     landingPage: LandingPageData,
     identity?: WebsiteIdentityData | null,
+    onProgress?: (step: string, index: number) => void,
   ): Promise<LandingPageData> {
     this.logger.info('Generating content for each section', {
       context: 'LandingPageGenerationService',
@@ -412,12 +416,37 @@ export class LandingPageGenerationService {
       await this.generateIdentityInfo(updatedLandingPage);
     }
     
+    // Progress tracking for sections - map to steps in CLI
+    const sectionToStepMap: Record<string, { step: string, index: number }> = {
+      'hero': { step: 'Generating hero section', index: 2 },
+      'problemStatement': { step: 'Creating problem statement', index: 3 },
+      'services': { step: 'Developing services content', index: 4 },
+      'process': { step: 'Building process description', index: 5 },
+      'expertise': { step: 'Adding expertise highlights', index: 6 },
+      'caseStudies': { step: 'Creating case studies', index: 7 },
+      'pricing': { step: 'Adding pricing information', index: 8 },
+      'faq': { step: 'Building FAQ section', index: 9 },
+      // Map other sections to appropriate steps
+      'about': { step: 'Adding about section', index: 6 },
+      'cta': { step: 'Adding call to action', index: 10 },
+      'footer': { step: 'Creating footer', index: 10 },
+    };
+    
     // Generate each section one by one
     for (const sectionType of updatedLandingPage.sectionOrder) {
       if (this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas]) {
+        // Report progress if we have a mapping for this section type
+        if (onProgress && sectionToStepMap[sectionType]) {
+          const { step, index } = sectionToStepMap[sectionType];
+          onProgress(step, index);
+        }
+        
         await this.generateSectionContent(updatedLandingPage, sectionType, identity);
       }
     }
+    
+    // Final step
+    onProgress?.('Finalizing content', 10);
     
     return updatedLandingPage;
   }

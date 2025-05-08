@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { setTimeout } from 'timers/promises';
 
 import { websiteConfig } from '@/config';
 import { BaseContext } from '@/contexts/baseContext';
@@ -565,15 +566,23 @@ export class WebsiteContext extends BaseContext<
    * @returns Result of the generation operation
    */
   async generateLandingPage(
-    useIdentity = true,
-    regenerateIdentity = false,
+    options?: {
+      useIdentity?: boolean;
+      regenerateIdentity?: boolean;
+      onProgress?: (step: string, index: number) => void;
+    },
   ): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+    // Default values
+    const useIdentity = options?.useIdentity ?? true;
+    const regenerateIdentity = options?.regenerateIdentity ?? false;
+    const onProgress = options?.onProgress;
     try {
       // Get services
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Get or generate identity if requested
+      // Step 1: Get or generate identity if requested
+      onProgress?.('Retrieving website identity', 0);
       let identity = null;
       if (useIdentity) {
         this.logger.debug('Using website identity for landing page generation', {
@@ -594,8 +603,12 @@ export class WebsiteContext extends BaseContext<
         }
       }
       
-      // Generate landing page data (no holistic editing)
-      const landingPageData = await landingPageService.generateLandingPageData(identity);
+      // Step 2: Analyze site requirements - prepare for generation
+      onProgress?.('Analyzing site requirements', 1);
+      await setTimeout(500); // Short pause before generation
+      
+      // Generate landing page data - onProgress will be called for each section
+      const landingPageData = await landingPageService.generateLandingPageData(identity, onProgress);
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);

@@ -277,32 +277,52 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Get CLI interface for status updates with spinner
         const cli = CLIInterface.getInstance();
         
-        // Note: In the future, we could use a progress spinner with steps:
-        // const steps = [
-        //   'Retrieving website identity',
-        //   'Generating hero section',
-        //   ...etc
-        // ];
+        // Define steps for the progress spinner
+        const steps = [
+          'Retrieving website identity',
+          'Analyzing site requirements',
+          'Generating hero section',
+          'Creating problem statement',
+          'Developing services content',
+          'Building process description',
+          'Adding expertise highlights',
+          'Creating case studies',
+          'Adding pricing information',
+          'Building FAQ section',
+          'Finalizing content',
+        ];
         
-        // Since we can't hook into the actual progress events yet,
-        // we'll use the simple spinner approach for now
-        cli.startSpinner('Generating landing page content (this will take a few minutes)...');
-        
-        // Launch the actual generation process
-        const result = await this.websiteContext.generateLandingPage();
-        
-        // Stop the spinner with appropriate status
-        if (result.success) {
-          cli.stopSpinner('success', 'Landing page generated successfully');
-        } else {
-          cli.stopSpinner('error', 'Failed to generate landing page');
-        }
+        // Use the progress spinner with steps
+        const result = await cli.withProgressSpinner(steps, async (updateStep) => {
+          // Launch the actual generation process with our step progress tracking
+          // The generateLandingPage method will call updateStep at appropriate times
+          
+          // If the context is not available, handle gracefully
+          if (!this.websiteContext) {
+            return {
+              success: false,
+              message: 'Website context not available',
+            };
+          }
+          
+          // The website context and service will call updateStep with the right indices
+          return await this.websiteContext.generateLandingPage({
+            useIdentity: true,
+            regenerateIdentity: false,
+            onProgress: (_step, index) => {
+              // Simply use the index provided by the progress callback
+              if (index >= 0 && index < steps.length) {
+                updateStep(index);
+              }
+            },
+          });
+        });
         
         return {
           type: 'landing-page',
-          success: result.success,
-          message: result.message,
-          data: result.data,
+          success: result?.success ?? false,
+          message: result?.message ?? 'Failed to generate landing page',
+          data: result?.data,
         };
       } catch (error) {
         // Get CLI interface for error handling
