@@ -3,6 +3,7 @@
  */
 
 import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
@@ -151,6 +152,17 @@ export interface WebsiteBuildResult {
   message: string;
   url?: string;
   output?: string;
+}
+
+/**
+ * Website identity result
+ */
+export interface WebsiteIdentityResult {
+  type: 'website-identity';
+  success?: boolean;
+  message?: string;
+  data?: WebsiteIdentityData;
+  action?: 'view' | 'generate' | 'update';
 }
 
 /**

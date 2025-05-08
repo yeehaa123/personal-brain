@@ -92,6 +92,7 @@
     "matrix-js-sdk": "^37.1.0",
     "nanoid": "^5.1.4",
     "openai": "^4.89.0",
+    "ora": "^8.2.0",
     "sanitize-html": "^2.15.0",
     "serve": "^14.2.4",
     "winston": "^3.17.0",

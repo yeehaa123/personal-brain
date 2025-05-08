@@ -18,6 +18,7 @@ import type { ProgressData } from '../interfaces/matrix/formatters/progress-type
 import type { 
   NotePreview, 
   WebsiteBuildResult, 
+  WebsiteIdentityResult,
   WebsitePromoteResult, 
   WebsiteStatusResult, 
 } from '../interfaces/matrix/formatters/types';
@@ -312,6 +313,11 @@ export class MatrixRenderer implements IProgressTracker {
       
       case 'website-status': {
         this.sendMessageFn(roomId, this.formatter.formatWebsiteStatus(result as WebsiteStatusResult));
+        break;
+      }
+      
+      case 'website-identity': {
+        this.sendMessageFn(roomId, this.formatter.formatWebsiteIdentity(result as WebsiteIdentityResult));
         break;
       }
       

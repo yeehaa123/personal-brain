@@ -4,7 +4,7 @@
  * Creates consistent, structured responses for different result types
  */
 
-import { formatLandingPageToMarkdown } from '@/utils/landingPageUtils';
+import { formatIdentityToMarkdown, formatLandingPageToMarkdown } from '@/utils/landingPageUtils';
 import logger from '@/utils/logger';
 import { getExcerpt } from '@/utils/noteUtils';
 
@@ -21,6 +21,7 @@ import type {
   SystemStatus,
   WebsiteBuildResult, 
   WebsiteConfigResult,
+  WebsiteIdentityResult,
   WebsitePromoteResult,
   WebsiteStatusResult,
 } from './types';
@@ -1175,6 +1176,54 @@ export class MatrixResponseFormatter {
    * @param profile Profile object
    * @returns Array of message lines
    */
+  /**
+   * Format website identity data
+   * 
+   * @param result Website identity result
+   * @returns Formatted identity data
+   */
+  formatWebsiteIdentity(result: WebsiteIdentityResult): string {
+    if (this.useBlocks) {
+      const builder = new MatrixBlockBuilder();
+      
+      builder.addHeader('Website Identity');
+      
+      // Add success/failure message if relevant
+      if (result.success !== undefined && result.message !== undefined) {
+        const icon = result.success === false ? '❌' : '✅';
+        builder.addSection(`${icon} ${result.message}`);
+      }
+      
+      // Add identity data if available
+      if (result.data) {
+        const identityMarkdown = formatIdentityToMarkdown(result.data);
+        builder.addSection(identityMarkdown);
+      } else if (result.action === 'view') {
+        builder.addSection('⚠️ No identity data found. Generate identity data with `website-identity generate`.');
+      }
+      
+      return builder.build() as string;
+    } else {
+      let message = '### Website Identity\n\n';
+      
+      // Add success/failure message if relevant
+      if (result.success === false) {
+        message += `❌ ${result.message || 'Failed to process identity command'}\n`;
+      } else if (result.message) {
+        message += `✅ ${result.message}\n\n`;
+      }
+      
+      // Add identity data if available
+      if (result.data) {
+        message += formatIdentityToMarkdown(result.data);
+      } else if (result.action === 'view') {
+        message += '⚠️ No identity data found. Generate identity data with `website-identity generate`.';
+      }
+      
+      return this.markdown.format(message);
+    }
+  }
+
   /**
    * Format progress tracker output for Matrix
    * 
