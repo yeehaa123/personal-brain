@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import type { CommandHandler } from '@/commands';
-import type { CLIInterface } from '@/utils/cliInterface';
 import type { CLIRenderer } from '@/commands/cli-renderer';
 import { CLIApp } from '@/interfaces/cli-app';
+import type { CLIInterface } from '@/utils/cliInterface';
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockCLIInterface } from '@test/__mocks__/utils/cliInterface';
 

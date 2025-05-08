@@ -615,7 +615,7 @@ export class CLIInterface {
    */
   public async withProgressSpinner<T>(
     steps: string[], 
-    task: (updateStep: (stepIndex: number) => void) => Promise<T>
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>,
   ): Promise<T> {
     if (this.silent) {
       return task(() => {});

@@ -7,13 +7,13 @@ import type { WebsiteDeploymentManager } from '@/contexts/website/services/deplo
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
 import type { WebsiteIdentityService } from '@/contexts/website/services/websiteIdentityService';
 import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
-import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 import { MockWebsiteIdentityNoteAdapter } from '@test/__mocks__/contexts/website/adapters/websiteIdentityNoteAdapter';
+import { MockWebsiteStorageAdapter } from '@test/__mocks__/contexts/website/adapters/websiteStorageAdapter';
 import { MockAstroContentService } from '@test/__mocks__/contexts/website/services/astroContentService';
 import { MockWebsiteDeploymentManager } from '@test/__mocks__/contexts/website/services/deployment/deploymentManager';
 import { MockLandingPageGenerationService } from '@test/__mocks__/contexts/website/services/landingPageGenerationService';
 import { MockWebsiteIdentityService } from '@test/__mocks__/contexts/website/services/websiteIdentityService';
-import { createTestLandingPageData, createTestIdentityData } from '@test/helpers';
+import { createTestIdentityData, createTestLandingPageData } from '@test/helpers';
 
 describe('WebsiteContext', () => {
   // Shared test resources

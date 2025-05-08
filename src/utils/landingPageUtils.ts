@@ -368,7 +368,7 @@ export function formatIdentityToMarkdown(identity: WebsiteIdentityData): string 
   markdown += `**Desired Action:** ${values.desiredAction}\n\n`;
   
   // Footer
-  markdown += `---\n\n`;
+  markdown += '---\n\n';
   
   return markdown;
 }

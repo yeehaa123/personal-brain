@@ -3,8 +3,8 @@
  * Defines the common types used throughout the command system
  */
 
-import type { LandingPageData, WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
+import type { LandingPageData, WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import type { ExternalCitation } from '@/protocol/types';

@@ -14,7 +14,8 @@ import type { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import type { Note } from '@/models/note';
 import { ServiceRegistry } from '@/services/serviceRegistry';
 import { Logger } from '@/utils/logger';
-import { WebsiteIdentitySchema, type WebsiteIdentityData } from '../schemas/websiteIdentitySchema';
+
+import { type WebsiteIdentityData, WebsiteIdentitySchema } from '../schemas/websiteIdentitySchema';
 
 // Consistent ID for the identity note
 const IDENTITY_NOTE_ID = 'website-identity';

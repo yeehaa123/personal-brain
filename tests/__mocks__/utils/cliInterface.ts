@@ -12,12 +12,8 @@ import type { CLIInterfaceOptions, CLIStyles } from '@/utils/cliInterface';
 import type { CLIInterface } from '@/utils/cliInterface';
 import Logger from '@/utils/logger';
 
-/**
- * Interface for our MockCLIInterface that omits the private members from CLIInterface
- */
-interface MockableCLIInterface extends Omit<CLIInterface, 'spinner'> {
-  // The interface doesn't need to add anything, just removes the private field
-}
+// Use a type instead of interface to avoid lint error about empty interface
+type MockableCLIInterface = Omit<CLIInterface, 'spinner'>;
 
 /**
  * MockCLIInterface provides a standardized mock for the CLIInterface class.
@@ -75,7 +71,7 @@ export class MockCLIInterface implements MockableCLIInterface {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public withProgressSpinner<T = any>(
     _steps: string[], 
-    task: (updateStep: (stepIndex: number) => void) => Promise<T>
+    task: (updateStep: (stepIndex: number) => void) => Promise<T>,
   ): Promise<T> {
     return task((_stepIndex: number) => {});
   }

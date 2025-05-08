@@ -19,6 +19,7 @@ import {
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
+
 import type { WebsiteIdentityData } from '../schemas/websiteIdentitySchema';
 
 import { SectionQualityService } from './landingPage/sectionQualityService';
@@ -394,7 +395,7 @@ export class LandingPageGenerationService {
    */
   private async generateAllSections(
     landingPage: LandingPageData,
-    identity?: WebsiteIdentityData | null
+    identity?: WebsiteIdentityData | null,
   ): Promise<LandingPageData> {
     this.logger.info('Generating content for each section', {
       context: 'LandingPageGenerationService',
@@ -522,7 +523,7 @@ Please ensure all content follows these brand guidelines consistently.
   private async generateSectionContent(
     landingPage: LandingPageData, 
     sectionType: string,
-    identity?: WebsiteIdentityData | null
+    identity?: WebsiteIdentityData | null,
   ): Promise<void> {
     this.logger.debug(`Generating content for section: ${sectionType}`, {
       context: 'LandingPageGenerationService',
@@ -717,7 +718,7 @@ Please ensure all content follows these brand guidelines consistently.
    */
   async editLandingPage(
     landingPage: LandingPageData, 
-    identity?: WebsiteIdentityData | null
+    identity?: WebsiteIdentityData | null,
   ): Promise<LandingPageData> {
     this.logger.info('Performing holistic content review and editing', {
       context: 'LandingPageGenerationService',
@@ -816,7 +817,7 @@ Keep the tone consistent across all items. Return only these four fields in JSON
   private async editSectionContent(
     landingPage: LandingPageData, 
     sectionType: string,
-    identity?: WebsiteIdentityData | null
+    identity?: WebsiteIdentityData | null,
   ): Promise<void> {
     this.logger.debug(`Editing content for section: ${sectionType}`, {
       context: 'LandingPageGenerationService',
@@ -861,13 +862,13 @@ Keep the tone consistent across all items. Return only these four fields in JSON
       const brandGuidelines = this.createBrandGuidelinesFromIdentity(identity);
       sectionPrompt = sectionPrompt.replace(
         '{{ADDITIONAL_GUIDELINES}}',
-        brandGuidelines
+        brandGuidelines,
       );
     } else {
       // No additional guidelines
       sectionPrompt = sectionPrompt.replace(
         '{{ADDITIONAL_GUIDELINES}}',
-        ''
+        '',
       );
     }
     

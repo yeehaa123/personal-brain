@@ -3,10 +3,10 @@ import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'b
 import { SectionQualityService } from '@/contexts/website/services/landingPage/sectionQualityService';
 import { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
 import { BrainProtocol } from '@/protocol/brainProtocol';
+import { createTestIdentityData } from '@test/helpers';
 import type { LandingPageData } from '@website/schemas';
 import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
 // Only using createTestIdentityData helper without needing the type
-import { createTestIdentityData } from '@test/helpers';
 
 /**
  * Mock landing page data for testing
@@ -465,7 +465,7 @@ describe('LandingPageGenerationService', () => {
             description: 'Identity-aligned Description',
             name: 'Identity-aligned Name',
             tagline: 'Identity-aligned Tagline',
-          }
+          },
         });
         
         // Act

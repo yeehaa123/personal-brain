@@ -4,8 +4,8 @@
  * This file contains utilities for testing website-related functionality
  */
 
-import type { LandingPageData } from '@website/schemas';
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
+import type { LandingPageData } from '@website/schemas';
 
 /**
  * Create a valid LandingPageData object with minimal required fields for testing
@@ -146,7 +146,7 @@ export function createTestIdentityData(overrides?: Partial<WebsiteIdentityData>)
         ],
         desiredAction: 'Contact Test User for a consultation on your web development needs',
       },
-    }
+    },
   };
 
   // Merge overrides with default data

@@ -1,8 +1,8 @@
 import { mock } from 'bun:test';
 
 // Import direct types we need
-import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 
 /**
  * Mock implementation of WebsiteIdentityService
@@ -47,7 +47,7 @@ export class MockWebsiteIdentityService {
         painPoints: ['complex development needs', 'technical debt', 'scalability challenges'],
         desiredAction: 'Contact Test User for professional software development services',
       },
-    }
+    },
   };
   
   // Mock methods
@@ -55,7 +55,7 @@ export class MockWebsiteIdentityService {
     if (forceRegenerate) {
       // Create a new instance with the current time to simulate regeneration
       return {
-        ...this.identityData
+        ...this.identityData,
       };
     }
     return { ...this.identityData };
@@ -64,13 +64,13 @@ export class MockWebsiteIdentityService {
   public generateIdentity = mock(async (): Promise<WebsiteIdentityData> => {
     // Create a new instance to simulate generation
     return {
-      ...this.identityData
+      ...this.identityData,
     };
   });
   
   public updateIdentity = mock(async (
     updates: Partial<WebsiteIdentityData>,
-    shallow = false
+    shallow = false,
   ): Promise<WebsiteIdentityData | null> => {
     if (shallow) {
       // For shallow updates, replace sections completely
@@ -112,7 +112,7 @@ export class MockWebsiteIdentityService {
         if (updates.brandIdentity.contentStyle) {
           brandIdentity.contentStyle = { 
             ...brandIdentity.contentStyle, 
-            ...updates.brandIdentity.contentStyle 
+            ...updates.brandIdentity.contentStyle, 
           };
         }
         

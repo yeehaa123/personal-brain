@@ -6,8 +6,8 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 
-import type { Logger } from '@/utils/logger';
 import type { CLIInterface } from '@/utils/cliInterface';
+import type { Logger } from '@/utils/logger';
 import { CLIRenderer } from '@commands/cli-renderer';
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { createMockNotes } from '@test/__mocks__/models/note';

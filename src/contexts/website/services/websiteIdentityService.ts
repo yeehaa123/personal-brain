@@ -11,24 +11,24 @@
  */
 
 import { ProfileContext } from '@/contexts/profiles';
+import type { Profile } from '@/models/profile';
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
-import type { Profile } from '@/models/profile';
 
 import { WebsiteIdentityNoteAdapter } from '../adapters/websiteIdentityNoteAdapter';
 import {
-  WebsiteIdentitySchema,
-  CreativeContentSchema,
+  type BrandIdentity,
   BrandIdentitySchema,
-  type WebsiteIdentityData,
-  type PersonalData,
   type CreativeContent,
-  type BrandIdentity
+  CreativeContentSchema,
+  type PersonalData,
+  type WebsiteIdentityData,
+  WebsiteIdentitySchema,
 } from '../schemas/websiteIdentitySchema';
 
 // Import prompt templates
-import creativeContentPrompt from './prompts/identity/creative-content.txt';
 import brandIdentityPrompt from './prompts/identity/brand-identity.txt';
+import creativeContentPrompt from './prompts/identity/creative-content.txt';
 
 /**
  * Configuration options for WebsiteIdentityService
@@ -204,7 +204,7 @@ export class WebsiteIdentityService {
     const identityData: WebsiteIdentityData = {
       personalData,
       creativeContent,
-      brandIdentity
+      brandIdentity,
     };
     
     // Validate with schema
@@ -227,7 +227,7 @@ export class WebsiteIdentityService {
    */
   async updateIdentity(
     updates: Partial<WebsiteIdentityData>,
-    shallow = false
+    shallow = false,
   ): Promise<WebsiteIdentityData | null> {
     try {
       // Get current identity data
@@ -283,7 +283,7 @@ export class WebsiteIdentityService {
         [profile.city, profile.state]
           .filter(Boolean)
           .join(', ') : 
-        undefined
+        undefined,
     };
   }
   
@@ -297,7 +297,7 @@ export class WebsiteIdentityService {
     });
     
     // Prepare prompt with replacements
-    let prompt = creativeContentPrompt
+    const prompt = creativeContentPrompt
       .replace('{{name}}', personalData.name)
       .replace('{{company}}', personalData.company ? ` from ${personalData.company}` : '')
       .replace('{{occupation}}', personalData.occupation ? ` who is a ${personalData.occupation}` : '');
@@ -336,7 +336,7 @@ export class WebsiteIdentityService {
           
           keyAchievements: Array.isArray(generatedContent.keyAchievements) ? 
             generatedContent.keyAchievements : 
-            []
+            [],
         };
         
         this.logger.debug('Generated creative content', {
@@ -357,7 +357,7 @@ export class WebsiteIdentityService {
       title: `${personalData.name} - ${personalData.occupation || 'Professional Services'}`,
       description: `Professional services provided by ${personalData.name}${personalData.company ? ` at ${personalData.company}` : ''}.`,
       tagline: 'Expert solutions for your needs',
-      keyAchievements: []
+      keyAchievements: [],
     };
   }
   
@@ -368,14 +368,14 @@ export class WebsiteIdentityService {
    */
   async generateBrandIdentity(
     personalData: PersonalData,
-    creativeContent: CreativeContent
+    creativeContent: CreativeContent,
   ): Promise<BrandIdentity> {
     this.logger.debug('Generating brand identity', {
       context: 'WebsiteIdentityService',
     });
     
     // Prepare prompt with replacements
-    let prompt = brandIdentityPrompt
+    const prompt = brandIdentityPrompt
       .replace('{{name}}', personalData.name)
       .replace('{{occupation}}', personalData.occupation ? `, a ${personalData.occupation}` : '')
       .replace('{{tagline}}', creativeContent.tagline)
@@ -403,7 +403,7 @@ export class WebsiteIdentityService {
           tone: {
             formality: tone.formality || defaultIdentity.tone.formality,
             personality: Array.isArray(tone.personality) ? tone.personality : defaultIdentity.tone.personality,
-            emotion: tone.emotion || defaultIdentity.tone.emotion
+            emotion: tone.emotion || defaultIdentity.tone.emotion,
           },
           contentStyle: {
             writingStyle: contentStyle.writingStyle || defaultIdentity.contentStyle.writingStyle,
@@ -411,14 +411,14 @@ export class WebsiteIdentityService {
             vocabLevel: contentStyle.vocabLevel || defaultIdentity.contentStyle.vocabLevel,
             useJargon: typeof contentStyle.useJargon === 'boolean' ? contentStyle.useJargon : defaultIdentity.contentStyle.useJargon,
             useHumor: typeof contentStyle.useHumor === 'boolean' ? contentStyle.useHumor : defaultIdentity.contentStyle.useHumor,
-            useStories: typeof contentStyle.useStories === 'boolean' ? contentStyle.useStories : defaultIdentity.contentStyle.useStories
+            useStories: typeof contentStyle.useStories === 'boolean' ? contentStyle.useStories : defaultIdentity.contentStyle.useStories,
           },
           values: {
             coreValues: Array.isArray(values.coreValues) ? values.coreValues : defaultIdentity.values.coreValues,
             targetAudience: Array.isArray(values.targetAudience) ? values.targetAudience : defaultIdentity.values.targetAudience,
             painPoints: Array.isArray(values.painPoints) ? values.painPoints : defaultIdentity.values.painPoints,
-            desiredAction: values.desiredAction || defaultIdentity.values.desiredAction
-          }
+            desiredAction: values.desiredAction || defaultIdentity.values.desiredAction,
+          },
         };
         
         this.logger.debug('Generated brand identity', {
@@ -447,7 +447,7 @@ export class WebsiteIdentityService {
       tone: {
         formality: 'professional',
         personality: ['knowledgeable', 'trustworthy', 'helpful'],
-        emotion: 'confident'
+        emotion: 'confident',
       },
       contentStyle: {
         writingStyle: 'Clear and straightforward with a focus on expertise',
@@ -455,14 +455,14 @@ export class WebsiteIdentityService {
         vocabLevel: 'moderate',
         useJargon: false,
         useHumor: false,
-        useStories: true
+        useStories: true,
       },
       values: {
         coreValues: ['expertise', 'quality', 'integrity'],
         targetAudience: ['professionals', 'businesses'],
         painPoints: ['lack of expertise', 'need for specialized knowledge'],
-        desiredAction: `Contact ${personalData.name} for professional services`
-      }
+        desiredAction: `Contact ${personalData.name} for professional services`,
+      },
     };
   }
   
@@ -472,7 +472,7 @@ export class WebsiteIdentityService {
   private createDefaultIdentity(): WebsiteIdentityData {
     const defaultPersonalData: PersonalData = {
       name: 'Professional Expert',
-      email: 'contact@example.com'
+      email: 'contact@example.com',
     };
     
     return {
@@ -481,9 +481,9 @@ export class WebsiteIdentityService {
         title: 'Professional Services',
         description: 'Expert professional services tailored to your needs',
         tagline: 'Expert solutions for your needs',
-        keyAchievements: []
+        keyAchievements: [],
       },
-      brandIdentity: this.createDefaultBrandIdentity(defaultPersonalData)
+      brandIdentity: this.createDefaultBrandIdentity(defaultPersonalData),
     };
   }
   
@@ -496,7 +496,7 @@ export class WebsiteIdentityService {
   private mergeIdentityData(
     current: WebsiteIdentityData,
     updates: Partial<WebsiteIdentityData>,
-    shallow = false
+    shallow = false,
   ): WebsiteIdentityData {
     // Create a deep copy of current data
     const result = JSON.parse(JSON.stringify(current)) as WebsiteIdentityData;

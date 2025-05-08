@@ -12,9 +12,10 @@ import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 
 import { PersistentWebsiteStorageAdapter } from './adapters/persistentWebsiteStorageAdapter';
-import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import { WebsiteIdentityNoteAdapter } from './adapters/websiteIdentityNoteAdapter';
+import type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';
 import { type WebsiteData, WebsiteFormatter } from './formatters';
+import type { WebsiteIdentityData } from './schemas/websiteIdentitySchema';
 import { AstroContentService } from './services/astroContentService';
 import { DeploymentManagerFactory } from './services/deployment';
 import type { WebsiteDeploymentManager } from './services/deployment';
@@ -22,7 +23,6 @@ import { LandingPageGenerationService } from './services/landingPageGenerationSe
 import { WebsiteIdentityService } from './services/websiteIdentityService';
 import { WebsiteToolService } from './tools';
 import type { WebsiteConfig } from './websiteStorage';
-import type { WebsiteIdentityData } from './schemas/websiteIdentitySchema';
 
 /**
  * Configuration for WebsiteContext
@@ -566,7 +566,7 @@ export class WebsiteContext extends BaseContext<
    */
   async generateLandingPage(
     useIdentity = true,
-    regenerateIdentity = false
+    regenerateIdentity = false,
   ): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     try {
       // Get services
@@ -983,7 +983,7 @@ export class WebsiteContext extends BaseContext<
    */
   async updateIdentity(
     updates: Partial<WebsiteIdentityData>,
-    shallow = false
+    shallow = false,
   ): Promise<{ success: boolean; message: string; data?: WebsiteIdentityData }> {
     try {
       const identityService = this.getIdentityService();
