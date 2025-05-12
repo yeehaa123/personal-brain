@@ -1,6 +1,7 @@
 import { mock } from 'bun:test';
 
 import type { 
+  AstroContentService,
   AstroContentServiceConfig,
   AstroContentServiceTestHelpers, 
   SpawnFunction, 
@@ -36,11 +37,11 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
    * @param config Optional configuration options
    * @returns The singleton instance
    */
-  static getInstance(config: AstroContentServiceConfig = {}): MockAstroContentService {
+  static getInstance(config: AstroContentServiceConfig = {}): AstroContentService {
     if (!MockAstroContentService.instance) {
       MockAstroContentService.instance = new MockAstroContentService(config);
     }
-    return MockAstroContentService.instance;
+    return MockAstroContentService.instance as unknown as AstroContentService;
   }
   
   /**
@@ -65,8 +66,8 @@ export class MockAstroContentService implements AstroContentServiceTestHelpers {
    * @param config Optional configuration options
    * @returns A new instance
    */
-  static createFresh(config: AstroContentServiceConfig = {}): MockAstroContentService {
-    return new MockAstroContentService(config);
+  static createFresh(config: AstroContentServiceConfig = {}): AstroContentService {
+    return new MockAstroContentService(config) as unknown as AstroContentService;
   }
   
   /**

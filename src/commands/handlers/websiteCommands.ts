@@ -332,7 +332,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
             
             // The website context and service will call updateStep with the right indices
             return await this.websiteContext.generateLandingPage({
-              useIdentity: true,
               regenerateIdentity: false,
               onProgress: (_step, index) => {
                 // Simply use the index provided by the progress callback

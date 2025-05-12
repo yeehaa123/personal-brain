@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'b
 
 import { SectionQualityService } from '@/contexts/website/services/landingPage/sectionQualityService';
 import { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
+import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import { createTestIdentityData } from '@test/helpers';
 import type { LandingPageData } from '@website/schemas';
@@ -235,18 +236,21 @@ describe('LandingPageGenerationService', () => {
       name: 'generateLandingPageData creates page with required sections',
       test: async () => {
         // Act
-        const result = await service.generateLandingPageData();
+        // Create identity data for test
+        const identity = createTestIdentityData();
+        const result = await service.generateLandingPageData(identity);
         
         // Assert
         expect(result).toBeDefined();
-        expect(result.title).toBe('Generated Title');
-        expect(result.description).toBe('Generated Description');
-        expect(result.name).toBe('Generated Name');
-        expect(result.tagline).toBe('Generated Tagline');
+        expect(result.landingPage).toBeDefined();
+        expect(result.landingPage.title).toBe(identity.creativeContent.title);
+        expect(result.landingPage.description).toBe(identity.creativeContent.description);
+        expect(result.landingPage.name).toBe(identity.personalData.name);
+        expect(result.landingPage.tagline).toBe(identity.creativeContent.tagline);
         
         // Check that all required sections exist
         for (const sectionType of REQUIRED_SECTION_TYPES) {
-          expect(result[sectionType as keyof LandingPageData]).toBeDefined();
+          expect(result.landingPage[sectionType as keyof LandingPageData]).toBeDefined();
         }
         
         // Verify brain protocol was called for identity and sections
@@ -263,14 +267,14 @@ describe('LandingPageGenerationService', () => {
         const result = await service.generateLandingPageData(identity);
         
         // Assert - Basic landing page fields should match identity data
-        expect(result.name).toBe(identity.personalData.name);
-        expect(result.title).toBe(identity.creativeContent.title);
-        expect(result.description).toBe(identity.creativeContent.description);
-        expect(result.tagline).toBe(identity.creativeContent.tagline);
+        expect(result.landingPage.name).toBe(identity.personalData.name);
+        expect(result.landingPage.title).toBe(identity.creativeContent.title);
+        expect(result.landingPage.description).toBe(identity.creativeContent.description);
+        expect(result.landingPage.tagline).toBe(identity.creativeContent.tagline);
         
         // Check that all required sections exist
         for (const sectionType of REQUIRED_SECTION_TYPES) {
-          expect(result[sectionType as keyof LandingPageData]).toBeDefined();
+          expect(result.landingPage[sectionType as keyof LandingPageData]).toBeDefined();
         }
         
         // Verify brand guidelines were included in prompts to Brain Protocol
@@ -297,7 +301,8 @@ describe('LandingPageGenerationService', () => {
         };
         
         // Generate a landing page first
-        const landingPage = await service.generateLandingPageData();
+        const identity = createTestIdentityData();
+        const { landingPage } = await service.generateLandingPageData(identity);
         
         // Act
         const qualityThresholds = {
@@ -319,7 +324,8 @@ describe('LandingPageGenerationService', () => {
       name: 'getSectionQualityAssessments returns assessments',
       test: async () => {
         // Arrange - Generate landing page and assess quality
-        const landingPage = await service.generateLandingPageData();
+        const identity = createTestIdentityData();
+        const { landingPage } = await service.generateLandingPageData(identity);
         await service.assessLandingPageQuality(landingPage);
         
         // Act
@@ -334,7 +340,8 @@ describe('LandingPageGenerationService', () => {
       name: 'assessLandingPageQuality handles applyRecommendations option',
       test: async () => {
         // Arrange - Generate landing page first
-        const landingPage = await service.generateLandingPageData();
+        const identity = createTestIdentityData();
+        const { landingPage } = await service.generateLandingPageData(identity);
         // Make sure pricing is in the landing page for the test with required tiers array
         landingPage.pricing = { 
           title: 'Pricing', 
@@ -480,6 +487,88 @@ describe('LandingPageGenerationService', () => {
         // Since we've simplified the test, we'll just verify basic functionality
         // rather than checking specific prompt content which is implementation-dependent
         expect(mockProcessQuery).toHaveBeenCalled();
+      },
+    },
+    {
+      name: 'regenerateSection successfully regenerates failed sections',
+      test: async () => {
+        // Arrange
+        const landingPage = createMockLandingPage();
+        const identity = createTestIdentityData();
+        
+        // Set up a mock status to indicate the section previously failed
+        // @ts-expect-error - Accessing private field for testing
+        service.generationStatus = {
+          'hero': {
+            status: SectionGenerationStatus.Failed,
+            error: 'Previous failure',
+            retryCount: 1,
+          },
+        };
+        
+        // Create a mock BrainProtocol for testing
+        const mockProtocol = {
+          processQuery: mock(() => Promise.resolve({
+            object: {
+              headline: 'Regenerated Headline',
+              subheading: 'Regenerated Subheading',
+              ctaText: 'Regenerated CTA',
+              ctaLink: '#contact',
+              enabled: true,
+            },
+          })),
+        };
+        
+        // Set the mock protocol
+        service.setBrainProtocol(mockProtocol as unknown as BrainProtocol);
+        
+        // Act
+        const result = await service.regenerateSection(landingPage, 'hero', identity);
+        
+        // Assert
+        expect(result.success).toBe(true);
+        expect(result.message).toContain('Successfully regenerated hero section');
+        
+        // Verify the section content was updated
+        expect(landingPage.hero.headline).toBe('Regenerated Headline');
+        expect(landingPage.hero.subheading).toBe('Regenerated Subheading');
+        expect(landingPage.hero.ctaText).toBe('Regenerated CTA');
+        
+        // Verify the generation status was updated
+        // @ts-expect-error - Accessing private field for testing
+        const status = service.generationStatus.hero;
+        expect(status.status).toBe(SectionGenerationStatus.Completed);
+        expect(status.data).toBeDefined();
+        expect(status.error).toBeUndefined();
+      },
+    },
+    {
+      name: 'regenerateSection handles errors gracefully',
+      test: async () => {
+        // Arrange
+        const landingPage = createMockLandingPage();
+        const identity = createTestIdentityData();
+        
+        // Create a mock BrainProtocol for testing that throws an error
+        const mockProtocol = {
+          processQuery: mock(() => Promise.reject(new Error('Regeneration failed'))),
+        };
+        
+        // Set the mock protocol
+        service.setBrainProtocol(mockProtocol as unknown as BrainProtocol);
+        
+        // Act
+        const result = await service.regenerateSection(landingPage, 'hero', identity);
+        
+        // Assert
+        expect(result.success).toBe(false);
+        expect(result.message).toContain('failed');
+        
+        // Verify the generation status was updated to failed
+        // @ts-expect-error - Accessing private field for testing
+        const status = service.generationStatus.hero;
+        expect(status.status).toBe(SectionGenerationStatus.Failed);
+        expect(status.error).toBeDefined();
       },
     },
   ];

@@ -14,4 +14,12 @@ The hero section should be professional in tone and match the following profile:
 Name: {{name}}
 Tagline: {{tagline}}
 
+{% if isRetry %}
+{{retryMessage}}
+{% endif %}
+
+{% if brandGuidelines %}
+{{brandGuidelines}}
+{% endif %}
+
 Return ONLY valid JSON for the hero section with keys for: headline, subheading, ctaText, ctaLink, and imageUrl.

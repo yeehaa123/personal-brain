@@ -2,8 +2,8 @@
  * Common types for Matrix formatters
  */
 
-import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
+import type { WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 

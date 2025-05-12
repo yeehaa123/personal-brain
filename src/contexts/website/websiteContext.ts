@@ -23,6 +23,8 @@ import type { WebsiteDeploymentManager } from './services/deployment';
 import { LandingPageGenerationService } from './services/landingPageGenerationService';
 import { WebsiteIdentityService } from './services/websiteIdentityService';
 import { WebsiteToolService } from './tools';
+import type { LandingPageGenerationStatus } from './types/landingPageTypes';
+import { SectionGenerationStatus } from './types/landingPageTypes';
 import type { WebsiteConfig } from './websiteStorage';
 
 /**
@@ -560,20 +562,24 @@ export class WebsiteContext extends BaseContext<
   /**
    * Generate a landing page from profile data
    * This method generates content without holistic editing
+   * Identity data is always required for generation
    * 
-   * @param useIdentity Whether to use website identity for generation (default: true)
    * @param regenerateIdentity Whether to regenerate identity before generating landing page (default: false)
+   * @param onProgress Optional progress callback
    * @returns Result of the generation operation
    */
   async generateLandingPage(
     options?: {
-      useIdentity?: boolean;
       regenerateIdentity?: boolean;
       onProgress?: (step: string, index: number) => void;
     },
-  ): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
+  ): Promise<{ 
+    success: boolean; 
+    message: string; 
+    data?: LandingPageData;
+    generationStatus?: LandingPageGenerationStatus 
+  }> {
     // Default values
-    const useIdentity = options?.useIdentity ?? true;
     const regenerateIdentity = options?.regenerateIdentity ?? false;
     const onProgress = options?.onProgress;
     try {
@@ -581,34 +587,33 @@ export class WebsiteContext extends BaseContext<
       const landingPageService = this.getLandingPageGenerationService();
       const astroService = await this.getAstroContentService();
       
-      // Step 1: Get or generate identity if requested
+      // Step 1: Get or generate identity - required for generation
       onProgress?.('Retrieving website identity', 0);
-      let identity = null;
-      if (useIdentity) {
-        this.logger.debug('Using website identity for landing page generation', {
-          context: 'WebsiteContext',
-          regenerateIdentity,
-        });
-        
-        identity = await this.getIdentity(regenerateIdentity);
-        
-        if (!identity) {
-          this.logger.warn('Failed to get website identity, proceeding without identity information', {
-            context: 'WebsiteContext',
-          });
-        } else {
-          this.logger.debug('Successfully retrieved website identity', {
-            context: 'WebsiteContext',
-          });
-        }
+      this.logger.debug('Getting website identity for landing page generation', {
+        context: 'WebsiteContext',
+        regenerateIdentity,
+      });
+      
+      const identity = await this.getIdentity(regenerateIdentity);
+      
+      if (!identity) {
+        return {
+          success: false,
+          message: 'Failed to get website identity. Identity is required for landing page generation.',
+        };
       }
+      
+      this.logger.debug('Successfully retrieved website identity', {
+        context: 'WebsiteContext',
+      });
       
       // Step 2: Analyze site requirements - prepare for generation
       onProgress?.('Analyzing site requirements', 1);
       await setTimeout(500); // Short pause before generation
       
       // Generate landing page data - onProgress will be called for each section
-      const landingPageData = await landingPageService.generateLandingPageData(identity, onProgress);
+      const { landingPage: landingPageData, generationStatus } = 
+        await landingPageService.generateLandingPageData(identity, onProgress);
       
       // Save to storage and Astro content
       await this.saveLandingPageData(landingPageData);
@@ -618,10 +623,18 @@ export class WebsiteContext extends BaseContext<
         throw new Error('Failed to write landing page data to Astro content');
       }
       
+      // Check if any sections failed
+      const hasFailedSections = Object.values(generationStatus).some(
+        status => status.status === SectionGenerationStatus.Failed,
+      );
+      
       return {
         success: true,
-        message: 'Successfully generated landing page content (without editing)',
+        message: hasFailedSections 
+          ? 'Generated landing page with some sections using fallback content. See status for details.'
+          : 'Successfully generated landing page content',
         data: landingPageData,
+        generationStatus,
       };
     } catch (error) {
       this.logger.error('Error generating landing page', {
@@ -1061,6 +1074,87 @@ export class WebsiteContext extends BaseContext<
       };
     } catch (error) {
       return this.handleError(error, 'checking website status');
+    }
+  }
+  
+  /**
+   * Regenerate a specific section of the landing page
+   * Useful for retrying sections that failed during initial generation
+   * 
+   * @param sectionType The type of section to regenerate
+   * @returns Result of the regeneration operation
+   */
+  async regenerateLandingPageSection(
+    sectionType: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data?: LandingPageData;
+  }> {
+    try {
+      this.logger.info(`Regenerating landing page section: ${sectionType}`, {
+        context: 'WebsiteContext',
+      });
+      
+      // Get necessary services
+      const landingPageService = this.getLandingPageGenerationService();
+      const astroService = await this.getAstroContentService();
+      
+      // Get current landing page
+      const landingPage = await this.getLandingPageData();
+      if (!landingPage) {
+        return {
+          success: false,
+          message: 'No landing page data found. Generate a landing page first.',
+        };
+      }
+      
+      // Get identity data - required for generation
+      const identity = await this.getIdentity(false);
+      if (!identity) {
+        return {
+          success: false,
+          message: 'Failed to get website identity. Identity is required for section regeneration.',
+        };
+      }
+      
+      // Regenerate the section
+      const result = await landingPageService.regenerateSection(
+        landingPage,
+        sectionType,
+        identity,
+      );
+      
+      // If successful, save updated landing page
+      if (result.success) {
+        await this.saveLandingPageData(landingPage);
+        const writeSuccess = await astroService.writeLandingPageContent(landingPage);
+        
+        if (!writeSuccess) {
+          return {
+            success: false,
+            message: 'Failed to write updated landing page data to Astro content',
+          };
+        }
+        
+        return {
+          success: true,
+          message: `Successfully regenerated ${sectionType} section`,
+          data: landingPage,
+        };
+      }
+      
+      return result;
+    } catch (error) {
+      this.logger.error(`Error regenerating section: ${sectionType}`, {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: `Error regenerating section: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
 

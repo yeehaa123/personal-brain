@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { WebsiteContext } from '@/contexts';
 import type { ProfileContext } from '@/contexts/profiles';
+import type { WebsiteStorageAdapter } from '@/contexts/website/adapters/websiteStorageAdapter';
+import type { WebsiteFormatter } from '@/contexts/website/formatters';
 import type { AstroContentService, AstroContentServiceTestHelpers } from '@/contexts/website/services/astroContentService';
 import type { WebsiteDeploymentManager } from '@/contexts/website/services/deployment';
 import type { LandingPageGenerationService } from '@/contexts/website/services/landingPageGenerationService';
@@ -18,7 +20,7 @@ import { createTestIdentityData, createTestLandingPageData } from '@test/helpers
 describe('WebsiteContext', () => {
   // Shared test resources
   let mockStorage: MockWebsiteStorageAdapter;
-  let mockAstroService: AstroContentService & AstroContentServiceTestHelpers;
+  let mockAstroService: AstroContentService;
   let mockLandingPageService: MockLandingPageGenerationService;
   let mockDeployManager: MockWebsiteDeploymentManager;
   let mockProfileContext: MockProfileContext;
@@ -94,36 +96,26 @@ describe('WebsiteContext', () => {
   });
 
   test('content generation features delegate to the appropriate services', async () => {
-    // Set up test data
-    const landingPageData = createTestLandingPageData();
-    mockLandingPageService.generateLandingPageData = mock(() => Promise.resolve(landingPageData));
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
     
-    const editedLandingPage = { 
-      ...landingPageData, 
-      hero: { ...landingPageData.hero, headline: 'Edited Headline' }, 
-    };
-    mockLandingPageService.editLandingPage = mock(() => Promise.resolve(editedLandingPage));
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
     
-    const assessmentResult = {
-      landingPage: landingPageData,
-      assessments: {
-        hero: {
-          content: landingPageData.hero,
-          assessment: {
-            qualityScore: 8,
-            confidenceScore: 9,
-            combinedScore: 8.5,
-            enabled: true,
-            qualityJustification: 'Good',
-            confidenceJustification: 'High',
-            suggestedImprovements: 'None',
-            improvementsApplied: false,
-          },
-          isRequired: true,
-        },
-      },
-    };
-    mockLandingPageService.assessLandingPageQuality = mock(() => Promise.resolve(assessmentResult));
+    // Setup astroContentService mock
+    mockAstroService.writeLandingPageContent = mock(() => Promise.resolve(true));
     
     // Test service getter
     const service = await context.getAstroContentService();
@@ -294,30 +286,42 @@ describe('WebsiteContext', () => {
   });
   
   test('landing page generation uses identity when available', async () => {
-    // Set up test data
-    const landingPageData = createTestLandingPageData();
-    const identityData = createTestIdentityData();
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
     
-    // Mock the services
-    mockIdentityService.getIdentity = mock(() => Promise.resolve(identityData));
-    mockLandingPageService.generateLandingPageData = mock(() => Promise.resolve(landingPageData));
-    mockLandingPageService.editLandingPage = mock(() => Promise.resolve(landingPageData));
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Setup astroContentService mock
+    mockAstroService.writeLandingPageContent = mock(() => Promise.resolve(true));
     
     // Test landing page generation with identity
-    await context.generateLandingPage({ useIdentity: true, regenerateIdentity: false });
+    await context.generateLandingPage({ regenerateIdentity: false });
     expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
     // We now pass an onProgress callback too, but can't directly check parameters
     // Just verify that the method was called at least once
     expect(mockLandingPageService.generateLandingPageData).toHaveBeenCalled();
     
     // Test landing page generation with identity regeneration
-    await context.generateLandingPage({ useIdentity: true, regenerateIdentity: true });
+    await context.generateLandingPage({ regenerateIdentity: true });
     expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(true);
     
-    // Test landing page generation without identity
+    // Test landing page generation with identity is now the only option
     // Note: we can't check the exact parameter due to mock implementation details
     mockLandingPageService.generateLandingPageData.mockClear();
-    await context.generateLandingPage({ useIdentity: false });
+    await context.generateLandingPage();
     expect(mockLandingPageService.generateLandingPageData).toHaveBeenCalled();
     
     // Test landing page editing with identity
@@ -329,5 +333,87 @@ describe('WebsiteContext', () => {
     mockLandingPageService.editLandingPage.mockClear();
     await context.editLandingPage(false);
     expect(mockLandingPageService.editLandingPage).toHaveBeenCalled();
+  });
+  
+  test('regenerateLandingPageSection calls LandingPageGenerationService with correct parameters', async () => {
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
+    
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Setup storage and AstroContentService mocks
+    const landingPageData = mockLandingPageService.landingPageData; // Get data from the mock
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(landingPageData));
+    mockAstroService.writeLandingPageContent = mock(() => Promise.resolve(true));
+    
+    // Act
+    const result = await context.regenerateLandingPageSection('hero');
+    
+    // Assert
+    expect(result.success).toBe(true);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockStorage.getLandingPageData).toHaveBeenCalled();
+    expect(mockLandingPageService.regenerateSection).toHaveBeenCalledWith(
+      landingPageData,
+      'hero',
+      expect.any(Object), // Identity will be available, but exact content might vary
+    );
+    expect(mockAstroService.writeLandingPageContent).toHaveBeenCalledWith(landingPageData);
+  });
+  
+  test('regenerateLandingPageSection handles failure gracefully', async () => {
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
+    
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Override regenerateSection to return failure
+    mockLandingPageService.regenerateSection = mock(() => Promise.resolve({
+      success: false,
+      message: 'Failed to regenerate section',
+    }));
+    
+    // Setup storage mock
+    const landingPageData = mockLandingPageService.landingPageData;
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(landingPageData));
+    
+    // Act
+    const result = await context.regenerateLandingPageSection('hero');
+    
+    // Assert
+    expect(result.success).toBe(false);
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockStorage.getLandingPageData).toHaveBeenCalled();
+    expect(mockLandingPageService.regenerateSection).toHaveBeenCalledWith(
+      landingPageData,
+      'hero',
+      expect.any(Object), // Identity will be available, but exact content might vary
+    );
   });
 });

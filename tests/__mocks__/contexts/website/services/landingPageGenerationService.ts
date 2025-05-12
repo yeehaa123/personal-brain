@@ -13,8 +13,8 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 export class MockLandingPageGenerationService {
   private static instance: MockLandingPageGenerationService | null = null;
   
-  // Mock landing page data
-  private landingPageData: LandingPageData = {
+  // Mock landing page data - make public for testing access
+  public landingPageData: LandingPageData = {
     title: 'Test Landing Page',
     description: 'Test description',
     name: 'Test Name',
@@ -78,8 +78,19 @@ export class MockLandingPageGenerationService {
   };
   
   // Mock methods
-  public generateLandingPageData = mock(async (): Promise<LandingPageData> => {
-    return { ...this.landingPageData };
+  public generateLandingPageData = mock(async (): Promise<{
+    landingPage: LandingPageData;
+    generationStatus: Record<string, { status: string; data?: unknown; error?: string }>;
+  }> => {
+    return { 
+      landingPage: { ...this.landingPageData },
+      generationStatus: {
+        hero: { status: 'completed', data: this.landingPageData.hero },
+        services: { status: 'completed', data: this.landingPageData.services },
+        about: { status: 'completed', data: this.landingPageData.about },
+        footer: { status: 'completed', data: this.landingPageData.footer },
+      },
+    };
   });
   
   public editLandingPage = mock(async (landingPage: LandingPageData): Promise<LandingPageData> => {
@@ -141,6 +152,33 @@ export class MockLandingPageGenerationService {
   
   public setBrainProtocol = mock((_protocol: BrainProtocol): void => {
     // Mock implementation
+  });
+  
+  /**
+   * Regenerate a specific section
+   */
+  public regenerateSection = mock(async (
+    landingPage: LandingPageData,
+    sectionType: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    if (sectionType in landingPage) {
+      // Update the section to simulate regeneration
+      if (sectionType === 'hero' && landingPage.hero) {
+        landingPage.hero.headline = 'Regenerated Headline';
+      } else if (sectionType === 'services' && landingPage.services) {
+        landingPage.services.title = 'Regenerated Services';
+      }
+      
+      return {
+        success: true,
+        message: `Successfully regenerated ${sectionType} section`,
+      };
+    }
+    
+    return {
+      success: false,
+      message: `Section ${sectionType} not found in landing page`,
+    };
   });
   
   /**

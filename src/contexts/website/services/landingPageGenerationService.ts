@@ -21,7 +21,15 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 import { REQUIRED_SECTION_TYPES } from '@website/schemas/sectionQualitySchema';
 
 import type { WebsiteIdentityData } from '../schemas/websiteIdentitySchema';
+import type { 
+  LandingPageGenerationOptions,
+  LandingPageGenerationResult,
+  LandingPageGenerationStatus,
+  SectionGenerationOptions,
+} from '../types/landingPageTypes';
+import { SectionGenerationStatus } from '../types/landingPageTypes';
 
+import { SectionGenerationService } from './landingPage/sectionGenerationService';
 import { SectionQualityService } from './landingPage/sectionQualityService';
 // We're now using section-by-section approach instead of holistic content review
 import sectionContentReviewPrompt from './prompts/section-content-review.txt';
@@ -63,9 +71,13 @@ export class LandingPageGenerationService {
   private brainProtocol: BrainProtocol | null = null;
   private logger = Logger.getInstance();
   private sectionQualityService: SectionQualityService;
+  private sectionGenerationService: SectionGenerationService;
   
   // Record to store section quality assessments
   private assessedSections: Record<string, AssessedSection<unknown>> = {};
+  
+  // Record to track section generation status
+  private generationStatus: LandingPageGenerationStatus = {};
   
   // Section schemas keyed by section type
   private sectionSchemas: Record<string, z.ZodSchema> = {
@@ -102,6 +114,7 @@ export class LandingPageGenerationService {
    */
   private constructor() {
     this.sectionQualityService = SectionQualityService.getInstance();
+    this.sectionGenerationService = SectionGenerationService.getInstance();
   }
 
   /**
@@ -132,20 +145,29 @@ export class LandingPageGenerationService {
    * Generate a complete landing page without holistic editing
    * The editing phase has been separated for better reliability
    * 
-   * @param identity Optional website identity data to use for generation
-   * @returns A complete landing page data structure with content
+   * @param identity Website identity data to use for generation
+   * @param onProgress Optional callback for progress tracking
+   * @param options Optional configuration for generation behavior
+   * @returns A landing page data structure with content and generation status
    */
   async generateLandingPageData(
-    identity?: WebsiteIdentityData | null,
+    identity: WebsiteIdentityData,
     onProgress?: (step: string, index: number) => void,
-  ): Promise<LandingPageData> {
+    options?: LandingPageGenerationOptions,
+  ): Promise<LandingPageGenerationResult> {
     this.logger.info('Starting landing page generation', {
       context: 'LandingPageGenerationService',
       usingIdentity: !!identity,
+      options,
     });
     
-    // Clear any previous assessment data
+    // Set defaults for options
+    const maxRetries = options?.maxRetries ?? 1;
+    const continueOnError = options?.continueOnError ?? true;
+    
+    // Clear any previous assessment data and generation status
     this.assessedSections = {};
+    this.generationStatus = {};
     
     try {
       // Create the basic structure for the landing page
@@ -156,21 +178,59 @@ export class LandingPageGenerationService {
         this.applyIdentityToLandingPage(landingPage, identity);
       }
       
-      // Generate content for each section individually
-      landingPage = await this.generateAllSections(landingPage, identity, onProgress);
+      // Generate content for each section individually with error handling
+      landingPage = await this.generateAllSections(
+        landingPage, 
+        identity, 
+        onProgress,
+        { maxRetries, continueOnError },
+      );
       
       this.logger.info('Completed landing page generation', {
         context: 'LandingPageGenerationService',
+        statusSummary: this.summarizeGenerationStatus(),
       });
       
-      return landingPage;
+      return {
+        landingPage,
+        generationStatus: { ...this.generationStatus },
+      };
     } catch (error) {
       this.logger.error('Error generating landing page', {
         error: error instanceof Error ? error.message : String(error),
         context: 'LandingPageGenerationService',
       });
+      
+      // Return what we have with error status
+      // This will only happen if continueOnError is false and a section fails
       throw error;
     }
+  }
+  
+  /**
+   * Helper method to summarize generation status for logging
+   * @returns Summary of generation status (success count, failure count, etc.)
+   */
+  private summarizeGenerationStatus(): Record<string, number> {
+    const summary = {
+      total: 0,
+      completed: 0,
+      failed: 0,
+      pending: 0,
+    };
+    
+    Object.values(this.generationStatus).forEach(status => {
+      summary.total++;
+      if (status.status === SectionGenerationStatus.Completed) {
+        summary.completed++;
+      } else if (status.status === SectionGenerationStatus.Failed) {
+        summary.failed++;
+      } else if (status.status === SectionGenerationStatus.Pending) {
+        summary.pending++;
+      }
+    });
+    
+    return summary;
   }
 
   /**
@@ -392,14 +452,17 @@ export class LandingPageGenerationService {
   }
 
   /**
-   * Generate content for all sections
+   * Generate content for all sections with error handling for each section
    * @param landingPage - Basic landing page structure
    * @param identity - Website identity data to use for generation
+   * @param onProgress - Optional callback for progress updates
+   * @param options - Optional configuration for generation behavior
    */
   private async generateAllSections(
     landingPage: LandingPageData,
-    identity?: WebsiteIdentityData | null,
+    identity: WebsiteIdentityData,
     onProgress?: (step: string, index: number) => void,
+    options?: LandingPageGenerationOptions,
   ): Promise<LandingPageData> {
     this.logger.info('Generating content for each section', {
       context: 'LandingPageGenerationService',
@@ -407,14 +470,8 @@ export class LandingPageGenerationService {
     });
     
     const updatedLandingPage = { ...landingPage };
-    
-    // Generate identity information only if not provided externally
-    if (!identity) {
-      this.logger.debug('No identity provided, generating basic identity info', {
-        context: 'LandingPageGenerationService',
-      });
-      await this.generateIdentityInfo(updatedLandingPage);
-    }
+    const maxRetries = options?.maxRetries ?? 1;
+    const continueOnError = options?.continueOnError ?? true;
     
     // Progress tracking for sections - map to steps in CLI
     const sectionToStepMap: Record<string, { step: string, index: number }> = {
@@ -432,16 +489,112 @@ export class LandingPageGenerationService {
       'footer': { step: 'Creating footer', index: 10 },
     };
     
-    // Generate each section one by one
+    // Generate each section one by one with error handling
     for (const sectionType of updatedLandingPage.sectionOrder) {
       if (this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas]) {
+        // Initialize status for this section to pending
+        this.generationStatus[sectionType] = {
+          status: SectionGenerationStatus.Pending,
+          retryCount: 0,
+        };
+        
         // Report progress if we have a mapping for this section type
         if (onProgress && sectionToStepMap[sectionType]) {
           const { step, index } = sectionToStepMap[sectionType];
           onProgress(step, index);
         }
         
-        await this.generateSectionContent(updatedLandingPage, sectionType, identity);
+        try {
+          // Update status to in progress
+          this.generationStatus[sectionType] = {
+            status: SectionGenerationStatus.InProgress,
+            retryCount: 0,
+          };
+          
+          const startTime = Date.now();
+          
+          // Generate the section content
+          await this.generateSectionContent(updatedLandingPage, sectionType, identity);
+          
+          const endTime = Date.now();
+          
+          // Update status to completed
+          this.generationStatus[sectionType] = {
+            status: SectionGenerationStatus.Completed,
+            data: (updatedLandingPage as Record<string, unknown>)[sectionType],
+            duration: endTime - startTime,
+          };
+        } catch (error) {
+          this.logger.error(`Error generating ${sectionType} section`, {
+            error: error instanceof Error ? error.message : String(error),
+            context: 'LandingPageGenerationService',
+          });
+          
+          // Try to retry the section generation
+          let retried = false;
+          
+          if (maxRetries > 0) {
+            this.generationStatus[sectionType] = {
+              status: SectionGenerationStatus.Retrying,
+              error: error instanceof Error ? error.message : String(error),
+              retryCount: 1,
+            };
+            
+            try {
+              this.logger.info(`Retrying ${sectionType} section generation with simplified prompt`);
+              const startTime = Date.now();
+              
+              // Generate with simplified options during retry
+              await this.generateSectionContent(
+                updatedLandingPage, 
+                sectionType, 
+                identity, 
+                { isRetry: true, simplifyPrompt: true },
+              );
+              
+              const endTime = Date.now();
+              
+              // Update status to completed after successful retry
+              this.generationStatus[sectionType] = {
+                status: SectionGenerationStatus.Completed,
+                data: (updatedLandingPage as Record<string, unknown>)[sectionType],
+                retryCount: 1,
+                duration: endTime - startTime,
+              };
+              
+              retried = true;
+            } catch (retryError) {
+              this.logger.error(`Retry failed for ${sectionType} section`, { 
+                error: retryError instanceof Error ? retryError.message : String(retryError),
+                context: 'LandingPageGenerationService', 
+              });
+              // Fall through to error handling
+            }
+          }
+          
+          if (!retried) {
+            // If retry failed or not attempted, mark as failed
+            this.generationStatus[sectionType] = {
+              status: SectionGenerationStatus.Failed,
+              error: error instanceof Error ? error.message : String(error),
+              retryCount: this.generationStatus[sectionType].retryCount,
+            };
+            
+            // Apply fallback content using the SectionGenerationService
+            const fallbackContent = this.sectionGenerationService.applyFallbackContent(
+              updatedLandingPage, 
+              sectionType,
+            );
+            
+            // Store fallback content in status
+            this.generationStatus[sectionType].data = fallbackContent;
+            
+            // Throw if not configured to continue on error
+            if (!continueOnError) {
+              throw new Error(`Failed to generate ${sectionType} section: ${error}`);
+            }
+          }
+        }
       }
     }
     
@@ -451,52 +604,6 @@ export class LandingPageGenerationService {
     return updatedLandingPage;
   }
 
-  /**
-   * Generate identity information for the landing page
-   * @param landingPage - Landing page to update
-   */
-  private async generateIdentityInfo(landingPage: LandingPageData): Promise<void> {
-    this.logger.debug('Generating identity information', {
-      context: 'LandingPageGenerationService',
-    });
-    
-    const prompt = `Generate basic identity information for a professional landing page.
-Include:
-1. Page title (for browser tab)
-2. Meta description (for search engines)
-3. Professional's name
-4. Tagline (short phrase describing the professional's value proposition)
-
-Return only these four fields formatted as JSON.`;
-    
-    try {
-      const result = await this.getBrainProtocol().processQuery(prompt, {
-        userId: 'system',
-        userName: 'System',
-      });
-      
-      if (result.object) {
-        const identityInfo = result.object as Partial<LandingPageData>;
-        
-        // Update fields with type checking
-        if (typeof identityInfo.title === 'string') landingPage.title = identityInfo.title;
-        if (typeof identityInfo.description === 'string') landingPage.description = identityInfo.description;
-        if (typeof identityInfo.name === 'string') landingPage.name = identityInfo.name;
-        if (typeof identityInfo.tagline === 'string') landingPage.tagline = identityInfo.tagline;
-        
-        this.logger.debug('Generated identity information', {
-          context: 'LandingPageGenerationService',
-          name: landingPage.name,
-        });
-      }
-    } catch (error) {
-      this.logger.error('Error generating identity information', {
-        error: error instanceof Error ? error.message : String(error),
-        context: 'LandingPageGenerationService',
-      });
-      // Continue with default values if generation fails
-    }
-  }
 
   /**
    * Create brand guidelines text from identity
@@ -547,16 +654,19 @@ Please ensure all content follows these brand guidelines consistently.
    * Generate content for a specific section
    * @param landingPage - Landing page to update
    * @param sectionType - Type of section to generate
-   * @param identity - Optional website identity data to use for generation
+   * @param identity - Website identity data to use for generation
+   * @param options - Optional generation options
    */
   private async generateSectionContent(
     landingPage: LandingPageData, 
     sectionType: string,
-    identity?: WebsiteIdentityData | null,
+    identity: WebsiteIdentityData,
+    options?: SectionGenerationOptions,
   ): Promise<void> {
     this.logger.debug(`Generating content for section: ${sectionType}`, {
       context: 'LandingPageGenerationService',
       usingIdentity: !!identity,
+      isRetry: options?.isRetry,
     });
     
     // Skip if no prompt template exists for this section
@@ -564,7 +674,7 @@ Please ensure all content follows these brand guidelines consistently.
       this.logger.warn(`No prompt template found for section: ${sectionType}`, {
         context: 'LandingPageGenerationService',
       });
-      return;
+      throw new Error(`No prompt template found for section: ${sectionType}`);
     }
     
     // Get the schema for this section
@@ -573,62 +683,31 @@ Please ensure all content follows these brand guidelines consistently.
       this.logger.warn(`No schema found for section: ${sectionType}`, {
         context: 'LandingPageGenerationService',
       });
-      return;
+      throw new Error(`No schema found for section: ${sectionType}`);
     }
     
+    // Get the prompt template for this section
+    const promptTemplate = this.sectionPrompts[sectionType];
+    
+    // Generate the section content using the SectionGenerationService
     try {
-      // Get the prompt template for this section
-      const promptTemplate = this.sectionPrompts[sectionType];
-      
-      // Replace placeholders in the prompt
-      let prompt = promptTemplate
-        .replace(/\{\{name\}\}/g, landingPage.name)
-        .replace(/\{\{tagline\}\}/g, landingPage.tagline);
-      
-      // Add brand identity guidelines if available
-      if (identity) {
-        const brandGuidelines = this.createBrandGuidelinesFromIdentity(identity);
-        prompt = `${prompt}\n\n${brandGuidelines}`;
-      }
-      
-      // Generate content for this section using the appropriate schema
-      const result = await this.getBrainProtocol().processQuery(prompt, {
-        userId: 'system',
-        userName: 'System',
-        schema: schema,
-      });
-      
-      if (result.object) {
-        // Get the current section
-        const sectionKey = sectionType as keyof LandingPageData;
-        const currentSection = landingPage[sectionKey];
-        
-        if (currentSection) {
-          // Parse the generated content with the section schema
-          // Convert to objects before spreading to satisfy TypeScript
-          const currentSectionObj = typeof currentSection === 'object' && currentSection !== null ? currentSection : {};
-          const resultObj = typeof result.object === 'object' && result.object !== null ? result.object : {};
-          
-          const validatedContent = schema.parse({
-            ...currentSectionObj,
-            ...resultObj,
-          });
-          
-          // Update the landing page with the validated content
-          // Use a type assertion to treat the validated content as part of the landing page
-          (landingPage as Partial<LandingPageData>)[sectionKey] = validatedContent;
-          
-          this.logger.debug(`Generated content for section: ${sectionType}`, {
-            context: 'LandingPageGenerationService',
-          });
-        }
-      }
+      await this.sectionGenerationService.generateSection(
+        landingPage,
+        sectionType,
+        promptTemplate,
+        schema,
+        identity,
+        options,
+      );
     } catch (error) {
-      this.logger.error(`Error generating content for section: ${sectionType}`, {
+      // Log the error at this level too for coordination purposes
+      this.logger.error(`Error in LandingPageGenerationService when generating ${sectionType} section`, {
         error: error instanceof Error ? error.message : String(error),
         context: 'LandingPageGenerationService',
       });
-      // Continue with other sections even if one fails
+      
+      // Re-throw the error to be handled by the caller
+      throw error;
     }
   }
 
@@ -947,6 +1026,91 @@ Keep the tone consistent across all items. Return only these four fields in JSON
    */
   public setBrainProtocol(protocol: BrainProtocol): void {
     this.brainProtocol = protocol;
+    this.sectionGenerationService.setBrainProtocol(protocol);
+  }
+  
+  /**
+   * Regenerate a specific section of the landing page
+   * @param landingPage - The landing page data to update
+   * @param sectionType - The type of section to regenerate
+   * @param identity - Website identity data to use for generation
+   * @returns The status of the regeneration attempt
+   */
+  async regenerateSection(
+    landingPage: LandingPageData,
+    sectionType: string,
+    identity: WebsiteIdentityData,
+  ): Promise<{success: boolean; message: string}> {
+    try {
+      this.logger.info(`Regenerating section: ${sectionType}`, {
+        context: 'LandingPageGenerationService',
+      });
+      
+      // Validate the section exists
+      if (!landingPage.sectionOrder.includes(sectionType)) {
+        return {
+          success: false,
+          message: `Section "${sectionType}" not found in landing page`,
+        };
+      }
+      
+      // Get the schema and prompt for this section
+      const schema = this.sectionSchemas[sectionType as keyof typeof this.sectionSchemas];
+      const promptTemplate = this.sectionPrompts[sectionType];
+      
+      if (!schema || !promptTemplate) {
+        return {
+          success: false,
+          message: `Invalid section type: ${sectionType}`,
+        };
+      }
+      
+      // Mark section as in progress
+      this.generationStatus[sectionType] = {
+        status: SectionGenerationStatus.InProgress,
+        retryCount: (this.generationStatus[sectionType]?.retryCount || 0) + 1,
+      };
+      
+      // Generate section content
+      await this.generateSectionContent(landingPage, sectionType, identity, { isRetry: true });
+      
+      // Mark section as enabled
+      const sectionKey = sectionType as keyof LandingPageData;
+      const section = landingPage[sectionKey];
+      if (section && typeof section === 'object' && 'enabled' in section) {
+        (section as { enabled: boolean }).enabled = true;
+      }
+      
+      // Update status to completed
+      this.generationStatus[sectionType] = {
+        status: SectionGenerationStatus.Completed,
+        data: landingPage[sectionKey],
+      };
+      
+      return {
+        success: true,
+        message: `Successfully regenerated ${sectionType} section`,
+      };
+    } catch (error) {
+      // Update status to failed
+      this.generationStatus[sectionType] = {
+        status: SectionGenerationStatus.Failed,
+        error: error instanceof Error ? error.message : String(error),
+      };
+      
+      return {
+        success: false,
+        message: `Failed to regenerate ${sectionType} section: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+  
+  /**
+   * Get the current generation status for all sections
+   * @returns A record of section generation status
+   */
+  getGenerationStatus(): LandingPageGenerationStatus {
+    return { ...this.generationStatus };
   }
 }
 
