@@ -10,15 +10,56 @@ import type {
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
 
+// Standard content patterns for mock responses
+const MOCK_CONTENT = {
+  hero: {
+    standard: {
+      headline: 'New Hero Headline',
+      subheading: 'New Hero Subheading',
+      ctaText: 'New CTA Text',
+      ctaLink: '#new-link',
+      enabled: true,
+    },
+    retry: {
+      headline: 'Retry Hero Headline',
+      subheading: 'Retry Hero Subheading',
+      ctaText: 'Retry CTA Text',
+      ctaLink: '#retry-link',
+      enabled: true,
+    },
+    fallback: {
+      headline: 'Fallback Hero Headline',
+      subheading: 'Fallback hero subheading',
+      ctaText: 'Contact Us',
+      ctaLink: '#contact',
+      enabled: false,
+    },
+  },
+  services: {
+    standard: {
+      title: 'New Services Title',
+      items: [
+        { title: 'Service 1', description: 'Service 1 description' },
+        { title: 'Service 2', description: 'Service 2 description' },
+      ],
+    },
+    fallback: {
+      title: 'Our Services',
+      items: [{ title: 'Service Example', description: 'Service description placeholder' }],
+      enabled: false,
+    },
+  },
+};
+
 /**
  * Mock implementation of SectionGenerationService
- * Follows the Component Interface Standardization pattern
+ * Follows the Component Interface Standardization pattern with simplified logic
  */
 export class MockSectionGenerationService {
   private static instance: MockSectionGenerationService | null = null;
   private brainProtocol: BrainProtocol | null = null;
   
-  // Mock methods
+  // Generate section mock with simplified content selection
   public generateSection = mock(async <T>(
     landingPage: LandingPageData,
     sectionType: string,
@@ -27,45 +68,25 @@ export class MockSectionGenerationService {
     _identity: WebsiteIdentityData,
     options?: SectionGenerationOptions,
   ): Promise<SectionGenerationResult<T>> => {
-    // Generate mock result based on section type
     const isRetry = options?.isRetry || false;
+    const contentType = isRetry ? 'retry' : 'standard';
     
-    // Create mock content based on section type
-    let mockContent: Record<string, unknown> = {};
-    
-    switch (sectionType) {
-    case 'hero':
-      mockContent = {
-        headline: isRetry ? 'Retry Hero Headline' : 'New Hero Headline',
-        subheading: isRetry ? 'Retry Hero Subheading' : 'New Hero Subheading',
-        ctaText: isRetry ? 'Retry CTA Text' : 'New CTA Text',
-        ctaLink: isRetry ? '#retry-link' : '#new-link',
-        enabled: true,
-      };
-      break;
-    case 'services':
-      mockContent = {
-        title: isRetry ? 'Retry Services Title' : 'New Services Title',
-        items: [
-          { title: 'Service 1', description: 'Service 1 description' },
-          { title: 'Service 2', description: 'Service 2 description' },
-        ],
-      };
-      break;
-    default:
-      mockContent = {
-        title: `${sectionType.charAt(0).toUpperCase() + sectionType.slice(1)} Title`,
-        content: `${sectionType} content`,
-        enabled: true,
-      };
-    }
+    // Select content based on section type and whether it's a retry
+    const mockContent = sectionType === 'hero' 
+      ? MOCK_CONTENT.hero[contentType] 
+      : sectionType === 'services'
+        ? MOCK_CONTENT.services.standard
+        : {
+          title: `${sectionType.charAt(0).toUpperCase() + sectionType.slice(1)} Title`,
+          content: `${sectionType} content`,
+          enabled: true,
+        };
     
     // Update the landing page with mock content
     if (landingPage && sectionType in landingPage) {
       (landingPage as Record<string, unknown>)[sectionType] = mockContent;
     }
     
-    // Return success result
     return {
       status: SectionGenerationStatus.Completed,
       data: mockContent as unknown as T,
@@ -74,37 +95,21 @@ export class MockSectionGenerationService {
     };
   });
   
+  // Apply fallback content with simplified selection
   public applyFallbackContent = mock((
     landingPage: LandingPageData,
     sectionType: string,
   ): unknown => {
-    // Create mock fallback content based on section type
-    let fallbackContent: Record<string, unknown> = {};
-    
-    switch (sectionType) {
-    case 'hero':
-      fallbackContent = {
-        headline: 'Fallback Hero Headline',
-        subheading: 'Fallback hero subheading',
-        ctaText: 'Contact Us',
-        ctaLink: '#contact',
-        enabled: false,
-      };
-      break;
-    case 'services':
-      fallbackContent = {
-        title: 'Our Services',
-        items: [{ title: 'Service Example', description: 'Service description placeholder' }],
-        enabled: false,
-      };
-      break;
-    default:
-      fallbackContent = {
-        title: `${sectionType.charAt(0).toUpperCase() + sectionType.slice(1)}`,
-        content: `This is a placeholder for ${sectionType} content`,
-        enabled: false,
-      };
-    }
+    // Select fallback content based on section type
+    const fallbackContent = sectionType === 'hero'
+      ? MOCK_CONTENT.hero.fallback
+      : sectionType === 'services'
+        ? MOCK_CONTENT.services.fallback
+        : {
+          title: `${sectionType.charAt(0).toUpperCase() + sectionType.slice(1)}`,
+          content: `This is a placeholder for ${sectionType} content`,
+          enabled: false,
+        };
     
     // Update the landing page with fallback content
     if (landingPage && sectionType in landingPage) {
@@ -114,26 +119,16 @@ export class MockSectionGenerationService {
     return fallbackContent;
   });
   
-  /**
-   * Get the Brain Protocol instance
-   */
+  // BrainProtocol accessor methods
   public getBrainProtocol(): BrainProtocol {
-    if (!this.brainProtocol) {
-      this.brainProtocol = {} as BrainProtocol;
-    }
-    return this.brainProtocol;
+    return this.brainProtocol || ({} as BrainProtocol);
   }
   
-  /**
-   * Set the Brain Protocol instance
-   */
   public setBrainProtocol(protocol: BrainProtocol): void {
     this.brainProtocol = protocol;
   }
   
-  /**
-   * Get singleton instance
-   */
+  // Component Interface Standardization Pattern implementation
   static getInstance(): MockSectionGenerationService {
     if (!MockSectionGenerationService.instance) {
       MockSectionGenerationService.instance = new MockSectionGenerationService();
@@ -141,16 +136,10 @@ export class MockSectionGenerationService {
     return MockSectionGenerationService.instance;
   }
   
-  /**
-   * Reset singleton instance
-   */
   static resetInstance(): void {
     MockSectionGenerationService.instance = null;
   }
   
-  /**
-   * Create fresh instance
-   */
   static createFresh(): MockSectionGenerationService {
     return new MockSectionGenerationService();
   }
