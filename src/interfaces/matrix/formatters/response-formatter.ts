@@ -945,6 +945,30 @@ export class MatrixResponseFormatter {
         
         builder.addSection(sectionStatuses.join('\n'));
         builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
+      } else if (result.action === 'regenerate-failed' && result.results) {
+        // Regenerate failed sections mode
+        builder.addHeader('Regenerate Failed Sections');
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          builder.addSection(`${icon} ${result.message}`);
+        }
+        
+        // Show details of regenerated sections
+        const { attempted, succeeded, failed } = result.results;
+        builder.addSection(`**Regeneration Summary**: Attempted ${attempted} sections, ${succeeded} succeeded, ${failed} failed`);
+        
+        if (Object.keys(result.results.sections).length > 0) {
+          // Show individual section results
+          builder.addSection('#### Section Details:');
+          
+          Object.entries(result.results.sections).forEach(([section, result]) => {
+            const icon = result.success ? '✅' : '❌';
+            builder.addSection(`**${section}**: ${icon} ${result.message}`);
+          });
+        }
+        
+        builder.addSection(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
       } else {
         // Generate mode or other - display success/failure message
         builder.addHeader('Landing Page');
@@ -959,6 +983,7 @@ export class MatrixResponseFormatter {
               `- \`${this.commandPrefix} landing-page view\` - View the content`,
               `- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`,
               `- \`${this.commandPrefix} landing-page assess\` - Assess quality`,
+              `- \`${this.commandPrefix} landing-page regenerate-failed\` - Retry failed sections`,
             ].join('\n');
             builder.addSection(actions);
           }
@@ -1052,6 +1077,38 @@ export class MatrixResponseFormatter {
         
         message.push('');
         message.push(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
+      } else if (result.action === 'regenerate-failed' && result.results) {
+        // Regenerate failed sections mode
+        message = [
+          '### Regenerate Failed Sections',
+          '',
+        ];
+        
+        if (result.success !== undefined && result.message !== undefined) {
+          const icon = result.success ? '✅' : '❌';
+          message.push(`${icon} ${result.message}`);
+          message.push('');
+        }
+        
+        // Show details of regenerated sections
+        const { attempted, succeeded, failed } = result.results;
+        message.push(`**Regeneration Summary**: Attempted ${attempted} sections, ${succeeded} succeeded, ${failed} failed`);
+        message.push('');
+        
+        if (Object.keys(result.results.sections).length > 0) {
+          // Show individual section results
+          message.push('#### Section Details:');
+          message.push('');
+          
+          Object.entries(result.results.sections).forEach(([section, result]) => {
+            const icon = result.success ? '✅' : '❌';
+            message.push(`**${section}**: ${icon} ${result.message}`);
+          });
+          
+          message.push('');
+        }
+        
+        message.push(`Use \`${this.commandPrefix} landing-page view\` to view the updated content.`);
       } else {
         // Generate mode or other - display success/failure message
         message = [
@@ -1069,6 +1126,7 @@ export class MatrixResponseFormatter {
             message.push(`- \`${this.commandPrefix} landing-page view\` - View the content`);
             message.push(`- \`${this.commandPrefix} landing-page edit\` - Perform holistic editing`);
             message.push(`- \`${this.commandPrefix} landing-page assess\` - Assess quality`);
+            message.push(`- \`${this.commandPrefix} landing-page regenerate-failed\` - Retry failed sections`);
           }
         }
       }

@@ -1112,6 +1112,101 @@ Keep the tone consistent across all items. Return only these four fields in JSON
   getGenerationStatus(): LandingPageGenerationStatus {
     return { ...this.generationStatus };
   }
+
+  /**
+   * Regenerate all sections that previously failed
+   * @param landingPage - The landing page data to update 
+   * @param identity - Website identity data to use for generation
+   * @returns Summary of regeneration attempts with success/failure counts
+   */
+  async regenerateFailedSections(
+    landingPage: LandingPageData,
+    identity: WebsiteIdentityData,
+  ): Promise<{ 
+    success: boolean; 
+    message: string;
+    results: {
+      attempted: number;
+      succeeded: number;
+      failed: number;
+      sections: Record<string, { success: boolean; message: string }>;
+    }
+  }> {
+    this.logger.info('Regenerating all failed sections', {
+      context: 'LandingPageGenerationService',
+    });
+    
+    // Get sections with Failed status
+    const failedSections = Object.entries(this.generationStatus)
+      .filter(([_, status]) => status.status === SectionGenerationStatus.Failed)
+      .map(([sectionType]) => sectionType);
+    
+    if (failedSections.length === 0) {
+      return {
+        success: true,
+        message: 'No failed sections found to regenerate',
+        results: {
+          attempted: 0,
+          succeeded: 0,
+          failed: 0,
+          sections: {},
+        },
+      };
+    }
+    
+    // Track results for each section
+    const results: Record<string, { success: boolean; message: string }> = {};
+    let succeeded = 0;
+    let failed = 0;
+    
+    // Attempt to regenerate each failed section
+    for (const sectionType of failedSections) {
+      try {
+        this.logger.info(`Attempting to regenerate section: ${sectionType}`, {
+          context: 'LandingPageGenerationService',
+        });
+        
+        // Regenerate the section
+        const result = await this.regenerateSection(landingPage, sectionType, identity);
+        
+        // Track results
+        results[sectionType] = result;
+        
+        if (result.success) {
+          succeeded++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        this.logger.error(`Error regenerating section: ${sectionType}`, {
+          error: error instanceof Error ? error.message : String(error),
+          context: 'LandingPageGenerationService',
+        });
+        
+        results[sectionType] = {
+          success: false,
+          message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        };
+        
+        failed++;
+      }
+    }
+    
+    // Generate summary message
+    const totalAttempted = failedSections.length;
+    const message = `Attempted to regenerate ${totalAttempted} sections: ${succeeded} succeeded, ${failed} failed`;
+    
+    return {
+      success: failed === 0,
+      message,
+      results: {
+        attempted: totalAttempted,
+        succeeded,
+        failed,
+        sections: results,
+      },
+    };
+  }
 }
 
 export default LandingPageGenerationService;

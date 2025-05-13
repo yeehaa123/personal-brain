@@ -122,7 +122,13 @@ export interface LandingPageResult {
   message?: string;
   data?: LandingPageData;
   assessments?: Record<string, AssessedSection<unknown>>;
-  action?: 'generate' | 'edit' | 'assess' | 'apply' | 'view';
+  action?: 'generate' | 'edit' | 'assess' | 'apply' | 'regenerate-failed' | 'view';
+  results?: {
+    attempted: number;
+    succeeded: number;
+    failed: number;
+    sections: Record<string, { success: boolean; message: string }>;
+  };
 }
 
 /**

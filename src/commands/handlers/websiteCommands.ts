@@ -84,9 +84,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       },
       {
         command: 'landing-page',
-        description: 'Manage landing page content (generate, edit, assess quality, or view)',
-        usage: 'landing-page [generate|edit|assess|apply|view]',
-        examples: ['landing-page generate', 'landing-page edit', 'landing-page assess', 'landing-page apply', 'landing-page view'],
+        description: 'Manage landing page content (generate, edit, assess quality, regenerate failed sections, or view)',
+        usage: 'landing-page [generate|edit|assess|apply|regenerate-failed|view]',
+        examples: ['landing-page generate', 'landing-page edit', 'landing-page assess', 'landing-page apply', 'landing-page regenerate-failed', 'landing-page view'],
       },
       {
         command: 'website-build',
@@ -532,9 +532,51 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       }
     }
     
+    // Regenerate all failed sections
+    else if (action === 'regenerate-failed' || action === 'retry-failed') {
+      try {
+        // Get CLI interface for status updates with spinner
+        const cli = CLIInterface.getInstance();
+        
+        // Start a spinner for regeneration
+        cli.startSpinner('Regenerating all failed landing page sections...');
+        
+        // Run the actual regeneration
+        const result = await this.websiteContext.regenerateFailedLandingPageSections();
+        
+        // Stop the spinner with appropriate status
+        if (result.success) {
+          cli.stopSpinner('success', `Successfully regenerated ${result.results?.succeeded || 0} of ${result.results?.attempted || 0} sections`);
+        } else {
+          cli.stopSpinner('error', 'Failed to regenerate sections');
+        }
+        
+        return {
+          type: 'landing-page',
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          results: result.results,
+          action: 'regenerate-failed',
+        };
+      } catch (error) {
+        // Get CLI interface for error handling
+        const cli = CLIInterface.getInstance();
+        
+        // Make sure we stop the spinner in case of error
+        cli.stopSpinner('error', 'Error regenerating failed sections');
+        
+        this.logger.error(`Error regenerating failed sections: ${error}`);
+        return {
+          type: 'error',
+          message: `Failed to regenerate failed sections: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    }
+    
     return {
       type: 'error',
-      message: 'Invalid action. Use "landing-page generate", "landing-page edit", "landing-page assess", "landing-page apply", or "landing-page view".',
+      message: 'Invalid action. Use "landing-page generate", "landing-page edit", "landing-page assess", "landing-page apply", "landing-page regenerate-failed", or "landing-page view".',
     };
   }
   

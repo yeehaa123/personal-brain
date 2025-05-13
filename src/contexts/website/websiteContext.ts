@@ -1158,4 +1158,87 @@ export class WebsiteContext extends BaseContext<
     }
   }
 
+  /**
+   * Regenerate all landing page sections that previously failed
+   * Useful for recovering from multiple section failures at once
+   * 
+   * @returns Result of the regeneration operation with details on success/failure
+   */
+  async regenerateFailedLandingPageSections(): Promise<{
+    success: boolean;
+    message: string;
+    data?: LandingPageData;
+    results?: {
+      attempted: number;
+      succeeded: number;
+      failed: number;
+      sections: Record<string, { success: boolean; message: string }>;
+    };
+  }> {
+    try {
+      this.logger.info('Regenerating all failed landing page sections', {
+        context: 'WebsiteContext',
+      });
+      
+      // Get necessary services
+      const landingPageService = this.getLandingPageGenerationService();
+      const astroService = await this.getAstroContentService();
+      
+      // Get current landing page
+      const landingPage = await this.getLandingPageData();
+      if (!landingPage) {
+        return {
+          success: false,
+          message: 'No landing page data found. Generate a landing page first.',
+        };
+      }
+      
+      // Get identity data - required for generation
+      const identity = await this.getIdentity(false);
+      if (!identity) {
+        return {
+          success: false,
+          message: 'Failed to get website identity. Identity is required for section regeneration.',
+        };
+      }
+      
+      // Regenerate all failed sections
+      const result = await landingPageService.regenerateFailedSections(
+        landingPage,
+        identity,
+      );
+      
+      // If at least one section was attempted, save the landing page
+      if (result.results.attempted > 0) {
+        await this.saveLandingPageData(landingPage);
+        const writeSuccess = await astroService.writeLandingPageContent(landingPage);
+        
+        if (!writeSuccess) {
+          return {
+            success: false,
+            message: 'Failed to write updated landing page data to Astro content',
+            results: result.results,
+          };
+        }
+      }
+      
+      return {
+        success: result.success,
+        message: result.message,
+        data: landingPage,
+        results: result.results,
+      };
+    } catch (error) {
+      this.logger.error('Error regenerating failed sections', {
+        error,
+        context: 'WebsiteContext',
+      });
+      
+      return {
+        success: false,
+        message: `Error regenerating failed sections: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
 }

@@ -86,6 +86,9 @@ export class WebsiteToolService {
       // assess_landing_page
       this.assessLandingPageTool(context),
       
+      // regenerate_failed_sections
+      this.regenerateFailedSectionsTool(context),
+      
       // build_website
       this.buildWebsiteTool(context),
       
@@ -117,6 +120,10 @@ export class WebsiteToolService {
 
     case 'assess_landing_page':
       return LandingPageQualityAssessmentToolSchema.shape;
+      
+    case 'regenerate_failed_sections':
+      // No parameters needed for regenerate_failed_sections
+      return {};
 
     case 'build_website':
       return WebsiteBuildToolSchema.shape;
@@ -304,6 +311,33 @@ export class WebsiteToolService {
           success: result.success,
           message: result.message,
           data: result.data,
+        };
+      },
+    };
+  }
+
+  /**
+   * Create the regenerate_failed_sections tool
+   */
+  private regenerateFailedSectionsTool(context: WebsiteContext): ResourceDefinition {
+    return {
+      protocol: 'website',
+      path: 'regenerate_failed_sections',
+      name: 'regenerate_failed_sections',
+      description: 'Regenerates all landing page sections that previously failed',
+      handler: async (_params: Record<string, unknown>) => {
+        // Call context to regenerate all failed sections
+        const result = await context.regenerateFailedLandingPageSections();
+
+        if (!result.success) {
+          throw new Error(`Failed to regenerate sections: ${result.message}`);
+        }
+
+        return {
+          success: result.success,
+          message: result.message,
+          data: result.data,
+          results: result.results,
         };
       },
     };
