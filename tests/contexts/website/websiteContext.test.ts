@@ -416,4 +416,192 @@ describe('WebsiteContext', () => {
       expect.any(Object), // Identity will be available, but exact content might vary
     );
   });
+  
+  test('regenerateFailedLandingPageSections regenerates all failed sections', async () => {
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
+    
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Setup mock data
+    const landingPageData = mockLandingPageService.landingPageData;
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(landingPageData));
+    mockAstroService.writeLandingPageContent = mock(() => Promise.resolve(true));
+    
+    // Mock regenerateFailedSections to return successful result
+    mockLandingPageService.regenerateFailedSections = mock(() => Promise.resolve({
+      success: true,
+      message: 'Successfully regenerated all failed sections',
+      results: {
+        attempted: 2,
+        succeeded: 2,
+        failed: 0,
+        sections: {
+          'pricing': { success: true, message: 'Successfully regenerated pricing section' },
+          'faq': { success: true, message: 'Successfully regenerated faq section' },
+        },
+      },
+    }));
+    
+    // Act
+    const result = await context.regenerateFailedLandingPageSections();
+    
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('Successfully regenerated all failed sections');
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockStorage.getLandingPageData).toHaveBeenCalled();
+    expect(mockLandingPageService.regenerateFailedSections).toHaveBeenCalledWith(
+      landingPageData,
+      expect.any(Object), // Identity will be available, but exact content might vary
+    );
+    expect(mockStorage.saveLandingPageData).toHaveBeenCalledWith(landingPageData);
+    expect(mockAstroService.writeLandingPageContent).toHaveBeenCalledWith(landingPageData);
+    
+    // Check results structure
+    expect(result.results).toBeDefined();
+    expect(result.results?.attempted).toBe(2);
+    expect(result.results?.succeeded).toBe(2);
+    expect(result.results?.failed).toBe(0);
+    expect(Object.keys(result.results?.sections || {}).length).toBe(2);
+  });
+  
+  test('regenerateFailedLandingPageSections handles mixed success and failure', async () => {
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
+    
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Setup mock data
+    const landingPageData = mockLandingPageService.landingPageData;
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(landingPageData));
+    mockAstroService.writeLandingPageContent = mock(() => Promise.resolve(true));
+    
+    // Mock regenerateFailedSections to return mixed success/failure result
+    mockLandingPageService.regenerateFailedSections = mock(() => Promise.resolve({
+      success: false, // Overall false because some sections failed
+      message: 'Attempted to regenerate 2 sections: 1 succeeded, 1 failed',
+      results: {
+        attempted: 2,
+        succeeded: 1,
+        failed: 1,
+        sections: {
+          'pricing': { success: true, message: 'Successfully regenerated pricing section' },
+          'faq': { success: false, message: 'Failed to regenerate faq section' },
+        },
+      },
+    }));
+    
+    // Act
+    const result = await context.regenerateFailedLandingPageSections();
+    
+    // Assert
+    expect(result.success).toBe(false);
+    expect(result.message).toContain('Attempted to regenerate 2 sections: 1 succeeded, 1 failed');
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockStorage.getLandingPageData).toHaveBeenCalled();
+    expect(mockLandingPageService.regenerateFailedSections).toHaveBeenCalledWith(
+      landingPageData,
+      expect.any(Object), // Identity will be available, but exact content might vary
+    );
+    expect(mockStorage.saveLandingPageData).toHaveBeenCalledWith(landingPageData);
+    expect(mockAstroService.writeLandingPageContent).toHaveBeenCalledWith(landingPageData);
+    
+    // Check results structure
+    expect(result.results).toBeDefined();
+    expect(result.results?.attempted).toBe(2);
+    expect(result.results?.succeeded).toBe(1);
+    expect(result.results?.failed).toBe(1);
+    expect(Object.keys(result.results?.sections || {}).length).toBe(2);
+    if (result.results?.sections) {
+      expect(result.results.sections['pricing'].success).toBe(true);
+      expect(result.results.sections['faq'].success).toBe(false);
+    }
+  });
+  
+  test('regenerateFailedLandingPageSections handles case with no failed sections', async () => {
+    // Reset mock services and use properly standardized mocks
+    mockIdentityService = MockWebsiteIdentityService.createFresh();
+    mockLandingPageService = MockLandingPageGenerationService.createFresh();
+    mockStorage = MockWebsiteStorageAdapter.createFresh();
+    mockAstroService = MockAstroContentService.createFresh();
+    
+    // Create a fresh context with proper mocks
+    const context = WebsiteContext.createFresh({}, {
+      identityService: mockIdentityService as unknown as WebsiteIdentityService,
+      landingPageGenerationService: mockLandingPageService as unknown as LandingPageGenerationService,
+      storage: mockStorage as unknown as WebsiteStorageAdapter,
+      astroContentService: mockAstroService as unknown as AstroContentService,
+      // Provide minimal implementations for required dependencies
+      profileContext: MockProfileContext.createFresh() as unknown as ProfileContext,
+      formatter: { format: () => '' } as unknown as WebsiteFormatter,
+      deploymentManager: MockWebsiteDeploymentManager.createFresh() as unknown as WebsiteDeploymentManager,
+    });
+    
+    // Setup mock data
+    const landingPageData = mockLandingPageService.landingPageData;
+    mockStorage.getLandingPageData = mock(() => Promise.resolve(landingPageData));
+    
+    // Mock regenerateFailedSections to return no failed sections result
+    mockLandingPageService.regenerateFailedSections = mock(() => Promise.resolve({
+      success: true,
+      message: 'No failed sections found to regenerate',
+      results: {
+        attempted: 0,
+        succeeded: 0,
+        failed: 0,
+        sections: {},
+      },
+    }));
+    
+    // Act
+    const result = await context.regenerateFailedLandingPageSections();
+    
+    // Assert
+    expect(result.success).toBe(true);
+    expect(result.message).toBe('No failed sections found to regenerate');
+    expect(mockIdentityService.getIdentity).toHaveBeenCalledWith(false);
+    expect(mockStorage.getLandingPageData).toHaveBeenCalled();
+    expect(mockLandingPageService.regenerateFailedSections).toHaveBeenCalledWith(
+      landingPageData,
+      expect.any(Object), // Identity will be available, but exact content might vary
+    );
+    
+    // No saving should happen when no sections were regenerated
+    expect(mockStorage.saveLandingPageData).not.toHaveBeenCalled();
+    expect(mockAstroService.writeLandingPageContent).not.toHaveBeenCalled();
+    
+    // Check results structure
+    expect(result.results).toBeDefined();
+    expect(result.results?.attempted).toBe(0);
+    expect(result.results?.succeeded).toBe(0);
+    expect(result.results?.failed).toBe(0);
+    expect(Object.keys(result.results?.sections || {}).length).toBe(0);
+  });
 });

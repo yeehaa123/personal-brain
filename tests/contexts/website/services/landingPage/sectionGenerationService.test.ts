@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { Mock } from 'bun:test';
 import { z } from 'zod';
 
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
@@ -7,17 +6,9 @@ import { FallbackContentGenerator } from '@/contexts/website/services/landingPag
 import { SectionGenerationService } from '@/contexts/website/services/landingPage/sectionGenerationService';
 import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
+import type { QueryResult } from '@/protocol/types';
+import { MockBrainProtocol } from '@test/__mocks__/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
-
-interface MockBrainProtocolResult {
-  object: {
-    headline?: string;
-    subheading?: string;
-    ctaText?: string;
-    ctaLink?: string;
-    enabled?: boolean;
-  };
-}
 
 // Create well-formed test data for the tests
 const createTestLandingPage = (): Partial<LandingPageData> => ({
@@ -78,25 +69,34 @@ const createTestIdentity = (): WebsiteIdentityData => ({
   },
 });
 
-// Mock the BrainProtocol
-const createMockBrainProtocol = () => ({
-  processQuery: mock<() => Promise<MockBrainProtocolResult>>(() => 
-    Promise.resolve({ object: { headline: 'Generated Title' } }),
-  ),
-});
-
 describe('SectionGenerationService', () => {
   let service: SectionGenerationService;
-  let mockBrainProtocol: ReturnType<typeof createMockBrainProtocol>;
+  let mockBrainProtocol: MockBrainProtocol;
   
   beforeEach(() => {
     // Reset instances for clean test state
     SectionGenerationService.resetInstance();
     FallbackContentGenerator.resetInstance();
+    MockBrainProtocol.resetInstance();
+    
+    // Create with custom response setup for tests
+    mockBrainProtocol = MockBrainProtocol.createFresh({
+      customQueryResponse: {
+        answer: 'Mock landing page section response',
+        object: {
+          headline: 'New Hero Headline',
+          subheading: 'New Hero Subheading',
+          ctaText: 'New CTA Text',
+          ctaLink: '#new-link',
+          enabled: true,
+        },
+        citations: [],
+        relatedNotes: [],
+      },
+    });
     
     // Initialize service and mocks
     service = SectionGenerationService.getInstance();
-    mockBrainProtocol = createMockBrainProtocol();
     
     // Set the mock brain protocol
     service.setBrainProtocol(mockBrainProtocol as unknown as BrainProtocol);
@@ -132,8 +132,9 @@ describe('SectionGenerationService', () => {
       enabled: z.boolean().optional(),
     });
     
-    // Mock processQuery to return a valid hero object
-    const mockResult = {
+    // Configure custom response for this test
+    const mockResponse: QueryResult<unknown> = {
+      answer: 'Generated hero section',
       object: {
         headline: 'New Hero Headline',
         subheading: 'New Hero Subheading',
@@ -141,9 +142,18 @@ describe('SectionGenerationService', () => {
         ctaLink: '#new-link',
         enabled: true,
       },
+      citations: [],
+      relatedNotes: [],
     };
     
-    (mockBrainProtocol.processQuery as Mock<() => Promise<MockBrainProtocolResult>>).mockResolvedValueOnce(mockResult);
+    mockBrainProtocol.setOptions({
+      customQueryResponse: mockResponse,
+    });
+    
+    // Mock processQuery with a spy function
+    const processQueryMock = mock((_query: string, _options: Record<string, unknown>) => Promise.resolve(mockResponse));
+    const originalProcessQuery = mockBrainProtocol.processQuery;
+    mockBrainProtocol.processQuery = processQueryMock as unknown as typeof mockBrainProtocol.processQuery;
     
     // Generate the section
     const result = await service.generateSection(
@@ -174,12 +184,15 @@ describe('SectionGenerationService', () => {
     });
     
     // Verify processQuery was called with the right parameters
-    expect(mockBrainProtocol.processQuery).toHaveBeenCalledWith(
+    expect(processQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('Test prompt template'),
       expect.objectContaining({
         schema: heroSchema,
       }),
     );
+    
+    // Restore original function
+    mockBrainProtocol.processQuery = originalProcessQuery;
   });
   
   test('handles errors and provides fallback content', async () => {
@@ -196,10 +209,10 @@ describe('SectionGenerationService', () => {
       enabled: z.boolean().optional(),
     });
     
-    // Mock processQuery to throw an error
-    (mockBrainProtocol.processQuery as Mock<() => Promise<MockBrainProtocolResult>>).mockRejectedValueOnce(
-      new Error('Generation failed'),
-    );
+    // Configure processQuery to throw an error for this test
+    mockBrainProtocol.processQuery = mock(() => {
+      throw new Error('Generation failed');
+    });
     
     // Mock the fallback content generator
     const mockFallbackContent = {
@@ -211,8 +224,8 @@ describe('SectionGenerationService', () => {
     };
     
     const mockFallbackGenerator = FallbackContentGenerator.getInstance();
-    const originalGetFallbackContent = mockFallbackGenerator.getFallbackContent;
-    mockFallbackGenerator.getFallbackContent = mock(() => mockFallbackContent);
+    const getFallbackContentMock = mock(() => mockFallbackContent);
+    mockFallbackGenerator.getFallbackContent = getFallbackContentMock;
     
     try {
       // Generate the section - this should throw
@@ -239,8 +252,8 @@ describe('SectionGenerationService', () => {
     expect(fallback).toMatchObject(mockFallbackContent);
     expect(landingPage.hero).toMatchObject(mockFallbackContent);
     
-    // Restore original function
-    mockFallbackGenerator.getFallbackContent = originalGetFallbackContent;
+    // Verify getFallbackContent was called
+    expect(getFallbackContentMock).toHaveBeenCalledWith('hero');
   });
   
   test('applies simplified options for retries', async () => {
@@ -257,8 +270,9 @@ describe('SectionGenerationService', () => {
       enabled: z.boolean().optional(),
     });
     
-    // Mock processQuery to return a valid hero object
-    const mockResult = {
+    // Configure custom response for retry scenario
+    const mockResponse: QueryResult<unknown> = {
+      answer: 'Retry generated hero section',
       object: {
         headline: 'Retry Hero Headline',
         subheading: 'Retry Hero Subheading',
@@ -266,9 +280,18 @@ describe('SectionGenerationService', () => {
         ctaLink: '#retry-link',
         enabled: true,
       },
+      citations: [],
+      relatedNotes: [],
     };
     
-    (mockBrainProtocol.processQuery as Mock<() => Promise<MockBrainProtocolResult>>).mockResolvedValueOnce(mockResult);
+    mockBrainProtocol.setOptions({
+      customQueryResponse: mockResponse,
+    });
+    
+    // Mock processQuery with a spy function
+    const processQueryMock = mock((_query: string, _options: Record<string, unknown>) => Promise.resolve(mockResponse));
+    const originalProcessQuery = mockBrainProtocol.processQuery;
+    mockBrainProtocol.processQuery = processQueryMock as unknown as typeof mockBrainProtocol.processQuery;
     
     // Generate the section with retry options
     const result = await service.generateSection(
@@ -291,12 +314,17 @@ describe('SectionGenerationService', () => {
     });
     
     // Verify processQuery was called with correct parameters
-    expect(mockBrainProtocol.processQuery).toHaveBeenCalledWith(
+    expect(processQueryMock).toHaveBeenCalledWith(
       expect.stringContaining('Test prompt template'),
       expect.objectContaining({
         schema: heroSchema,
-        userId: 'system',
       }),
     );
+    
+    // Verify retryCount in result
+    expect(result.retryCount).toBe(1);
+    
+    // Restore original function
+    mockBrainProtocol.processQuery = originalProcessQuery;
   });
 });

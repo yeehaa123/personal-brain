@@ -496,9 +496,9 @@ describe('LandingPageGenerationService', () => {
         const landingPage = createMockLandingPage();
         const identity = createTestIdentityData();
         
-        // Set up a mock status to indicate the section previously failed
-        // @ts-expect-error - Accessing private field for testing
-        service.generationStatus = {
+        // For testing purposes, we need to access private generationStatus field
+        const serviceWithGenerationAccess = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> };
+        serviceWithGenerationAccess.generationStatus = {
           'hero': {
             status: SectionGenerationStatus.Failed,
             error: 'Previous failure',
@@ -534,9 +534,10 @@ describe('LandingPageGenerationService', () => {
         expect(landingPage.hero.subheading).toBe('Regenerated Subheading');
         expect(landingPage.hero.ctaText).toBe('Regenerated CTA');
         
-        // Verify the generation status was updated
-        // @ts-expect-error - Accessing private field for testing
-        const status = service.generationStatus.hero;
+        // For testing purposes, we need to access private generationStatus field
+        // We use a type assertion with unknown as an intermediate step for safety
+        const serviceWithStatusAccess = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string }> };
+        const status = serviceWithStatusAccess.generationStatus['hero'];
         expect(status.status).toBe(SectionGenerationStatus.Completed);
         expect(status.data).toBeDefined();
         expect(status.error).toBeUndefined();
@@ -564,11 +565,129 @@ describe('LandingPageGenerationService', () => {
         expect(result.success).toBe(false);
         expect(result.message).toContain('failed');
         
-        // Verify the generation status was updated to failed
-        // @ts-expect-error - Accessing private field for testing
-        const status = service.generationStatus.hero;
+        // For testing purposes, we need to access private generationStatus field
+        const serviceWithErrorAccess = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string }> };
+        const status = serviceWithErrorAccess.generationStatus['hero'];
         expect(status.status).toBe(SectionGenerationStatus.Failed);
         expect(status.error).toBeDefined();
+      },
+    },
+    {
+      name: 'regenerateFailedSections regenerates all failed sections',
+      test: async () => {
+        // Arrange
+        const landingPage = createMockLandingPage();
+        const identity = createTestIdentityData();
+        
+        // For testing purposes, we need to access private generationStatus field
+        const serviceWithRegenAccess = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> };
+        serviceWithRegenAccess.generationStatus = {
+          'hero': {
+            status: SectionGenerationStatus.Completed,
+            data: landingPage.hero,
+          },
+          'pricing': {
+            status: SectionGenerationStatus.Failed,
+            error: 'Pricing section generation failed',
+          },
+          'faq': {
+            status: SectionGenerationStatus.Failed,
+            error: 'FAQ section generation failed',
+          },
+        };
+        
+        // Mock the regenerateSection method to control test behavior
+        const regenerateSectionMock = mock((lp: LandingPageData, section: string) => {
+          // Simulate success for pricing and failure for faq
+          if (section === 'pricing') {
+            // Update the section to show it was regenerated
+            const pricingSection = lp.pricing as Record<string, unknown>;
+            pricingSection['title'] = 'Regenerated Pricing';
+            pricingSection['enabled'] = true;
+            
+            // Update generation status with type assertion for testing
+            const serviceWithStatusUpdate = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> };
+            serviceWithStatusUpdate.generationStatus[section] = {
+              status: SectionGenerationStatus.Completed,
+              data: lp[section as keyof LandingPageData],
+            };
+            
+            return Promise.resolve({
+              success: true,
+              message: `Successfully regenerated ${section} section`,
+            });
+          } else {
+            // For faq, simulate failure
+            return Promise.resolve({
+              success: false,
+              message: `Failed to regenerate ${section} section`,
+            });
+          }
+        });
+        
+        // Replace the regenerateSection method with our mock
+        service.regenerateSection = regenerateSectionMock;
+        
+        // Act
+        const result = await service.regenerateFailedSections(landingPage, identity);
+        
+        // Assert
+        expect(result.success).toBe(false); // Overall result is false because faq failed
+        expect(result.message).toContain('Attempted to regenerate 2 sections');
+        expect(regenerateSectionMock).toHaveBeenCalledTimes(2);
+        
+        // Check results structure
+        expect(result.results.attempted).toBe(2);
+        expect(result.results.succeeded).toBe(1);
+        expect(result.results.failed).toBe(1);
+        expect(Object.keys(result.results.sections).length).toBe(2);
+        expect(result.results.sections['pricing'].success).toBe(true);
+        expect(result.results.sections['faq'].success).toBe(false);
+        
+        // Check that pricing section was updated
+        const pricing = landingPage['pricing'] as Record<string, unknown>;
+        expect(pricing['title']).toBe('Regenerated Pricing');
+        expect(pricing['enabled']).toBe(true);
+      },
+    },
+    {
+      name: 'regenerateFailedSections handles no failed sections',
+      test: async () => {
+        // Arrange
+        const landingPage = createMockLandingPage();
+        const identity = createTestIdentityData();
+        
+        // For testing purposes, we need to access private generationStatus field
+        const serviceWithNoFailures = service as unknown as { generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> };
+        serviceWithNoFailures.generationStatus = {
+          'hero': {
+            status: SectionGenerationStatus.Completed,
+            data: landingPage.hero,
+          },
+          'services': {
+            status: SectionGenerationStatus.Completed,
+            data: landingPage.services,
+          },
+        };
+        
+        // Mock the regenerateSection method to verify it's not called
+        const regenerateSectionMock = mock();
+        // Replacing private method for testing
+        service.regenerateSection = regenerateSectionMock;
+        
+        // Act
+        const result = await service.regenerateFailedSections(landingPage, identity);
+        
+        // Assert
+        expect(result.success).toBe(true);
+        expect(result.message).toBe('No failed sections found to regenerate');
+        expect(regenerateSectionMock).not.toHaveBeenCalled();
+        
+        // Check results structure
+        expect(result.results.attempted).toBe(0);
+        expect(result.results.succeeded).toBe(0);
+        expect(result.results.failed).toBe(0);
+        expect(Object.keys(result.results.sections).length).toBe(0);
       },
     },
   ];

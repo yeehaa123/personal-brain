@@ -1,7 +1,9 @@
 import { mock } from 'bun:test';
 
 // Import direct types we need
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import type { LandingPageQualityAssessmentOptions } from '@/contexts/website/services/landingPageGenerationService';
+import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
@@ -13,13 +15,22 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 export class MockLandingPageGenerationService {
   private static instance: MockLandingPageGenerationService | null = null;
   
+  // Mock generation status for controlling test behavior
+  public generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> = {
+    hero: { status: SectionGenerationStatus.Completed, data: {} },
+    services: { status: SectionGenerationStatus.Completed, data: {} },
+    about: { status: SectionGenerationStatus.Completed, data: {} },
+    pricing: { status: SectionGenerationStatus.Failed, error: 'Failed to generate pricing section' },
+    faq: { status: SectionGenerationStatus.Failed, error: 'Failed to generate FAQ section' },
+  };
+  
   // Mock landing page data - make public for testing access
   public landingPageData: LandingPageData = {
     title: 'Test Landing Page',
     description: 'Test description',
     name: 'Test Name',
     tagline: 'Test Tagline',
-    sectionOrder: ['hero', 'services', 'about', 'footer'],
+    sectionOrder: ['hero', 'services', 'about', 'footer', 'pricing', 'faq'],
     hero: {
       headline: 'Test Headline',
       subheading: 'Test Subheading',
@@ -84,12 +95,7 @@ export class MockLandingPageGenerationService {
   }> => {
     return { 
       landingPage: { ...this.landingPageData },
-      generationStatus: {
-        hero: { status: 'completed', data: this.landingPageData.hero },
-        services: { status: 'completed', data: this.landingPageData.services },
-        about: { status: 'completed', data: this.landingPageData.about },
-        footer: { status: 'completed', data: this.landingPageData.footer },
-      },
+      generationStatus: { ...this.generationStatus },
     };
   });
   
@@ -146,6 +152,10 @@ export class MockLandingPageGenerationService {
     };
   });
   
+  public getGenerationStatus = mock((): Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> => {
+    return { ...this.generationStatus };
+  });
+  
   public getBrainProtocol = mock((): BrainProtocol => {
     return {} as BrainProtocol;
   });
@@ -167,6 +177,24 @@ export class MockLandingPageGenerationService {
         landingPage.hero.headline = 'Regenerated Headline';
       } else if (sectionType === 'services' && landingPage.services) {
         landingPage.services.title = 'Regenerated Services';
+      } else if (sectionType === 'pricing' && landingPage.pricing) {
+        landingPage.pricing.title = 'Regenerated Pricing';
+        landingPage.pricing.enabled = true;
+        
+        // Update generation status to completed
+        this.generationStatus[sectionType] = {
+          status: SectionGenerationStatus.Completed,
+          data: landingPage.pricing,
+        };
+      } else if (sectionType === 'faq' && landingPage.faq) {
+        landingPage.faq.title = 'Regenerated FAQ';
+        landingPage.faq.enabled = true;
+        
+        // Update generation status to completed
+        this.generationStatus[sectionType] = {
+          status: SectionGenerationStatus.Completed,
+          data: landingPage.faq,
+        };
       }
       
       return {
@@ -182,10 +210,109 @@ export class MockLandingPageGenerationService {
   });
   
   /**
+   * Regenerate all failed sections
+   */
+  public regenerateFailedSections = mock(async (
+    landingPage: LandingPageData,
+    _identity: WebsiteIdentityData,
+  ): Promise<{ 
+    success: boolean; 
+    message: string;
+    results: {
+      attempted: number;
+      succeeded: number;
+      failed: number;
+      sections: Record<string, { success: boolean; message: string }>;
+    }
+  }> => {
+    // Find failed sections
+    const failedSections = Object.entries(this.generationStatus)
+      .filter(([_, status]) => status.status === SectionGenerationStatus.Failed)
+      .map(([sectionType]) => sectionType);
+    
+    if (failedSections.length === 0) {
+      return {
+        success: true,
+        message: 'No failed sections found to regenerate',
+        results: {
+          attempted: 0,
+          succeeded: 0,
+          failed: 0,
+          sections: {},
+        },
+      };
+    }
+    
+    // Track results for each section
+    const results: Record<string, { success: boolean; message: string }> = {};
+    let succeeded = 0;
+    let failed = 0;
+    
+    // Try to regenerate each section
+    for (const sectionType of failedSections) {
+      try {
+        // Simulate successful regeneration for 'pricing' and failure for 'faq'
+        if (sectionType === 'pricing') {
+          if (landingPage.pricing) {
+            landingPage.pricing.title = 'Regenerated Pricing';
+            landingPage.pricing.enabled = true;
+            
+            // Update generation status to completed
+            this.generationStatus[sectionType] = {
+              status: SectionGenerationStatus.Completed,
+              data: landingPage.pricing,
+            };
+          }
+          
+          results[sectionType] = {
+            success: true,
+            message: `Successfully regenerated ${sectionType} section`,
+          };
+          succeeded++;
+        } else {
+          results[sectionType] = {
+            success: false,
+            message: `Failed to regenerate ${sectionType} section: Generation error`,
+          };
+          failed++;
+        }
+      } catch (error) {
+        results[sectionType] = {
+          success: false,
+          message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        };
+        failed++;
+      }
+    }
+    
+    // Generate summary
+    const totalAttempted = failedSections.length;
+    const message = `Attempted to regenerate ${totalAttempted} sections: ${succeeded} succeeded, ${failed} failed`;
+    
+    return {
+      success: failed === 0,
+      message,
+      results: {
+        attempted: totalAttempted,
+        succeeded,
+        failed,
+        sections: results,
+      },
+    };
+  });
+  
+  /**
    * Set landing page data for testing
    */
   setLandingPageData(data: LandingPageData): void {
     this.landingPageData = data;
+  }
+  
+  /**
+   * Set generation status for testing
+   */
+  setGenerationStatus(status: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }>): void {
+    this.generationStatus = status;
   }
   
   /**
