@@ -325,7 +325,7 @@ export class BrainProtocol implements IBrainProtocol {
 
   /**
    * Get the messaging-enabled profile context
-   * @returns ProfileContextV2Messaging instance
+   * @returns ProfileContextMessaging instance
    */
   getMessagingProfileContext() {
     return this.contextIntegrator.getProfileContext();

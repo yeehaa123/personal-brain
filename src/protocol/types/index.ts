@@ -13,7 +13,7 @@ import type {
 } from '@/contexts';
 import type { ConversationStorage } from '@/contexts/conversations';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContext } from '@/contexts/profiles/profileContext';
 import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
@@ -178,14 +178,8 @@ export interface IContextManager {
   /** Get access to the note context for data operations */
   getNoteContext(): NoteContext;
   
-  /** 
-   * Get access to the profile context for user profile operations 
-   * @deprecated Use getProfileContextV2() instead
-   */
-  getProfileContext(): ProfileContextV2;
-  
-  /** Get access to the new profile context implementation that uses notes for storage */
-  getProfileContextV2(): ProfileContextV2;
+  /** Get access to the profile context implementation that uses notes for storage */
+  getProfileContext(): ProfileContext;
   
   /** Get access to the external source context for external knowledge */
   getExternalSourceContext(): ExternalSourceContext;
@@ -238,7 +232,7 @@ export interface IProfileManager {
   getProfileText(): Promise<string | null>;
   analyzeProfileRelevance(query: string): Promise<ProfileAnalysisResult>;
   getProfileAnalyzer(): ProfileAnalyzer;
-  getProfileContext(): ProfileContextV2;
+  getProfileContext(): ProfileContext; // Keep this to avoid breaking existing code
 }
 
 /**

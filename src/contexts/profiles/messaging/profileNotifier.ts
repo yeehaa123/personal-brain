@@ -1,5 +1,5 @@
 /**
- * Profile Notifier V2
+ * Profile Notifier
  * 
  * Sends notifications about profile events to other contexts.
  */
@@ -11,17 +11,17 @@ import { NotificationType } from '@/protocol/messaging/messageTypes';
 import { Logger } from '@/utils/logger';
 
 /**
- * Options for ProfileNotifierV2
+ * Options for ProfileNotifier
  */
-export interface ProfileNotifierV2Options {
+export interface ProfileNotifierOptions {
   mediator?: ContextMediator;
 }
 
 /**
  * Sends notifications about profile events
  */
-export class ProfileNotifierV2 {
-  private static instance: ProfileNotifierV2 | null = null;
+export class ProfileNotifier {
+  private static instance: ProfileNotifier | null = null;
   
   /** Context mediator */
   private mediator: ContextMediator;
@@ -36,7 +36,7 @@ export class ProfileNotifierV2 {
     this.mediator = mediator;
     this.logger = Logger.getInstance();
     
-    this.logger.debug('ProfileNotifierV2 initialized', { context: 'ProfileNotifierV2' });
+    this.logger.debug('ProfileNotifier initialized', { context: 'ProfileNotifier' });
   }
   
   /**
@@ -45,11 +45,11 @@ export class ProfileNotifierV2 {
    * @param mediator Context mediator
    * @returns The singleton instance
    */
-  public static getInstance(mediator: ContextMediator): ProfileNotifierV2 {
-    if (!ProfileNotifierV2.instance) {
-      ProfileNotifierV2.instance = new ProfileNotifierV2(mediator);
+  public static getInstance(mediator: ContextMediator): ProfileNotifier {
+    if (!ProfileNotifier.instance) {
+      ProfileNotifier.instance = new ProfileNotifier(mediator);
     }
-    return ProfileNotifierV2.instance;
+    return ProfileNotifier.instance;
   }
   
   /**
@@ -57,7 +57,7 @@ export class ProfileNotifierV2 {
    * This is primarily used for testing
    */
   public static resetInstance(): void {
-    ProfileNotifierV2.instance = null;
+    ProfileNotifier.instance = null;
   }
   
   /**
@@ -66,12 +66,12 @@ export class ProfileNotifierV2 {
    * @param options Configuration options
    * @returns A new instance
    */
-  public static createFresh(options: ProfileNotifierV2Options): ProfileNotifierV2 {
+  public static createFresh(options: ProfileNotifierOptions): ProfileNotifier {
     if (!options.mediator) {
       throw new Error('Context mediator is required');
     }
     
-    return new ProfileNotifierV2(options.mediator);
+    return new ProfileNotifier(options.mediator);
   }
   
   /**
@@ -82,7 +82,7 @@ export class ProfileNotifierV2 {
    */
   public async notifyProfileUpdated(profile: Profile): Promise<boolean> {
     try {
-      this.logger.debug('Sending profile updated notification', { context: 'ProfileNotifierV2' });
+      this.logger.debug('Sending profile updated notification', { context: 'ProfileNotifier' });
       
       // Use a constant for the context ID
       const PROFILE_CONTEXT_ID = 'profile-context';
@@ -96,7 +96,7 @@ export class ProfileNotifierV2 {
       await this.mediator.sendNotification(message);
       return true;
     } catch (error) {
-      this.logger.error('Error sending profile updated notification', { error, context: 'ProfileNotifierV2' });
+      this.logger.error('Error sending profile updated notification', { error, context: 'ProfileNotifier' });
       return false;
     }
   }
@@ -109,7 +109,7 @@ export class ProfileNotifierV2 {
    */
   public async notifyProfileCreated(profile: Profile): Promise<boolean> {
     try {
-      this.logger.debug('Sending profile created notification', { context: 'ProfileNotifierV2' });
+      this.logger.debug('Sending profile created notification', { context: 'ProfileNotifier' });
       
       // Use a constant for the context ID
       const PROFILE_CONTEXT_ID = 'profile-context';
@@ -123,7 +123,7 @@ export class ProfileNotifierV2 {
       await this.mediator.sendNotification(message);
       return true;
     } catch (error) {
-      this.logger.error('Error sending profile created notification', { error, context: 'ProfileNotifierV2' });
+      this.logger.error('Error sending profile created notification', { error, context: 'ProfileNotifier' });
       return false;
     }
   }

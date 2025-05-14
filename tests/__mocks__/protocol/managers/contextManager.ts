@@ -10,7 +10,7 @@ import type {
   NoteContext,
   WebsiteContext,
 } from '@/contexts';
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import { ProfileContext } from '@/contexts/profiles';
 import type { IContextManager } from '@/protocol/types';
 import {
   MockConversationContext,
@@ -22,8 +22,8 @@ import {
   MockNoteContext,
 } from '@test/__mocks__/contexts/noteContext';
 import {
-  MockProfileContextV2,
-} from '@test/__mocks__/contexts/profileContextV2';
+  MockProfileContext,
+} from '@test/__mocks__/contexts/profileContext';
 import {
   MockWebsiteContext,
 } from '@test/__mocks__/contexts/websiteContext';
@@ -32,7 +32,7 @@ export class MockContextManager implements IContextManager {
   private static instance: MockContextManager | null = null;
   private externalSourcesEnabled = false;
   private noteContext = MockNoteContext.createFresh();
-  private profileContext = MockProfileContextV2.createFresh();
+  private profileContext = MockProfileContext.createFresh();
   private conversationContext = MockConversationContext.createFresh();
   private externalSourceContext = MockExternalSourceContext.createFresh();
   private websiteContext = MockWebsiteContext.createFresh();
@@ -56,7 +56,7 @@ export class MockContextManager implements IContextManager {
 
     // Reset all context instances too
     MockNoteContext.resetInstance();
-    MockProfileContextV2.resetInstance();
+    MockProfileContext.resetInstance();
     MockConversationContext.resetInstance();
     MockExternalSourceContext.resetInstance();
     MockWebsiteContext.resetInstance();
@@ -80,12 +80,8 @@ export class MockContextManager implements IContextManager {
     return this.noteContext as unknown as NoteContext;
   }
 
-  getProfileContext(): ProfileContextV2 {
-    return this.profileContext as unknown as ProfileContextV2;
-  }
-  
-  getProfileContextV2(): ProfileContextV2 {
-    return this.profileContext as unknown as ProfileContextV2;
+  getProfileContext(): ProfileContext {
+    return this.profileContext as unknown as ProfileContext;
   }
 
   getConversationContext(): ConversationContext {

@@ -11,5 +11,5 @@
 export { ConversationContext } from './conversations';
 export { ExternalSourceContext } from './externalSources'; 
 export { NoteContext } from './notes';
-export { ProfileContextV2 } from './profiles';
+export { ProfileContext } from './profiles';
 export { WebsiteContext } from './website';

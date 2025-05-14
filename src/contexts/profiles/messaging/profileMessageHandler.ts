@@ -1,10 +1,10 @@
 /**
- * Profile Message Handler V2
+ * Profile Message Handler
  * 
- * Handles incoming messages for ProfileContextV2 from other contexts.
+ * Handles incoming messages for ProfileContext from other contexts.
  */
 
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import { ProfileContext } from '@/contexts/profiles';
 import type { Profile } from '@/models/profile';
 import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { 
@@ -17,20 +17,20 @@ import {
 import { Logger } from '@/utils/logger';
 
 /**
- * Options for ProfileMessageHandlerV2
+ * Options for ProfileMessageHandler
  */
-export interface ProfileMessageHandlerV2Options {
-  profileContext?: ProfileContextV2;
+export interface ProfileMessageHandlerOptions {
+  profileContext?: ProfileContext;
 }
 
 /**
- * Handles incoming messages for ProfileContextV2
+ * Handles incoming messages for ProfileContext
  */
-export class ProfileMessageHandlerV2 {
-  private static instance: ProfileMessageHandlerV2 | null = null;
+export class ProfileMessageHandler {
+  private static instance: ProfileMessageHandler | null = null;
   
   /** Profile context */
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
   
   /** Logger instance */
   private logger: Logger;
@@ -39,12 +39,12 @@ export class ProfileMessageHandlerV2 {
    * Private constructor to enforce getInstance() usage
    */
   private constructor(
-    profileContext: ProfileContextV2,
+    profileContext: ProfileContext,
   ) {
     this.profileContext = profileContext;
     this.logger = Logger.getInstance();
     
-    this.logger.debug('ProfileMessageHandlerV2 initialized', { context: 'ProfileMessageHandlerV2' });
+    this.logger.debug('ProfileMessageHandler initialized', { context: 'ProfileMessageHandler' });
   }
   
   /**
@@ -54,14 +54,14 @@ export class ProfileMessageHandlerV2 {
    * @returns The singleton instance
    */
   public static getInstance(
-    profileContext: ProfileContextV2,
-  ): ProfileMessageHandlerV2 {
-    if (!ProfileMessageHandlerV2.instance) {
-      ProfileMessageHandlerV2.instance = new ProfileMessageHandlerV2(
+    profileContext: ProfileContext,
+  ): ProfileMessageHandler {
+    if (!ProfileMessageHandler.instance) {
+      ProfileMessageHandler.instance = new ProfileMessageHandler(
         profileContext,
       );
     }
-    return ProfileMessageHandlerV2.instance;
+    return ProfileMessageHandler.instance;
   }
   
   /**
@@ -69,7 +69,7 @@ export class ProfileMessageHandlerV2 {
    * This is primarily used for testing
    */
   public static resetInstance(): void {
-    ProfileMessageHandlerV2.instance = null;
+    ProfileMessageHandler.instance = null;
   }
   
   /**
@@ -78,12 +78,12 @@ export class ProfileMessageHandlerV2 {
    * @param options Configuration options
    * @returns A new instance
    */
-  public static createFresh(options: ProfileMessageHandlerV2Options): ProfileMessageHandlerV2 {
+  public static createFresh(options: ProfileMessageHandlerOptions): ProfileMessageHandler {
     if (!options.profileContext) {
       throw new Error('Profile context is required');
     }
     
-    return new ProfileMessageHandlerV2(
+    return new ProfileMessageHandler(
       options.profileContext,
     );
   }
@@ -114,12 +114,12 @@ export class ProfileMessageHandlerV2 {
     try {
       this.logger.debug('Handling profile context request', { 
         requestType: message.dataType,
-        context: 'ProfileMessageHandlerV2', 
+        context: 'ProfileMessageHandler', 
       });
       
       // Check if this is a valid data request
       if (!message.dataType) {
-        this.logger.error('Invalid data request message', { message, context: 'ProfileMessageHandlerV2' });
+        this.logger.error('Invalid data request message', { message, context: 'ProfileMessageHandler' });
         return MessageFactory.createErrorResponse(
           message.id,
           message.sourceContext,
@@ -136,7 +136,7 @@ export class ProfileMessageHandlerV2 {
       default:
         this.logger.warn('Unhandled request type', { 
           requestType: message.dataType,
-          context: 'ProfileMessageHandlerV2', 
+          context: 'ProfileMessageHandler', 
         });
         return MessageFactory.createErrorResponse(
           message.id,
@@ -146,7 +146,7 @@ export class ProfileMessageHandlerV2 {
         );
       }
     } catch (error) {
-      this.logger.error('Error handling profile context request', { error, context: 'ProfileMessageHandlerV2' });
+      this.logger.error('Error handling profile context request', { error, context: 'ProfileMessageHandler' });
       
       return MessageFactory.createErrorResponse(
         message.id,
@@ -165,7 +165,7 @@ export class ProfileMessageHandlerV2 {
   private async handleNotification(message: ContextCommunicationMessage): Promise<void> {
     try {
       if (message.category !== 'notification') {
-        this.logger.error('Invalid notification message category', { message, context: 'ProfileMessageHandlerV2' });
+        this.logger.error('Invalid notification message category', { message, context: 'ProfileMessageHandler' });
         return;
       }
       
@@ -173,12 +173,12 @@ export class ProfileMessageHandlerV2 {
       
       this.logger.debug('Handling profile context notification', { 
         notificationType: notificationMessage.notificationType,
-        context: 'ProfileMessageHandlerV2', 
+        context: 'ProfileMessageHandler', 
       });
       
       // Check if this is a valid notification
       if (!notificationMessage.notificationType) {
-        this.logger.error('Invalid notification message', { message, context: 'ProfileMessageHandlerV2' });
+        this.logger.error('Invalid notification message', { message, context: 'ProfileMessageHandler' });
         return;
       }
       
@@ -188,12 +188,12 @@ export class ProfileMessageHandlerV2 {
       default:
         this.logger.debug('Ignoring notification type', { 
           notificationType: notificationMessage.notificationType,
-          context: 'ProfileMessageHandlerV2', 
+          context: 'ProfileMessageHandler', 
         });
         break;
       }
     } catch (error) {
-      this.logger.error('Error handling profile context notification', { error, context: 'ProfileMessageHandlerV2' });
+      this.logger.error('Error handling profile context notification', { error, context: 'ProfileMessageHandler' });
     }
   }
   
@@ -215,7 +215,7 @@ export class ProfileMessageHandlerV2 {
         profile,
       );
     } catch (error) {
-      this.logger.error('Error handling get profile request', { error, context: 'ProfileMessageHandlerV2' });
+      this.logger.error('Error handling get profile request', { error, context: 'ProfileMessageHandler' });
       return MessageFactory.createErrorResponse(
         message.id,
         message.sourceContext,

@@ -3,7 +3,7 @@
  * Handles profile-related commands
  */
 
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContext } from '@/contexts/profiles/profileContext';
 import type { IBrainProtocol } from '@/protocol/types';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
@@ -13,12 +13,12 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
  * Handler for profile-related commands
  */
 export class ProfileCommandHandler extends BaseCommandHandler {
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
 
   constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
-    // Get the ProfileContextV2 from the brain protocol
-    this.profileContext = brainProtocol.getContextManager().getProfileContextV2();
+    // Get the ProfileContext from the brain protocol
+    this.profileContext = brainProtocol.getContextManager().getProfileContext();
   }
 
   /**

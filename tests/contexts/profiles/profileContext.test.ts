@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
 import type { NoteContext } from '@/contexts/notes/noteContext';
 import type { ProfileNoteAdapter } from '@/contexts/profiles/adapters/profileNoteAdapter';
-import type { ProfileContextDependencies } from '@/contexts/profiles/profileContextV2';
-import { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContextDependencies } from '@/contexts/profiles/profileContext';
+import { ProfileContext } from '@/contexts/profiles/profileContext';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Profile } from '@/models/profile';
 import type { LinkedInProfileMigrationAdapter } from '@/services/profiles/linkedInProfileMigrationAdapter';
@@ -13,7 +13,7 @@ import { MockProfileNoteAdapter } from '@test/__mocks__/contexts/profiles/adapte
 import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockLinkedInProfileMigrationAdapter } from '@test/__mocks__/services/profiles/linkedInProfileMigrationAdapter';
 
-describe('ProfileContextV2', () => {
+describe('ProfileContext', () => {
   // Create a sample profile for testing
   const sampleProfile: Profile = {
     displayName: 'Test User',
@@ -30,7 +30,7 @@ describe('ProfileContextV2', () => {
 
   beforeEach(async () => {
     // Reset singletons before each test
-    ProfileContextV2.resetInstance();
+    ProfileContext.resetInstance();
     MockNoteContext.resetInstance();
     MockProfileNoteAdapter.resetInstance();
     MockLinkedInProfileMigrationAdapter.resetInstance();
@@ -55,15 +55,15 @@ describe('ProfileContextV2', () => {
 
   // Helper to create a context with dependencies
   const createContext = () => {
-    return ProfileContextV2.createFresh({}, dependencies);
+    return ProfileContext.createFresh({}, dependencies);
   };
 
   test('getInstance should return a singleton instance', () => {
     // Create first instance with dependencies
-    const ctx1 = ProfileContextV2.getInstance({}, dependencies);
+    const ctx1 = ProfileContext.getInstance({}, dependencies);
     
     // Second call should return the same instance
-    const ctx2 = ProfileContextV2.getInstance();
+    const ctx2 = ProfileContext.getInstance();
     
     expect(ctx1).toBe(ctx2);
   });

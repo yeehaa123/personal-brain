@@ -1,9 +1,9 @@
 /**
- * Mock ProfileContextV2Messaging for testing
+ * Mock ProfileContextMessaging for testing
  */
 
-import type { ProfileContextV2Messaging } from '@/contexts/profiles/messaging/profileContextV2Messaging';
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContextMessaging } from '@/contexts/profiles/messaging/profileContextMessaging';
+import { ProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
@@ -11,42 +11,42 @@ import type { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { Logger } from '@/utils/logger';
 
 /**
- * Mock implementation of ProfileContextV2Messaging
+ * Mock implementation of ProfileContextMessaging
  */
-export class MockProfileContextV2Messaging {
-  private static instance: MockProfileContextV2Messaging | null = null;
+export class MockProfileContextMessaging {
+  private static instance: MockProfileContextMessaging | null = null;
   
   /**
    * Get the singleton instance
    */
-  public static getInstance(profileContext: ProfileContextV2, mediator?: ContextMediator) {
-    if (!MockProfileContextV2Messaging.instance) {
-      MockProfileContextV2Messaging.instance = new MockProfileContextV2Messaging(profileContext, mediator);
+  public static getInstance(profileContext: ProfileContext, mediator?: ContextMediator) {
+    if (!MockProfileContextMessaging.instance) {
+      MockProfileContextMessaging.instance = new MockProfileContextMessaging(profileContext, mediator);
     }
-    return MockProfileContextV2Messaging.instance as unknown as ProfileContextV2Messaging;
+    return MockProfileContextMessaging.instance as unknown as ProfileContextMessaging;
   }
   
   /**
    * Reset the singleton instance
    */
   public static resetInstance(): void {
-    MockProfileContextV2Messaging.instance = null;
+    MockProfileContextMessaging.instance = null;
   }
   
   /**
    * Create a fresh instance
    */
-  public static createFresh(profileContext: ProfileContextV2, mediator?: ContextMediator) {
-    return new MockProfileContextV2Messaging(profileContext, mediator) as unknown as ProfileContextV2Messaging;
+  public static createFresh(profileContext: ProfileContext, mediator?: ContextMediator) {
+    return new MockProfileContextMessaging(profileContext, mediator) as unknown as ProfileContextMessaging;
   }
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
   
   // Add missing properties to match the real implementation
   mediator: ContextMediator;
   notifier: { notifyProfileUpdated: () => Promise<void> };
   logger: Logger;
   
-  constructor(profileContext: ProfileContextV2, mediator?: ContextMediator) {
+  constructor(profileContext: ProfileContext, mediator?: ContextMediator) {
     this.profileContext = profileContext;
     this.mediator = mediator || {} as ContextMediator;
     this.notifier = { notifyProfileUpdated: async () => {} };
@@ -56,7 +56,7 @@ export class MockProfileContextV2Messaging {
   /**
    * Get the wrapped profile context
    */
-  getContext(): ProfileContextV2 {
+  getContext(): ProfileContext {
     return this.profileContext;
   }
   

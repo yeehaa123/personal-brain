@@ -413,7 +413,7 @@ export class QueryProcessor implements IQueryProcessor {
     // Get profile if relevant to the query
     let profileText: string | null = null;
     if (profileAnalysis.isProfileQuery || profileAnalysis.relevance > relevanceConfig.profileInclusionThreshold) {
-      const profileContext = this.contextManager.getProfileContextV2();
+      const profileContext = this.contextManager.getProfileContext();
       const profile = await profileContext.getProfile();
       
       if (profile) {

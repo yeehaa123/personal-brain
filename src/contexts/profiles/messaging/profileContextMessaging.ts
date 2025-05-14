@@ -1,65 +1,65 @@
 /**
- * Profile Context V2 Messaging
+ * Profile Context Messaging
  * 
- * This module integrates ProfileContextV2 with the messaging system,
+ * This module integrates ProfileContext with the messaging system,
  * wrapping the original context and adding notification capabilities.
  */
 
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import { ProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import type { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { Logger } from '@/utils/logger';
 
-import { ProfileMessageHandlerV2 } from './profileMessageHandlerV2';
-import { ProfileNotifierV2 } from './profileNotifierV2';
+import { ProfileMessageHandler } from './profileMessageHandler';
+import { ProfileNotifier } from './profileNotifier';
 
 /**
- * Messaging wrapper for ProfileContextV2
+ * Messaging wrapper for ProfileContext
  * Delegates operations to the original context and adds notification capabilities
  */
-export class ProfileContextV2Messaging {
+export class ProfileContextMessaging {
   /** Original profile context */
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
   
   /** Context mediator for messaging */
   private mediator: ContextMediator;
   
   /** Profile notifier */
-  private notifier: ProfileNotifierV2;
+  private notifier: ProfileNotifier;
   
   /** Logger instance */
   private logger: Logger;
   
   /**
-   * Create a new ProfileContextV2Messaging instance
+   * Create a new ProfileContextMessaging instance
    * 
    * @param profileContext Original profile context to wrap
    * @param mediator Context mediator for messaging
    */
-  constructor(profileContext: ProfileContextV2, mediator: ContextMediator) {
+  constructor(profileContext: ProfileContext, mediator: ContextMediator) {
     this.profileContext = profileContext;
     this.mediator = mediator;
     this.logger = Logger.getInstance();
     
     // Create the notifier
-    this.notifier = ProfileNotifierV2.getInstance(mediator);
+    this.notifier = ProfileNotifier.getInstance(mediator);
     
     // Create and register the message handler
-    const handler = ProfileMessageHandlerV2.getInstance(profileContext);
+    const handler = ProfileMessageHandler.getInstance(profileContext);
     // Register the handler with the mediator using the profile context ID
     const PROFILE_CONTEXT_ID = 'profile-context';
     mediator.registerHandler(PROFILE_CONTEXT_ID, handler.handleMessage.bind(handler));
     
-    this.logger.debug('ProfileContextV2Messaging initialized', { context: 'ProfileContextV2Messaging' });
+    this.logger.debug('ProfileContextMessaging initialized', { context: 'ProfileContextMessaging' });
   }
   
   /**
    * Get the wrapped profile context
    * @returns Original profile context
    */
-  getContext(): ProfileContextV2 {
+  getContext(): ProfileContext {
     return this.profileContext;
   }
   
@@ -89,7 +89,7 @@ export class ProfileContextV2Messaging {
       
       return success;
     } catch (error) {
-      this.logger.error('Error in saveProfile with messaging', { error, context: 'ProfileContextV2Messaging' });
+      this.logger.error('Error in saveProfile with messaging', { error, context: 'ProfileContextMessaging' });
       return false;
     }
   }
@@ -115,7 +115,7 @@ export class ProfileContextV2Messaging {
       
       return success;
     } catch (error) {
-      this.logger.error('Error in updateProfile with messaging', { error, context: 'ProfileContextV2Messaging' });
+      this.logger.error('Error in updateProfile with messaging', { error, context: 'ProfileContextMessaging' });
       return false;
     }
   }
@@ -168,7 +168,7 @@ export class ProfileContextV2Messaging {
       
       return success;
     } catch (error) {
-      this.logger.error('Error in migrateLinkedInProfile with messaging', { error, context: 'ProfileContextV2Messaging' });
+      this.logger.error('Error in migrateLinkedInProfile with messaging', { error, context: 'ProfileContextMessaging' });
       return false;
     }
   }

@@ -17,7 +17,7 @@ import type {
   NoteContext,
   WebsiteContext,
 } from '@/contexts';
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContext } from '@/contexts/profiles/profileContext';
 import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
@@ -146,20 +146,11 @@ export class ContextOrchestrator {
   }
   
   /**
-   * Get the profile context
-   * @deprecated Use getProfileContextV2() instead
-   * @returns Profile context
+   * Get the ProfileContext instance
+   * @returns ProfileContext instance
    */
-  getProfileContext(): ProfileContextV2 {
-    return this.contextManager.getProfileContextV2();
-  }
-  
-  /**
-   * Get the ProfileContextV2 instance
-   * @returns ProfileContextV2 instance
-   */
-  getProfileContextV2(): ProfileContextV2 {
-    return this.contextManager.getProfileContextV2();
+  getProfileContext(): ProfileContext {
+    return this.contextManager.getProfileContext();
   }
   
   /**
@@ -399,7 +390,7 @@ export class ContextOrchestrator {
    * @returns Message handler function
    */
   private createProfileContextHandler(): MessageHandler {
-    const profileContext = this.contextManager.getProfileContextV2();
+    const profileContext = this.contextManager.getProfileContext();
     
     return async (message) => {
       if (message.category === 'request' && 'dataType' in message) {

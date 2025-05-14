@@ -2,16 +2,16 @@ import * as fs from 'fs';
 
 import * as yaml from 'js-yaml';
 
-import { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import { ProfileContext } from '@/contexts/profiles/profileContext';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 
 import logger from '../utils/logger';
 
 export class ProfileImporter {
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
 
   constructor() {
-    this.profileContext = ProfileContextV2.createFresh();
+    this.profileContext = ProfileContext.createFresh();
   }
 
   /**
@@ -31,7 +31,7 @@ export class ProfileImporter {
       logger.debug('Converted to LinkedIn profile format', { context: 'ProfileImporter' });
       
       // Then migrate the LinkedIn profile to our new format
-      logger.debug('Attempting to migrate via ProfileContextV2...', { context: 'ProfileImporter' });
+      logger.debug('Attempting to migrate via ProfileContext...', { context: 'ProfileImporter' });
       const success = await this.profileContext.migrateLinkedInProfile(linkedInProfile);
       logger.debug(`Migration result: ${success ? 'success' : 'failure'}`, { context: 'ProfileImporter' });
       

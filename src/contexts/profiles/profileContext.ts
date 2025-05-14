@@ -18,7 +18,7 @@ export interface ProfileContextConfig {
 }
 
 /**
- * Dependencies for ProfileContextV2
+ * Dependencies for ProfileContext
  */
 export interface ProfileContextDependencies {
   noteContext?: NoteContext;
@@ -28,13 +28,12 @@ export interface ProfileContextDependencies {
 }
 
 /**
- * Simplified ProfileContext implementation using note-based storage
+ * ProfileContext implementation using note-based storage
  * 
- * This version represents a significant simplification from the previous implementation,
- * focusing on a single profile per user and using note-based storage.
+ * This implementation focuses on a single profile per user and uses note-based storage.
  */
-export class ProfileContextV2 extends BaseContext {
-  private static instance: ProfileContextV2 | null = null;
+export class ProfileContext extends BaseContext {
+  private static instance: ProfileContext | null = null;
   private noteContext: NoteContext;
   private profileNoteAdapter: ProfileNoteAdapter;
   private profileMigrationAdapter: LinkedInProfileMigrationAdapter;
@@ -61,18 +60,18 @@ export class ProfileContextV2 extends BaseContext {
   public static override getInstance(
     options?: Partial<ProfileContextConfig>,
     dependencies?: ProfileContextDependencies,
-  ): ProfileContextV2 {
-    if (!ProfileContextV2.instance) {
-      ProfileContextV2.instance = new ProfileContextV2(options, dependencies);
+  ): ProfileContext {
+    if (!ProfileContext.instance) {
+      ProfileContext.instance = new ProfileContext(options, dependencies);
     }
-    return ProfileContextV2.instance;
+    return ProfileContext.instance;
   }
   
   /**
    * Reset the singleton instance (for testing)
    */
   public static override resetInstance(): void {
-    ProfileContextV2.instance = null;
+    ProfileContext.instance = null;
   }
   
   /**
@@ -81,8 +80,8 @@ export class ProfileContextV2 extends BaseContext {
   public static override createFresh(
     options?: Partial<ProfileContextConfig>,
     dependencies?: ProfileContextDependencies,
-  ): ProfileContextV2 {
-    return new ProfileContextV2(options, dependencies);
+  ): ProfileContext {
+    return new ProfileContext(options, dependencies);
   }
 
   /**
@@ -165,7 +164,7 @@ export class ProfileContextV2 extends BaseContext {
     try {
       return await this.profileNoteAdapter.getProfile();
     } catch (error) {
-      this.logger.error('Failed to retrieve profile', { error, context: 'ProfileContextV2' });
+      this.logger.error('Failed to retrieve profile', { error, context: 'ProfileContext' });
       return null;
     }
   }
@@ -177,7 +176,7 @@ export class ProfileContextV2 extends BaseContext {
     try {
       return await this.profileNoteAdapter.saveProfile(profile);
     } catch (error) {
-      this.logger.error('Failed to save profile', { error, context: 'ProfileContextV2' });
+      this.logger.error('Failed to save profile', { error, context: 'ProfileContext' });
       return false;
     }
   }
@@ -195,7 +194,7 @@ export class ProfileContextV2 extends BaseContext {
         ...data,
       });
     } catch (error) {
-      this.logger.error('Failed to update profile', { error, context: 'ProfileContextV2' });
+      this.logger.error('Failed to update profile', { error, context: 'ProfileContext' });
       return false;
     }
   }
@@ -208,7 +207,7 @@ export class ProfileContextV2 extends BaseContext {
       const note = await this.noteContext.getNoteById(ProfileNoteAdapter.PROFILE_NOTE_ID);
       return note || null;
     } catch (error) {
-      this.logger.error('Failed to get profile as note', { error, context: 'ProfileContextV2' });
+      this.logger.error('Failed to get profile as note', { error, context: 'ProfileContext' });
       return null;
     }
   }
@@ -218,18 +217,18 @@ export class ProfileContextV2 extends BaseContext {
    */
   async migrateLinkedInProfile(linkedInProfile: LinkedInProfile): Promise<boolean> {
     try {
-      this.logger.debug('Starting LinkedIn profile migration', { context: 'ProfileContextV2' });
+      this.logger.debug('Starting LinkedIn profile migration', { context: 'ProfileContext' });
       
-      this.logger.debug('Converting LinkedIn profile to standard format', { context: 'ProfileContextV2' });
+      this.logger.debug('Converting LinkedIn profile to standard format', { context: 'ProfileContext' });
       const profile = this.profileMigrationAdapter.convertToProfile(linkedInProfile);
       
-      this.logger.debug('Converted profile, attempting to save', { context: 'ProfileContextV2' });
+      this.logger.debug('Converted profile, attempting to save', { context: 'ProfileContext' });
       const result = await this.saveProfile(profile);
       
-      this.logger.debug(`Profile saved result: ${result}`, { context: 'ProfileContextV2' });
+      this.logger.debug(`Profile saved result: ${result}`, { context: 'ProfileContext' });
       return result;
     } catch (error) {
-      this.logger.error('Failed to migrate LinkedIn profile', { error, context: 'ProfileContextV2' });
+      this.logger.error('Failed to migrate LinkedIn profile', { error, context: 'ProfileContext' });
       return false;
     }
   }

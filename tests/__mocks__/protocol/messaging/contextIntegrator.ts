@@ -9,16 +9,16 @@ import type { ConversationContext } from '@/contexts/conversations';
 import type { ExternalSourceContext } from '@/contexts/externalSources';
 import type { NoteContext } from '@/contexts/notes';
 import type { NoteContextMessaging } from '@/contexts/notes/messaging/noteContextMessaging';
-import type { ProfileContextV2Messaging } from '@/contexts/profiles/messaging';
-import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { ProfileContextMessaging } from '@/contexts/profiles/messaging';
+import { ProfileContext } from '@/contexts/profiles';
 import type { WebsiteContext } from '@/contexts/website';
 import type { WebsiteContextMessaging } from '@/contexts/website/messaging';
 import type { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
 import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
-import { MockProfileContextV2 } from '@test/__mocks__/contexts/profileContextV2';
-import { MockProfileContextV2Messaging } from '@test/__mocks__/contexts/profiles/messaging/profileContextV2Messaging';
+import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
+import { MockProfileContextMessaging } from '@test/__mocks__/contexts/profiles/messaging/profileContextMessaging';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
 
 import { MockContextMediator } from './contextMediator';
@@ -28,7 +28,7 @@ import { MockContextMediator } from './contextMediator';
  */
 interface MockContextIntegratorOptions {
   noteContext?: NoteContext;
-  profileContext?: ProfileContextV2;
+  profileContext?: ProfileContext;
   conversationContext?: ConversationContext;
   externalSourceContext?: ExternalSourceContext;
   websiteContext?: WebsiteContext;
@@ -43,7 +43,7 @@ export class MockContextIntegrator {
   
   // Base contexts
   private noteContext: NoteContext;
-  private profileContext: ProfileContextV2;
+  private profileContext: ProfileContext;
   private conversationContext: ConversationContext;
   private externalSourceContext: ExternalSourceContext;
   private websiteContext: WebsiteContext;
@@ -53,7 +53,7 @@ export class MockContextIntegrator {
   
   // Messaging-enabled contexts (mocks)
   private noteContextMessaging: NoteContextMessaging;
-  private profileContextMessaging: ProfileContextV2Messaging;
+  private profileContextMessaging: ProfileContextMessaging;
   private websiteContextMessaging: WebsiteContextMessaging;
   
   /**
@@ -86,7 +86,7 @@ export class MockContextIntegrator {
   constructor(options?: MockContextIntegratorOptions) {
     // Initialize base contexts with type assertions to avoid type errors
     this.noteContext = (options?.noteContext || MockNoteContext.getInstance()) as NoteContext;
-    this.profileContext = (options?.profileContext || MockProfileContextV2.getInstance()) as ProfileContextV2;
+    this.profileContext = (options?.profileContext || MockProfileContext.getInstance()) as ProfileContext;
     this.conversationContext = (options?.conversationContext || MockConversationContext.getInstance()) as ConversationContext;
     this.externalSourceContext = (options?.externalSourceContext || MockExternalSourceContext.getInstance()) as ExternalSourceContext;
     this.websiteContext = (options?.websiteContext || MockWebsiteContext.getInstance()) as WebsiteContext;
@@ -122,7 +122,7 @@ export class MockContextIntegrator {
       notifyNoteDeleted: async () => {},
     } as unknown as NoteContextMessaging;
     
-    this.profileContextMessaging = MockProfileContextV2Messaging.createFresh(this.profileContext);
+    this.profileContextMessaging = MockProfileContextMessaging.createFresh(this.profileContext);
     
     this.websiteContextMessaging = {
       // Base WebsiteContext methods
@@ -138,7 +138,7 @@ export class MockContextIntegrator {
    */
   getContexts(): {
     note: NoteContextMessaging;
-    profile: ProfileContextV2Messaging;
+    profile: ProfileContextMessaging;
     conversation: ConversationContext;
     externalSource: ExternalSourceContext;
     website: WebsiteContextMessaging;
@@ -162,7 +162,7 @@ export class MockContextIntegrator {
   /**
    * Get the messaging-enabled profile context
    */
-  getProfileContext(): ProfileContextV2Messaging {
+  getProfileContext(): ProfileContextMessaging {
     return this.profileContextMessaging;
   }
   

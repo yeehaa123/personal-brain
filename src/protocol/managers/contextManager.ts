@@ -13,7 +13,7 @@ import {
   NoteContext,
   WebsiteContext,
 } from '@/contexts';
-import { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import { ProfileContext } from '@/contexts/profiles/profileContext';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { RendererRegistry } from '@/utils/registry/rendererRegistry';
@@ -50,9 +50,7 @@ export class ContextManager implements IContextManager {
 
   // Core context objects
   private readonly noteContext: NoteContext;
-  private readonly profileContext: ProfileContextV2;
-  // New profile context implementation using notes for storage
-  private readonly profileContextV2: ProfileContextV2;
+  private readonly profileContextV2: ProfileContext;
   private readonly externalSourceContext: ExternalSourceContext;
   private readonly conversationContext: ConversationContext;
   private readonly websiteContext: WebsiteContext;
@@ -135,9 +133,8 @@ export class ContextManager implements IContextManager {
     try {
       this.noteContext = NoteContext.getInstance({ apiKey });
 
-      // Initialize both profile contexts - we'll use V2 for most operations but keep V1 for backward compatibility
-      this.profileContext = ProfileContextV2.getInstance();
-      this.profileContextV2 = ProfileContextV2.getInstance();
+      // Initialize profile context
+      this.profileContextV2 = ProfileContext.getInstance();
 
       this.externalSourceContext = ExternalSourceContext.getInstance({
         apiKey,
@@ -190,21 +187,10 @@ export class ContextManager implements IContextManager {
 
   /**
    * Get the profile context for profile operations
-   * @returns The profile context instance
-   * @throws Error if context is not properly initialized
-   * @deprecated Use getProfileContextV2 instead
-   */
-  getProfileContext(): ProfileContextV2 {
-    this.ensureContextsReady();
-    return this.profileContext;
-  }
-
-  /**
-   * Get the new profile context implementation that uses notes for storage
-   * @returns The ProfileContextV2 instance
+   * @returns The ProfileContext instance
    * @throws Error if context is not properly initialized
    */
-  getProfileContextV2(): ProfileContextV2 {
+  getProfileContext(): ProfileContext {
     this.ensureContextsReady();
     return this.profileContextV2;
   }
@@ -266,7 +252,6 @@ export class ContextManager implements IContextManager {
   areContextsReady(): boolean {
     return this.initialized &&
       isDefined(this.noteContext) &&
-      isDefined(this.profileContext) &&
       isDefined(this.profileContextV2) &&
       isDefined(this.externalSourceContext) &&
       isDefined(this.conversationContext) &&
@@ -293,7 +278,7 @@ export class ContextManager implements IContextManager {
    */
   initializeContextLinks(): void {
     if (this.areContextsReady()) {
-      // ProfileContextV2 doesn't need explicit NoteContext reference anymore
+      // ProfileContext doesn't need explicit NoteContext reference anymore
       // this.profileContext.setNoteContext(this.noteContext);
       this.logger.debug('Context links initialized');
     } else {
@@ -335,7 +320,7 @@ export class ContextManager implements IContextManager {
     const logger = Logger.getInstance();
 
     NoteContext.resetInstance();
-    ProfileContextV2.resetInstance();
+    ProfileContext.resetInstance();
     ExternalSourceContext.resetInstance();
     // Reset the conversation context as well
     if (ConversationContext.resetInstance) {
