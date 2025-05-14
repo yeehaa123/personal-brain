@@ -2,6 +2,7 @@
  * Mock WebsiteCommandHandler for testing
  */
 
+import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
 
@@ -124,7 +125,7 @@ export class MockWebsiteCommandHandler {
           };
         }
         
-        await websiteContext.updateConfig(configUpdates);
+        // updateConfig functionality was removed
         const updatedConfig = await websiteContext.getConfig();
       
         return {
@@ -148,18 +149,30 @@ export class MockWebsiteCommandHandler {
         
       if (action === 'generate') {
         const result = await websiteContext.generateLandingPage();
+        
+        // Type guard to safely access result properties
+        // We need to use any here to bypass strict type checking in this test mock
+         
+        interface LandingPageResult {
+          success?: boolean;
+          message?: string;
+          data?: LandingPageData;
+        }
+        
+        const typedResult = result as LandingPageResult;
+        
         return {
           type: 'landing-page',
-          success: result.success,
-          message: result.message,
-          data: result.data,
+          success: typedResult?.success,
+          message: typedResult?.message || 'Generated landing page',
+          data: typedResult?.data,
         };
       } else if (action === 'view' || !action) {
         const astroService = await websiteContext.getAstroContentService();
         const landingPageData = await astroService.readLandingPageContent();
         return {
           type: 'landing-page',
-          data: landingPageData || undefined,
+          data: landingPageData as LandingPageData,
         };
       }
         
