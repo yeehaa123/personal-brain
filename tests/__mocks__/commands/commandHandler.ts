@@ -59,17 +59,9 @@ export class MockCommandHandler {
       if (args === 'related') {
         const profile = await this.createMockProfile();
         return {
-          type: 'profile-related',
+          // Use a valid type without relatedNotes property
+          type: 'profile',
           profile,
-          relatedNotes: [
-            this.createMockNote(
-              'note-1', 
-              'Ecosystem Architecture Principles', 
-              'Test content', 
-              ['ecosystem-architecture', 'innovation'],
-            ),
-          ],
-          matchType: 'tags',
         };
       }
       
@@ -148,7 +140,6 @@ export class MockCommandHandler {
         answer: 'Mock answer',
         citations: [],
         relatedNotes: [],
-        profile: undefined,
         externalSources: undefined,
       });
         

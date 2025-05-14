@@ -1,5 +1,7 @@
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import { BrainProtocol } from '@/protocol/brainProtocol';
 import { Logger } from '@/utils/logger';
+import { TemplateEngine } from '@/utils/templateEngine';
 import type { 
   AssessedSection,
   QualityThresholds,
@@ -11,7 +13,9 @@ import {
 } from '@website/schemas/sectionQualitySchema';
 
 // Import prompt templates
+import sectionContentImprovementWithIdentityPrompt from '../prompts/section-content-improvement-with-identity.txt';
 import sectionContentImprovementPrompt from '../prompts/section-content-improvement.txt';
+import sectionQualityAssessmentWithIdentityPrompt from '../prompts/section-quality-assessment-with-identity.txt';
 import sectionQualityAssessmentPrompt from '../prompts/section-quality-assessment.txt';
 
 /**
@@ -40,6 +44,7 @@ export class SectionQualityService {
   private static instance: SectionQualityService | null = null;
   private brainProtocol: BrainProtocol | null = null;
   private logger: Logger;
+  private templateEngine: TemplateEngine;
   private qualityThresholds: QualityThresholds;
 
   /**
@@ -55,6 +60,7 @@ export class SectionQualityService {
     // Set dependencies
     this.logger = dependencies?.logger || Logger.getInstance();
     this.brainProtocol = dependencies?.brainProtocol || null;
+    this.templateEngine = TemplateEngine.getInstance();
     
     // Set configuration
     this.qualityThresholds = QualityThresholdsSchema.parse(config?.qualityThresholds || {});
@@ -119,11 +125,13 @@ export class SectionQualityService {
    * Assess the quality of a section
    * @param sectionType The type of section (e.g., "hero", "services")
    * @param sectionContent The content of the section to assess
+   * @param identity Website identity data to use for assessment
    * @returns The quality assessment result
    */
   async assessSectionQuality<T>(
     sectionType: string,
     sectionContent: T,
+    identity?: WebsiteIdentityData,
   ): Promise<SectionQualityAssessment> {
     try {
       this.logger.info(`Assessing quality for section: ${sectionType}`, {
@@ -132,11 +140,24 @@ export class SectionQualityService {
 
       // Get BrainProtocol instance
       const brainProtocol = this.getBrainProtocol();
-
-      // Create assessment prompt with section content
-      const prompt = sectionQualityAssessmentPrompt
-        .replace('{{sectionType}}', sectionType)
-        .replace('{{sectionContent}}', JSON.stringify(sectionContent, null, 2));
+      
+      // Choose the appropriate template based on identity availability
+      const templateText = identity ? sectionQualityAssessmentWithIdentityPrompt : sectionQualityAssessmentPrompt;
+      
+      // Prepare template data
+      const templateData: Record<string, unknown> = {
+        sectionType,
+        sectionContent: JSON.stringify(sectionContent, null, 2),
+      };
+      
+      // Add identity data if available
+      if (identity) {
+        // Map identity data to template variables
+        Object.assign(templateData, this.extractIdentityDataForTemplate(identity));
+      }
+      
+      // Render the template
+      const prompt = this.templateEngine.render(templateText, templateData);
 
       // Process the assessment
       const result = await brainProtocol.processQuery(prompt, {
@@ -198,6 +219,7 @@ export class SectionQualityService {
     sectionType: string,
     sectionContent: T,
     assessment: SectionQualityAssessment,
+    identity?: WebsiteIdentityData,
   ): Promise<T> {
     try {
       this.logger.info(`Improving content for section: ${sectionType}`, {
@@ -217,16 +239,31 @@ export class SectionQualityService {
       const brainProtocol = this.getBrainProtocol();
 
       // Create assessment summary
-      const assessmentSummary = `Quality Score: ${assessment.qualityScore}/10 - ${assessment.qualityJustification}
+      const assessmentFeedback = `Quality Score: ${assessment.qualityScore}/10 - ${assessment.qualityJustification}
 Confidence Score: ${assessment.confidenceScore}/10 - ${assessment.confidenceJustification}
-Combined Score: ${assessment.combinedScore}/10`;
+Combined Score: ${assessment.combinedScore}/10
 
-      // Create improvement prompt with section content and assessment
-      const prompt = sectionContentImprovementPrompt
-        .replace('{{sectionType}}', sectionType)
-        .replace('{{sectionContent}}', JSON.stringify(sectionContent, null, 2))
-        .replace('{{assessmentSummary}}', assessmentSummary)
-        .replace('{{suggestedImprovements}}', assessment.suggestedImprovements);
+Suggested Improvements:
+${assessment.suggestedImprovements}`;
+
+      // Choose the appropriate template based on identity availability
+      const templateText = identity ? sectionContentImprovementWithIdentityPrompt : sectionContentImprovementPrompt;
+      
+      // Prepare template data
+      const templateData: Record<string, unknown> = {
+        sectionType,
+        sectionContent: JSON.stringify(sectionContent, null, 2),
+        assessmentFeedback,
+      };
+      
+      // Add identity data if available
+      if (identity) {
+        // Map identity data to template variables
+        Object.assign(templateData, this.extractIdentityDataForTemplate(identity));
+      }
+      
+      // Render the template
+      const prompt = this.templateEngine.render(templateText, templateData);
 
       // Process the improvement
       const result = await brainProtocol.processQuery(prompt, {
@@ -264,11 +301,13 @@ Combined Score: ${assessment.combinedScore}/10`;
    * Process a section through both assessment and improvement phases
    * @param sectionType The type of section (e.g., "hero", "services")
    * @param sectionContent The content of the section to process
+   * @param identity Website identity data to use for assessment
    * @returns The assessed section with potentially improved content
    */
   async processSectionWithQualityAssessment<T>(
     sectionType: string,
     sectionContent: T,
+    identity: WebsiteIdentityData,
   ): Promise<AssessedSection<T>> {
     try {
       this.logger.info(`Processing section with quality assessment: ${sectionType}`, {
@@ -279,7 +318,7 @@ Combined Score: ${assessment.combinedScore}/10`;
       const isRequired = REQUIRED_SECTION_TYPES.includes(sectionType);
       
       // Phase 1: Assessment
-      const initialAssessment = await this.assessSectionQuality(sectionType, sectionContent);
+      const initialAssessment = await this.assessSectionQuality(sectionType, sectionContent, identity);
       
       // Phase 2: Improvement (if needed)
       let improvedContent = sectionContent;
@@ -291,11 +330,12 @@ Combined Score: ${assessment.combinedScore}/10`;
           sectionType, 
           sectionContent, 
           initialAssessment,
+          identity,
         );
         
         // Reassess the improved content
         if (improvedContent !== sectionContent) {
-          finalAssessment = await this.assessSectionQuality(sectionType, improvedContent);
+          finalAssessment = await this.assessSectionQuality(sectionType, improvedContent, identity);
           finalAssessment.improvementsApplied = true;
         }
       }
@@ -355,6 +395,46 @@ Combined Score: ${assessment.combinedScore}/10`;
     if (dependencies.brainProtocol) {
       this.brainProtocol = dependencies.brainProtocol;
     }
+  }
+  
+  /**
+   * Extract identity data for use in prompt templates
+   * @param identity The website identity data
+   * @returns Object with identity data mapped to template variables
+   */
+  private extractIdentityDataForTemplate(identity: WebsiteIdentityData): Record<string, unknown> {
+    return {
+      // Personal data
+      name: identity.name,
+      occupation: identity.occupation,
+      industry: identity.industry,
+      
+      // Creative content
+      tagline: identity.tagline,
+      description: identity.description,
+      uniqueValue: identity.uniqueValue 
+        ? `Unique value: ${identity.uniqueValue}` 
+        : '',
+      
+      // Brand identity - tone
+      formality: identity.formality,
+      personality: identity.personality.join(', '),
+      emotion: identity.emotion,
+      
+      // Brand identity - content style
+      writingStyle: identity.writingStyle,
+      sentenceLength: identity.sentenceLength,
+      vocabLevel: identity.vocabLevel,
+      useJargon: identity.useJargon ? 'yes' : 'no',
+      useHumor: identity.useHumor ? 'yes' : 'no',
+      useStories: identity.useStories ? 'yes' : 'no',
+      
+      // Brand identity - values
+      coreValues: identity.coreValues.join(', '),
+      targetAudience: identity.targetAudience.join(', '),
+      painPoints: identity.painPoints.join(', '),
+      desiredAction: identity.desiredAction,
+    };
   }
 }
 

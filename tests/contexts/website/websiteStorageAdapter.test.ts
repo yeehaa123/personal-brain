@@ -18,38 +18,7 @@ describe('WebsiteStorageAdapter', () => {
       expect(true).toBe(true); // If no error is thrown, the test passes
     });
     
-    test('should return default config when no updates have been made', async () => {
-      const config = await adapter.getWebsiteConfig();
-      
-      expect(config).toEqual({
-        title: 'Personal Brain',
-        description: 'My personal website',
-        author: 'Anonymous',
-        baseUrl: 'http://localhost:4321',
-        astroProjectPath: 'src/website',
-        deployment: {
-          type: 'local-dev',
-          previewPort: 4321,
-          livePort: 4322,
-        },
-      });
-    });
-    
-    test('should update config and return updated values', async () => {
-      const updates = {
-        title: 'Updated Title',
-        author: 'Updated Author',
-      };
-      
-      const updatedConfig = await adapter.updateWebsiteConfig(updates);
-      
-      expect(updatedConfig.title).toBe('Updated Title');
-      expect(updatedConfig.author).toBe('Updated Author');
-      
-      // Verify persistence between calls
-      const retrievedConfig = await adapter.getWebsiteConfig();
-      expect(retrievedConfig).toEqual(updatedConfig);
-    });
+    // Config methods (getWebsiteConfig and updateWebsiteConfig) have been moved to use config.ts directly
     
     test('should return null for landing page data initially', async () => {
       const data = await adapter.getLandingPageData();

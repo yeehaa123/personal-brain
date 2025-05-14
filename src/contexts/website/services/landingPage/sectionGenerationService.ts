@@ -202,26 +202,20 @@ export class SectionGenerationService {
    * @returns Text with brand guidelines for AI prompts
    */
   private createBrandGuidelinesFromIdentity(identity: WebsiteIdentityData): string {
-    // Extract brand identity information
-    const { brandIdentity, personalData, creativeContent } = identity;
-    
     // Format tone information
-    const tone = brandIdentity.tone;
-    const toneDescription = `Tone: ${tone.formality} and ${tone.emotion}. Personality traits: ${tone.personality.join(', ')}.`;
+    const toneDescription = `Tone: ${identity.formality} and ${identity.emotion}. Personality traits: ${identity.personality.join(', ')}.`;
     
     // Format content style information
-    const style = brandIdentity.contentStyle;
-    const styleDescription = `Style: ${style.writingStyle}. Use ${style.sentenceLength} sentences and ${style.vocabLevel} vocabulary.` +
-      (style.useJargon ? ' Include industry-specific terminology.' : ' Avoid jargon.') +
-      (style.useHumor ? ' Include appropriate humor.' : ' Maintain serious tone.') +
-      (style.useStories ? ' Use storytelling elements.' : ' Focus on facts.');
+    const styleDescription = `Style: ${identity.writingStyle}. Use ${identity.sentenceLength} sentences and ${identity.vocabLevel} vocabulary.` +
+      (identity.useJargon ? ' Include industry-specific terminology.' : ' Avoid jargon.') +
+      (identity.useHumor ? ' Include appropriate humor.' : ' Maintain serious tone.') +
+      (identity.useStories ? ' Use storytelling elements.' : ' Focus on facts.');
     
     // Format values information
-    const values = brandIdentity.values;
-    const valuesDescription = `Core values: ${values.coreValues.join(', ')}. ` +
-      `Target audience: ${values.targetAudience.join(', ')}. ` +
-      `Pain points to address: ${values.painPoints.join(', ')}. ` +
-      `Desired action: ${values.desiredAction}.`;
+    const valuesDescription = `Core values: ${identity.coreValues.join(', ')}. ` +
+      `Target audience: ${identity.targetAudience.join(', ')}. ` +
+      `Pain points to address: ${identity.painPoints.join(', ')}. ` +
+      `Desired action: ${identity.desiredAction}.`;
     
     // Combine into guidelines block
     return `
@@ -233,9 +227,9 @@ ${styleDescription}
 
 ${valuesDescription}
 
-NAME: ${personalData.name}
-TAGLINE: ${creativeContent.tagline}
-UNIQUE VALUE: ${creativeContent.uniqueValue || 'Not specified'}
+NAME: ${identity.name}
+TAGLINE: ${identity.tagline}
+UNIQUE VALUE: ${identity.uniqueValue || 'Not specified'}
 
 Please ensure all content follows these brand guidelines consistently.
 `;

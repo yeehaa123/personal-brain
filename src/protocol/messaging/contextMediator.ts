@@ -204,6 +204,32 @@ export class ContextMediator {
   }
   
   /**
+   * Create a data request message
+   * 
+   * @param sourceContext Source context identifier
+   * @param targetContext Target context identifier
+   * @param requestType Type of data being requested
+   * @param parameters Optional query parameters
+   * @param timeout Optional timeout in milliseconds
+   * @returns Data request message
+   */
+  createDataRequest(
+    sourceContext: string,
+    targetContext: string,
+    requestType: string,
+    parameters: Record<string, unknown> = {},
+    timeout?: number,
+  ): DataRequestMessage {
+    return MessageFactory.createDataRequest(
+      sourceContext,
+      targetContext,
+      requestType,
+      parameters,
+      timeout,
+    );
+  }
+
+  /**
    * Send a data request message and wait for a response
    * 
    * @param request Data request message
@@ -216,11 +242,11 @@ export class ContextMediator {
       this.logger.warn(`No handler registered for target context: ${request.targetContext}`);
       
       return MessageFactory.createErrorResponse(
+        request.id,
         request.targetContext,
         request.sourceContext,
-        request.id,
-        'CONTEXT_NOT_FOUND',
         `No handler registered for context: ${request.targetContext}`,
+        'CONTEXT_NOT_FOUND',
       );
     }
     
@@ -265,11 +291,11 @@ export class ContextMediator {
       this.logger.error(`Error handling request to ${request.targetContext}:`, error);
       
       const errorResponse = MessageFactory.createErrorResponse(
+        request.id,
         request.targetContext,
         request.sourceContext,
-        request.id,
-        'HANDLER_ERROR',
         `Error handling request: ${(error as Error).message}`,
+        'HANDLER_ERROR',
       );
       
       // Clean up the pending request

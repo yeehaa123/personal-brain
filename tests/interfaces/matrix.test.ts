@@ -475,7 +475,7 @@ const mockConversationNote = createTestNote({
 
 // Create a mock brain protocol for testing
 const mockBrainProtocol = {
-  getProfileContext: () => ({}),
+  getProfileContextV2: () => ({}),
   getNoteContext: () => ({}),
   getExternalSourceContext: () => ({}),
   hasActiveConversation: () => true,

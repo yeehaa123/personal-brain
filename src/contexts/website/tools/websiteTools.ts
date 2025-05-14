@@ -21,6 +21,11 @@ import {
   WebsiteStatusToolSchema, 
 } from '@website/schemas/websiteToolSchemas';
 
+import {
+  GenerateWebsiteIdentityToolSchema,
+  GetWebsiteIdentityToolSchema,
+} from '../schemas/websiteIdentitySchema';
+
 /**
  * Service responsible for providing MCP tools for website management
  * Follows the Component Interface Standardization pattern
@@ -99,6 +104,12 @@ export class WebsiteToolService {
       
       // get_website_status
       this.getWebsiteStatusTool(context),
+      
+      // get_identity - retrieve website identity information
+      this.getWebsiteIdentityTool(context),
+      
+      // generate_identity - create new website identity
+      this.generateWebsiteIdentityTool(context),
     ];
   }
 
@@ -133,6 +144,12 @@ export class WebsiteToolService {
 
     case 'get_website_status':
       return WebsiteStatusToolSchema.shape;
+      
+    case 'get_identity':
+      return GetWebsiteIdentityToolSchema.shape;
+      
+    case 'generate_identity':
+      return GenerateWebsiteIdentityToolSchema.shape;
 
     default:
       // For unknown tools, return an empty schema
@@ -342,4 +359,73 @@ export class WebsiteToolService {
       },
     };
   }
+  
+  /**
+   * Create the get_identity tool
+   */
+  private getWebsiteIdentityTool(context: WebsiteContext): ResourceDefinition {
+    return {
+      protocol: 'website',
+      path: 'get_identity',
+      name: 'get_identity',
+      description: 'Gets the website identity information used for branding and content generation',
+      handler: async (_params: Record<string, unknown>) => {
+        // Call context to get identity data
+        try {
+          const identityData = await context.getIdentity();
+          return {
+            success: true,
+            message: identityData ? 'Retrieved website identity' : 'No identity data found',
+            data: identityData,
+          };
+        } catch (error) {
+          this.logger.error('Error getting website identity', { error });
+          throw new Error(`Failed to get website identity: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      },
+    };
+  }
+  
+  /**
+   * Create the generate_identity tool
+   */
+  private generateWebsiteIdentityTool(context: WebsiteContext): ResourceDefinition {
+    return {
+      protocol: 'website',
+      path: 'generate_identity',
+      name: 'generate_identity',
+      description: 'Generates new website identity information from profile data',
+      handler: async (params: Record<string, unknown>) => {
+        // Parse parameters
+        const validatedParams = GenerateWebsiteIdentityToolSchema.safeParse(params);
+        
+        if (!validatedParams.success) {
+          throw new Error(`Invalid parameters: ${validatedParams.error.message}`);
+        }
+        
+        // Extract forceRegenerate parameter
+        const forceRegenerate = validatedParams.data.forceRegenerate ?? false;
+        
+        this.logger.info('Generating website identity', { 
+          forceRegenerate,
+          context: 'WebsiteToolService',
+        });
+        
+        // Call context to generate identity
+        try {
+          const result = await context.generateIdentity();
+          
+          return {
+            success: result.success,
+            message: result.message,
+            data: result.data,
+          };
+        } catch (error) {
+          this.logger.error('Error generating website identity', { error });
+          throw new Error(`Failed to generate website identity: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      },
+    };
+  }
+  
 }

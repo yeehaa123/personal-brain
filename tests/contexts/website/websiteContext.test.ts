@@ -296,10 +296,7 @@ describe('WebsiteContext', () => {
     const identityData = createTestIdentityData();
     const updatedIdentity = {
       ...identityData,
-      creativeContent: {
-        ...identityData.creativeContent,
-        tagline: 'Updated tagline for testing',
-      },
+      tagline: 'Updated tagline for testing',
     };
 
     // Mock the methods
@@ -311,14 +308,7 @@ describe('WebsiteContext', () => {
       return Promise.resolve(identityData);
     });
     
-    mockIdentityService.updateIdentity = mock((updates) => {
-      const result = {
-        ...identityData,
-        ...updates,
-        updatedAt: new Date(),
-      };
-      return Promise.resolve(result);
-    });
+    // updateIdentity method has been removed from the WebsiteIdentityService
 
     // Test the service getter
     const service = context.getIdentityService();

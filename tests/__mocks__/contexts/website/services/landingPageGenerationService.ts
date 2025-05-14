@@ -2,7 +2,7 @@ import { mock } from 'bun:test';
 
 // Import direct types we need
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
-import type { LandingPageQualityAssessmentOptions } from '@/contexts/website/services/landingPageGenerationService';
+import type { LandingPageGenerationService, LandingPageQualityAssessmentOptions } from '@/contexts/website/services/landingPageGenerationService';
 import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
@@ -11,10 +11,12 @@ import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
 /**
  * Mock implementation of LandingPageGenerationService
  * Follows the Component Interface Standardization pattern
+ * Implements required interface
  */
 export class MockLandingPageGenerationService {
   private static instance: MockLandingPageGenerationService | null = null;
-  
+
+
   // Mock generation status for controlling test behavior
   public generationStatus: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> = {
     hero: { status: SectionGenerationStatus.Completed, data: {} },
@@ -23,7 +25,7 @@ export class MockLandingPageGenerationService {
     pricing: { status: SectionGenerationStatus.Failed, error: 'Failed to generate pricing section' },
     faq: { status: SectionGenerationStatus.Failed, error: 'Failed to generate FAQ section' },
   };
-  
+
   // Mock landing page data - make public for testing access
   public landingPageData: LandingPageData = {
     title: 'Test Landing Page',
@@ -87,18 +89,18 @@ export class MockLandingPageGenerationService {
       enabled: true,
     },
   };
-  
+
   // Mock methods
   public generateLandingPageData = mock(async (): Promise<{
     landingPage: LandingPageData;
     generationStatus: Record<string, { status: string; data?: unknown; error?: string }>;
   }> => {
-    return { 
+    return {
       landingPage: { ...this.landingPageData },
       generationStatus: { ...this.generationStatus },
     };
   });
-  
+
   public editLandingPage = mock(async (landingPage: LandingPageData): Promise<LandingPageData> => {
     // Create a copy of the landing page to simulate editing
     const editedLandingPage = { ...landingPage };
@@ -108,9 +110,9 @@ export class MockLandingPageGenerationService {
     }
     return editedLandingPage;
   });
-  
-  public assessLandingPageQuality = mock(async (landingPage: LandingPageData, _options?: LandingPageQualityAssessmentOptions): Promise<{ 
-    landingPage: LandingPageData; 
+
+  public assessLandingPageQuality = mock(async (landingPage: LandingPageData, _options?: LandingPageQualityAssessmentOptions): Promise<{
+    landingPage: LandingPageData;
     assessments: Record<string, AssessedSection<unknown>>;
   }> => {
     return {
@@ -118,7 +120,7 @@ export class MockLandingPageGenerationService {
       assessments: this.getSectionQualityAssessments(),
     };
   });
-  
+
   public getSectionQualityAssessments = mock((): Record<string, AssessedSection<unknown>> => {
     return {
       hero: {
@@ -151,19 +153,19 @@ export class MockLandingPageGenerationService {
       },
     };
   });
-  
+
   public getGenerationStatus = mock((): Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }> => {
     return { ...this.generationStatus };
   });
-  
+
   public getBrainProtocol = mock((): BrainProtocol => {
     return {} as BrainProtocol;
   });
-  
+
   public setBrainProtocol = mock((_protocol: BrainProtocol): void => {
     // Mock implementation
   });
-  
+
   /**
    * Regenerate a specific section
    */
@@ -180,7 +182,7 @@ export class MockLandingPageGenerationService {
       } else if (sectionType === 'pricing' && landingPage.pricing) {
         landingPage.pricing.title = 'Regenerated Pricing';
         landingPage.pricing.enabled = true;
-        
+
         // Update generation status to completed
         this.generationStatus[sectionType] = {
           status: SectionGenerationStatus.Completed,
@@ -189,34 +191,34 @@ export class MockLandingPageGenerationService {
       } else if (sectionType === 'faq' && landingPage.faq) {
         landingPage.faq.title = 'Regenerated FAQ';
         landingPage.faq.enabled = true;
-        
+
         // Update generation status to completed
         this.generationStatus[sectionType] = {
           status: SectionGenerationStatus.Completed,
           data: landingPage.faq,
         };
       }
-      
+
       return {
         success: true,
         message: `Successfully regenerated ${sectionType} section`,
       };
     }
-    
+
     return {
       success: false,
       message: `Section ${sectionType} not found in landing page`,
     };
   });
-  
+
   /**
    * Regenerate all failed sections
    */
   public regenerateFailedSections = mock(async (
     landingPage: LandingPageData,
     _identity: WebsiteIdentityData,
-  ): Promise<{ 
-    success: boolean; 
+  ): Promise<{
+    success: boolean;
     message: string;
     results: {
       attempted: number;
@@ -229,7 +231,7 @@ export class MockLandingPageGenerationService {
     const failedSections = Object.entries(this.generationStatus)
       .filter(([_, status]) => status.status === SectionGenerationStatus.Failed)
       .map(([sectionType]) => sectionType);
-    
+
     if (failedSections.length === 0) {
       return {
         success: true,
@@ -242,12 +244,12 @@ export class MockLandingPageGenerationService {
         },
       };
     }
-    
+
     // Track results for each section
     const results: Record<string, { success: boolean; message: string }> = {};
     let succeeded = 0;
     let failed = 0;
-    
+
     // Try to regenerate each section
     for (const sectionType of failedSections) {
       try {
@@ -256,14 +258,14 @@ export class MockLandingPageGenerationService {
           if (landingPage.pricing) {
             landingPage.pricing.title = 'Regenerated Pricing';
             landingPage.pricing.enabled = true;
-            
+
             // Update generation status to completed
             this.generationStatus[sectionType] = {
               status: SectionGenerationStatus.Completed,
               data: landingPage.pricing,
             };
           }
-          
+
           results[sectionType] = {
             success: true,
             message: `Successfully regenerated ${sectionType} section`,
@@ -284,11 +286,11 @@ export class MockLandingPageGenerationService {
         failed++;
       }
     }
-    
+
     // Generate summary
     const totalAttempted = failedSections.length;
     const message = `Attempted to regenerate ${totalAttempted} sections: ${succeeded} succeeded, ${failed} failed`;
-    
+
     return {
       success: failed === 0,
       message,
@@ -300,43 +302,43 @@ export class MockLandingPageGenerationService {
       },
     };
   });
-  
+
   /**
    * Set landing page data for testing
    */
   setLandingPageData(data: LandingPageData): void {
     this.landingPageData = data;
   }
-  
+
   /**
    * Set generation status for testing
    */
   setGenerationStatus(status: Record<string, { status: string; data?: unknown; error?: string; retryCount?: number }>): void {
     this.generationStatus = status;
   }
-  
+
   /**
    * Get singleton instance
    */
-  static getInstance(): MockLandingPageGenerationService {
+  static getInstance() {
     if (!MockLandingPageGenerationService.instance) {
       MockLandingPageGenerationService.instance = new MockLandingPageGenerationService();
     }
-    return MockLandingPageGenerationService.instance;
+    return MockLandingPageGenerationService.instance as unknown as LandingPageGenerationService;
   }
-  
+
   /**
    * Reset singleton instance
    */
   static resetInstance(): void {
     MockLandingPageGenerationService.instance = null;
   }
-  
+
   /**
    * Create fresh instance
    */
-  static createFresh(): MockLandingPageGenerationService {
-    return new MockLandingPageGenerationService();
+  static createFresh() {
+    return new MockLandingPageGenerationService() as unknown as LandingPageGenerationService;
   }
 }
 

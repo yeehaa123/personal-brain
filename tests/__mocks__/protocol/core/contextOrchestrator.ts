@@ -7,13 +7,13 @@
 import type { ConversationContext } from '@/contexts/conversations';
 import type { ExternalSourceContext } from '@/contexts/externalSources';
 import type { NoteContext } from '@/contexts/notes';
-import type { ProfileContext } from '@/contexts/profiles';
+import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import type { WebsiteContext } from '@/contexts/website';
 import type { IContextManager } from '@/protocol/types';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
 import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
-import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
+import { MockProfileContextV2 } from '@test/__mocks__/contexts/profileContextV2';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
 
 /**
@@ -23,7 +23,7 @@ interface MockContextOrchestratorOptions {
   ready?: boolean;
   contextManager?: IContextManager;
   noteContext?: NoteContext;
-  profileContext?: ProfileContext;
+  profileContext?: ProfileContextV2;
   conversationContext?: ConversationContext;
   externalSourceContext?: ExternalSourceContext;
   websiteContext?: WebsiteContext;
@@ -43,7 +43,7 @@ export class MockContextOrchestrator {
   
   // Individual contexts
   private noteContext: NoteContext;
-  private profileContext: ProfileContext;
+  private profileContext: ProfileContextV2;
   private conversationContext: ConversationContext;
   private externalSourceContext: ExternalSourceContext;
   private websiteContext: WebsiteContext;
@@ -87,7 +87,7 @@ export class MockContextOrchestrator {
       MockNoteContext.getInstance() as unknown as NoteContext;
       
     this.profileContext = options?.profileContext || 
-      MockProfileContext.getInstance() as unknown as ProfileContext;
+      MockProfileContextV2.getInstance() as unknown as ProfileContextV2;
       
     this.conversationContext = options?.conversationContext || 
       MockConversationContext.getInstance() as unknown as ConversationContext;
@@ -123,7 +123,14 @@ export class MockContextOrchestrator {
   /**
    * Get the profile context
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): ProfileContextV2 {
+    return this.profileContext;
+  }
+  
+  /**
+   * Get the profile context v2 (for backward compatibility during migration)
+   */
+  getProfileContextV2(): ProfileContextV2 {
     return this.profileContext;
   }
   

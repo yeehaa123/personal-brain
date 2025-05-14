@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { relevanceConfig } from '@/config';
-import type { ProfileContext } from '@/contexts';
+import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import type { Profile } from '@/models/profile';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import { EmbeddingService } from '@/resources/ai/embedding';
@@ -22,7 +22,7 @@ import type { IProfileManager, ProfileAnalysisResult } from '../types';
  */
 export interface ProfileManagerConfig {
   /** Profile context instance */
-  profileContext: ProfileContext;
+  profileContext: ProfileContextV2;
   /** API key for embedding service */
   apiKey?: string;
 }
@@ -42,7 +42,7 @@ export class ProfileManager implements IProfileManager {
    */
   private logger = Logger.getInstance();
   
-  private profileContext: ProfileContext;
+  private profileContext: ProfileContextV2;
   private profileAnalyzer: ProfileAnalyzer;
   private profile: Profile | undefined;
 
@@ -174,7 +174,9 @@ export class ProfileManager implements IProfileManager {
       return null;
     }
     
-    return this.profileContext.getProfileTextForEmbedding(profile);
+    // Get profile content from the profile note
+    const noteData = await this.profileContext.getProfileAsNote();
+    return noteData?.content || null;
   }
 
   /**
@@ -196,24 +198,31 @@ export class ProfileManager implements IProfileManager {
     // Get the profile
     const profile = await this.getProfile();
     
-    // Calculate relevance if we have a profile with embeddings
-    if (isDefined(profile) && isDefined(profile.embedding)) {
+    // Get profile note to retrieve the embedding
+    if (isDefined(profile)) {
       try {
-        relevance = await this.profileAnalyzer.getProfileRelevance(query, profile);
-        this.logger.debug(`Profile semantic relevance: ${relevance.toFixed(2)}`);
+        // Get the profile note to access its embedding
+        const profileNote = await this.profileContext.getProfileAsNote();
         
-        // If relevance is high enough, consider it a profile query
-        if (relevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
-          this.logger.info(`Query is semantically relevant to profile (score: ${relevance.toFixed(2)})`);
-          // Update isProfileQuery based on relevance
-          return { isProfileQuery: true, relevance };
+        if (profileNote && profileNote.embedding) {
+          relevance = await this.profileAnalyzer.getProfileRelevance(query, profileNote.embedding);
+          this.logger.debug(`Profile semantic relevance: ${relevance.toFixed(2)}`);
+          
+          // If relevance is high enough, consider it a profile query
+          if (relevance > relevanceConfig.profileQueryThreshold && !isProfileQuery) {
+            this.logger.info(`Query is semantically relevant to profile (score: ${relevance.toFixed(2)})`);
+            // Update isProfileQuery based on relevance
+            return { isProfileQuery: true, relevance };
+          }
+        } else {
+          this.logger.debug('Profile note not found or no embedding available');
         }
       } catch (error) {
         this.logger.error('Error calculating profile relevance:', error);
         // Fall back to initial determination
       }
     } else {
-      this.logger.debug('No profile or embedding available for semantic relevance calculation');
+      this.logger.debug('No profile available for semantic relevance calculation');
     }
     
     return { isProfileQuery, relevance };
@@ -229,10 +238,10 @@ export class ProfileManager implements IProfileManager {
   }
   
   /**
-   * Get the ProfileContext instance
-   * @returns The ProfileContext instance
+   * Get the ProfileContextV2 instance
+   * @returns The ProfileContextV2 instance
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): ProfileContextV2 {
     return this.profileContext;
   }
 }

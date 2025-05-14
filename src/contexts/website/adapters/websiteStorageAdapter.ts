@@ -20,9 +20,7 @@ export interface WebsiteStorageAdapter extends StorageInterface<WebsiteDataItem>
    * Initialize storage adapter
    */
   initialize(): Promise<void>;
-  // Config management
-  getWebsiteConfig(): Promise<WebsiteConfig>;
-  updateWebsiteConfig(config: Partial<WebsiteConfig>): Promise<WebsiteConfig>;
+  // No longer needed - using the config.ts directly
   
   // Landing page data
   getLandingPageData(): Promise<LandingPageData | null>;
@@ -59,22 +57,7 @@ export class InMemoryWebsiteStorageAdapter implements WebsiteStorageAdapter {
     });
   }
   
-  async getWebsiteConfig(): Promise<WebsiteConfig> {
-    // Debug log to see what config is being returned
-    console.log('InMemoryWebsiteStorageAdapter.getWebsiteConfig() returning:', this.config);
-    return this.config;
-  }
-  
-  async updateWebsiteConfig(updates: Partial<WebsiteConfig>): Promise<WebsiteConfig> {
-    this.config = { ...this.config, ...updates };
-    // Update in items store too
-    this.items.set('config', {
-      id: 'config',
-      type: 'config',
-      data: this.config,
-    });
-    return this.config;
-  }
+  // Config methods removed - we now use config.ts directly
   
   async getLandingPageData(): Promise<LandingPageData | null> {
     return this.landingPageData;

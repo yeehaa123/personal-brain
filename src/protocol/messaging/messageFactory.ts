@@ -58,7 +58,7 @@ export class MessageFactory {
   static createDataRequest(
     sourceContext: string,
     targetContext: string,
-    dataType: DataRequestType,
+    dataType: string | DataRequestType,
     parameters?: Record<string, unknown>,
     timeout?: number,
   ): DataRequestMessage {
@@ -80,6 +80,32 @@ export class MessageFactory {
    * @param data Response data
    * @returns Data response message
    */
+  /**
+   * Create a data response with typed data
+   * 
+   * @param requestId ID of the request being responded to
+   * @param sourceContext Source context identifier
+   * @param targetContext Target context identifier
+   * @param dataType Type of data being requested
+   * @param data The data to return
+   * @returns Data response message
+   */
+  static createDataResponse<T>(
+    requestId: string,
+    sourceContext: string,
+    targetContext: string,
+    dataType: string | DataRequestType,
+    data: T,
+  ): DataResponseMessage {
+    return {
+      ...this.createBaseMessage(targetContext, sourceContext, 'response'),
+      category: 'response',
+      requestId,
+      status: 'success',
+      data: { data, dataType },
+    };
+  }
+  
   static createSuccessResponse(
     sourceContext: string,
     targetContext: string,
@@ -107,11 +133,11 @@ export class MessageFactory {
    * @returns Data response message
    */
   static createErrorResponse(
+    requestId: string,
     sourceContext: string,
     targetContext: string,
-    requestId: string,
-    errorCode: string,
     errorMessage: string,
+    errorCode: string = 'ERROR',
     details?: Record<string, unknown>,
   ): DataResponseMessage {
     return {
@@ -140,7 +166,7 @@ export class MessageFactory {
   static createNotification(
     sourceContext: string,
     targetContext: string,
-    notificationType: NotificationType,
+    notificationType: string | NotificationType,
     payload: Record<string, unknown>,
     requiresAck: boolean = false,
   ): NotificationMessage {

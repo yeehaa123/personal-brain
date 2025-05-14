@@ -3,7 +3,6 @@
  */
 import { relevanceConfig } from '@/config';
 import type { EmbeddingService } from '@/resources/ai/embedding';
-import type { Profile } from '@models/profile';
 import { Logger } from '@utils/logger';
 
 /**
@@ -104,24 +103,21 @@ export class ProfileAnalyzer {
   /**
    * Get profile similarity score to the query using semantic search
    * @param query The user's query
-   * @param profile The user profile
+   * @param profileEmbedding Profile embedding from the note
    * @returns Semantic relevance score (0-1)
    */
-  async getProfileRelevance(query: string, profile?: Profile): Promise<number> {
+  async getProfileRelevance(
+    query: string, 
+    profileEmbedding: number[],
+  ): Promise<number> {
     try {
-      if (!profile || !profile.embedding) {
-        return this.isProfileQuery(query) ? 
-          relevanceConfig.fallback.highRelevance : 
-          relevanceConfig.fallback.lowRelevance;
-      }
-
       // Get embedding for the query
       const queryEmbedding = await this.embeddingService.getEmbedding(query);
 
       // Calculate similarity score between query and profile
       const similarity = this.embeddingService.calculateSimilarity(
         queryEmbedding,
-        profile.embedding as number[],
+        profileEmbedding,
       );
 
       // Scale the similarity to be more decisive

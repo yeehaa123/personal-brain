@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { z } from 'zod';
 
-import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import { FallbackContentGenerator } from '@/contexts/website/services/landingPage/fallbackContentGenerator';
 import { SectionGenerationService } from '@/contexts/website/services/landingPage/sectionGenerationService';
 import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { QueryResult } from '@/protocol/types';
 import { MockBrainProtocol } from '@test/__mocks__/protocol/brainProtocol';
+import { createTestIdentityData } from '@test/helpers/websiteTestHelpers';
 import type { LandingPageData } from '@website/schemas';
 
 // Test fixture constants
@@ -52,36 +52,8 @@ const createTestFixtures = () => {
     sectionOrder: ['hero'],
   } as LandingPageData;
   
-  // Identity data with all required fields for the real implementation
-  const identity = {
-    personalData: { 
-      name: 'Test User',
-      email: 'test@example.com',
-    },
-    brandIdentity: {
-      tone: { 
-        formality: 'casual' as const, 
-        emotion: 'friendly',
-        personality: ['helpful'],
-      },
-      contentStyle: { 
-        writingStyle: 'clear',
-        sentenceLength: 'medium' as const,
-        vocabLevel: 'moderate' as const,
-      },
-      values: { 
-        coreValues: ['quality'],
-        targetAudience: ['professionals'],
-        painPoints: ['complexity'],
-        desiredAction: 'contact',
-      },
-    },
-    creativeContent: {
-      title: 'Creative Title',
-      description: 'Creative Description',
-      tagline: 'Creative Tagline',
-    },
-  } as WebsiteIdentityData;
+  // Use the shared helper to create identity data
+  const identity = createTestIdentityData();
   
   // Schema used in all tests
   const heroSchema = z.object({

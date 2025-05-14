@@ -8,7 +8,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ConversationContext } from '@/contexts/conversations';
 import { ExternalSourceContext } from '@/contexts/externalSources';
 import { NoteContext } from '@/contexts/notes';
-import { ProfileContext } from '@/contexts/profiles';
+import { ProfileContextV2 } from '@/contexts/profiles';
 import { WebsiteContext } from '@/contexts/website';
 import { isTestEnvironment } from '@/utils/configUtils';
 
@@ -16,7 +16,7 @@ import { isTestEnvironment } from '@/utils/configUtils';
 export type { McpServer };
 
 // Export the context types directly
-export type { ConversationContext, ExternalSourceContext, NoteContext, ProfileContext, WebsiteContext };
+export type { ConversationContext, ExternalSourceContext, NoteContext, ProfileContextV2, WebsiteContext };
 
 /**
  * Configuration options for the MCP server
@@ -49,7 +49,7 @@ export function createUnifiedMcpServer(config: McpServerConfig = {}): McpServer 
   
   // Use singleton instances of all contexts
   const noteContext = NoteContext.getInstance({ apiKey: config.apiKey });
-  const profileContext = ProfileContext.getInstance({ apiKey: config.apiKey });
+  const profileContext = ProfileContextV2.getInstance();
   const externalSourceContext = ExternalSourceContext.getInstance({ 
     apiKey: config.apiKey, 
     newsApiKey: config.newsApiKey,

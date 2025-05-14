@@ -145,7 +145,6 @@ export class ConversationCommandHandler extends BaseCommandHandler {
         answer: result.answer,
         citations: result.citations,
         relatedNotes: result.relatedNotes,
-        profile: result.profile,
         externalSources: result.externalSources,
       };
     } catch (error: unknown) {

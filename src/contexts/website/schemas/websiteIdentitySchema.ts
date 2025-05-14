@@ -8,86 +8,47 @@
 import { z } from 'zod';
 
 /**
- * Personal data schema - basic information from profile
+ * Website Identity Schema - Flat structure for all identity data
  */
-export const PersonalDataSchema = z.object({
+export const WebsiteIdentitySchema = z.object({
+  // Personal data
   name: z.string().min(1, 'Name is required'),
   email: z.string().email('Valid email is required'),
-  company: z.string().optional(),
-  location: z.string().optional(),
-  occupation: z.string().optional(),
-  industry: z.string().optional(),
-  yearsExperience: z.number().positive().optional(),
-});
-
-/**
- * Creative content schema - marketing-oriented content
- */
-export const CreativeContentSchema = z.object({
+  company: z.string(),
+  location: z.string(),
+  occupation: z.string(),
+  industry: z.string(),
+  yearsExperience: z.number(),
+  
+  // Creative content
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   tagline: z.string().min(1, 'Tagline is required'),
-  pitch: z.string().optional(),
-  uniqueValue: z.string().optional(),
-  keyAchievements: z.array(z.string()).optional().default([]),
-});
-
-/**
- * Tone settings schema - voice and tone guidelines
- */
-export const ToneSchema = z.object({
+  pitch: z.string(),
+  uniqueValue: z.string(),
+  keyAchievements: z.array(z.string()),
+  
+  // Brand identity - tone
   formality: z.enum(['casual', 'conversational', 'professional', 'academic']),
   personality: z.array(z.string()).min(1, 'At least one personality trait is required'),
   emotion: z.string().min(1, 'Emotion is required'),
-});
-
-/**
- * Content style schema - writing style preferences
- */
-export const ContentStyleSchema = z.object({
+  
+  // Brand identity - content style
   writingStyle: z.string().min(1, 'Writing style description is required'),
   sentenceLength: z.enum(['short', 'medium', 'varied', 'long']),
   vocabLevel: z.enum(['simple', 'moderate', 'advanced', 'technical']),
   useJargon: z.boolean(),
   useHumor: z.boolean(),
   useStories: z.boolean(),
-});
-
-/**
- * Values schema - brand values and audience targeting
- */
-export const ValuesSchema = z.object({
+  
+  // Brand identity - values
   coreValues: z.array(z.string()).min(1, 'At least one core value is required'),
   targetAudience: z.array(z.string()).min(1, 'At least one target audience is required'),
   painPoints: z.array(z.string()).min(1, 'At least one pain point is required'),
   desiredAction: z.string().min(1, 'Desired action is required'),
 });
 
-/**
- * Brand identity schema - guidelines for consistent content
- */
-export const BrandIdentitySchema = z.object({
-  tone: ToneSchema,
-  contentStyle: ContentStyleSchema,
-  values: ValuesSchema,
-});
-
-/**
- * Full website identity schema
- */
-export const WebsiteIdentitySchema = z.object({
-  personalData: PersonalDataSchema,
-  creativeContent: CreativeContentSchema,
-  brandIdentity: BrandIdentitySchema,
-});
-
-// Export types derived from schemas
-export type PersonalData = z.infer<typeof PersonalDataSchema>;
-export type CreativeContent = z.infer<typeof CreativeContentSchema>;
-export type Tone = z.infer<typeof ToneSchema>;
-export type ContentStyle = z.infer<typeof ContentStyleSchema>;
-export type Values = z.infer<typeof ValuesSchema>;
-export type BrandIdentity = z.infer<typeof BrandIdentitySchema>;
+// Export type derived from schema
 export type WebsiteIdentityData = z.infer<typeof WebsiteIdentitySchema>;
 
 /**
@@ -98,8 +59,3 @@ export const GenerateWebsiteIdentityToolSchema = z.object({
 });
 
 export const GetWebsiteIdentityToolSchema = z.object({});
-
-export const UpdateWebsiteIdentityToolSchema = z.object({
-  identityData: z.record(z.unknown()).optional(),
-  partialUpdate: z.boolean().optional().default(true),
-});

@@ -251,6 +251,7 @@ export class LandingPageGenerationService {
    */
   async assessLandingPageQuality(
     landingPage: LandingPageData,
+    identity: WebsiteIdentityData,
     options: LandingPageQualityAssessmentOptions = {},
   ): Promise<{ 
     landingPage: LandingPageData; 
@@ -273,7 +274,7 @@ export class LandingPageGenerationService {
       let assessedLandingPage = { ...landingPage };
       
       // Process sections with quality assessment
-      assessedLandingPage = await this.assessAndImproveSections(assessedLandingPage);
+      assessedLandingPage = await this.assessAndImproveSections(assessedLandingPage, identity);
       
       // If requested, apply the enablement recommendations
       if (options.applyRecommendations) {
@@ -304,17 +305,11 @@ export class LandingPageGenerationService {
    * @param identity The identity data to apply
    */
   private applyIdentityToLandingPage(landingPage: LandingPageData, identity: WebsiteIdentityData): void {
-    // Apply personal data
-    if (identity.personalData) {
-      landingPage.name = identity.personalData.name;
-    }
-    
-    // Apply creative content
-    if (identity.creativeContent) {
-      landingPage.title = identity.creativeContent.title;
-      landingPage.description = identity.creativeContent.description;
-      landingPage.tagline = identity.creativeContent.tagline;
-    }
+    // Apply identity data
+    landingPage.name = identity.name;
+    landingPage.title = identity.title;
+    landingPage.description = identity.description;
+    landingPage.tagline = identity.tagline;
     
     this.logger.debug('Applied identity data to landing page', {
       context: 'LandingPageGenerationService',
@@ -612,25 +607,20 @@ export class LandingPageGenerationService {
    */
   private createBrandGuidelinesFromIdentity(identity: WebsiteIdentityData): string {
     // Extract brand identity information
-    const { brandIdentity, personalData, creativeContent } = identity;
-    
     // Format tone information
-    const tone = brandIdentity.tone;
-    const toneDescription = `Tone: ${tone.formality} and ${tone.emotion}. Personality traits: ${tone.personality.join(', ')}.`;
+    const toneDescription = `Tone: ${identity.formality} and ${identity.emotion}. Personality traits: ${identity.personality.join(', ')}.`;
     
     // Format content style information
-    const style = brandIdentity.contentStyle;
-    const styleDescription = `Style: ${style.writingStyle}. Use ${style.sentenceLength} sentences and ${style.vocabLevel} vocabulary.` +
-      (style.useJargon ? ' Include industry-specific terminology.' : ' Avoid jargon.') +
-      (style.useHumor ? ' Include appropriate humor.' : ' Maintain serious tone.') +
-      (style.useStories ? ' Use storytelling elements.' : ' Focus on facts.');
+    const styleDescription = `Style: ${identity.writingStyle}. Use ${identity.sentenceLength} sentences and ${identity.vocabLevel} vocabulary.` +
+      (identity.useJargon ? ' Include industry-specific terminology.' : ' Avoid jargon.') +
+      (identity.useHumor ? ' Include appropriate humor.' : ' Maintain serious tone.') +
+      (identity.useStories ? ' Use storytelling elements.' : ' Focus on facts.');
     
     // Format values information
-    const values = brandIdentity.values;
-    const valuesDescription = `Core values: ${values.coreValues.join(', ')}. ` +
-      `Target audience: ${values.targetAudience.join(', ')}. ` +
-      `Pain points to address: ${values.painPoints.join(', ')}. ` +
-      `Desired action: ${values.desiredAction}.`;
+    const valuesDescription = `Core values: ${identity.coreValues.join(', ')}. ` +
+      `Target audience: ${identity.targetAudience.join(', ')}. ` +
+      `Pain points to address: ${identity.painPoints.join(', ')}. ` +
+      `Desired action: ${identity.desiredAction}.`;
     
     // Combine into guidelines block
     return `
@@ -642,9 +632,9 @@ ${styleDescription}
 
 ${valuesDescription}
 
-NAME: ${personalData.name}
-TAGLINE: ${creativeContent.tagline}
-UNIQUE VALUE: ${creativeContent.uniqueValue || 'Not specified'}
+NAME: ${identity.name}
+TAGLINE: ${identity.tagline}
+UNIQUE VALUE: ${identity.uniqueValue || 'Not specified'}
 
 Please ensure all content follows these brand guidelines consistently.
 `;
@@ -716,8 +706,12 @@ Please ensure all content follows these brand guidelines consistently.
   /**
    * Assess and improve all sections of the landing page
    * @param landingPage - Generated landing page data
+   * @param identity - Website identity data to use for assessment
    */
-  private async assessAndImproveSections(landingPage: LandingPageData): Promise<LandingPageData> {
+  private async assessAndImproveSections(
+    landingPage: LandingPageData,
+    identity: WebsiteIdentityData,
+  ): Promise<LandingPageData> {
     this.logger.debug('Starting section quality assessment', {
       context: 'LandingPageGenerationService',
     });
@@ -754,6 +748,7 @@ Please ensure all content follows these brand guidelines consistently.
         const assessedSection = await this.sectionQualityService.processSectionWithQualityAssessment(
           sectionType,
           section,
+          identity,
         );
         
         // Store the assessed section for later use

@@ -708,62 +708,7 @@ export class MatrixResponseFormatter {
     }
   }
   
-  /**
-   * Format a profile-related response
-   * 
-   * @param profile Profile object
-   * @param relatedNotes Related notes
-   * @param matchType Match type
-   * @returns Formatted response
-   */
-  formatProfileRelated(
-    profile: Record<string, unknown>, 
-    relatedNotes: NotePreview[], 
-    matchType?: 'tags' | 'semantic' | 'keyword',
-  ): string {
-    const profileLines = this.buildProfileMessage(profile);
-    
-    // Add related notes section
-    profileLines.push('');
-    profileLines.push('### Notes related to your profile:');
-    
-    if (relatedNotes.length > 0) {
-      // Explain how we found the notes
-      switch (matchType) {
-      case 'tags': {
-        profileLines.push('(Matched by profile tags and semantic similarity)');
-        break;
-      }
-      case 'semantic': {
-        profileLines.push('(Matched by semantic similarity)');
-        break;
-      }
-      case 'keyword': {
-        profileLines.push('(Matched by keyword similarity)');
-        break;
-      }
-      }
-      
-      profileLines.push('');
-      relatedNotes.forEach((note, index) => {
-        profileLines.push(formatNotePreviewInternal(note, index + 1));
-      });
-    } else {
-      profileLines.push('No related notes found. Try generating embeddings and tags for your notes and profile.');
-      profileLines.push('You can run "bun run tag:profile" to generate profile tags.');
-    }
-    
-    if (this.useBlocks) {
-      const builder = new MatrixBlockBuilder();
-      
-      builder.addHeader('Profile Information');
-      builder.addSection(profileLines.join('\n'));
-      
-      return builder.build() as string;
-    } else {
-      return this.markdown.format(profileLines.join('\n'));
-    }
-  }
+  // formatProfileRelated method has been removed as part of simplifying the profile functionality
 
   // Website help formatter removed as it's no longer needed
   

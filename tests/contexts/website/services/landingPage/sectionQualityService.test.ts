@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
+import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import { SectionQualityService } from '@/contexts/website/services/landingPage/sectionQualityService';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { MockLogger } from '@test/__mocks__/core/logger';
+import { createTestIdentityData } from '@test/helpers/websiteTestHelpers';
 import type { SectionQualityAssessment } from '@website/schemas/sectionQualitySchema';
 
 // Mock BrainProtocol for testing
@@ -54,8 +56,9 @@ describe('SectionQualityService', () => {
       ctaText: 'Get Started',
       ctaLink: '#contact',
     };
+    const identity = createTestIdentityData();
 
-    const assessment = await service.assessSectionQuality(sectionType, sectionContent);
+    const assessment = await service.assessSectionQuality(sectionType, sectionContent, identity);
     
     expect(mockBrainProtocol.processQuery).toHaveBeenCalled();
     expect(assessment.qualityScore).toBe(8);
@@ -81,8 +84,10 @@ describe('SectionQualityService', () => {
       } as SectionQualityAssessment,
     }));
     
+    const identity = createTestIdentityData();
+    
     // Test with a required section
-    const assessment = await service.assessSectionQuality('hero', {});
+    const assessment = await service.assessSectionQuality('hero', {}, identity);
     
     // Even with low scores, required sections should be enabled
     expect(assessment.enabled).toBe(true);
@@ -105,8 +110,10 @@ describe('SectionQualityService', () => {
       } as SectionQualityAssessment,
     }));
     
+    const identity = createTestIdentityData();
+    
     // Test with a non-required section
-    const assessment = await service.assessSectionQuality('about', {});
+    const assessment = await service.assessSectionQuality('about', {}, identity);
     
     // With low scores, non-required sections should be disabled
     expect(assessment.enabled).toBe(false);
@@ -119,6 +126,8 @@ describe('SectionQualityService', () => {
       content: 'I am a professional consultant with experience.',
       enabled: true,
     };
+    
+    const identity = createTestIdentityData();
     
     const assessment: SectionQualityAssessment = {
       qualityScore: 5,
@@ -140,11 +149,11 @@ describe('SectionQualityService', () => {
     
     // First try the ideal, correct approach
     const originalImplementation = service.improveSectionContent;
-    service.improveSectionContent = async <T>(_sectionType: string, _sectionContent: T, _assessment: SectionQualityAssessment): Promise<T> => {
+    service.improveSectionContent = async <T>(_sectionType: string, _sectionContent: T, _assessment: SectionQualityAssessment, _identity?: WebsiteIdentityData): Promise<T> => {
       return improvedContent as unknown as T;
     };
     
-    const result = await service.improveSectionContent(sectionType, originalContent, assessment);
+    const result = await service.improveSectionContent(sectionType, originalContent, assessment, identity);
     
     // Restore the original implementation
     service.improveSectionContent = originalImplementation;
@@ -160,6 +169,7 @@ describe('SectionQualityService', () => {
       items: [{ title: 'Business Strategy', description: 'Help with strategy' }],
       enabled: true,
     };
+    const identity = createTestIdentityData();
     
     // Improved content that will be returned
     const improvedContent = {
@@ -188,7 +198,7 @@ describe('SectionQualityService', () => {
     
     // Replace the method implementation for the duration of the test
     const originalProcessSection = service.processSectionWithQualityAssessment;
-    service.processSectionWithQualityAssessment = async <T>(_sectionType: string, _sectionContent: T) => {
+    service.processSectionWithQualityAssessment = async <T>(_sectionType: string, _sectionContent: T, _identity?: WebsiteIdentityData) => {
       return {
         content: improvedContent as unknown as T,
         assessment: finalAssessment,
@@ -196,7 +206,7 @@ describe('SectionQualityService', () => {
       };
     };
     
-    const result = await service.processSectionWithQualityAssessment(sectionType, sectionContent);
+    const result = await service.processSectionWithQualityAssessment(sectionType, sectionContent, identity);
     
     // Restore the original implementation
     service.processSectionWithQualityAssessment = originalProcessSection;
@@ -210,12 +220,14 @@ describe('SectionQualityService', () => {
   test('should handle errors gracefully during assessment', async () => {
     // Replace the implementation to throw an error
     const originalAssessMethod = service.assessSectionQuality;
-    service.assessSectionQuality = async <T>(_sectionType: string, _sectionContent: T): Promise<SectionQualityAssessment> => {
+    service.assessSectionQuality = async <T>(_sectionType: string, _sectionContent: T, _identity?: WebsiteIdentityData): Promise<SectionQualityAssessment> => {
       throw new Error('API Error');
     };
     
+    const identity = createTestIdentityData();
+    
     // Errors during processing should be caught
-    await expect(service.assessSectionQuality('about', {})).rejects.toThrow('API Error');
+    await expect(service.assessSectionQuality('about', {}, identity)).rejects.toThrow('API Error');
     
     // Restore the original implementation
     service.assessSectionQuality = originalAssessMethod;
@@ -233,6 +245,7 @@ describe('SectionQualityService', () => {
       suggestedImprovements: 'Improve this',
       improvementsApplied: false,
     };
+    const identity = createTestIdentityData();
     
     // Save original implementation
     const originalGetBrainProtocol = service.getBrainProtocol;
@@ -247,7 +260,7 @@ describe('SectionQualityService', () => {
       } as unknown as BrainProtocol;
     };
     
-    const result = await service.improveSectionContent('test', originalContent, assessment);
+    const result = await service.improveSectionContent('test', originalContent, assessment, identity);
     
     // If improvement fails, original content should be returned
     expect(result).toEqual(originalContent);

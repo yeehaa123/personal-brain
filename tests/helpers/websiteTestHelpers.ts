@@ -100,53 +100,50 @@ export function createTestLandingPageData(overrides?: Partial<LandingPageData>):
  */
 export function createTestIdentityData(overrides?: Partial<WebsiteIdentityData>): WebsiteIdentityData {
   const defaultData: WebsiteIdentityData = {
-    personalData: {
-      name: 'Test User',
-      email: 'test@example.com',
-      company: 'Test Company',
-      occupation: 'Web Developer',
-      industry: 'Technology',
-      yearsExperience: 10,
-      location: 'San Francisco, CA, USA',
-    },
-    creativeContent: {
-      title: 'Test User - Professional Web Development',
-      description: 'Expert web development services by Test User',
-      tagline: 'Transforming ideas into digital reality',
-      pitch: 'I help businesses create effective web solutions that grow their digital presence.',
-      uniqueValue: 'A blend of technical expertise and creative problem-solving.',
-      keyAchievements: [
-        'Successfully completed 150+ projects',
-        'Reduced loading times by 40% on average',
-        'Developed custom solutions for enterprise clients',
-      ],
-    },
-    brandIdentity: {
-      tone: {
-        formality: 'professional',
-        personality: ['knowledgeable', 'approachable', 'innovative'],
-        emotion: 'confident',
-      },
-      contentStyle: {
-        writingStyle: 'Clear, concise, and engaging with a focus on value',
-        sentenceLength: 'varied',
-        vocabLevel: 'moderate',
-        useJargon: false,
-        useHumor: true,
-        useStories: true,
-      },
-      values: {
-        coreValues: ['quality', 'innovation', 'reliability', 'transparency'],
-        targetAudience: ['small businesses', 'startups', 'tech companies'],
-        painPoints: [
-          'outdated web presence',
-          'slow loading times',
-          'poor user experience',
-          'lack of technical expertise',
-        ],
-        desiredAction: 'Contact Test User for a consultation on your web development needs',
-      },
-    },
+    // Personal data fields
+    name: 'Test User',
+    email: 'test@example.com',
+    company: 'Test Company',
+    occupation: 'Web Developer',
+    industry: 'Technology',
+    yearsExperience: 10,
+    location: 'San Francisco, CA, USA',
+    
+    // Creative content fields
+    title: 'Test User - Professional Web Development',
+    description: 'Expert web development services by Test User',
+    tagline: 'Transforming ideas into digital reality',
+    pitch: 'I help businesses create effective web solutions that grow their digital presence.',
+    uniqueValue: 'A blend of technical expertise and creative problem-solving.',
+    keyAchievements: [
+      'Successfully completed 150+ projects',
+      'Reduced loading times by 40% on average',
+      'Developed custom solutions for enterprise clients',
+    ],
+    
+    // Brand identity - tone fields
+    formality: 'professional',
+    personality: ['knowledgeable', 'approachable', 'innovative'],
+    emotion: 'confident',
+    
+    // Brand identity - content style fields
+    writingStyle: 'Clear, concise, and engaging with a focus on value',
+    sentenceLength: 'varied',
+    vocabLevel: 'moderate',
+    useJargon: false,
+    useHumor: true,
+    useStories: true,
+    
+    // Brand identity - values fields
+    coreValues: ['quality', 'innovation', 'reliability', 'transparency'],
+    targetAudience: ['small businesses', 'startups', 'tech companies'],
+    painPoints: [
+      'outdated web presence',
+      'slow loading times',
+      'poor user experience',
+      'lack of technical expertise',
+    ],
+    desiredAction: 'Contact Test User for a consultation on your web development needs',
   };
 
   // Merge overrides with default data

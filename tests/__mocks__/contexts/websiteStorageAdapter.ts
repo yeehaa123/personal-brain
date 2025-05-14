@@ -45,18 +45,7 @@ export class MockWebsiteStorageAdapter implements IWebsiteStorageAdapter {
     return Promise.resolve();
   });
   
-  getWebsiteConfig = mock(() => Promise.resolve(this.config));
-  
-  updateWebsiteConfig = mock((updates: Partial<WebsiteConfig>) => {
-    this.config = { ...this.config, ...updates };
-    // Update in items storage
-    this.items.set('config', {
-      id: 'config',
-      type: 'config',
-      data: this.config,
-    });
-    return Promise.resolve(this.config);
-  });
+  // Config methods removed - using config.ts directly
   
   getLandingPageData = mock(() => Promise.resolve(this.landingPageData));
   
@@ -157,8 +146,6 @@ export class MockWebsiteStorageAdapter implements IWebsiteStorageAdapter {
     if (MockWebsiteStorageAdapter.instance) {
       // Clear all mock functions
       MockWebsiteStorageAdapter.instance.initialize.mockClear();
-      MockWebsiteStorageAdapter.instance.getWebsiteConfig.mockClear();
-      MockWebsiteStorageAdapter.instance.updateWebsiteConfig.mockClear();
       MockWebsiteStorageAdapter.instance.getLandingPageData.mockClear();
       MockWebsiteStorageAdapter.instance.saveLandingPageData.mockClear();
       

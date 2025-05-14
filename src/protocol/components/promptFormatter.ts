@@ -4,7 +4,7 @@
 
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@models/note';
-import type { Profile, ProfileEducation, ProfileExperience, ProfileProject } from '@models/profile';
+import type { Profile } from '@models/profile';
 import { Logger } from '@utils/logger';
 import { getExcerpt as noteExcerpt } from '@utils/noteUtils';
 
@@ -197,13 +197,12 @@ ${query}`;
     let profileContext = '\n\nPROFILE INFORMATION:\n';
 
     // Basic information (always included)
-    profileContext += `Name: ${profile.fullName}\n`;
+    profileContext += `Display Name: ${profile.displayName}\n`;
     if (profile.headline) profileContext += `Headline: ${profile.headline}\n`;
-    if (profile.occupation) profileContext += `Occupation: ${profile.occupation}\n`;
 
     // Location (always included)
-    if (profile.city || profile.country) {
-      profileContext += `Location: ${[profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ')}\n`;
+    if (profile.location) {
+      profileContext += `Location: ${[profile.location.city, profile.location.state, profile.location.country].filter(Boolean).join(', ')}\n`;
     }
 
     // Summary (always included)
@@ -213,11 +212,11 @@ ${query}`;
 
     // Current Experience (always included)
     if (profile.experiences?.length) {
-      const currentExperiences = (profile.experiences as ProfileExperience[]).filter(exp => !exp.ends_at);
+      const currentExperiences = profile.experiences.filter(exp => !exp.endDate);
       if (currentExperiences.length > 0) {
         profileContext += '\nCurrent Work:\n';
         currentExperiences.forEach(exp => {
-          profileContext += `- ${exp.title} at ${exp.company}`;
+          profileContext += `- ${exp.title} at ${exp.organization}`;
           if (exp.description) profileContext += `: ${exp.description.split('\n')[0]}\n`;
           else profileContext += '\n';
         });
@@ -228,13 +227,15 @@ ${query}`;
     if (queryRelevance > 0.5) {
       // Past Experience
       if (profile.experiences?.length) {
-        const pastExperiences = (profile.experiences as ProfileExperience[]).filter(exp => exp.ends_at).slice(0, 5);
+        const pastExperiences = profile.experiences.filter(exp => exp.endDate).slice(0, 5);
         if (pastExperiences.length > 0) {
           profileContext += '\nPast Experience:\n';
           pastExperiences.forEach(exp => {
-            profileContext += `- ${exp.title} at ${exp.company}`;
-            if (exp.starts_at && exp.ends_at) {
-              profileContext += ` (${exp.starts_at} - ${exp.ends_at})`;
+            profileContext += `- ${exp.title} at ${exp.organization}`;
+            if (exp.startDate && exp.endDate) {
+              const startDate = new Date(exp.startDate).getFullYear();
+              const endDate = new Date(exp.endDate).getFullYear();
+              profileContext += ` (${startDate} - ${endDate})`;
             }
             if (exp.description) {
               const shortDesc = exp.description.length > 100
@@ -251,19 +252,21 @@ ${query}`;
       // Education
       if (profile.education?.length) {
         profileContext += '\nEducation:\n';
-        (profile.education as ProfileEducation[]).forEach(edu => {
-          profileContext += `- ${edu.degree_name} at ${edu.school}`;
-          if (edu.starts_at && edu.ends_at) {
-            profileContext += ` (${edu.starts_at} - ${edu.ends_at})`;
+        profile.education.forEach(edu => {
+          profileContext += `- ${edu.degree || 'Degree'} at ${edu.institution}`;
+          if (edu.startDate && edu.endDate) {
+            const startDate = new Date(edu.startDate).getFullYear();
+            const endDate = new Date(edu.endDate).getFullYear();
+            profileContext += ` (${startDate} - ${endDate})`;
           }
           profileContext += '\n';
         });
       }
 
       // Projects
-      if (profile.accomplishmentProjects?.length) {
+      if (profile.projects?.length) {
         profileContext += '\nProjects:\n';
-        (profile.accomplishmentProjects as ProfileProject[]).slice(0, 3).forEach(proj => {
+        profile.projects.slice(0, 3).forEach(proj => {
           profileContext += `- ${proj.title}`;
           if (proj.description) {
             const shortDesc = proj.description.length > 100
@@ -278,20 +281,29 @@ ${query}`;
     }
 
     // Skills (Languages) - always included but more detailed for higher relevance
+    if (profile.skills && profile.skills.length > 0) {
+      profileContext += '\nSkills:\n';
+      profileContext += profile.skills.join(', ') + '\n';
+    }
+    
+    // Add languages if available
     if (profile.languages && profile.languages.length > 0) {
-      profileContext += '\nSkills & Languages:\n';
-      profileContext += profile.languages.join(', ') + '\n';
+      profileContext += '\nLanguages:\n';
+      profile.languages.forEach(lang => {
+        if (typeof lang === 'object') {
+          profileContext += `- ${lang.name} (${lang.proficiency})\n`;
+        }
+      });
     }
 
     // Add machine-readable section to help the model understand the profile structure
     profileContext += '\nProfile Structure:\n';
-    profileContext += `- Full Name: ${profile.fullName}\n`;
-    profileContext += `- Primary Occupation: ${profile.occupation || 'Not specified'}\n`;
+    profileContext += `- Display Name: ${profile.displayName}\n`;
     profileContext += `- Primary Expertise: ${profile.headline ? profile.headline.split('|')[0].trim() : 'Not specified'}\n`;
-    profileContext += `- Current Location: ${profile.city || 'Not specified'}\n`;
+    profileContext += `- Current Location: ${profile.location?.city || 'Not specified'}\n`;
     profileContext += `- Number of Past Roles: ${profile.experiences ? profile.experiences.length : 0}\n`;
-    profileContext += `- Number of Projects: ${profile.accomplishmentProjects ? profile.accomplishmentProjects.length : 0}\n`;
-    profileContext += `- Number of Skills: ${profile.languages ? profile.languages.length : 0}\n`;
+    profileContext += `- Number of Projects: ${profile.projects ? profile.projects.length : 0}\n`;
+    profileContext += `- Number of Skills: ${profile.skills ? profile.skills.length : 0}\n`;
 
     return profileContext;
   }

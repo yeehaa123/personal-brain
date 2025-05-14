@@ -109,20 +109,20 @@ export class WebsiteContextMessaging {
    */
   async generateLandingPage(): Promise<{ success: boolean; message: string; data?: LandingPageData }> {
     // Delegate to the original context
-    const result = await this.websiteContext.generateLandingPage();
+    const response = await this.websiteContext.generateLandingPage();
     
     // Notify other contexts if the landing page was generated successfully
-    if (result.success && result.data) {
+    if (response.success && response.data) {
       await this.notifier.notifyWebsiteGenerated(
         'landing-page',
         { 
           type: 'landing-page',
-          data: result.data,
+          data: response.data,
         },
       );
     }
     
-    return result;
+    return response;
   }
   
   /**
@@ -216,26 +216,24 @@ export class WebsiteContextMessaging {
     return this.websiteContext.getConfig();
   }
   
-  async updateConfig(updates: Partial<WebsiteConfig>): Promise<WebsiteConfig> {
-    // Delegate to the original context
-    const config = await this.websiteContext.updateConfig(updates);
-    
-    // Could add notification here if needed in the future
-    // await this.notifier.notifyWebsiteConfigUpdated(config);
-    
-    return config;
-  }
+  // updateConfig method removed - we now use config.ts directly
   
   async getLandingPageData(): Promise<LandingPageData | null> {
     return this.websiteContext.getLandingPageData();
   }
   
   async saveLandingPageData(data: LandingPageData): Promise<void> {
-    // Delegate to the original context
-    await this.websiteContext.saveLandingPageData(data);
+    // Use storage's saveLandingPageData since WebsiteContext doesn't have this method
+    await this.websiteContext.getStorage().saveLandingPageData(data);
     
-    // Could add notification here if needed
-    // await this.notifier.notifyLandingPageDataSaved(data);
+    // Add notification 
+    await this.notifier.notifyWebsiteGenerated(
+      'landing-page-updated', 
+      { 
+        type: 'landing-page-update',
+        data,
+      },
+    );
   }
   
   async handleWebsiteStatus(environment: string = 'preview'): Promise<{ 

@@ -119,6 +119,9 @@ export class MockBaseContext<
         description: 'A test tool for mock implementation',
       },
     ];
+    
+    // Initialize MCP components
+    this.initializeMcpComponents();
   }
   
   /**
@@ -263,6 +266,15 @@ export class MockBaseContext<
     this.resources.push(resource);
   }
   
+  /**
+   * Initialize MCP components
+   * This is a protected method in BaseContext that must be implemented
+   */
+  protected initializeMcpComponents(): void {
+    // In the mock implementation, we do not need to do anything
+    // The resources and tools are already set up in the constructor
+  }
+
   /**
    * Add a tool
    * @param tool Tool to add

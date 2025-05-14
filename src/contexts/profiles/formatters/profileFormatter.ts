@@ -13,14 +13,12 @@
  */
 import type { FormatterInterface } from '@/contexts/formatterInterface';
 import type { 
-  Profile, 
-  ProfileAward, 
-  ProfileEducation,
-  ProfileExperience,
-  ProfileLanguageProficiency,
-  ProfileProject,
-  ProfilePublication,
-  ProfileVolunteerWork,
+  Education, 
+  Experience,
+  Language,
+  Profile,
+  Project,
+  Publication,
 } from '@/models/profile';
 import { Logger } from '@/utils/logger';
 import { isNonEmptyString } from '@/utils/safeAccessUtils';
@@ -176,12 +174,10 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       
       // Start with personal info
       let formatted = '';
-      const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
       
-      if (name) {
-        formatted += `# ${name}\n\n`;
-      } else if (profile.fullName) {
-        formatted += `# ${profile.fullName}\n\n`;
+      // Use displayName as the main name
+      if (profile.displayName) {
+        formatted += `# ${profile.displayName}\n\n`;
       }
       
       if (profile.headline) {
@@ -195,17 +191,34 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       // Basic info section
       let basicInfo = '';
       
-      // Location from city, state, country
-      const location = [profile.city, profile.state, profile.countryFullName]
-        .filter(Boolean)
-        .join(', ');
-      
-      if (location) {
-        basicInfo += `**Location:** ${formatField(location)}\n`;
+      // Location from location object
+      if (profile.location) {
+        const locationParts = [
+          profile.location.city,
+          profile.location.state,
+          profile.location.country,
+        ].filter(Boolean);
+        
+        if (locationParts.length > 0) {
+          const locationStr = locationParts.join(', ');
+          basicInfo += `**Location:** ${formatField(locationStr)}\n`;
+        }
       }
       
-      if (profile.occupation) {
-        basicInfo += `**Occupation:** ${formatField(profile.occupation)}\n`;
+      // Email
+      if (profile.email) {
+        basicInfo += `**Email:** ${formatField(profile.email)}\n`;
+      }
+      
+      // Contact info
+      if (profile.contact) {
+        if (profile.contact.phone) {
+          basicInfo += `**Phone:** ${formatField(profile.contact.phone)}\n`;
+        }
+        
+        if (profile.contact.website) {
+          basicInfo += `**Website:** ${formatField(profile.contact.website)}\n`;
+        }
       }
       
       if (basicInfo && (includeEmptySections || basicInfo.length > 0)) {
@@ -250,12 +263,12 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       }
       
       // Projects
-      if (profile.accomplishmentProjects && profile.accomplishmentProjects.length > 0) {
+      if (profile.projects && profile.projects.length > 0) {
         if (includeSectionHeaders) {
           formatted += '## Projects\n\n';
         }
         
-        formatted += profile.accomplishmentProjects
+        formatted += profile.projects
           .map(project => this.formatProject(project, formatField))
           .join('\n\n');
         formatted += '\n\n';
@@ -267,12 +280,12 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       }
       
       // Publications
-      if (profile.accomplishmentPublications && profile.accomplishmentPublications.length > 0) {
+      if (profile.publications && profile.publications.length > 0) {
         if (includeSectionHeaders) {
           formatted += '## Publications\n\n';
         }
         
-        formatted += profile.accomplishmentPublications
+        formatted += profile.publications
           .map(pub => this.formatPublication(pub, formatField))
           .join('\n\n');
         formatted += '\n\n';
@@ -284,23 +297,14 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
       }
       
       // Languages
-      if (profile.languagesAndProficiencies && profile.languagesAndProficiencies.length > 0) {
-        if (includeSectionHeaders) {
-          formatted += '## Languages\n\n';
-        }
-        
-        formatted += profile.languagesAndProficiencies
-          .map(lang => this.formatLanguage(lang, formatField))
-          .join('\n');
-        formatted += '\n\n';
-      } else if (profile.languages && profile.languages.length > 0) {
+      if (profile.languages && profile.languages.length > 0) {
         if (includeSectionHeaders) {
           formatted += '## Languages\n\n';
         }
         
         formatted += profile.languages
-          .map(lang => `- **${formatField(lang)}**\n`)
-          .join('');
+          .map(lang => this.formatLanguage(lang, formatField))
+          .join('\n');
         formatted += '\n\n';
       } else if (includeEmptySections) {
         if (includeSectionHeaders) {
@@ -309,38 +313,21 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
         formatted += 'No languages listed.\n\n';
       }
       
-      // Volunteer work
-      if (profile.volunteerWork && profile.volunteerWork.length > 0) {
+      // Skills
+      if (profile.skills && profile.skills.length > 0) {
         if (includeSectionHeaders) {
-          formatted += '## Volunteer Work\n\n';
+          formatted += '## Skills\n\n';
         }
         
-        formatted += profile.volunteerWork
-          .map(work => this.formatVolunteerWork(work, formatField))
-          .join('\n\n');
+        formatted += profile.skills
+          .map(skill => `- ${formatField(skill)}\n`)
+          .join('');
         formatted += '\n\n';
       } else if (includeEmptySections) {
         if (includeSectionHeaders) {
-          formatted += '## Volunteer Work\n\n';
+          formatted += '## Skills\n\n';
         }
-        formatted += 'No volunteer work listed.\n\n';
-      }
-      
-      // Awards
-      if (profile.accomplishmentHonorsAwards && profile.accomplishmentHonorsAwards.length > 0) {
-        if (includeSectionHeaders) {
-          formatted += '## Awards\n\n';
-        }
-        
-        formatted += profile.accomplishmentHonorsAwards
-          .map(award => this.formatAward(award, formatField))
-          .join('\n\n');
-        formatted += '\n\n';
-      } else if (includeEmptySections) {
-        if (includeSectionHeaders) {
-          formatted += '## Awards\n\n';
-        }
-        formatted += 'No awards listed.\n\n';
+        formatted += 'No skills listed.\n\n';
       }
       
       // Tags
@@ -356,28 +343,20 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
   }
   
   /**
-   * Formats a date object into a readable string
+   * Formats a Date object into a readable string
    * 
-   * @param date - Date object with year, month, day fields
+   * @param date - JavaScript Date object
    * @returns Formatted date string
    */
-  private formatDate(date: { year: number | null; month: number | null; day: number | null }): string {
+  private formatDate(date: Date | undefined | null): string {
     if (!date) return '';
     
-    const { year, month, day } = date;
-    
-    if (year && month && day) {
-      // Full date with padding
-      return `${String(year)}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    } else if (year && month) {
-      // Year and month
-      return `${String(year)}-${String(month).padStart(2, '0')}`;
-    } else if (year) {
-      // Just year
-      return String(year);
+    try {
+      // Format as YYYY-MM-DD
+      return date.toISOString().split('T')[0];
+    } catch (_error) {
+      return '';
     }
-    
-    return '';
   }
   
   /**
@@ -395,25 +374,25 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
   }
 
   private formatExperience(
-    experience: ProfileExperience, 
+    experience: Experience, 
     formatField: (value: string | null | undefined) => string,
   ): string {
     const title = this.safeNonEmptyString(experience.title);
-    const company = this.safeNonEmptyString(experience.company);
-    const startDate = this.formatDate(experience.starts_at || {});
-    const endDate = experience.ends_at ? this.formatDate(experience.ends_at) : 'Present';
+    const organization = this.safeNonEmptyString(experience.organization);
+    const startDate = this.formatDate(experience.startDate);
+    const endDate = experience.endDate ? this.formatDate(experience.endDate) : 'Present';
     const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : '';
     const location = this.safeNonEmptyString(experience.location);
     const description = this.safeNonEmptyString(experience.description);
     
     let formatted = '';
     
-    if (title && company) {
-      formatted += `### ${formatField(title)} at ${formatField(company)}\n`;
+    if (title && organization) {
+      formatted += `### ${formatField(title)} at ${formatField(organization)}\n`;
     } else if (title) {
       formatted += `### ${formatField(title)}\n`;
-    } else if (company) {
-      formatted += `### Position at ${formatField(company)}\n`;
+    } else if (organization) {
+      formatted += `### Position at ${formatField(organization)}\n`;
     } else {
       formatted += '### Work Experience\n';
     }
@@ -443,47 +422,37 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * @returns Formatted education string
    */
   private formatEducation(
-    education: ProfileEducation,
+    education: Education,
     formatField: (value: string | null | undefined) => string,
   ): string {
-    const school = this.safeNonEmptyString(education.school);
-    const degree = this.safeNonEmptyString(education.degree_name);
-    const fieldOfStudy = this.safeNonEmptyString(education.field_of_study);
-    const startDate = this.formatDate(education.starts_at || {});
-    const endDate = education.ends_at ? this.formatDate(education.ends_at) : 'Present';
+    const institution = this.safeNonEmptyString(education.institution);
+    const degree = this.safeNonEmptyString(education.degree);
+    const field = this.safeNonEmptyString(education.field);
+    const startDate = this.formatDate(education.startDate);
+    const endDate = education.endDate ? this.formatDate(education.endDate) : 'Present';
     const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : '';
-    const grade = this.safeNonEmptyString(education.grade);
-    const activities = this.safeNonEmptyString(education.activities_and_societies);
     const description = this.safeNonEmptyString(education.description);
     
     let formatted = '';
     
-    if (school) {
-      formatted += `### ${formatField(school)}\n`;
+    if (institution) {
+      formatted += `### ${formatField(institution)}\n`;
     } else {
       formatted += '### Education\n';
     }
     
-    if (degree && fieldOfStudy) {
-      formatted += `**${formatField(degree)}** in **${formatField(fieldOfStudy)}**\n`;
+    if (degree && field) {
+      formatted += `**${formatField(degree)}** in **${formatField(field)}**\n`;
     } else if (degree) {
       formatted += `**${formatField(degree)}**\n`;
-    } else if (fieldOfStudy) {
-      formatted += `**${formatField(fieldOfStudy)}**\n`;
+    } else if (field) {
+      formatted += `**${formatField(field)}**\n`;
     }
     
     if (dateRange) {
       formatted += `${dateRange}\n\n`;
     } else {
       formatted += '\n';
-    }
-    
-    if (grade) {
-      formatted += `Grade: ${formatField(grade)}\n\n`;
-    }
-    
-    if (activities) {
-      formatted += `Activities: ${formatField(activities)}\n\n`;
     }
     
     if (description) {
@@ -501,12 +470,12 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * @returns Formatted project string
    */
   private formatProject(
-    project: ProfileProject,
+    project: Project,
     formatField: (value: string | null | undefined) => string,
   ): string {
     const name = this.safeNonEmptyString(project.title);
-    const startDate = this.formatDate(project.starts_at || {});
-    const endDate = project.ends_at ? this.formatDate(project.ends_at) : 'Present';
+    const startDate = this.formatDate(project.startDate);
+    const endDate = project.endDate ? this.formatDate(project.endDate) : 'Present';
     const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : '';
     const url = this.safeNonEmptyString(project.url);
     const description = this.safeNonEmptyString(project.description);
@@ -542,12 +511,12 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * @returns Formatted publication string
    */
   private formatPublication(
-    publication: ProfilePublication,
+    publication: Publication,
     formatField: (value: string | null | undefined) => string,
   ): string {
-    const title = this.safeNonEmptyString(publication.name);
+    const title = this.safeNonEmptyString(publication.title);
     const publisher = this.safeNonEmptyString(publication.publisher);
-    const date = this.formatDate(publication.published_on || {});
+    const date = this.formatDate(publication.date);
     const url = this.safeNonEmptyString(publication.url);
     const description = this.safeNonEmptyString(publication.description);
     
@@ -588,7 +557,7 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
    * @returns Formatted language string
    */
   private formatLanguage(
-    language: ProfileLanguageProficiency,
+    language: Language,
     formatField: (value: string | null | undefined) => string,
   ): string {
     const name = this.safeNonEmptyString(language.name);
@@ -601,87 +570,5 @@ export class ProfileFormatter implements FormatterInterface<Profile, string> {
     } else {
       return '';
     }
-  }
-  
-  /**
-   * Formats a volunteer work entry
-   * 
-   * @param work - The volunteer work to format
-   * @param formatField - Function to format and truncate fields
-   * @returns Formatted volunteer work string
-   */
-  private formatVolunteerWork(
-    work: ProfileVolunteerWork,
-    formatField: (value: string | null | undefined) => string,
-  ): string {
-    const organization = this.safeNonEmptyString(work.company);
-    const role = this.safeNonEmptyString(work.title);
-    const startDate = this.formatDate(work.starts_at || {});
-    const endDate = work.ends_at ? this.formatDate(work.ends_at) : 'Present';
-    const dateRange = startDate && endDate ? `${startDate} to ${endDate}` : '';
-    const description = this.safeNonEmptyString(work.description);
-    
-    let formatted = '';
-    
-    if (organization && role) {
-      formatted += `### ${formatField(role)} at ${formatField(organization)}\n`;
-    } else if (organization) {
-      formatted += `### ${formatField(organization)}\n`;
-    } else if (role) {
-      formatted += `### ${formatField(role)}\n`;
-    } else {
-      formatted += '### Volunteer Work\n';
-    }
-    
-    if (dateRange) {
-      formatted += `**${dateRange}**\n\n`;
-    }
-    
-    if (description) {
-      formatted += `${formatField(description)}\n`;
-    }
-    
-    return formatted;
-  }
-  
-  /**
-   * Formats an award entry
-   * 
-   * @param award - The award to format
-   * @param formatField - Function to format and truncate fields
-   * @returns Formatted award string
-   */
-  private formatAward(
-    award: ProfileAward,
-    formatField: (value: string | null | undefined) => string,
-  ): string {
-    const title = this.safeNonEmptyString(award.title);
-    const issuer = this.safeNonEmptyString(award.issuer);
-    const date = this.formatDate(award.issued_on || {});
-    const description = this.safeNonEmptyString(award.description);
-    
-    let formatted = '';
-    
-    if (title) {
-      formatted += `### ${formatField(title)}\n`;
-    } else {
-      formatted += '### Award\n';
-    }
-    
-    if (issuer) {
-      formatted += `**${formatField(issuer)}**`;
-      if (date) {
-        formatted += ` | ${date}`;
-      }
-      formatted += '\n\n';
-    } else if (date) {
-      formatted += `**${date}**\n\n`;
-    }
-    
-    if (description) {
-      formatted += `${formatField(description)}\n`;
-    }
-    
-    return formatted;
   }
 }

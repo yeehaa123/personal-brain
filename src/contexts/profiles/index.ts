@@ -5,9 +5,9 @@
  * Implementation details should be imported directly from their source files
  */
 
-// Export only the main context class and its configuration
-export { ProfileContext } from './profileContext';
-export type { ProfileContextConfig } from './profileContext';
+// Export the ProfileContextV2 class and its configuration
+export { ProfileContextV2 } from './profileContextV2';
+export type { ProfileContextConfig, ProfileContextDependencies } from './profileContextV2';
 
-// Export standardized adapter for extension/configuration
-export { ProfileStorageAdapter } from './profileStorageAdapter';
+// Export note adapter for profiles
+export { ProfileNoteAdapter } from './adapters/profileNoteAdapter';

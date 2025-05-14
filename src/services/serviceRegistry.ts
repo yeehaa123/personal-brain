@@ -28,10 +28,6 @@ import { TextUtils } from '@/utils/textUtils';
 import { NoteEmbeddingService } from './notes/noteEmbeddingService';
 import { NoteRepository } from './notes/noteRepository';
 import { NoteSearchService } from './notes/noteSearchService';
-import { ProfileEmbeddingService } from './profiles/profileEmbeddingService';
-import { ProfileRepository } from './profiles/profileRepository';
-import { ProfileSearchService } from './profiles/profileSearchService';
-import { ProfileTagService } from './profiles/profileTagService';
 
 /**
  * ServiceRegistry configuration options
@@ -79,7 +75,7 @@ export const ServiceIdentifiers = {
   ConversationStorageAdapter: 'service.conversation.storage',
   ConversationFormatter: 'service.conversation.formatter',
   ConversationMcpFormatter: 'service.conversation.mcpFormatter',
-  
+
   // Utility service identifiers
   TextUtils: 'service.utils.text',
   ContextMediator: 'service.messaging.mediator',
@@ -113,7 +109,7 @@ export class ServiceRegistry extends Registry {
    * @returns The shared instance
    */
   public static override getInstance(
-    config: Partial<ServiceRegistryConfig> = {}, 
+    config: Partial<ServiceRegistryConfig> = {},
     dependencies: Partial<ServiceRegistryDependencies> = {},
   ): ServiceRegistry {
     if (!ServiceRegistry.instance) {
@@ -149,7 +145,7 @@ export class ServiceRegistry extends Registry {
    * @returns A new instance
    */
   public static override createFresh(
-    config: Partial<ServiceRegistryConfig> = {}, 
+    config: Partial<ServiceRegistryConfig> = {},
     dependencies: Partial<ServiceRegistryDependencies> = {},
   ): ServiceRegistry {
     const registry = new ServiceRegistry(config, dependencies);
@@ -164,7 +160,7 @@ export class ServiceRegistry extends Registry {
    * @param dependencies Dependencies such as logger
    */
   protected constructor(
-    config: Partial<ServiceRegistryConfig> = {}, 
+    config: Partial<ServiceRegistryConfig> = {},
     dependencies: Partial<ServiceRegistryDependencies> = {},
   ) {
     super({
@@ -214,11 +210,6 @@ export class ServiceRegistry extends Registry {
       () => NoteRepository.getInstance(),
     );
 
-    this.register<ProfileRepository>(
-      ServiceIdentifiers.ProfileRepository,
-      () => ProfileRepository.getInstance(),
-    );
-
     // Register embedding services
     this.register<NoteEmbeddingService>(
       ServiceIdentifiers.NoteEmbeddingService,
@@ -229,32 +220,17 @@ export class ServiceRegistry extends Registry {
       },
     );
 
-    this.register<ProfileEmbeddingService>(
-      ServiceIdentifiers.ProfileEmbeddingService,
-      () => {
-        // Get embedding service from resource registry (used internally by ProfileEmbeddingService)
-        this.resourceRegistry.getEmbeddingService(); // Ensure it's initialized
-        return ProfileEmbeddingService.getInstance();
-      },
-    );
-
-    // Register tag services
-    this.register(
-      ServiceIdentifiers.ProfileTagService,
-      () => ProfileTagService.getInstance(),
-    );
-    
     // Register utility services
     this.register(
       ServiceIdentifiers.TextUtils,
       () => TextUtils.getInstance(),
     );
-    
+
     this.register(
       ServiceIdentifiers.ContextMediator,
       () => ContextMediator.getInstance(),
     );
-    
+
     this.register(
       ServiceIdentifiers.Logger,
       () => Logger.getInstance(),
@@ -282,48 +258,12 @@ export class ServiceRegistry extends Registry {
         );
       },
       [
-        ServiceIdentifiers.NoteRepository, 
+        ServiceIdentifiers.NoteRepository,
         ServiceIdentifiers.NoteEmbeddingService,
         ServiceIdentifiers.TextUtils,
         ServiceIdentifiers.Logger,
       ],
     );
-
-    this.registerService<ProfileSearchService>(
-      ServiceIdentifiers.ProfileSearchService,
-      (container) => {
-        // Get dependencies from container
-        const repository = container.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
-        const embeddingService = container.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
-        const tagService = container.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
-        const textUtils = container.resolve<TextUtils>(ServiceIdentifiers.TextUtils);
-        const mediator = container.resolve<ContextMediator>(ServiceIdentifiers.ContextMediator);
-        const logger = container.resolve<Logger>(ServiceIdentifiers.Logger);
-
-        // Create service with injected dependencies using the updated interface
-        return ProfileSearchService.createFresh(
-          { entityName: 'profile' },
-          {
-            repository,
-            embeddingService,
-            tagService,
-            logger,
-            textUtils,
-            mediator,
-          },
-        );
-      },
-      [
-        ServiceIdentifiers.ProfileRepository,
-        ServiceIdentifiers.ProfileEmbeddingService,
-        ServiceIdentifiers.ProfileTagService,
-        ServiceIdentifiers.TextUtils,
-        ServiceIdentifiers.ContextMediator,
-        ServiceIdentifiers.Logger,
-      ],
-    );
-
-    // Register conversation services
 
     // Register storage adapter and formatters first since other services depend on them
     this.register(
@@ -397,15 +337,6 @@ export class ServiceRegistry extends Registry {
   }
 
   /**
-   * Get the profile repository
-   * 
-   * @returns Profile repository
-   */
-  public getProfileRepository(): ProfileRepository {
-    return this.resolve<ProfileRepository>(ServiceIdentifiers.ProfileRepository);
-  }
-
-  /**
    * Get the note embedding service
    * 
    * @returns Note embedding service
@@ -415,39 +346,12 @@ export class ServiceRegistry extends Registry {
   }
 
   /**
-   * Get the profile embedding service
-   * 
-   * @returns Profile embedding service
-   */
-  public getProfileEmbeddingService(): ProfileEmbeddingService {
-    return this.resolve<ProfileEmbeddingService>(ServiceIdentifiers.ProfileEmbeddingService);
-  }
-
-  /**
    * Get the note search service
    * 
    * @returns Note search service
    */
   public getNoteSearchService(): NoteSearchService {
     return this.resolve<NoteSearchService>(ServiceIdentifiers.NoteSearchService);
-  }
-
-  /**
-   * Get the profile search service
-   * 
-   * @returns Profile search service
-   */
-  public getProfileSearchService(): ProfileSearchService {
-    return this.resolve<ProfileSearchService>(ServiceIdentifiers.ProfileSearchService);
-  }
-
-  /**
-   * Get the profile tag service
-   * 
-   * @returns Profile tag service
-   */
-  public getProfileTagService(): ProfileTagService {
-    return this.resolve<ProfileTagService>(ServiceIdentifiers.ProfileTagService);
   }
 
   /**
@@ -467,7 +371,7 @@ export class ServiceRegistry extends Registry {
   public getConversationMemoryService(): ConversationMemoryService {
     return this.resolve<ConversationMemoryService>(ServiceIdentifiers.ConversationMemoryService);
   }
-  
+
   /**
    * Get the note storage adapter
    * 

@@ -2,16 +2,16 @@ import * as fs from 'fs';
 
 import * as yaml from 'js-yaml';
 
-import { ProfileContext } from '@/contexts';
+import { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
+import type { LinkedInProfile } from '@/models/linkedInProfile';
 
-import { selectProfileSchema } from '../models/profile';
 import logger from '../utils/logger';
 
 export class ProfileImporter {
-  private profileContext: ProfileContext;
+  private profileContext: ProfileContextV2;
 
   constructor() {
-    this.profileContext = ProfileContext.createFresh({});
+    this.profileContext = ProfileContextV2.createFresh();
   }
 
   /**
@@ -21,18 +21,27 @@ export class ProfileImporter {
     try {
       logger.info(`Importing profile from ${filePath}`, { context: 'ProfileImporter' });
       const fileContent = fs.readFileSync(filePath, 'utf8');
-      const profileData = yaml.load(fileContent) as Record<string, unknown>;
-      const profileToSave = this.transformYamlToProfile(profileData);
-      const parsedProfile = selectProfileSchema.parse(profileToSave);
+      const linkedInProfileData = yaml.load(fileContent) as Record<string, unknown>;
       
-      // Convert the profile to match the expected input format for the MCP SDK implementation
-      const profileForSaving = {
-        ...parsedProfile,
-        // Make sure followerCount is not null for MCP SDK implementation
-        followerCount: parsedProfile.followerCount ?? undefined,
-      };
+      // Log the YAML data for debugging
+      logger.debug('YAML profile data loaded', { context: 'ProfileImporter' });
       
-      const profileId = await this.profileContext.saveProfile(profileForSaving);
+      // First convert the YAML data to LinkedIn profile format
+      const linkedInProfile = this.transformYamlToLinkedInProfile(linkedInProfileData) as LinkedInProfile;
+      logger.debug('Converted to LinkedIn profile format', { context: 'ProfileImporter' });
+      
+      // Then migrate the LinkedIn profile to our new format
+      logger.debug('Attempting to migrate via ProfileContextV2...', { context: 'ProfileImporter' });
+      const success = await this.profileContext.migrateLinkedInProfile(linkedInProfile);
+      logger.debug(`Migration result: ${success ? 'success' : 'failure'}`, { context: 'ProfileImporter' });
+      
+      if (!success) {
+        throw new Error('Failed to save profile');
+      }
+      
+      const profile = await this.profileContext.getProfile();
+      const profileId = profile?.id || 'unknown';
+      
       logger.info(`Successfully imported profile with ID: ${profileId}`, { context: 'ProfileImporter' });
       return profileId;
     } catch (error) {
@@ -42,11 +51,12 @@ export class ProfileImporter {
   }
 
   /**
-   * Transform YAML data to profile format
+   * Transform YAML data to LinkedIn profile format
    */
-  private transformYamlToProfile(data: Record<string, unknown>): Record<string, unknown> {
-    // Convert snake_case from YAML to camelCase for database
+  private transformYamlToLinkedInProfile(data: Record<string, unknown>): Record<string, unknown> {
+    // Convert snake_case from YAML to camelCase for the LinkedIn profile format
     return {
+      id: data['id'] || `linkedin-${Date.now()}`,
       publicIdentifier: data['public_identifier'],
       profilePicUrl: data['profile_pic_url'],
       backgroundCoverImageUrl: data['background_cover_image_url'],

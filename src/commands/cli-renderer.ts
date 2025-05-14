@@ -8,7 +8,7 @@
 /* global setTimeout */
 
 import type { Note } from '../models/note';
-import type { EnhancedProfile, ProfileExperience } from '../models/profile';
+import type { EnhancedProfile } from '../models/profile';
 // Import types and interfaces
 import { CLIInterface } from '../utils/cliInterface';
 import { formatIdentityToMarkdown, formatLandingPageToMarkdown } from '../utils/landingPageUtils';
@@ -37,16 +37,16 @@ export interface CLIRendererOptions {
 export class CLIRenderer {
   /** The singleton instance */
   private static instance: CLIRenderer | null = null;
-  
+
   /** Logger instance */
   private readonly logger: Logger;
-  
+
   /** CLI interface for user interaction */
   private readonly cli: CLIInterface;
-  
+
   /** Command handler for interactive operations */
   private commandHandler?: CommandHandler;
-  
+
   /**
    * Get the singleton instance of CLIRenderer
    * 
@@ -59,7 +59,7 @@ export class CLIRenderer {
     }
     return CLIRenderer.instance;
   }
-  
+
   /**
    * Reset the singleton instance
    * This clears the instance for clean test isolation
@@ -67,7 +67,7 @@ export class CLIRenderer {
   public static resetInstance(): void {
     CLIRenderer.instance = null;
   }
-  
+
   /**
    * Create a fresh instance without affecting the singleton
    * 
@@ -77,7 +77,7 @@ export class CLIRenderer {
   public static createFresh(options?: CLIRendererOptions): CLIRenderer {
     return new CLIRenderer(options);
   }
-  
+
   /**
    * Private constructor to enforce the use of getInstance()
    * 
@@ -87,7 +87,7 @@ export class CLIRenderer {
     this.cli = options?.cliInterface || CLIInterface.getInstance();
     this.logger = options?.logger || Logger.createFresh();
   }
-  
+
   /**
    * Render help command
    * 
@@ -111,7 +111,7 @@ export class CLIRenderer {
   setCommandHandler(handler: CommandHandler): void {
     this.commandHandler = handler;
   }
-  
+
   /**
    * Render a command result
    * 
@@ -165,35 +165,6 @@ export class CLIRenderer {
       this.renderProfile(result.profile as EnhancedProfile);
       break;
 
-    case 'profile-related':
-      this.renderProfile(result.profile as EnhancedProfile);
-
-      this.cli.info('Finding notes related to your profile...');
-      this.cli.displayTitle('Notes Related to Your Profile');
-
-      if (result.relatedNotes.length > 0) {
-        // Explain how we found the notes
-        let matchDescription = '';
-        switch (result.matchType) {
-        case 'tags':
-          matchDescription = 'Matched by profile tags and semantic similarity';
-          break;
-        case 'semantic':
-          matchDescription = 'Matched by semantic similarity';
-          break;
-        case 'keyword':
-          matchDescription = 'Matched by keyword similarity';
-          break;
-        }
-        this.cli.print(this.cli.styles.dim(`(${matchDescription})\n`));
-
-        displayNotes(result.relatedNotes, this.cli);
-      } else {
-        this.cli.warn('No related notes found. Try generating embeddings and tags for your notes and profile.');
-        this.cli.info('You can run "bun run tag:profile" to generate profile tags.');
-      }
-      break;
-
     case 'ask':
       this.cli.displayTitle('Answer');
       this.cli.print(result.answer);
@@ -224,13 +195,7 @@ export class CLIRenderer {
         displayNotes(result.relatedNotes, this.cli);
       }
 
-      // Display profile if it was included in the response
-      if (result.profile) {
-        this.cli.displayTitle('Profile Information');
-        this.cli.printLabelValue('Name', result.profile.fullName);
-        if (result.profile.occupation) this.cli.printLabelValue('Occupation', result.profile.occupation);
-        if (result.profile.headline) this.cli.printLabelValue('Headline', result.profile.headline);
-      }
+      // Profile display has been removed as it's no longer needed in the response
       break;
 
     case 'external':
@@ -240,20 +205,20 @@ export class CLIRenderer {
         this.cli.warn(result.message);
       }
       break;
-      
+
     case 'save-note-preview':
       this.renderSaveNotePreview(result);
       break;
-      
+
     case 'save-note-confirm':
       this.renderSaveNoteConfirm(result);
       break;
-      
+
     case 'conversation-notes':
       this.renderConversationNotes(result);
       break;
-      
-    // Website commands
+
+      // Website commands
     case 'website-config':
       if (result.success !== undefined) {
         this.cli.displayTitle('Updated Configuration');
@@ -265,16 +230,16 @@ export class CLIRenderer {
       } else {
         this.cli.displayTitle('Website Configuration');
       }
-      
+
       if (result.config) {
-        const configItems = Object.entries(result.config).map(([key, value]) => ({ 
-          key, 
-          value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value), 
+        const configItems = Object.entries(result.config).map(([key, value]) => ({
+          key,
+          value: typeof value === 'object' && value !== null ? JSON.stringify(value, null, 2) : String(value),
         }));
         this.cli.displayList(configItems, item => `${this.cli.styles.subtitle(item.key)}: ${item.value}`);
       }
       break;
-      
+
     case 'landing-page':
       if (result.success !== undefined && result.message) {
         if (result.success) {
@@ -283,29 +248,29 @@ export class CLIRenderer {
           this.cli.error(result.message);
         }
       }
-      
+
       if (result.data) {
         this.cli.displayTitle('Landing Page Content');
-        
+
         // Format landing page data as markdown for better readability
         const markdown = formatLandingPageToMarkdown(result.data);
         this.cli.print(markdown, { renderMarkdown: true });
-        
+
         // If there are assessments, display them
         if (result.assessments && Object.keys(result.assessments).length > 0) {
           this.cli.displayTitle('Quality Assessments');
-          
+
           Object.entries(result.assessments).forEach(([sectionType, assessedSection]) => {
             if (assessedSection && assessedSection.assessment) {
               const qualityScore = assessedSection.assessment.qualityScore;
               const confidenceScore = assessedSection.assessment.confidenceScore;
               const combinedScore = assessedSection.assessment.combinedScore;
               const enabled = assessedSection.assessment.enabled;
-              
+
               // Format the section name
               const formattedSectionType = sectionType.charAt(0).toUpperCase() + sectionType.slice(1)
                 .replace(/([A-Z])/g, ' $1').trim();
-              
+
               this.cli.displaySubtitle(formattedSectionType);
               this.cli.printLabelValue('Quality', `${qualityScore}/10`);
               this.cli.printLabelValue('Confidence', `${confidenceScore}/10`);
@@ -313,28 +278,28 @@ export class CLIRenderer {
               this.cli.printLabelValue('Enabled', enabled ? 'Yes' : 'No', {
                 formatter: val => enabled ? this.cli.styles.success(val) : this.cli.styles.error(val),
               });
-              
+
               if (assessedSection.assessment.suggestedImprovements) {
                 this.cli.print('\n' + this.cli.styles.dim('Suggested Improvements:'));
                 this.cli.print(assessedSection.assessment.suggestedImprovements);
               }
-              
+
               this.cli.print('');
             }
           });
         }
       }
       break;
-      
+
     case 'website-build':
       if (result.success) {
         this.cli.success(result.message);
-        
+
         if (result.url) {
           this.cli.info('Website preview available at:');
           this.cli.print(result.url);
         }
-        
+
         // Show helpful next steps
         this.cli.info('To promote to production:');
         this.cli.print('website-promote');
@@ -342,11 +307,11 @@ export class CLIRenderer {
         this.cli.error(result.message);
       }
       break;
-      
+
     case 'website-promote':
       if (result.success) {
         this.cli.success(result.message);
-        
+
         if (result.url) {
           this.cli.info('Production site available at:');
           this.cli.print(result.url);
@@ -355,23 +320,23 @@ export class CLIRenderer {
         this.cli.error(result.message);
       }
       break;
-      
+
     case 'website-status':
       if (result.success) {
         this.cli.displayTitle('Website Status');
         this.cli.success(result.message);
-        
+
         if (result.data) {
           // Display detailed status information
           const { environment, buildStatus, fileCount, serverStatus, domain, accessStatus, url } = result.data;
-          
+
           this.cli.printLabelValue('Environment', environment);
           this.cli.printLabelValue('Build Status', buildStatus);
           this.cli.printLabelValue('File Count', String(fileCount));
           this.cli.printLabelValue('Server Status', serverStatus);
           this.cli.printLabelValue('Domain', domain);
           this.cli.printLabelValue('Access Status', accessStatus);
-          
+
           if (url) {
             this.cli.info('Website URL:');
             this.cli.print(url);
@@ -381,19 +346,19 @@ export class CLIRenderer {
         this.cli.error(result.message || 'Failed to check website status');
       }
       break;
-      
+
     case 'website-identity':
       this.cli.displayTitle('Website Identity');
-      
+
       if (result.success === false) {
         this.cli.error(result.message || 'Failed to process identity command');
         break;
       }
-      
+
       if (result.message) {
         this.cli.success(result.message);
       }
-      
+
       if (result.data) {
         // Format identity data as markdown for better readability
         const markdown = formatIdentityToMarkdown(result.data);
@@ -462,19 +427,19 @@ export class CLIRenderer {
   private renderSaveNotePreview(result: { noteContent: string; title: string; conversationId: string }): void {
     this.cli.displayTitle('Note Preview');
     this.cli.printLabelValue('Title', result.title);
-    
+
     this.cli.displaySubtitle('Content Preview');
     // Display first 300 characters of content with markdown rendering
     const previewContent = result.noteContent.length > 300
       ? result.noteContent.substring(0, 297) + '...'
       : result.noteContent;
     this.cli.print(previewContent, { renderMarkdown: true });
-    
+
     this.cli.info('');
     this.cli.info('This is a preview of the note that will be created from your conversation.');
     this.cli.info('To save this note, type "y". To cancel, type "n".');
     this.cli.info('You can also edit the title by typing "title: New Title"');
-    
+
     // Collect user input for confirmation
     // In a real implementation, we would set up an event listener for user input
     // and call confirmSaveNote when the user confirms
@@ -484,7 +449,7 @@ export class CLIRenderer {
     this.cli.info('1. Type "y" to confirm and save the note');
     this.cli.info('2. Type "n" to cancel');
     this.cli.info('3. Type "title: New Title" to change the title');
-    
+
     // If we have a commandHandler, we can handle the confirmation directly
     // In a real implementation, this would be connected to user input handling
     if (this.commandHandler) {
@@ -499,7 +464,7 @@ export class CLIRenderer {
       }, 2000); // Wait 2 seconds before auto-confirming
     }
   }
-  
+
   /**
    * Render save-note confirmation
    * 
@@ -511,7 +476,7 @@ export class CLIRenderer {
     this.cli.info('To view the note, use the command:');
     this.cli.print(`  note ${result.noteId}`);
   }
-  
+
   /**
    * Render conversation notes list
    * 
@@ -519,12 +484,12 @@ export class CLIRenderer {
    */
   private renderConversationNotes(result: { notes: Note[] }): void {
     this.cli.displayTitle('Notes Created from Conversations');
-    
+
     if (result.notes.length === 0) {
       this.cli.warn('No conversation notes found.');
       return;
     }
-    
+
     displayNotes(result.notes, this.cli);
   }
 
@@ -556,13 +521,22 @@ export class CLIRenderer {
     this.cli.displayTitle('Profile Information');
 
     // Print basic information using label-value formatting
-    this.cli.printLabelValue('Name', profile.fullName);
-    if (profile.headline) this.cli.printLabelValue('Headline', profile.headline);
-    if (profile.occupation) this.cli.printLabelValue('Occupation', profile.occupation);
+    this.cli.printLabelValue('Name', profile.displayName);
 
-    // Display location
-    const location = [profile.city, profile.state, profile.countryFullName].filter(Boolean).join(', ');
-    if (location) this.cli.printLabelValue('Location', location);
+    if (profile.headline) this.cli.printLabelValue('Headline', profile.headline);
+
+    // Handle location
+    if (profile.location) {
+      const locationParts = [
+        profile.location.city,
+        profile.location.state,
+        profile.location.country,
+      ].filter(Boolean);
+
+      if (locationParts.length > 0) {
+        this.cli.printLabelValue('Location', locationParts.join(', '));
+      }
+    }
 
     // Display summary
     if (profile.summary) {
@@ -570,17 +544,15 @@ export class CLIRenderer {
       this.cli.print(profile.summary);
     }
 
-    // Display current experience
+    // Display experiences
     if (profile.experiences && profile.experiences.length > 0) {
       this.cli.displaySubtitle('Current Work');
-      const experiences = profile.experiences as ProfileExperience[];
-      const currentExperiences = experiences.filter(exp => !exp.ends_at);
 
-      if (currentExperiences.length > 0) {
-        currentExperiences.forEach((exp: ProfileExperience) => {
+      try {
+        profile.experiences.forEach(exp => {
           const title = this.cli.styles.subtitle(exp.title);
-          const company = this.cli.styles.highlight(exp.company);
-          this.cli.print(`- ${title} at ${company}`);
+          const organization = this.cli.styles.highlight(exp.organization);
+          this.cli.print(`- ${title} at ${organization}`);
 
           if (exp.description) {
             // Trim long descriptions
@@ -590,28 +562,29 @@ export class CLIRenderer {
             this.cli.print(`  ${this.cli.styles.dim(desc)}`);
           }
         });
-      } else {
-        this.cli.print(this.cli.styles.dim('No current work experiences found.'));
+      } catch (_error) {
+        this.cli.print(this.cli.styles.dim('Error displaying experiences.'));
       }
     }
 
-    // Display skills
+    // Display languages
     if (profile.languages && profile.languages.length > 0) {
       this.cli.displaySubtitle('Languages');
-      this.cli.printLabelValue('Skills', profile.languages as string[]);
-    }
 
-    // Check for embedding
-    this.cli.print('');
-    if (profile.embedding) {
-      this.cli.printLabelValue('Profile has embeddings', 'Yes', {
-        formatter: val => this.cli.styles.success(val),
-      });
-    } else {
-      this.cli.printLabelValue('Profile has embeddings', 'No', {
-        formatter: val => this.cli.styles.error(val),
-      });
-      this.cli.print(this.cli.styles.dim('Run "bun run embed:profile" to generate embeddings.'));
+      try {
+        const languageStrings = profile.languages.map(lang => 
+          `${lang.name} (${lang.proficiency})`,
+        );
+        this.cli.printLabelValue('Languages', languageStrings);
+      } catch (_error) {
+        this.cli.printLabelValue('Languages', 'Error displaying languages');
+      }
+    }
+    
+    // Display skills if available
+    if (profile.skills && profile.skills.length > 0) {
+      this.cli.displaySubtitle('Skills');
+      this.cli.printLabelValue('Skills', profile.skills);
     }
 
     // Display tags if available
@@ -620,7 +593,7 @@ export class CLIRenderer {
       this.cli.printLabelValue('Tags', profile.tags);
     } else {
       this.cli.printLabelValue('Tags', '', { emptyText: 'None' });
-      this.cli.print(this.cli.styles.dim('Run "bun run tag:profile" to generate tags.'));
+      // Tags are automatically generated when saving a profile via the ProfileNoteAdapter
     }
   }
 }

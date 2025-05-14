@@ -141,9 +141,9 @@ describe('LandingPageGenerationService', () => {
         const result = await service.generateLandingPageData(identity);
         
         // Check essential functionality: identity data applied and all required sections present
-        expect(result.landingPage.name).toBe(identity.personalData.name);
-        expect(result.landingPage.title).toBe(identity.creativeContent.title);
-        expect(result.landingPage.description).toBe(identity.creativeContent.description);
+        expect(result.landingPage.name).toBe(identity.name);
+        expect(result.landingPage.title).toBe(identity.title);
+        expect(result.landingPage.description).toBe(identity.description);
         
         for (const sectionType of REQUIRED_SECTION_TYPES) {
           expect(result.landingPage[sectionType as keyof LandingPageData]).toBeDefined();
@@ -160,7 +160,7 @@ describe('LandingPageGenerationService', () => {
         const identity = createTestIdentityData();
         const { landingPage } = await service.generateLandingPageData(identity);
         
-        const result = await service.assessLandingPageQuality(landingPage, { 
+        const result = await service.assessLandingPageQuality(landingPage, identity, { 
           qualityThresholds: { minQualityScore: 7 },
           applyRecommendations: true,
         });
@@ -242,9 +242,9 @@ describe('LandingPageGenerationService', () => {
         const result = await service.editLandingPage(landingPage, identity);
         
         // Identity data should be directly applied
-        expect(result.name).toBe(identity.personalData.name);
-        expect(result.title).toBe(identity.creativeContent.title);
-        expect(result.description).toBe(identity.creativeContent.description);
+        expect(result.name).toBe(identity.name);
+        expect(result.title).toBe(identity.title);
+        expect(result.description).toBe(identity.description);
         expect(mockProcessQuery).toHaveBeenCalled();
       },
     },

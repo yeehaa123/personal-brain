@@ -15,9 +15,9 @@ import type {
   ConversationContext,
   ExternalSourceContext,
   NoteContext,
-  ProfileContext,
   WebsiteContext,
 } from '@/contexts';
+import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
@@ -35,6 +35,7 @@ export enum ContextId {
   CONVERSATION = 'conversation-context',
   EXTERNAL_SOURCES = 'external-sources-context',
   WEBSITE = 'website-context',
+  ALL = '*', // Special value to target all contexts
 }
 
 /**
@@ -133,7 +134,7 @@ export class ContextOrchestrator {
     // Set up subscriptions for notifications
     this.registerSubscriptions();
     
-    this.logger.debug('ContextOrchestrator initialized with messaging support');
+    this.logger.info('Context orchestrator initialized');
   }
   
   /**
@@ -146,10 +147,19 @@ export class ContextOrchestrator {
   
   /**
    * Get the profile context
+   * @deprecated Use getProfileContextV2() instead
    * @returns Profile context
    */
-  getProfileContext(): ProfileContext {
-    return this.contextManager.getProfileContext();
+  getProfileContext(): ProfileContextV2 {
+    return this.contextManager.getProfileContextV2();
+  }
+  
+  /**
+   * Get the ProfileContextV2 instance
+   * @returns ProfileContextV2 instance
+   */
+  getProfileContextV2(): ProfileContextV2 {
+    return this.contextManager.getProfileContextV2();
   }
   
   /**
@@ -300,91 +310,86 @@ export class ContextOrchestrator {
               ContextId.NOTES,
               request.sourceContext,
               request.id,
-              'SEARCH_ERROR',
-              `Error searching notes: ${error instanceof Error ? error.message : String(error)}`,
+              'Failed to search notes',
+              error instanceof Error ? error.message : String(error),
             );
           }
         }
-            
+        
         case DataRequestType.NOTE_BY_ID: {
-          const noteId = request.parameters?.['id'] as string;
-          if (!noteId) {
+          try {
+            const noteId = request.parameters?.['id'] as string;
+            if (!noteId) {
+              return MessageFactory.createErrorResponse(
+                ContextId.NOTES,
+                request.sourceContext,
+                request.id,
+                'Note ID is required',
+              );
+            }
+            
+            const note = await noteContext.getNoteById(noteId);
+            
+            return MessageFactory.createSuccessResponse(
+              ContextId.NOTES,
+              request.sourceContext,
+              request.id,
+              { note },
+            );
+          } catch (error) {
             return MessageFactory.createErrorResponse(
               ContextId.NOTES,
               request.sourceContext,
               request.id,
-              'MISSING_PARAMETER',
-              'Note ID is required',
+              'Failed to get note by ID',
+              error instanceof Error ? error.message : String(error),
             );
           }
-            
-          const note = await noteContext.getNoteById(noteId);
-          if (!note) {
-            return MessageFactory.createErrorResponse(
-              ContextId.NOTES,
-              request.sourceContext,
-              request.id,
-              'NOTE_NOT_FOUND',
-              `Note with ID ${noteId} not found`,
-            );
-          }
-            
-          return MessageFactory.createSuccessResponse(
-            ContextId.NOTES,
-            request.sourceContext,
-            request.id,
-            { note },
-          );
         }
+        
+        case DataRequestType.NOTES_SEMANTIC_SEARCH: {
+          try {
+            const limit = request.parameters?.['limit'] as number || 10;
+            const notes = await noteContext.getRecentNotes(limit);
             
+            return MessageFactory.createSuccessResponse(
+              ContextId.NOTES,
+              request.sourceContext,
+              request.id,
+              { notes },
+            );
+          } catch (error) {
+            return MessageFactory.createErrorResponse(
+              ContextId.NOTES,
+              request.sourceContext,
+              request.id,
+              'Failed to get recent notes',
+              error instanceof Error ? error.message : String(error),
+            );
+          }
+        }
+        
         default:
           return MessageFactory.createErrorResponse(
             ContextId.NOTES,
             request.sourceContext,
             request.id,
-            'UNSUPPORTED_DATA_TYPE',
             `Unsupported data type: ${request.dataType}`,
           );
         }
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        // Handle notifications
-        const notification = message;
-        
-        switch (notification.notificationType) {
-        case NotificationType.PROFILE_UPDATED: {
-          this.logger.debug('Notes context received profile update notification');
-          // Handle profile update if needed
-          break;
-        }
-            
-        case NotificationType.CONVERSATION_STARTED: {
-          this.logger.debug('Notes context received conversation start notification');
-          // Handle conversation start if needed
-          break;
-        }
-            
-        default:
-          this.logger.debug(`Notes context received unhandled notification type: ${notification.notificationType}`);
-          break;
-        }
-        
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.NOTES,
-          notification.sourceContext || '*',
-          notification.id || 'unknown',
-          'processed',
-        );
       }
       
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.NOTES,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
+      if (message.category === 'notification') {
+        const notification = message;
+        
+        // Log notifications received by the notes context
+        this.logger.debug(`Notes context received notification: ${notification.type}`);
+        
+        // No response needed for notifications
+      }
+      
+      // Return void instead of null to match MessageHandler return type
+      return;
     };
   }
   
@@ -394,68 +399,53 @@ export class ContextOrchestrator {
    * @returns Message handler function
    */
   private createProfileContextHandler(): MessageHandler {
-    const profileContext = this.getProfileContext();
+    const profileContext = this.contextManager.getProfileContextV2();
     
     return async (message) => {
       if (message.category === 'request' && 'dataType' in message) {
         const request = message;
         
-        // Handle different data request types
         switch (request.dataType) {
         case DataRequestType.PROFILE_DATA: {
-          const profile = await profileContext.getProfile();
+          try {
+            const profile = await profileContext.getProfile();
             
-          return MessageFactory.createSuccessResponse(
-            ContextId.PROFILE,
-            request.sourceContext,
-            request.id,
-            { profile },
-          );
+            return MessageFactory.createSuccessResponse(
+              ContextId.PROFILE,
+              request.sourceContext,
+              request.id,
+              { profile },
+            );
+          } catch (error) {
+            return MessageFactory.createErrorResponse(
+              ContextId.PROFILE,
+              request.sourceContext,
+              request.id,
+              'Failed to get profile',
+              error instanceof Error ? error.message : String(error),
+            );
+          }
         }
-            
+        
         default:
           return MessageFactory.createErrorResponse(
             ContextId.PROFILE,
             request.sourceContext,
             request.id,
-            'UNSUPPORTED_DATA_TYPE',
             `Unsupported data type: ${request.dataType}`,
           );
         }
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        // Handle notifications
-        const notification = message;
-        
-        switch (notification.notificationType) {
-        case NotificationType.NOTE_CREATED:
-        case NotificationType.NOTE_UPDATED: {
-          this.logger.debug(`Profile context received ${notification.notificationType} notification`);
-          // Handle note update if needed
-          break;
-        }
-            
-        default:
-          this.logger.debug(`Profile context received unhandled notification type: ${notification.notificationType}`);
-          break;
-        }
-        
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.PROFILE,
-          notification.sourceContext || '*',
-          notification.id || 'unknown',
-          'processed',
-        );
       }
       
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.PROFILE,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
+      if (message.category === 'notification') {
+        const notification = message;
+        
+        // Log notifications received by the profile context
+        this.logger.debug(`Profile context received notification: ${notification.type}`);
+      }
+      
+      // Return void instead of null to match MessageHandler return type
+      return;
     };
   }
   
@@ -471,82 +461,48 @@ export class ContextOrchestrator {
       if (message.category === 'request' && 'dataType' in message) {
         const request = message;
         
-        // Handle different data request types
         switch (request.dataType) {
         case DataRequestType.CONVERSATION_HISTORY: {
-          const conversationId = request.parameters?.['conversationId'] as string;
-          
-          if (!conversationId) {
+          try {
+            const conversationId = request.parameters?.['id'] as string;
+            const conversation = await conversationContext.getConversation(conversationId);
+            
+            return MessageFactory.createSuccessResponse(
+              ContextId.CONVERSATION,
+              request.sourceContext,
+              request.id,
+              { conversation },
+            );
+          } catch (error) {
             return MessageFactory.createErrorResponse(
               ContextId.CONVERSATION,
               request.sourceContext,
               request.id,
-              'MISSING_PARAMETER',
-              'Conversation ID is required',
+              'Failed to get conversation history',
+              error instanceof Error ? error.message : String(error),
             );
           }
-          
-          // Use getConversationHistory method
-          const history = await conversationContext.getConversationHistory(conversationId);
-            
-          return MessageFactory.createSuccessResponse(
-            ContextId.CONVERSATION,
-            request.sourceContext,
-            request.id,
-            { history },
-          );
         }
-            
+        
         default:
           return MessageFactory.createErrorResponse(
             ContextId.CONVERSATION,
             request.sourceContext,
             request.id,
-            'UNSUPPORTED_DATA_TYPE',
             `Unsupported data type: ${request.dataType}`,
           );
         }
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        // Handle notifications
-        const notification = message;
-        
-        switch (notification.notificationType) {
-        case NotificationType.NOTE_CREATED: {
-          this.logger.debug('Conversation context received note creation notification');
-          // Handle new note if needed
-          break;
-        }
-            
-        case NotificationType.PROFILE_UPDATED: {
-          this.logger.debug('Conversation context received profile update notification');
-          // Handle profile update if needed
-          break;
-        }
-            
-        case NotificationType.EXTERNAL_SOURCES_STATUS: {
-          this.logger.debug('Conversation context received external sources status notification');
-          // No actual action needed here as the orchestrator handles this directly
-          break;
-        }
-        }
-        
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.CONVERSATION,
-          notification.sourceContext || '*',
-          notification.id || 'unknown',
-          'processed',
-        );
       }
       
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.CONVERSATION,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
+      if (message.category === 'notification') {
+        const notification = message;
+        
+        // Log notifications received by the conversation context
+        this.logger.debug(`Conversation context received notification: ${notification.type}`);
+      }
+      
+      // Return void instead of null to match MessageHandler return type
+      return;
     };
   }
   
@@ -562,82 +518,63 @@ export class ContextOrchestrator {
       if (message.category === 'request' && 'dataType' in message) {
         const request = message;
         
-        // Handle different data request types
         switch (request.dataType) {
         case DataRequestType.EXTERNAL_SOURCES: {
-          const query = request.parameters?.['query'] as string;
-          if (!query) {
+          try {
+            const query = request.parameters?.['query'] as string;
+            if (!query) {
+              return MessageFactory.createErrorResponse(
+                ContextId.EXTERNAL_SOURCES,
+                request.sourceContext,
+                request.id,
+                'Query is required',
+              );
+            }
+            
+            // Discard any notes passed as they're not used in the search options currently
+            // const notes = request.parameters?.['notes'] as unknown[];
+            
+            const results = await externalSourceContext.search(query);
+            
+            return MessageFactory.createSuccessResponse(
+              ContextId.EXTERNAL_SOURCES,
+              request.sourceContext,
+              request.id,
+              { results },
+            );
+          } catch (error) {
             return MessageFactory.createErrorResponse(
               ContextId.EXTERNAL_SOURCES,
               request.sourceContext,
               request.id,
-              'MISSING_PARAMETER',
-              'Query is required for external sources search',
+              'Failed to get external sources',
+              error instanceof Error ? error.message : String(error),
             );
           }
-            
-          if (!this.getExternalSourcesEnabled()) {
-            return MessageFactory.createErrorResponse(
-              ContextId.EXTERNAL_SOURCES,
-              request.sourceContext,
-              request.id,
-              'EXTERNAL_SOURCES_DISABLED',
-              'External sources are currently disabled',
-            );
-          }
-            
-          const results = await externalSourceContext.search(query);
-            
-          return MessageFactory.createSuccessResponse(
-            ContextId.EXTERNAL_SOURCES,
-            request.sourceContext,
-            request.id,
-            { results },
-          );
         }
-            
+        
         default:
           return MessageFactory.createErrorResponse(
             ContextId.EXTERNAL_SOURCES,
             request.sourceContext,
             request.id,
-            'UNSUPPORTED_DATA_TYPE',
             `Unsupported data type: ${request.dataType}`,
           );
         }
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        // Handle notifications
-        const notification = message;
-        
-        switch (notification.notificationType) {
-        case NotificationType.CONVERSATION_STARTED: {
-          this.logger.debug('External sources context received conversation start notification');
-          // Handle conversation start if needed
-          break;
-        }
-          
-        default:
-          this.logger.debug(`External sources context received unhandled notification type: ${notification.notificationType}`);
-          break;
-        }
-        
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.EXTERNAL_SOURCES,
-          notification.sourceContext || '*',
-          notification.id || 'unknown',
-          'processed',
-        );
       }
       
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.EXTERNAL_SOURCES,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
+      if (message.category === 'notification') {
+        const notification = message;
+        
+        // Handle specific notifications
+        if (notification.type === NotificationType.CONVERSATION_STARTED) {
+          // Nothing to do yet
+          this.logger.debug('External sources received conversation started notification');
+        }
+      }
+      
+      // Return void instead of null to match MessageHandler return type
+      return;
     };
   }
   
@@ -653,99 +590,74 @@ export class ContextOrchestrator {
       if (message.category === 'request' && 'dataType' in message) {
         const request = message;
         
-        // Handle different data request types
         switch (request.dataType) {
         case DataRequestType.WEBSITE_STATUS: {
           try {
-            // Get environment status
-            const environment = request.parameters?.['environment'] as string || 'preview';
-            
-            // Use getEnvironmentStatus
-            const deploymentManager = await websiteContext.getDeploymentManager();
-            const status = await deploymentManager.getEnvironmentStatus(environment as 'preview' | 'live');
+            const identity = await websiteContext.getIdentity();
             
             return MessageFactory.createSuccessResponse(
               ContextId.WEBSITE,
               request.sourceContext,
               request.id,
-              { status },
+              { identity },
             );
           } catch (error) {
             return MessageFactory.createErrorResponse(
               ContextId.WEBSITE,
               request.sourceContext,
               request.id,
-              'STATUS_ERROR',
-              `Error getting website status: ${error instanceof Error ? error.message : String(error)}`,
+              'Failed to get website identity',
+              error instanceof Error ? error.message : String(error),
             );
           }
         }
-            
+        
         default:
           return MessageFactory.createErrorResponse(
             ContextId.WEBSITE,
             request.sourceContext,
             request.id,
-            'UNSUPPORTED_DATA_TYPE',
             `Unsupported data type: ${request.dataType}`,
           );
         }
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        // Handle notifications
-        const notification = message;
-        
-        switch (notification.notificationType) {
-        case NotificationType.PROFILE_UPDATED: {
-          this.logger.debug('Website context received profile update notification');
-          // Update website contents based on profile if needed
-          break;
-        }
-          
-        default:
-          this.logger.debug(`Website context received unhandled notification type: ${notification.notificationType}`);
-          break;
-        }
-        
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.WEBSITE,
-          notification.sourceContext || '*',
-          notification.id || 'unknown',
-          'processed',
-        );
       }
       
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.WEBSITE,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
+      if (message.category === 'notification') {
+        const notification = message;
+        
+        // Handle specific notifications for website context
+        if (notification.type === NotificationType.PROFILE_UPDATED) {
+          // Regenerate website identity when profile is updated
+          this.logger.debug('Website context received profile updated notification');
+          
+          // Start asynchronous identity generation
+          websiteContext.generateIdentity().catch((error: Error) => {
+            this.logger.error('Error generating website identity after profile update', error.message);
+          });
+        }
+      }
+      
+      // Return void instead of null to match MessageHandler return type
+      return;
     };
   }
   
   /**
-   * Send a notification about external sources status change
-   * 
+   * Send notification about external sources status change
    * @param enabled Whether external sources are enabled
    */
-  async notifyExternalSourcesStatusChange(enabled: boolean): Promise<void> {
+  private async notifyExternalSourcesStatusChange(enabled: boolean): Promise<void> {
+    const notification = MessageFactory.createNotification(
+      ContextId.PROFILE, // Source context (not really important for this notification)
+      ContextId.ALL, // Target all contexts
+      NotificationType.EXTERNAL_SOURCES_STATUS,
+      { enabled },
+    );
+    
     try {
-      const notification = MessageFactory.createNotification(
-        'system',
-        '*', // Broadcast to all interested contexts
-        NotificationType.EXTERNAL_SOURCES_STATUS,
-        { enabled },
-      );
-      
-      const receivedBy = await this.mediator.sendNotification(notification);
-      if (receivedBy && receivedBy.length) {
-        this.logger.debug(`External sources status notification sent to ${receivedBy.length} contexts`);
-      } else {
-        this.logger.debug('No subscribers received external sources status notification');
-      }
+      // Send to subscribers (currently only conversation context)
+      await this.mediator.sendNotification(notification);
+      this.logger.debug('Sent external sources status notification');
     } catch (error) {
       this.logger.error('Error sending external sources status notification:', error);
     }

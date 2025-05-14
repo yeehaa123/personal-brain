@@ -274,32 +274,30 @@ export function formatIdentityToMarkdown(identity: WebsiteIdentityData): string 
   // Personal Data
   markdown += '## Personal Information\n\n';
   
-  const { personalData } = identity;
-  markdown += `**Name:** ${personalData.name}\n`;
-  markdown += `**Email:** ${personalData.email}\n`;
+  markdown += `**Name:** ${identity.name}\n`;
+  markdown += `**Email:** ${identity.email}\n`;
   
-  if (personalData.company) markdown += `**Company:** ${personalData.company}\n`;
-  if (personalData.location) markdown += `**Location:** ${personalData.location}\n`;
-  if (personalData.occupation) markdown += `**Occupation:** ${personalData.occupation}\n`;
-  if (personalData.industry) markdown += `**Industry:** ${personalData.industry}\n`;
-  if (personalData.yearsExperience) markdown += `**Years Experience:** ${personalData.yearsExperience}\n`;
+  if (identity.company) markdown += `**Company:** ${identity.company}\n`;
+  if (identity.location) markdown += `**Location:** ${identity.location}\n`;
+  if (identity.occupation) markdown += `**Occupation:** ${identity.occupation}\n`;
+  if (identity.industry) markdown += `**Industry:** ${identity.industry}\n`;
+  if (identity.yearsExperience) markdown += `**Years Experience:** ${identity.yearsExperience}\n`;
   
   markdown += '\n';
   
   // Creative Content
   markdown += '## Creative Content\n\n';
   
-  const { creativeContent } = identity;
-  markdown += `**Title:** ${creativeContent.title}\n`;
-  markdown += `**Tagline:** ${creativeContent.tagline}\n`;
-  markdown += `**Description:** ${creativeContent.description}\n`;
+  markdown += `**Title:** ${identity.title}\n`;
+  markdown += `**Tagline:** ${identity.tagline}\n`;
+  markdown += `**Description:** ${identity.description}\n`;
   
-  if (creativeContent.pitch) markdown += `**Pitch:** ${creativeContent.pitch}\n`;
-  if (creativeContent.uniqueValue) markdown += `**Unique Value:** ${creativeContent.uniqueValue}\n`;
+  if (identity.pitch) markdown += `**Pitch:** ${identity.pitch}\n`;
+  if (identity.uniqueValue) markdown += `**Unique Value:** ${identity.uniqueValue}\n`;
   
-  if (creativeContent.keyAchievements && creativeContent.keyAchievements.length > 0) {
+  if (identity.keyAchievements && identity.keyAchievements.length > 0) {
     markdown += '\n**Key Achievements:**\n\n';
-    creativeContent.keyAchievements.forEach(achievement => {
+    identity.keyAchievements.forEach((achievement: string) => {
       markdown += `- ${achievement}\n`;
     });
   }
@@ -312,13 +310,12 @@ export function formatIdentityToMarkdown(identity: WebsiteIdentityData): string 
   // Tone
   markdown += '### Tone\n\n';
   
-  const { tone } = identity.brandIdentity;
-  markdown += `**Formality:** ${tone.formality}\n`;
-  markdown += `**Emotion:** ${tone.emotion}\n`;
+  markdown += `**Formality:** ${identity.formality}\n`;
+  markdown += `**Emotion:** ${identity.emotion}\n`;
   
-  if (tone.personality && tone.personality.length > 0) {
+  if (identity.personality && identity.personality.length > 0) {
     markdown += '\n**Personality:**\n\n';
-    tone.personality.forEach(trait => {
+    identity.personality.forEach((trait: string) => {
       markdown += `- ${trait}\n`;
     });
   }
@@ -328,44 +325,41 @@ export function formatIdentityToMarkdown(identity: WebsiteIdentityData): string 
   // Content Style
   markdown += '### Content Style\n\n';
   
-  const { contentStyle } = identity.brandIdentity;
-  markdown += `**Writing Style:** ${contentStyle.writingStyle}\n`;
-  markdown += `**Sentence Length:** ${contentStyle.sentenceLength}\n`;
-  markdown += `**Vocabulary Level:** ${contentStyle.vocabLevel}\n`;
-  markdown += `**Use Jargon:** ${contentStyle.useJargon ? 'Yes' : 'No'}\n`;
-  markdown += `**Use Humor:** ${contentStyle.useHumor ? 'Yes' : 'No'}\n`;
-  markdown += `**Use Stories:** ${contentStyle.useStories ? 'Yes' : 'No'}\n\n`;
+  markdown += `**Writing Style:** ${identity.writingStyle}\n`;
+  markdown += `**Sentence Length:** ${identity.sentenceLength}\n`;
+  markdown += `**Vocabulary Level:** ${identity.vocabLevel}\n`;
+  markdown += `**Use Jargon:** ${identity.useJargon ? 'Yes' : 'No'}\n`;
+  markdown += `**Use Humor:** ${identity.useHumor ? 'Yes' : 'No'}\n`;
+  markdown += `**Use Stories:** ${identity.useStories ? 'Yes' : 'No'}\n\n`;
   
   // Values
   markdown += '### Values\n\n';
   
-  const { values } = identity.brandIdentity;
-  
-  if (values.coreValues && values.coreValues.length > 0) {
+  if (identity.coreValues && identity.coreValues.length > 0) {
     markdown += '**Core Values:**\n\n';
-    values.coreValues.forEach(value => {
+    identity.coreValues.forEach((value: string) => {
       markdown += `- ${value}\n`;
     });
     markdown += '\n';
   }
   
-  if (values.targetAudience && values.targetAudience.length > 0) {
+  if (identity.targetAudience && identity.targetAudience.length > 0) {
     markdown += '**Target Audience:**\n\n';
-    values.targetAudience.forEach(audience => {
+    identity.targetAudience.forEach((audience: string) => {
       markdown += `- ${audience}\n`;
     });
     markdown += '\n';
   }
   
-  if (values.painPoints && values.painPoints.length > 0) {
+  if (identity.painPoints && identity.painPoints.length > 0) {
     markdown += '**Pain Points:**\n\n';
-    values.painPoints.forEach(point => {
+    identity.painPoints.forEach((point: string) => {
       markdown += `- ${point}\n`;
     });
     markdown += '\n';
   }
   
-  markdown += `**Desired Action:** ${values.desiredAction}\n\n`;
+  markdown += `**Desired Action:** ${identity.desiredAction}\n\n`;
   
   // Footer
   markdown += '---\n\n';

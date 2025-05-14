@@ -59,12 +59,11 @@ export type CommandResult =
   | { type: 'error'; message: string }
   | { type: 'help'; commands: CommandInfo[] }
   | { type: 'profile'; profile: Profile }
-  | { type: 'profile-related'; profile: Profile; relatedNotes: Note[]; matchType: 'tags' | 'semantic' | 'keyword' }
   | { type: 'notes'; notes: Note[]; title?: string }
   | { type: 'note'; note: Note }
   | { type: 'tags'; tags: Array<{ tag: string; count: number }> }
   | { type: 'search'; query: string; notes: Note[] }
-  | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; profile: Profile | undefined; externalSources: ExternalCitation[] | undefined }
+  | { type: 'ask'; answer: string; citations: Array<{ noteId: string; noteTitle: string; excerpt: string }>; relatedNotes: Note[]; externalSources: ExternalCitation[] | undefined }
   | { type: 'external'; enabled: boolean; message: string }
   | {
     type: 'status'; status: {

@@ -11,8 +11,8 @@ const baseSelectNoteSchema = createSelectSchema(notes);
 export const insertNoteSchema = baseInsertNoteSchema.extend({
   tags: z.array(z.string()).nullable().optional(),
   embedding: z.array(z.number()).nullable().optional(),
-  // New fields for conversation-to-notes feature and landing page
-  source: z.enum(['import', 'conversation', 'user-created', 'landing-page']).default('import'),
+  // New fields for conversation-to-notes feature, landing page, and profile
+  source: z.enum(['import', 'conversation', 'user-created', 'landing-page', 'profile']).default('import'),
   conversationMetadata: z.object({
     conversationId: z.string(),
     timestamp: z.date(),
@@ -26,8 +26,8 @@ export const insertNoteSchema = baseInsertNoteSchema.extend({
 export const selectNoteSchema = baseSelectNoteSchema.extend({
   tags: z.array(z.string()).nullable(),
   embedding: z.array(z.number()).nullable(),
-  // New fields for conversation-to-notes feature and landing page
-  source: z.enum(['import', 'conversation', 'user-created', 'landing-page']).default('import'),
+  // New fields for conversation-to-notes feature, landing page, and profile
+  source: z.enum(['import', 'conversation', 'user-created', 'landing-page', 'profile']).default('import'),
   conversationMetadata: z.object({
     conversationId: z.string(),
     timestamp: z.date(),

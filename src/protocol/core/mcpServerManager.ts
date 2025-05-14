@@ -138,14 +138,14 @@ export class McpServerManager {
       
       // Get all contexts from the orchestrator
       const noteContext = this.contextOrchestrator.getNoteContext();
-      const profileContext = this.contextOrchestrator.getProfileContext();
+      const profileContext = this.contextOrchestrator.getProfileContextV2();
       const conversationContext = this.contextOrchestrator.getConversationContext();
       const externalSourceContext = this.contextOrchestrator.getExternalSourceContext();
       const websiteContext = this.contextOrchestrator.getWebsiteContext();
       
       // Register each context on the server with proper error handling
       this.registerContextWithErrorHandling('NoteContext', () => noteContext.registerOnServer(this.mcpServer!));
-      this.registerContextWithErrorHandling('ProfileContext', () => profileContext.registerOnServer(this.mcpServer!));
+      this.registerContextWithErrorHandling('ProfileContextV2', () => profileContext.registerOnServer(this.mcpServer!));
       this.registerContextWithErrorHandling('ConversationContext', () => conversationContext.registerOnServer(this.mcpServer!));
       this.registerContextWithErrorHandling('ExternalSourceContext', () => externalSourceContext.registerOnServer(this.mcpServer!));
       this.registerContextWithErrorHandling('WebsiteContext', () => websiteContext.registerOnServer(this.mcpServer!));

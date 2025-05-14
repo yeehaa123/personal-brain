@@ -177,39 +177,7 @@ export class PersistentWebsiteStorageAdapter implements WebsiteStorageAdapter {
     return this.initialized;
   }
   
-  /**
-   * Get the website configuration
-   * @returns The current website configuration
-   */
-  async getWebsiteConfig(): Promise<WebsiteConfig> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-    return this.config;
-  }
-  
-  /**
-   * Update the website configuration
-   * @param updates The configuration updates to apply
-   * @returns The updated configuration
-   */
-  async updateWebsiteConfig(updates: Partial<WebsiteConfig>): Promise<WebsiteConfig> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-    
-    // Apply updates
-    this.config = { ...this.config, ...updates };
-    
-    // Update in items store too
-    this.items.set('config', {
-      id: 'config',
-      type: 'config',
-      data: this.config,
-    });
-    
-    return this.config;
-  }
+  // Config methods removed - we now use the config.ts directly
   
   /**
    * Get the landing page data

@@ -43,12 +43,9 @@ describe('CommandHandler', () => {
                         typeof commandResults.profileCommand.profile === 'object',
       },
       profileRelatedCommand: {
-        hasCorrectType: commandResults.profileRelatedCommand.type === 'profile-related',
-        hasRelatedNotes: commandResults.profileRelatedCommand.type === 'profile-related' && 
-                         Array.isArray(commandResults.profileRelatedCommand.relatedNotes) &&
-                         commandResults.profileRelatedCommand.relatedNotes.length > 0,
-        hasValidMatchType: commandResults.profileRelatedCommand.type === 'profile-related' && 
-                          ['tags', 'semantic', 'keyword'].includes(commandResults.profileRelatedCommand.matchType),
+        hasCorrectType: commandResults.profileRelatedCommand.type === 'profile',
+        hasProfile: commandResults.profileRelatedCommand.type === 'profile' && 
+                    typeof commandResults.profileRelatedCommand.profile === 'object',
       },
       searchCommand: {
         hasCorrectType: commandResults.searchCommand.type === 'search',
@@ -108,7 +105,7 @@ describe('CommandHandler', () => {
       commands: { isArray: true, hasExpectedCommands: true },
       errorCommand: { hasCorrectType: true, hasErrorMessage: true },
       profileCommand: { hasCorrectType: true, hasProfileData: true },
-      profileRelatedCommand: { hasCorrectType: true, hasRelatedNotes: true, hasValidMatchType: true },
+      profileRelatedCommand: { hasCorrectType: true, hasProfile: true },
       searchCommand: { hasCorrectType: true, hasCorrectQuery: true, hasResults: true, hasRelevantTitle: true, hasRelevantTags: true },
       listCommands: { hasCorrectListType: true, hasExpectedTitle: true, hasCorrectTagListType: true, hasCorrectFilteredTag: true },
       noteCommand: { hasCorrectType: true, hasCorrectId: true, hasCorrectTitle: true, hasCorrectTags: true },

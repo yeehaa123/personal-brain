@@ -150,3 +150,8 @@ export type ContextCommunicationMessage =
   | DataResponseMessage 
   | NotificationMessage 
   | AcknowledgmentMessage;
+  
+/**
+ * Re-export ContextId from contextOrchestrator for messaging use
+ */
+export { ContextId } from '../core/contextOrchestrator';

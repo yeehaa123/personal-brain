@@ -168,7 +168,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   /**
    * Handle website configuration command
    */
-  private async handleWebsiteConfig(args: string): Promise<CommandResult> {
+  private async handleWebsiteConfig(_args: string): Promise<CommandResult> {
     if (!this.websiteContext) {
       return {
         type: 'website-config',
@@ -191,55 +191,19 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       }
     }
     
-    // If no args, display current config
-    if (!args.trim()) {
+    try {
+      // Display current config - configuration is read-only
       const config = await this.websiteContext.getConfig();
       return {
         type: 'website-config',
         config,
         message: 'Current website configuration',
       };
-    }
-    
-    // Parse key=value pairs from arguments
-    try {
-      const configUpdates: Record<string, string> = {};
-      const keyValuePairs = args.match(/(\w+)="([^"]*)"/g) || [];
-      
-      for (const pair of keyValuePairs) {
-        const [key, value] = pair.split('=');
-        const cleanKey = key.trim();
-        const cleanValue = value.replace(/"/g, '').trim();
-        
-        if (cleanKey && cleanValue !== undefined) {
-          configUpdates[cleanKey] = cleanValue;
-        }
-      }
-      
-      if (Object.keys(configUpdates).length === 0) {
-        return {
-          type: 'error',
-          message: 'Invalid configuration format. Use key="value" format.',
-        };
-      }
-      
-      // Update configuration
-      await this.websiteContext.updateConfig(configUpdates);
-      
-      // Get updated config
-      const updatedConfig = await this.websiteContext.getConfig();
-      
-      return {
-        type: 'website-config',
-        success: true,
-        config: updatedConfig,
-        message: 'Configuration updated successfully',
-      };
     } catch (error) {
-      this.logger.error(`Error updating website configuration: ${error}`);
+      this.logger.error(`Error getting website configuration: ${error}`);
       return {
         type: 'error',
-        message: `Failed to update configuration: ${error instanceof Error ? error.message : String(error)}`,
+        message: `Failed to get configuration: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -332,9 +296,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
             
             // The website context and service will call updateStep with the right indices
             return await this.websiteContext.generateLandingPage({
-              regenerateIdentity: false,
-              onProgress: (_step, index) => {
-                // Simply use the index provided by the progress callback
+              onProgress: (_step: string, index: number) => {
+                // Use the index provided by the progress callback
                 if (index >= 0 && index < steps.length) {
                   updateStep(index);
                 }
@@ -344,11 +307,21 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           roomId, // This parameter is only used by Matrix, and ignored by CLI
         );
         
+        if (!result) {
+          return {
+            type: 'landing-page',
+            success: false,
+            message: 'Failed to generate landing page',
+          };
+        }
+        
+        // Convert website context result to command result format
         return {
           type: 'landing-page',
-          success: result?.success ?? false,
-          message: result?.message ?? 'Failed to generate landing page',
-          data: result?.data,
+          success: true,
+          message: 'Landing page generated successfully',
+          data: result.data,
+          action: 'generate',
         };
       } catch (error) {
         // Get CLI interface for error handling
@@ -364,54 +337,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
     } 
-    // Edit landing page content
-    else if (action === 'edit') {
-      try {
-        // Get CLI interface for status updates with spinner
-        const cli = CLIInterface.getInstance();
-        
-        // Note: In the future, we could use a progress spinner with steps:
-        // const steps = [
-        //   'Retrieving website identity and current content',
-        //   'Performing content review across sections',
-        //   ...etc
-        // ];
-        
-        // Since we can't hook into the actual progress events yet,
-        // we'll use the simple spinner approach for now
-        cli.startSpinner('Editing landing page content (this will take a few minutes)...');
-        
-        // Run the actual edit operation
-        const result = await this.websiteContext.editLandingPage();
-        
-        // Stop the spinner with appropriate status
-        if (result.success) {
-          cli.stopSpinner('success', 'Landing page edited successfully');
-        } else {
-          cli.stopSpinner('error', 'Failed to edit landing page');
-        }
-        
-        return {
-          type: 'landing-page',
-          success: result.success,
-          message: result.message,
-          data: result.data,
-          action: 'edit',
-        };
-      } catch (error) {
-        // Get CLI interface for error handling
-        const cli = CLIInterface.getInstance();
-        
-        // Make sure we stop the spinner in case of error
-        cli.stopSpinner('error', 'Error editing landing page');
-        
-        this.logger.error(`Error editing landing page: ${error}`);
-        return {
-          type: 'error',
-          message: `Failed to edit landing page: ${error instanceof Error ? error.message : String(error)}`,
-        };
-      }
-    }
+    // Edit landing page option removed - not currently supported
     // Assess landing page quality
     else if (action === 'assess' || action === 'qa') {
       try {
@@ -516,6 +442,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     else if (action === 'view' || !action) {
       try {
         // Try to read from existing file first
+        // Use await since getAstroContentService returns a Promise
         const astroService = await this.websiteContext.getAstroContentService();
         const landingPageData = await astroService.readLandingPageContent();
         
@@ -733,7 +660,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
 
     const parts = args.trim().split(/\s+/);
     const action = parts[0]?.toLowerCase() || 'view';
-    let restArgs = parts.slice(1).join(' ');
 
     // View identity information
     if (action === 'view' || action === '') {
@@ -797,76 +723,11 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       }
     }
     
-    // Update identity properties
-    else if (action === 'update') {
-      try {
-        // Parse update arguments similar to config updates
-        const updates: Record<string, unknown> = {};
-        let shallowMerge = false;
-        
-        // Check for shallow merge flag
-        if (restArgs.includes('--shallow')) {
-          shallowMerge = true;
-          // Remove the flag from restArgs
-          const argsWithoutFlag = restArgs.replace(/--shallow\s*/, '');
-          restArgs = argsWithoutFlag;
-        }
-        
-        // Parse key=value pairs with dot notation support
-        const updatePairs = restArgs.match(/([^=\s]+)=(?:"([^"]*)"|([\S]+))/g) || [];
-        
-        for (const pair of updatePairs) {
-          const [keyPath, value] = pair.split('=');
-          const cleanValue = value.replace(/^"(.*)"$/, '$1');
-          
-          // Support for nested properties with dot notation
-          const pathParts = keyPath.split('.');
-          
-          // Build up the updates object structure
-          let current = updates;
-          for (let i = 0; i < pathParts.length - 1; i++) {
-            const part = pathParts[i];
-            if (!current[part] || typeof current[part] !== 'object') {
-              current[part] = {};
-            }
-            current = current[part] as Record<string, unknown>;
-          }
-          
-          // Set the value at the final path part
-          const finalPart = pathParts[pathParts.length - 1];
-          current[finalPart] = cleanValue;
-        }
-        
-        if (Object.keys(updates).length === 0) {
-          return {
-            type: 'error',
-            message: 'Invalid update format. Use key="value" format with dot notation for nested properties.',
-          };
-        }
-        
-        // Apply the updates
-        const result = await this.websiteContext.updateIdentity(updates, shallowMerge);
-        
-        return {
-          type: 'website-identity',
-          success: result.success,
-          message: result.message,
-          data: result.data,
-          action: 'update',
-        };
-      } catch (error) {
-        this.logger.error(`Error updating identity: ${error}`);
-        return {
-          type: 'error',
-          message: `Failed to update identity: ${error instanceof Error ? error.message : String(error)}`,
-        };
-      }
-    }
     
     // Unknown action
     return {
       type: 'error',
-      message: `Unknown action: ${action}. Available actions: view, generate, update`,
+      message: `Unknown action: ${action}. Available actions: view, generate`,
     };
   }
   

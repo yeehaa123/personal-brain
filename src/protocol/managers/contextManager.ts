@@ -11,9 +11,9 @@ import {
   ConversationContext,
   ExternalSourceContext,
   NoteContext,
-  ProfileContext,
   WebsiteContext,
 } from '@/contexts';
+import { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { RendererRegistry } from '@/utils/registry/rendererRegistry';
@@ -50,19 +50,21 @@ export class ContextManager implements IContextManager {
 
   // Core context objects
   private readonly noteContext: NoteContext;
-  private readonly profileContext: ProfileContext;
+  private readonly profileContext: ProfileContextV2;
+  // New profile context implementation using notes for storage
+  private readonly profileContextV2: ProfileContextV2;
   private readonly externalSourceContext: ExternalSourceContext;
   private readonly conversationContext: ConversationContext;
   private readonly websiteContext: WebsiteContext;
-  
+
   // State
   private useExternalSources: boolean;
   private initialized: boolean = false;
   private initializationError: Error | null = null;
-  
+
   // Reference to the configuration for getting the interface type
   private config: BrainProtocolConfig;
-  
+
   // Logger instance
   private logger = Logger.getInstance();
 
@@ -75,7 +77,7 @@ export class ContextManager implements IContextManager {
   public static getInstance(options: ContextManagerConfig): ContextManager {
     if (!ContextManager.instance) {
       ContextManager.instance = new ContextManager(options.config);
-      
+
       const logger = Logger.getInstance();
       logger.debug('ContextManager singleton instance created');
     } else if (options) {
@@ -83,7 +85,7 @@ export class ContextManager implements IContextManager {
       const logger = Logger.getInstance();
       logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
-    
+
     return ContextManager.instance;
   }
 
@@ -94,7 +96,7 @@ export class ContextManager implements IContextManager {
   public static resetInstance(): void {
     if (ContextManager.instance) {
       ContextManager.instance = null;
-      
+
       const logger = Logger.getInstance();
       logger.debug('ContextManager singleton instance reset');
     }
@@ -110,7 +112,7 @@ export class ContextManager implements IContextManager {
   public static createFresh(options: ContextManagerConfig): ContextManager {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ContextManager instance');
-    
+
     return new ContextManager(options.config);
   }
 
@@ -122,20 +124,24 @@ export class ContextManager implements IContextManager {
   private constructor(config: BrainProtocolConfig) {
     // Store config for later use
     this.config = config;
-    
+
     const apiKey = config.getApiKey();
     const newsApiKey = config.newsApiKey;
     const interfaceType = config.interfaceType || 'cli';
     const roomId = config.roomId;
-    
+
     // Initialize the contexts with singletons
     // This ensures we're using the same context instances throughout the application
     try {
       this.noteContext = NoteContext.getInstance({ apiKey });
-      this.profileContext = ProfileContext.getInstance({ apiKey });
-      this.externalSourceContext = ExternalSourceContext.getInstance({ 
-        apiKey, 
-        newsApiKey, 
+
+      // Initialize both profile contexts - we'll use V2 for most operations but keep V1 for backward compatibility
+      this.profileContext = ProfileContextV2.getInstance();
+      this.profileContextV2 = ProfileContextV2.getInstance();
+
+      this.externalSourceContext = ExternalSourceContext.getInstance({
+        apiKey,
+        newsApiKey,
       });
       this.conversationContext = ConversationContext.getInstance({
         // Pass any configuration needed for conversation context
@@ -143,13 +149,10 @@ export class ContextManager implements IContextManager {
         anchorId: config.anchorId,
       });
       this.websiteContext = WebsiteContext.getInstance();
-      
-      // Connect NoteContext to ProfileContext for related note operations
-      this.profileContext.setNoteContext(this.noteContext);
-      
+
       // Set initial state
       this.useExternalSources = config.useExternalSources;
-      
+
       // Initialize conversation if roomId is provided
       if (roomId) {
         this.conversationContext.getOrCreateConversationForRoom(roomId, interfaceType)
@@ -160,10 +163,10 @@ export class ContextManager implements IContextManager {
             this.logger.warn(`Failed to initialize conversation for room ${roomId}:`, error);
           });
       }
-      
+
       // Mark as successfully initialized
       this.initialized = true;
-      
+
       this.logger.debug('Context manager successfully initialized');
     } catch (error) {
       this.initializationError = error instanceof Error ? error : new Error(String(error));
@@ -189,10 +192,21 @@ export class ContextManager implements IContextManager {
    * Get the profile context for profile operations
    * @returns The profile context instance
    * @throws Error if context is not properly initialized
+   * @deprecated Use getProfileContextV2 instead
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): ProfileContextV2 {
     this.ensureContextsReady();
     return this.profileContext;
+  }
+
+  /**
+   * Get the new profile context implementation that uses notes for storage
+   * @returns The ProfileContextV2 instance
+   * @throws Error if context is not properly initialized
+   */
+  getProfileContextV2(): ProfileContextV2 {
+    this.ensureContextsReady();
+    return this.profileContextV2;
   }
 
   /**
@@ -204,7 +218,7 @@ export class ContextManager implements IContextManager {
     this.ensureContextsReady();
     return this.externalSourceContext;
   }
-  
+
   /**
    * Get the conversation context for conversation management
    * @returns The conversation context instance
@@ -214,7 +228,7 @@ export class ContextManager implements IContextManager {
     this.ensureContextsReady();
     return this.conversationContext;
   }
-  
+
   /**
    * Get the website context
    * @returns The website context instance
@@ -251,11 +265,12 @@ export class ContextManager implements IContextManager {
    */
   areContextsReady(): boolean {
     return this.initialized &&
-           isDefined(this.noteContext) && 
-           isDefined(this.profileContext) && 
-           isDefined(this.externalSourceContext) &&
-           isDefined(this.conversationContext) &&
-           isDefined(this.websiteContext);
+      isDefined(this.noteContext) &&
+      isDefined(this.profileContext) &&
+      isDefined(this.profileContextV2) &&
+      isDefined(this.externalSourceContext) &&
+      isDefined(this.conversationContext) &&
+      isDefined(this.websiteContext);
   }
 
   /**
@@ -278,14 +293,14 @@ export class ContextManager implements IContextManager {
    */
   initializeContextLinks(): void {
     if (this.areContextsReady()) {
-      // Connect NoteContext to ProfileContext for related note operations
-      this.profileContext.setNoteContext(this.noteContext);
+      // ProfileContextV2 doesn't need explicit NoteContext reference anymore
+      // this.profileContext.setNoteContext(this.noteContext);
       this.logger.debug('Context links initialized');
     } else {
       this.logger.warn('Cannot initialize context links: contexts not ready');
     }
   }
-  
+
   /**
    * Get the renderer for the current interface type
    * This provides a standardized way to access the renderer from any context
@@ -296,15 +311,15 @@ export class ContextManager implements IContextManager {
     try {
       // Get the configured interface type from our stored config
       const interfaceType = this.config.interfaceType || 'cli';
-      
+
       // Get the renderer from the registry
       const registry = RendererRegistry.getInstance();
       const renderer = registry.getRenderer(interfaceType);
-      
+
       if (!renderer) {
         this.logger.warn(`No renderer found for interface type: ${interfaceType}`);
       }
-      
+
       return renderer;
     } catch (error) {
       this.logger.error('Error getting renderer:', error);
@@ -318,9 +333,9 @@ export class ContextManager implements IContextManager {
    */
   static resetContexts(): void {
     const logger = Logger.getInstance();
-    
+
     NoteContext.resetInstance();
-    ProfileContext.resetInstance();
+    ProfileContextV2.resetInstance();
     ExternalSourceContext.resetInstance();
     // Reset the conversation context as well
     if (ConversationContext.resetInstance) {

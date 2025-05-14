@@ -191,6 +191,7 @@ export class MockContextMediator {
   _configure(options: { 
     errorMode?: { dataRequests?: boolean; notifications?: boolean };
     responseData?: Record<string, unknown>;
+    profileData?: Record<string, unknown>;
   }): void {
     if (options.errorMode) {
       if (options.errorMode.dataRequests !== undefined) {
@@ -203,6 +204,11 @@ export class MockContextMediator {
     
     if (options.responseData) {
       this.mockResponseData = options.responseData;
+    }
+    
+    // For profile data requests
+    if (options.profileData) {
+      this.mockResponseData = options.profileData;
     }
   }
 }

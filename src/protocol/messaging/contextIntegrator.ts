@@ -10,8 +10,8 @@ import type { ConversationContext } from '@/contexts/conversations';
 import type { ExternalSourceContext } from '@/contexts/externalSources';
 import type { NoteContext } from '@/contexts/notes';
 import { NoteContextMessaging } from '@/contexts/notes/messaging/noteContextMessaging';
-import type { ProfileContext } from '@/contexts/profiles';
-import { ProfileContextMessaging } from '@/contexts/profiles/messaging/profileContextMessaging';
+import { ProfileContextV2Messaging } from '@/contexts/profiles/messaging';
+import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import type { WebsiteContext } from '@/contexts/website';
 import { WebsiteContextMessaging } from '@/contexts/website/messaging';
 import { Logger } from '@/utils/logger';
@@ -25,7 +25,7 @@ export interface ContextIntegratorOptions {
   /** Note context to integrate */
   noteContext: NoteContext;
   /** Profile context to integrate */
-  profileContext: ProfileContext;
+  profileContext: ProfileContextV2;
   /** Conversation context to integrate */
   conversationContext: ConversationContext;
   /** External source context to integrate */
@@ -43,7 +43,7 @@ export interface MessagingContexts {
   /** Messaging-enabled note context */
   note: NoteContextMessaging;
   /** Messaging-enabled profile context */
-  profile: ProfileContextMessaging;
+  profile: ProfileContextV2Messaging;
   /** Original conversation context */
   conversation: ConversationContext;
   /** Original external source context */
@@ -120,7 +120,7 @@ export class ContextIntegrator {
     // Create messaging-enabled contexts
     this.contexts = {
       note: new NoteContextMessaging(options.noteContext, this.mediator),
-      profile: new ProfileContextMessaging(options.profileContext, this.mediator),
+      profile: new ProfileContextV2Messaging(options.profileContext, this.mediator),
       conversation: options.conversationContext,
       externalSource: options.externalSourceContext,
       website: new WebsiteContextMessaging(options.websiteContext, this.mediator),
@@ -149,7 +149,7 @@ export class ContextIntegrator {
    * Get the messaging-enabled profile context
    * @returns Profile context with messaging support
    */
-  getProfileContext(): ProfileContextMessaging {
+  getProfileContext(): ProfileContextV2Messaging {
     return this.contexts.profile;
   }
   

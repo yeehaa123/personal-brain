@@ -1,7 +1,21 @@
 /**
  * Query Processor for BrainProtocol
- * Manages the query processing pipeline
+ * 
+ * Manages the pipeline for processing a natural language query, including:
+ * - Analyzing profile relevance
+ * - Retrieving relevant notes
+ * - Getting conversation history
+ * - Fetching external sources
+ * - Formatting prompts
+ * - Calling the model
+ * - Saving conversation turns
+ * 
+ * Implements the Component Interface Standardization pattern with:
+ * - getInstance(): Returns the singleton instance
+ * - resetInstance(): Resets the singleton instance (mainly for testing)
+ * - createFresh(): Creates a new instance without affecting the singleton
  */
+
 import type { z } from 'zod';
 
 import { relevanceConfig } from '@/config';
@@ -9,14 +23,12 @@ import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
 import { PromptFormatter } from '@/protocol/components/promptFormatter';
 import { SystemPromptGenerator } from '@/protocol/components/systemPromptGenerator';
-import { ResourceRegistry } from '@/resources';
-import type { ModelResponse } from '@/resources/ai/interfaces';
+import { ResourceRegistry } from '@/resources/resourceRegistry';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import type {
   ContextResult,
-  ExternalCitation,
   IContextManager,
   IConversationManager,
   IQueryProcessor,
@@ -25,74 +37,86 @@ import type {
   QueryResult,
   TurnOptions,
 } from '../types';
+import type {
+  ExternalCitation,
+} from '../types/index';
 
 /**
- * Configuration options for QueryProcessor
+ * Configuration object for QueryProcessor
  */
 export interface QueryProcessorConfig {
-  /** Context manager for accessing contexts */
+  /** Context manager for accessing all contexts */
   contextManager: IContextManager;
-  /** Conversation manager for history */
+  /** Conversation manager for conversation state */
   conversationManager: IConversationManager;
-  /** API key for model access */
+  /** API key for the model */
   apiKey?: string;
 }
 
 /**
- * Processes queries through a structured pipeline
+ * QueryProcessor implementation
  * 
- * Implements the Component Interface Standardization pattern with:
- * - getInstance(): Returns the singleton instance
- * - resetInstance(): Resets the singleton instance (mainly for testing)
- * - createFresh(): Creates a new instance without affecting the singleton
+ * Manages the full query processing pipeline:
+ * 1. Analyze profile relevance
+ * 2. Retrieve relevant notes
+ * 3. Get conversation history
+ * 4. Fetch external sources
+ * 5. Format prompt
+ * 6. Call model
+ * 7. Save turn
+ * 8. Return result
  */
 export class QueryProcessor implements IQueryProcessor {
-  /** The singleton instance */
   private static instance: QueryProcessor | null = null;
 
-  /** Logger instance for this class */
-  private logger = Logger.getInstance();
+  // Dependencies
+  private readonly contextManager: IContextManager;
+  private readonly conversationManager: IConversationManager;
+  private readonly promptFormatter: PromptFormatter;
+  private readonly systemPromptGenerator: SystemPromptGenerator;
+  private readonly resourceRegistry: ResourceRegistry;
 
-  private contextManager: IContextManager;
-  private conversationManager: IConversationManager;
-  private promptFormatter: PromptFormatter;
-  private systemPromptGenerator: SystemPromptGenerator;
-  private resourceRegistry: ResourceRegistry;
+  // Utility
+  private readonly logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of QueryProcessor
    * 
-   * @param config Configuration options
+   * @param options Configuration options
    * @returns The singleton instance
    */
-  public static getInstance(config: QueryProcessorConfig): QueryProcessor {
+  public static getInstance(options: QueryProcessorConfig): QueryProcessor {
     if (!QueryProcessor.instance) {
       QueryProcessor.instance = new QueryProcessor(
-        config.contextManager,
-        config.conversationManager,
-        config.apiKey,
+        options.contextManager,
+        options.conversationManager,
+        options.apiKey,
       );
-
+      
       const logger = Logger.getInstance();
       logger.debug('QueryProcessor singleton instance created');
+    } else if (options) {
+      // Log a warning if trying to get instance with different config
+      const logger = Logger.getInstance();
+      logger.warn('getInstance called with config but instance already exists. Config ignored.');
     }
-
+    
     return QueryProcessor.instance;
   }
 
   /**
    * Reset the singleton instance
-   * This is primarily used for testing to ensure a clean state
+   * This is primarily used for testing
    */
   public static resetInstance(): void {
     QueryProcessor.instance = null;
-
     const logger = Logger.getInstance();
     logger.debug('QueryProcessor singleton instance reset');
   }
 
   /**
-   * Create a fresh instance without affecting the singleton
+   * Create a fresh instance that is not the singleton
+   * This method is primarily used for testing
    * 
    * @param config Configuration options
    * @returns A new QueryProcessor instance
@@ -240,21 +264,15 @@ export class QueryProcessor implements IQueryProcessor {
       ? await noteContext.getRelatedNotes(context.relevantNotes[0].id)
       : [];
 
-    // 9. Determine if profile should be included in response
-    const includeProfileInResponse =
-      profileAnalysis.isProfileQuery ||
-      profileAnalysis.relevance > relevanceConfig.profileResponseThreshold;
-
-    // 10. Get profile if needed
-    const profileContext = this.contextManager.getProfileContext();
-    const profile = includeProfileInResponse ? await profileContext.getProfile() : undefined;
+    // Note: Profile data is handled during prompt formatting
+    // We no longer need to include it in the response since it's used
+    // for answering profile-related queries through the model
 
     // 11. Return the result with the optional structured object
     return {
       answer,
       citations: context.citations,
       relatedNotes,
-      profile,
       externalSources: externalCitations.length > 0 ? externalCitations : undefined,
       object: modelResponse.object, // Include the structured object in the result
     };
@@ -299,10 +317,13 @@ export class QueryProcessor implements IQueryProcessor {
     const citations = relevantNotes.map(note => ({
       noteId: note.id,
       noteTitle: note.title || 'Untitled Note',
-      excerpt: this.promptFormatter.getExcerpt(note.content, 150),
+      excerpt: this.truncateContent(note.content, 150),
     }));
 
-    return { relevantNotes, citations };
+    return {
+      relevantNotes,
+      citations,
+    };
   }
 
   /**
@@ -310,54 +331,76 @@ export class QueryProcessor implements IQueryProcessor {
    * @returns Formatted conversation history
    */
   private async getConversationHistory(): Promise<string> {
-    return await this.conversationManager.getConversationHistory();
+    try {
+      const conversationId = this.conversationManager.getCurrentConversationId();
+      if (!conversationId) {
+        return '';
+      }
+
+      return await this.conversationManager.getConversationHistory(conversationId);
+    } catch (error) {
+      this.logger.error('Error retrieving conversation history:', error);
+      return '';
+    }
   }
 
   /**
-   * Fetch external sources for a query
+   * Fetch external sources if enabled
    * @param query User query
-   * @param relevantNotes Relevant notes for the query
-   * @returns External results or null
+   * @param relevantNotes Relevant notes
+   * @returns External source results or null if disabled/error
    */
-  private async fetchExternalSources(query: string, _relevantNotes: Note[]): Promise<ExternalSourceResult[] | null> {
-    const externalSourceContext = this.contextManager.getExternalSourceContext();
-    const enabled = this.contextManager.getExternalSourcesEnabled();
-
-    if (!enabled) {
+  private async fetchExternalSources(
+    query: string,
+    _relevantNotes: Note[],
+  ): Promise<ExternalSourceResult[] | null> {
+    // Check if external sources are enabled
+    if (!this.contextManager.getExternalSourcesEnabled()) {
       return null;
     }
 
-    return await externalSourceContext.search(query);
+    try {
+      const externalSourceContext = this.contextManager.getExternalSourceContext();
+      const externalResults = await externalSourceContext.search(query);
+
+      if (externalResults && externalResults.length > 0) {
+        this.logger.info(`Found ${externalResults.length} external sources`);
+      } else {
+        this.logger.info('No relevant external sources found');
+      }
+
+      return externalResults;
+    } catch (error) {
+      this.logger.error('Error fetching external sources:', error);
+      return null;
+    }
   }
 
   /**
-   * Format external results as citations
-   * @param externalResults External results
+   * Format external sources as citations
+   * @param results External source results
    * @returns External citations
    */
-  private formatExternalCitations(externalResults: ExternalSourceResult[] | null): ExternalCitation[] {
-    if (!externalResults || !Array.isArray(externalResults) || externalResults.length === 0) {
+  private formatExternalCitations(results: ExternalSourceResult[] | null): ExternalCitation[] {
+    if (!results || !Array.isArray(results)) {
       return [];
     }
 
-    return externalResults.map(result => ({
-      title: isNonEmptyString(result.title) ? result.title : 'Untitled Source',
-      source: isNonEmptyString(result.source) ? result.source : 'Unknown Source',
-      url: isNonEmptyString(result.url) ? result.url : '#',
-      excerpt: this.promptFormatter.getExcerpt(
-        isNonEmptyString(result.content) ? result.content : 'No content available',
-        150,
-      ),
+    return results.map(result => ({
+      title: result.title,
+      source: result.source,
+      url: result.url,
+      excerpt: this.truncateContent(result.content, 150),
     }));
   }
 
   /**
-   * Format the prompt for the model
+   * Format prompt for the model
    * @param query User query
-   * @param context Context result
+   * @param context Relevant note context
    * @param history Conversation history
    * @param profileAnalysis Profile analysis result
-   * @param externalResults External results
+   * @param externalResults External source results
    * @returns Formatted system and user prompts
    */
   private async formatPrompt(
@@ -366,91 +409,133 @@ export class QueryProcessor implements IQueryProcessor {
     history: string,
     profileAnalysis: ProfileAnalysisResult,
     externalResults: ExternalSourceResult[] | null,
-  ): Promise<{ systemPrompt: string, userPrompt: string }> {
-    // For highly relevant profile queries, always include profile information
-    const includeProfile =
-      profileAnalysis.isProfileQuery ||
-      profileAnalysis.relevance > relevanceConfig.profileInclusionThreshold;
+  ): Promise<{ systemPrompt: string; userPrompt: string }> {
+    // Get profile if relevant to the query
+    let profileText: string | null = null;
+    if (profileAnalysis.isProfileQuery || profileAnalysis.relevance > relevanceConfig.profileInclusionThreshold) {
+      const profileContext = this.contextManager.getProfileContextV2();
+      const profile = await profileContext.getProfile();
+      
+      if (profile) {
+        // Get profile as a note which already has a text representation
+        const profileNote = await profileContext.getProfileAsNote();
+        profileText = profileNote?.content || null;
+        this.logger.debug('Including profile in prompt');
+      }
+    }
 
-    // Get profile if needed
-    const profileContext = this.contextManager.getProfileContext();
-    const profile = includeProfile ? await profileContext.getProfile() : undefined;
+    // Generate system prompt
+    const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
+      Boolean(profileText), // isProfileQuery
+      1.0, // profileRelevance (default high value)
+      Boolean(externalResults && externalResults.length > 0), // hasExternalSources
+    );
 
-    // Format the user prompt
-    const { formattedPrompt } = this.promptFormatter.formatPromptWithContext(
+    // Format user prompt with all context
+    const { formattedPrompt: userPrompt } = this.promptFormatter.formatPromptWithContext(
       query,
       context.relevantNotes,
       externalResults || [],
-      includeProfile,
-      profileAnalysis.relevance,
-      profile,
+      Boolean(profileText),
+      1.0, // default relevance
+      undefined, // no profile available in context
       history,
     );
 
-    // Generate system prompt based on query analysis
-    const systemPrompt = this.systemPromptGenerator.getSystemPrompt(
-      profileAnalysis.isProfileQuery,
-      profileAnalysis.relevance,
-      externalResults !== null && Array.isArray(externalResults) && externalResults.length > 0,
-    );
-
-    return { systemPrompt, userPrompt: formattedPrompt };
+    return { systemPrompt, userPrompt };
   }
 
   /**
-   * Call the AI model
+   * Call the model with the prepared prompts
    * @param systemPrompt System prompt
-   * @param userPrompt User prompt
+   * @param userPrompt User prompt with context
    * @param schema Optional schema for structured responses
    * @returns Model response
    */
   private async callModel<T = unknown>(
     systemPrompt: string,
     userPrompt: string,
-    schema?: z.ZodType<T>,
-  ): Promise<ModelResponse<T>> {
-    const claude = this.resourceRegistry.getClaudeModel();
-    return await claude.complete({
-      systemPrompt,
-      userPrompt,
-      schema,
-    });
+    schema?: z.ZodType<T>, // Schema for structured responses
+  ): Promise<{ object: T | undefined; usage?: { promptTokens: number; completionTokens: number } }> {
+    try {
+      const claude = this.resourceRegistry.getClaudeModel();
+      
+      // Call the model with the provided schema
+      const response = await claude.complete({
+        systemPrompt,
+        userPrompt,
+        schema, // Pass the schema to the claude.complete method
+      });
+
+      // The response.object already contains the structured response
+      const structuredObject = response.object as T;
+
+      // Map the usage to match the expected interface
+      const usage = response.usage ? {
+        promptTokens: response.usage.inputTokens || 0,
+        completionTokens: response.usage.outputTokens || 0,
+      } : undefined;
+
+      return {
+        object: structuredObject,
+        usage,
+      };
+    } catch (error) {
+      this.logger.error('Error calling model:', error);
+      return { object: undefined };
+    }
   }
 
   /**
    * Save a conversation turn
    * @param query User query
-   * @param response Model response
-   * @param options Query options
+   * @param response Assistant response
+   * @param options Turn options
    */
-  private async saveTurn(query: string, response: string, options?: QueryOptions): Promise<void> {
+  private async saveTurn(
+    query: string,
+    response: string,
+    options?: QueryOptions<unknown>,
+  ): Promise<void> {
     try {
-      // First, add the user's query with the provided userId
-      const userTurnOptions: TurnOptions = {
-        userId: options?.userId || 'matrix-user',
-        userName: options?.userName || 'User',
-        metadata: {
-          turnType: 'user',
-        },
-      };
-
-      await this.conversationManager.saveTurn(query, '', userTurnOptions);
-      this.logger.debug(`Saved user turn with userId: ${userTurnOptions.userId}`);
-
-      // Then, add the assistant's response with 'assistant' as userId
-      const assistantTurnOptions: TurnOptions = {
-        userId: 'assistant',
-        userName: 'Assistant',
+      // Create turn options from query options
+      const turnOptions: TurnOptions = {
+        userId: options?.userId,
+        userName: options?.userName,
         metadata: {
           turnType: 'assistant',
+          // Add more metadata here if needed
         },
       };
 
-      await this.conversationManager.saveTurn(query, response, assistantTurnOptions);
-      this.logger.debug('Saved assistant turn with userId: assistant');
+      await this.conversationManager.saveTurn(query, response, turnOptions);
     } catch (error) {
-      this.logger.warn('Failed to save conversation turn:', error);
-      // Continue even if saving fails
+      this.logger.error('Error saving conversation turn:', error);
     }
+  }
+
+  /**
+   * Truncate content to a specified length
+   * @param content Content to truncate
+   * @param maxLength Maximum length
+   * @returns Truncated content with ellipsis if needed
+   */
+  private truncateContent(content: string, maxLength: number): string {
+    if (!content) {
+      return '';
+    }
+
+    if (content.length <= maxLength) {
+      return content;
+    }
+
+    // Find the last complete sentence or word boundary before maxLength
+    const truncated = content.slice(0, maxLength);
+    const lastPeriod = truncated.lastIndexOf('.');
+    const lastSpace = truncated.lastIndexOf(' ');
+
+    // Prefer ending at a sentence boundary, otherwise use word boundary
+    const breakPoint = lastPeriod > 0 ? lastPeriod + 1 : lastSpace;
+    return breakPoint > 0 ? `${content.slice(0, breakPoint)}...` : `${truncated}...`;
   }
 }

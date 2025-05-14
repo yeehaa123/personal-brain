@@ -5,7 +5,10 @@ import { websiteConfig } from '@/config';
 import { BaseContext } from '@/contexts/baseContext';
 import type { ContextInterface } from '@/contexts/contextInterface';
 import type { FormattingOptions } from '@/contexts/formatterInterface';
-import { ProfileContext } from '@/contexts/profiles';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
+import { requestContextData } from '@/protocol/messaging/contextIntegration';
+import { ContextMediator } from '@/protocol/messaging/contextMediator';
+import { DataRequestType } from '@/protocol/messaging/messageTypes';
 import { Logger } from '@/utils/logger';
 import { getProjectRoot, resolvePath } from '@/utils/pathUtils';
 import { Registry } from '@/utils/registry';
@@ -25,7 +28,7 @@ import { WebsiteIdentityService } from './services/websiteIdentityService';
 import { WebsiteToolService } from './tools';
 import type { LandingPageGenerationStatus } from './types/landingPageTypes';
 import { SectionGenerationStatus } from './types/landingPageTypes';
-import type { WebsiteConfig } from './websiteStorage';
+import { type WebsiteConfig, WebsiteConfigSchema } from './websiteStorage';
 
 /**
  * Configuration for WebsiteContext
@@ -59,8 +62,8 @@ export interface WebsiteContextDependencies {
   /** LandingPageGenerationService instance */
   landingPageGenerationService: LandingPageGenerationService;
   
-  /** ProfileContext instance */
-  profileContext: ProfileContext;
+  /** Context mediator for messaging */
+  mediator: ContextMediator;
   
   /** DeploymentManager instance */
   deploymentManager: WebsiteDeploymentManager;
@@ -92,9 +95,9 @@ export class WebsiteContext extends BaseContext<
   protected override logger = Logger.getInstance();
   private astroContentService: AstroContentService | null = null;
   private landingPageGenerationService: LandingPageGenerationService | null = null;
-  private profileContext: ProfileContext | null = null;
   private deploymentManager: WebsiteDeploymentManager | null = null;
   private identityService: WebsiteIdentityService | null = null;
+  private mediator: ContextMediator;
   
   /**
    * Create a new WebsiteContext instance
@@ -117,7 +120,7 @@ export class WebsiteContext extends BaseContext<
     this.formatter = dependencies.formatter;
     this.astroContentService = dependencies.astroContentService;
     this.landingPageGenerationService = dependencies.landingPageGenerationService;
-    this.profileContext = dependencies.profileContext;
+    this.mediator = dependencies.mediator;
     this.deploymentManager = dependencies.deploymentManager;
     this.identityService = dependencies.identityService;
   }
@@ -244,7 +247,9 @@ export class WebsiteContext extends BaseContext<
       astroProjectPath,
     });
     const landingPageGenerationService = LandingPageGenerationService.getInstance();
-    const profileContext = ProfileContext.getInstance();
+    
+    // Get the context mediator for messaging
+    const mediator = ContextMediator.getInstance();
     
     // Create deployment manager using config
     const deploymentManager = DeploymentManagerFactory.getInstance().create({
@@ -254,7 +259,7 @@ export class WebsiteContext extends BaseContext<
     // Create identity service
     const identityAdapter = WebsiteIdentityNoteAdapter.getInstance();
     const identityService = WebsiteIdentityService.getInstance({}, {
-      profileContext,
+      mediator,
       identityAdapter,
     });
     
@@ -263,7 +268,7 @@ export class WebsiteContext extends BaseContext<
       formatter,
       astroContentService,
       landingPageGenerationService,
-      profileContext,
+      mediator,
       deploymentManager,
       identityService,
     };
@@ -333,15 +338,10 @@ export class WebsiteContext extends BaseContext<
    * Get the current website configuration
    */
   async getConfig(): Promise<WebsiteConfig> {
-    return this.storage.getWebsiteConfig();
+    // Use the schema to validate and parse the config
+    return WebsiteConfigSchema.parse(websiteConfig);
   }
   
-  /**
-   * Update the website configuration
-   */
-  async updateConfig(updates: Partial<WebsiteConfig>): Promise<WebsiteConfig> {
-    return this.storage.updateWebsiteConfig(updates);
-  }
   
   /**
    * Get current landing page data
@@ -412,9 +412,8 @@ export class WebsiteContext extends BaseContext<
       return this.getLandingPageGenerationService() as unknown as T;
     }
     
-    if (serviceType === ProfileContext as unknown as new () => T) {
-      return this.getProfileContext() as unknown as T;
-    }
+    // Profile access is now handled through messaging
+    // No longer directly providing ProfileContext service
     
     if (serviceType === WebsiteToolService as unknown as new () => T) {
       return WebsiteToolService.getInstance() as unknown as T;
@@ -503,16 +502,34 @@ export class WebsiteContext extends BaseContext<
   }
   
   /**
-   * Get the ProfileContext instance
-   * @returns ProfileContext for user profile operations
+   * Get profile data using messaging
+   * @returns Profile data from the profile context
    */
-  getProfileContext(): ProfileContext {
-    if (!this.profileContext) {
-      // If no profile context was injected, use the singleton instance
-      this.profileContext = ProfileContext.getInstance();
+  async getProfileData(): Promise<Record<string, unknown> | null> {
+    try {
+      // Use the requestContextData helper for better type safety
+      const profileData = await requestContextData<Record<string, unknown>>(
+        this.mediator,
+        ContextId.WEBSITE,
+        ContextId.PROFILE,
+        DataRequestType.PROFILE_DATA,
+      );
+      
+      if (!profileData) {
+        this.logger.warn('No profile data received', {
+          context: 'WebsiteContext',
+        });
+        return null;
+      }
+      
+      return profileData;
+    } catch (error) {
+      this.logger.error('Error retrieving profile data', {
+        error,
+        context: 'WebsiteContext',
+      });
+      return null;
     }
-    
-    return this.profileContext;
   }
   
   /**
@@ -548,7 +565,7 @@ export class WebsiteContext extends BaseContext<
     // Create a new service instance with dependencies
     const identityAdapter = WebsiteIdentityNoteAdapter.getInstance();
     this.identityService = WebsiteIdentityService.getInstance({}, {
-      profileContext: this.getProfileContext(),
+      mediator: this.mediator,
       identityAdapter,
     });
     
@@ -756,9 +773,19 @@ export class WebsiteContext extends BaseContext<
         };
       }
       
+      // Get identity data - required for assessment
+      const identity = await this.getIdentity(false);
+      if (!identity) {
+        return {
+          success: false,
+          message: 'Failed to get website identity. Identity is required for quality assessment.',
+        };
+      }
+
       // Assess quality
       const { landingPage, assessments } = await landingPageService.assessLandingPageQuality(
         currentLandingPage,
+        identity,
         {
           qualityThresholds: options?.qualityThresholds,
           applyRecommendations: options?.applyRecommendations,
@@ -1001,44 +1028,6 @@ export class WebsiteContext extends BaseContext<
     }
   }
   
-  /**
-   * Update website identity with partial new data
-   * @param updates Partial data to update identity with
-   * @param shallow Whether to replace entire sections (shallow=true) or merge properties (shallow=false)
-   * @returns The updated identity data
-   */
-  async updateIdentity(
-    updates: Partial<WebsiteIdentityData>,
-    shallow = false,
-  ): Promise<{ success: boolean; message: string; data?: WebsiteIdentityData }> {
-    try {
-      const identityService = this.getIdentityService();
-      const updatedData = await identityService.updateIdentity(updates, shallow);
-      
-      if (!updatedData) {
-        return {
-          success: false,
-          message: 'Failed to update website identity',
-        };
-      }
-      
-      return {
-        success: true,
-        message: 'Successfully updated website identity',
-        data: updatedData,
-      };
-    } catch (error) {
-      this.logger.error('Error updating website identity', {
-        error,
-        context: 'WebsiteContext',
-      });
-      
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : 'Unknown error updating website identity',
-      };
-    }
-  }
 
   /**
    * Get website environment status (for local development or Caddy-based hosting)

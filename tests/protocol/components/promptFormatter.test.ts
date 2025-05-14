@@ -16,10 +16,6 @@ describe('PromptFormatter', () => {
   beforeEach(async () => {
     // Initialize sample notes
     sampleNotes = await createSampleNotes();
-    
-    // Initialize profile embedding
-    const mockService = MockEmbeddingService.createFresh();
-    sampleProfile.embedding = await mockService.getEmbedding('Quantum researcher profile');
   });
   
   // Create sample notes with embeddings
@@ -44,45 +40,24 @@ describe('PromptFormatter', () => {
 
   const sampleProfile: Profile = {
     id: 'profile-1',
-    publicIdentifier: null,
-    profilePicUrl: null,
-    backgroundCoverImageUrl: null,
-    firstName: 'Jan Hein',
-    lastName: 'Hoogstad',
-    fullName: 'Jan Hein Hoogstad',
-    followerCount: null,
+    displayName: 'Jan Hein Hoogstad',
+    email: 'janhein@example.com',
     headline: 'Quantum Physicist | AI Researcher',
-    occupation: 'Quantum Physicist',
-    city: 'Amsterdam',
-    country: 'nl',
-    countryFullName: 'Netherlands',
-    state: null,
     summary: 'Researching quantum computing applications in artificial intelligence.',
+    location: {
+      city: 'Amsterdam',
+      country: 'Netherlands',
+    },
     experiences: [
       {
-        company: 'Quantum Labs',
         title: 'Lead Researcher',
-        starts_at: { day: 1, month: 1, year: 2020 },
-        ends_at: null,
+        organization: 'Quantum Labs',
         description: 'Leading research in quantum computing applications.',
-        company_linkedin_profile_url: null,
-        company_facebook_profile_url: null,
-        location: null,
-        logo_url: null,
+        startDate: new Date(2020, 0, 1),
       },
     ],
-    education: null,
-    languages: ['TypeScript', 'Python', 'Q#'],
-    languagesAndProficiencies: null,
-    accomplishmentPublications: null,
-    accomplishmentHonorsAwards: null,
-    accomplishmentProjects: null,
-    volunteerWork: null,
-    // We'll set this in beforeEach
-    embedding: [] as number[],
+    skills: ['TypeScript', 'Python', 'Q#', 'Quantum Computing', 'AI Research'],
     tags: ['quantum', 'research', 'AI'],
-    createdAt: new Date(),
-    updatedAt: new Date(),
   };
 
   const sampleExternalSources: ExternalSourceResult[] = [
@@ -155,7 +130,7 @@ describe('PromptFormatter', () => {
         promptStructure: {
           hasProfileIntro: formattedPrompt.includes('including my profile and relevant notes'),
           hasProfileSection: formattedPrompt.includes('PROFILE INFORMATION:'),
-          hasProfileName: formattedPrompt.includes('Name: Jan Hein Hoogstad'),
+          hasProfileName: formattedPrompt.includes('Display Name: Jan Hein Hoogstad'),
           hasProfileHeadline: formattedPrompt.includes('Headline: Quantum Physicist | AI Researcher'),
           hasNotes: formattedPrompt.includes('INTERNAL CONTEXT [1]:'),
           hasQuantumComputingNote: formattedPrompt.includes('Title: Quantum Computing Basics'),

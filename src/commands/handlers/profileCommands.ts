@@ -3,25 +3,22 @@
  * Handles profile-related commands
  */
 
-import type { ProfileContext } from '@/mcpServer';
-import type { Note } from '@/models/note';
+import type { ProfileContextV2 } from '@/contexts/profiles/profileContextV2';
 import type { IBrainProtocol } from '@/protocol/types';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
 import type { CommandInfo, CommandResult } from '../core/commandTypes';
 
-// Define valid source types
-type NoteSource = 'import' | 'conversation' | 'user-created' | 'landing-page';
-
 /**
  * Handler for profile-related commands
  */
 export class ProfileCommandHandler extends BaseCommandHandler {
-  private profileContext: ProfileContext;
+  private profileContext: ProfileContextV2;
 
   constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);
-    this.profileContext = brainProtocol.getContextManager().getProfileContext();
+    // Get the ProfileContextV2 from the brain protocol
+    this.profileContext = brainProtocol.getContextManager().getProfileContextV2();
   }
 
   /**
@@ -32,8 +29,8 @@ export class ProfileCommandHandler extends BaseCommandHandler {
       {
         command: 'profile',
         description: 'View your profile information',
-        usage: 'profile [related]',
-        examples: ['profile', 'profile related'],
+        usage: 'profile',
+        examples: ['profile'],
       },
     ];
   }
@@ -58,59 +55,19 @@ export class ProfileCommandHandler extends BaseCommandHandler {
   /**
    * Handle profile command
    */
-  private async handleProfile(args: string): Promise<CommandResult> {
+  private async handleProfile(_args: string): Promise<CommandResult> {
     const profile = await this.profileContext.getProfile();
 
     if (!profile) {
       return this.formatError('No profile found. Use "bun run src/import.ts profile <path/to/profile.yaml>" to import a profile.');
     }
 
-    // Check if we want related notes
-    if (args && args.toLowerCase() === 'related') {
-      // Get related notes using the messaging architecture
-      const relatedNotes = await this.profileContext.findRelatedNotes(5);
-
-      // Determine match type
-      let matchType: 'tags' | 'semantic' | 'keyword' = 'keyword';
-      if (profile.tags && profile.tags.length > 0) {
-        matchType = 'tags';
-      } else if (profile.embedding) {
-        matchType = 'semantic';
-      }
-
-      // Type assertion to resolve compatibility issue between NoteWithSimilarity and Note types
-      return {
-        type: 'profile-related',
-        profile,
-        // Ensure type compatibility by using a properly typed mapping function
-        relatedNotes: relatedNotes.map(note => this.convertToNote(note)),
-        matchType,
-      };
-    }
-
+    // Simply return the profile information
     return {
       type: 'profile',
       profile,
     };
   }
 
-  /**
-   * Convert a note with similarity to a standard note
-   * Ensures type compatibility between different note representations
-   */
-  private convertToNote(note: { id: string; title: string; content: string; embedding?: number[] | null; tags?: string[] | null; createdAt: Date; updatedAt: Date; source?: NoteSource; confidence?: number | null; conversationMetadata?: { conversationId: string; timestamp: Date; userName?: string; promptSegment?: string } | null; verified?: boolean | null }): Note {
-    return {
-      id: note.id,
-      title: note.title, 
-      content: note.content,
-      embedding: note.embedding || null,
-      tags: note.tags || null,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      source: note.source || 'import',
-      confidence: note.confidence || null,
-      conversationMetadata: note.conversationMetadata || null,
-      verified: note.verified || false,
-    };
-  }
+  // convertToNote method removed - no longer needed with simplified profile commands
 }

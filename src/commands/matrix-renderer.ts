@@ -243,14 +243,6 @@ export class MatrixRenderer implements IProgressTracker {
         break;
       }
 
-      case 'profile-related': {
-        this.sendMessageFn(
-          roomId,
-          this.formatter.formatProfileRelated(result.profile, result.relatedNotes as unknown as NotePreview[], result.matchType),
-        );
-        break;
-      }
-
       case 'ask': {
         // DEBUG: Log the raw answer from the command handler
         logger.debug(`[DEBUG RENDERER] Received answer in renderer: ${result.answer.substring(0, 100)}...`);

@@ -1,12 +1,7 @@
-import { createInsertSchema, createSelectSchema, createUpdateSchema } from 'drizzle-zod';
+// TODO: This file will be removed after the profile note migration is complete.
+// It's kept temporarily for backward compatibility and migration purposes.
+
 import { z } from 'zod';
-
-import { profiles } from '../db/schema';
-
-// Create base Zod schemas from Drizzle schema
-const baseInsertProfileSchema = createInsertSchema(profiles);
-const baseUpdateProfileSchema = createUpdateSchema(profiles);
-const baseSelectProfileSchema = createSelectSchema(profiles);
 
 // Define schemas for complex JSON types
 export const linkedInProfileDateInfoSchema = z.object({
@@ -79,6 +74,45 @@ export const linkedInProfileVolunteerWorkSchema = z.object({
   description: z.string().nullable(),
   logo_url: z.string().nullable(),
 });
+
+// Define base schemas since the profile table no longer exists
+export const baseProfileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  location: z.string().nullable().optional(),
+  company: z.string().nullable().optional(),
+  occupation: z.string().nullable().optional(),
+  industry: z.string().nullable().optional(),
+  yearsExperience: z.number().nullable().optional(),
+  about: z.string().nullable().optional(),
+  createdAt: z.string().or(z.date()).optional(),
+  updatedAt: z.string().or(z.date()).optional(),
+  
+  // LinkedIn profile specific fields
+  fullName: z.string().optional(),
+  profilePicUrl: z.string().optional(),
+  headline: z.string().optional(),
+  summary: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  countryFullName: z.string().optional(),
+  publicIdentifier: z.string().optional(),
+});
+
+export const baseInsertProfileSchema = baseProfileSchema.omit({ 
+  createdAt: true, 
+  updatedAt: true, 
+}).extend({
+  // Additional fields for insert can be defined here
+});
+
+export const baseUpdateProfileSchema = baseProfileSchema.partial().omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const baseSelectProfileSchema = baseProfileSchema;
 
 // Fix JSON field types by explicitly defining the correct types
 export const linkedInInsertProfileSchema = baseInsertProfileSchema.extend({

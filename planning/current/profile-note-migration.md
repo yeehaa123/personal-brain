@@ -775,14 +775,8 @@ export class ProfileContext extends BaseContext {
     return note;
   }
   
-  /**
-   * Create embedded representation of profile
-   */
-  async embedProfile(profile: Profile): Promise<number[] | null> {
-    // Use the NoteContext's embedding capabilities
-    const profileNote = this.profileNoteAdapter.convertProfileToNote(profile);
-    return this.noteContext.embedContent(profileNote.content || '');
-  }
+# Note: embedProfile method is no longer needed
+# ProfileContext now uses the NoteContext's built-in embedding capabilities through the note storage
 }
 ```
 

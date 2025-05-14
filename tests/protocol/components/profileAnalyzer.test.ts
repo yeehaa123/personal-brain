@@ -1,17 +1,12 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import type { Profile } from '@/models/profile';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { EmbeddingService } from '@/resources/ai/embedding';
-import { createMockProfile } from '@test/__mocks__/models/profile';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 describe('ProfileAnalyzer', () => {
   // Use our standardized MockEmbeddingService
   let mockEmbeddingService: EmbeddingService;
-  
-  // Sample profile - will be initialized in beforeEach
-  let sampleProfile: Profile;
   
   beforeEach(async () => {
     // Reset the mock instance to ensure test isolation
@@ -23,9 +18,6 @@ describe('ProfileAnalyzer', () => {
     // Set up specific mocks for this test
     mockEmbeddingService.getEmbedding = mock(() => Promise.resolve([0.1, 0.2, 0.3]));
     mockEmbeddingService.calculateSimilarity = mock(() => 0.75);
-    
-    // Initialize sample profile
-    sampleProfile = await createMockProfile('profile-1');
   });
 
   test('correctly identifies profile and non-profile queries', async () => {
@@ -62,8 +54,11 @@ describe('ProfileAnalyzer', () => {
     // Create profile analyzer for this test
     const profileAnalyzer = ProfileAnalyzer.createFresh({ embeddingService: mockEmbeddingService });
     
-    // Test relevance calculation
-    const relevance = await profileAnalyzer.getProfileRelevance('What are my skills?', sampleProfile);
+    // Mock profile embedding
+    const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+    
+    // Test relevance calculation with embedding
+    const relevance = await profileAnalyzer.getProfileRelevance('What are my skills?', mockEmbedding);
     
     // Verify relevance is within expected range
     expect({
@@ -75,35 +70,23 @@ describe('ProfileAnalyzer', () => {
     });
   });
 
-  test('handles missing profile embeddings with appropriate fallback behavior', async () => {
+  test('handles profile query detection without embeddings', async () => {
     // Create profile analyzer for this test
     const profileAnalyzer = ProfileAnalyzer.createFresh({ embeddingService: mockEmbeddingService });
     
-    // Create profile without embedding
-    const profileWithoutEmbedding: Profile = { 
-      ...sampleProfile, 
-      embedding: null,
-    };
-    
-    // Test both query types with a profile missing embeddings
+    // Test detection of profile queries via keyword matching
     const results = {
-      profileQuery: await profileAnalyzer.getProfileRelevance(
-        'Tell me about my background', 
-        profileWithoutEmbedding,
-      ),
-      nonProfileQuery: await profileAnalyzer.getProfileRelevance(
-        'What is quantum computing?', 
-        profileWithoutEmbedding,
-      ),
+      isProfileQuery: profileAnalyzer.isProfileQuery('Tell me about my background'),
+      isNotProfileQuery: profileAnalyzer.isProfileQuery('What is quantum computing?'),
     };
     
-    // Verify appropriate fallback behavior in a single assertion
+    // Verify keyword-based detection works correctly
     expect({
-      profileQueryHasHighRelevance: results.profileQuery > 0.8,
-      nonProfileQueryHasLowRelevance: results.nonProfileQuery < 0.3,
+      profileQueryDetected: results.isProfileQuery,
+      nonProfileQueryRejected: !results.isNotProfileQuery,
     }).toMatchObject({
-      profileQueryHasHighRelevance: true,
-      nonProfileQueryHasLowRelevance: true,
+      profileQueryDetected: true,
+      nonProfileQueryRejected: true,
     });
   });
 
@@ -119,8 +102,11 @@ describe('ProfileAnalyzer', () => {
       embeddingService: failingEmbeddingService,
     });
     
+    // Mock profile embedding
+    const mockEmbedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+    
     // Test error handling with fallback
-    const relevance = await analyzer.getProfileRelevance('Tell me about my skills', sampleProfile);
+    const relevance = await analyzer.getProfileRelevance('Tell me about my skills', mockEmbedding);
     
     // Verify that error handling worked correctly
     expect({

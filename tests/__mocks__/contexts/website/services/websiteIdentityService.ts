@@ -1,140 +1,150 @@
-import { mock } from 'bun:test';
-
-// Import direct types we need
-import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
+import type { 
+  WebsiteIdentityData,
+} from '@/contexts/website/schemas/websiteIdentitySchema';
+import { 
+  IdentityGenerationError,
+  type WebsiteIdentityService,
+  type WebsiteIdentityServiceConfig,
+  type WebsiteIdentityServiceDependencies,
+} from '@/contexts/website/services/websiteIdentityService';
+import type { Profile } from '@/models/profile';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
+import { Logger } from '@/utils/logger';
 
 /**
  * Mock implementation of WebsiteIdentityService
- * Follows the Component Interface Standardization pattern
+ * Follows the Component Interface Standardization pattern with getInstance/resetInstance/createFresh
  */
 export class MockWebsiteIdentityService {
   private static instance: MockWebsiteIdentityService | null = null;
   
+  // Required properties from the interface
+  protected logger = Logger.getInstance();
+  private brainProtocol: BrainProtocol | null = null;
+  
   // Mock identity data
   private identityData: WebsiteIdentityData = {
-    personalData: {
-      name: 'Test User',
-      email: 'test@example.com',
-      company: 'Test Company',
-      occupation: 'Software Developer',
-    },
-    creativeContent: {
-      title: 'Test User - Software Development Expert',
-      description: 'Professional software development services provided by Test User at Test Company.',
-      tagline: 'Crafting elegant solutions to complex problems',
-      keyAchievements: ['Achievement 1', 'Achievement 2'],
-      pitch: 'I help businesses develop scalable and maintainable software solutions.',
-      uniqueValue: 'A unique blend of technical expertise and business understanding.',
-    },
-    brandIdentity: {
-      tone: {
-        formality: 'professional',
-        personality: ['knowledgeable', 'trustworthy', 'precise'],
-        emotion: 'confident',
-      },
-      contentStyle: {
-        writingStyle: 'Clear and straightforward with a focus on technical accuracy',
-        sentenceLength: 'varied',
-        vocabLevel: 'moderate',
-        useJargon: false,
-        useHumor: false,
-        useStories: true,
-      },
-      values: {
-        coreValues: ['quality', 'efficiency', 'reliability'],
-        targetAudience: ['businesses', 'startups', 'enterprises'],
-        painPoints: ['complex development needs', 'technical debt', 'scalability challenges'],
-        desiredAction: 'Contact Test User for professional software development services',
-      },
-    },
+    name: 'Test User',
+    email: 'test@example.com',
+    company: 'Test Company',
+    location: 'San Francisco, CA',
+    occupation: 'Software Developer',
+    industry: 'Technology',
+    yearsExperience: 10,
+    
+    title: 'Test User - Software Development Expert',
+    description: 'Professional software development services provided by Test User at Test Company.',
+    tagline: 'Crafting elegant solutions to complex problems',
+    keyAchievements: ['Achievement 1', 'Achievement 2'],
+    pitch: 'I help businesses develop scalable and maintainable software solutions.',
+    uniqueValue: 'A unique blend of technical expertise and business understanding.',
+    
+    formality: 'professional',
+    personality: ['knowledgeable', 'trustworthy', 'precise'],
+    emotion: 'confident',
+    
+    writingStyle: 'Clear and straightforward with a focus on technical accuracy',
+    sentenceLength: 'varied',
+    vocabLevel: 'moderate',
+    useJargon: false,
+    useHumor: false,
+    useStories: true,
+    
+    coreValues: ['quality', 'efficiency', 'reliability'],
+    targetAudience: ['businesses', 'startups', 'enterprises'],
+    painPoints: ['complex development needs', 'technical debt', 'scalability challenges'],
+    desiredAction: 'Contact Test User for professional software development services',
   };
   
+  // Flag to control whether getIdentity should succeed
+  private shouldSucceed = true;
+  private shouldThrowProfileError = false;
+  
+  constructor(
+    _config: WebsiteIdentityServiceConfig = {},
+    dependencies?: Partial<WebsiteIdentityServiceDependencies>,
+  ) {
+    // Only set brainProtocol from dependencies, ignore the rest
+    this.brainProtocol = dependencies?.brainProtocol ?? null;
+  }
+  
   // Mock methods
-  public getIdentity = mock(async (forceRegenerate = false): Promise<WebsiteIdentityData | null> => {
-    if (forceRegenerate) {
-      // Create a new instance with the current time to simulate regeneration
-      return {
-        ...this.identityData,
-      };
+  public async getIdentity(forceRegenerate = false): Promise<WebsiteIdentityData> {
+    if (!this.shouldSucceed) {
+      throw new IdentityGenerationError('Mock identity generation failed');
     }
-    return { ...this.identityData };
-  });
+    
+    // If not forcing regeneration and we have existing identity data
+    if (!forceRegenerate) {
+      // Return a copy of the identity data
+      return { ...this.identityData };
+    }
+    
+    // Otherwise generate new identity
+    return this.generateIdentity();
+  }
   
-  public generateIdentity = mock(async (): Promise<WebsiteIdentityData> => {
-    // Create a new instance to simulate generation
-    return {
-      ...this.identityData,
+  public async generateIdentity(): Promise<WebsiteIdentityData> {
+    if (!this.shouldSucceed) {
+      throw new IdentityGenerationError('Mock identity generation failed');
+    }
+    
+    try {
+      // Get profile data - we don't need to use it in the mock
+      await this.getProfileData();
+      
+      // If successful, return identity data
+      return { ...this.identityData };
+    } catch (error) {
+      throw new IdentityGenerationError(
+        `Identity generation failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  
+  private async getProfileData(): Promise<Profile> {
+    if (this.shouldThrowProfileError) {
+      throw new Error('Failed to get profile data');
+    }
+    
+    // Get profile data - this is always successful in the mock
+    // unless shouldThrowProfileError is true
+    const profile = {
+      displayName: 'Test User',
+      email: 'test@example.com',
+      id: 'test-profile',
+      headline: 'Software Developer',
+      summary: 'Experienced developer with a focus on web technologies',
+      tags: ['developer', 'software', 'web'],
     };
-  });
+    
+    return profile;
+  }
   
-  public updateIdentity = mock(async (
-    updates: Partial<WebsiteIdentityData>,
-    shallow = false,
-  ): Promise<WebsiteIdentityData | null> => {
-    if (shallow) {
-      // For shallow updates, replace sections completely
-      const updatedIdentity = { ...this.identityData };
-      
-      if (updates.personalData) {
-        updatedIdentity.personalData = { ...updates.personalData };
-      }
-      
-      if (updates.creativeContent) {
-        updatedIdentity.creativeContent = { ...updates.creativeContent };
-      }
-      
-      if (updates.brandIdentity) {
-        updatedIdentity.brandIdentity = { ...updates.brandIdentity };
-      }
-      
-      // We no longer track updatedAt timestamp
-      return updatedIdentity;
-    } else {
-      // For deep updates, merge properties
-      const updatedIdentity = { ...this.identityData };
-      
-      if (updates.personalData) {
-        updatedIdentity.personalData = { ...updatedIdentity.personalData, ...updates.personalData };
-      }
-      
-      if (updates.creativeContent) {
-        updatedIdentity.creativeContent = { ...updatedIdentity.creativeContent, ...updates.creativeContent };
-      }
-      
-      if (updates.brandIdentity) {
-        const brandIdentity = { ...updatedIdentity.brandIdentity };
-        
-        if (updates.brandIdentity.tone) {
-          brandIdentity.tone = { ...brandIdentity.tone, ...updates.brandIdentity.tone };
-        }
-        
-        if (updates.brandIdentity.contentStyle) {
-          brandIdentity.contentStyle = { 
-            ...brandIdentity.contentStyle, 
-            ...updates.brandIdentity.contentStyle, 
-          };
-        }
-        
-        if (updates.brandIdentity.values) {
-          brandIdentity.values = { ...brandIdentity.values, ...updates.brandIdentity.values };
-        }
-        
-        updatedIdentity.brandIdentity = brandIdentity;
-      }
-      
-      // We no longer track updatedAt timestamp
-      return updatedIdentity;
+  public getBrainProtocol(): BrainProtocol {
+    if (!this.brainProtocol) {
+      throw new Error('BrainProtocol is not available');
     }
-  });
+    return this.brainProtocol as BrainProtocol;
+  }
   
-  public getBrainProtocol = mock((): BrainProtocol => {
-    return {} as BrainProtocol;
-  });
+  public setBrainProtocol(protocol: BrainProtocol): void {
+    this.brainProtocol = protocol;
+  }
   
-  public setBrainProtocol = mock((_brainProtocol: BrainProtocol): void => {
-    // Mock implementation
-  });
+  /**
+   * Control whether mock operations succeed or fail
+   */
+  setShouldSucceed(shouldSucceed: boolean): void {
+    this.shouldSucceed = shouldSucceed;
+  }
+  
+  /**
+   * Set whether profile data retrieval should fail
+   */
+  setShouldThrowProfileError(shouldThrow: boolean): void {
+    this.shouldThrowProfileError = shouldThrow;
+  }
   
   /**
    * Set identity data for testing
@@ -146,11 +156,14 @@ export class MockWebsiteIdentityService {
   /**
    * Get singleton instance
    */
-  static getInstance(): MockWebsiteIdentityService {
+  static getInstance(
+    config: WebsiteIdentityServiceConfig = {},
+    dependencies?: Partial<WebsiteIdentityServiceDependencies>,
+  ) {
     if (!MockWebsiteIdentityService.instance) {
-      MockWebsiteIdentityService.instance = new MockWebsiteIdentityService();
+      MockWebsiteIdentityService.instance = new MockWebsiteIdentityService(config, dependencies);
     }
-    return MockWebsiteIdentityService.instance;
+    return MockWebsiteIdentityService.instance as unknown as WebsiteIdentityService;
   }
   
   /**
@@ -163,8 +176,11 @@ export class MockWebsiteIdentityService {
   /**
    * Create fresh instance
    */
-  static createFresh(): MockWebsiteIdentityService {
-    return new MockWebsiteIdentityService();
+  static createFresh(
+    config: WebsiteIdentityServiceConfig = {},
+    dependencies?: Partial<WebsiteIdentityServiceDependencies>,
+  ) {
+    return new MockWebsiteIdentityService(config, dependencies) as unknown as WebsiteIdentityService;
   }
 }
 
