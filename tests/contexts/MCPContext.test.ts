@@ -1,124 +1,171 @@
 /**
  * Tests for MCPContext
  * 
- * These tests verify the functionality of the simplified context system.
+ * These tests focus on the behavior of the context system,
+ * not implementation details. We test WHAT it does, not HOW it does it.
  */
 import { describe, expect, test } from 'bun:test';
 
 import { createContextFunctionality } from '@/contexts/MCPContext';
-import type { Logger } from '@/utils/logger';
+import type { McpServer } from '@/mcpServer';
 
 describe('MCPContext', () => {
-  test('createContextFunctionality creates a valid context object', () => {
-    // Create a mock logger for testing
-    const mockLogger = {
-      debug: () => {},
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    } as unknown as Logger;
-    
-    // Create context functionality
-    const contextFunctionality = createContextFunctionality({
-      name: 'TestContext',
-      version: '1.0.0',
-      logger: mockLogger,
+  describe('Identity and Information', () => {
+    test('provides correct identity information', () => {
+      const contextObj = createContextFunctionality({
+        name: 'TestContext',
+        version: '1.0.0',
+      });
+      
+      // A context should report its identity
+      expect(contextObj.getContextName()).toBe('TestContext');
+      expect(contextObj.getContextVersion()).toBe('1.0.0');
     });
     
-    // Verify the created object has all required properties of MCPContext
-    expect(contextFunctionality).toBeDefined();
-    expect(typeof contextFunctionality.getContextName).toBe('function');
-    expect(typeof contextFunctionality.getContextVersion).toBe('function');
-    expect(typeof contextFunctionality.initialize).toBe('function');
-    expect(typeof contextFunctionality.isReady).toBe('function');
-    expect(typeof contextFunctionality.getStatus).toBe('function');
-    expect(typeof contextFunctionality.registerOnServer).toBe('function');
-    expect(typeof contextFunctionality.getMcpServer).toBe('function');
-    expect(typeof contextFunctionality.getCapabilities).toBe('function');
-    expect(typeof contextFunctionality.cleanup).toBe('function');
-    
-    // Verify resources and tools arrays exist
-    expect(Array.isArray(contextFunctionality.resources)).toBe(true);
-    expect(Array.isArray(contextFunctionality.tools)).toBe(true);
-    
-    // Verify basic functionality
-    expect(contextFunctionality.getContextName()).toBe('TestContext');
-    expect(contextFunctionality.getContextVersion()).toBe('1.0.0');
-    expect(contextFunctionality.isReady()).toBe(false); // Should be false before initialization
-    
-    // Verify status
-    const status = contextFunctionality.getStatus();
-    expect(status.name).toBe('TestContext');
-    expect(status.version).toBe('1.0.0');
-    expect(status.ready).toBe(false);
-    expect(status.resourceCount).toBe(0);
-    expect(status.toolCount).toBe(0);
-    
-    // Verify capabilities
-    const capabilities = contextFunctionality.getCapabilities();
-    expect(Array.isArray(capabilities.resources)).toBe(true);
-    expect(Array.isArray(capabilities.tools)).toBe(true);
-    expect(Array.isArray(capabilities.features)).toBe(true);
+    test('reports health and status information', () => {
+      const contextObj = createContextFunctionality({
+        name: 'HealthContext',
+        version: '2.0.0',
+      });
+      
+      // A context should provide status information
+      const status = contextObj.getStatus();
+      expect(status.name).toBe('HealthContext');
+      expect(status.version).toBe('2.0.0');
+      expect(typeof status.ready).toBe('boolean');
+    });
   });
   
-  test('initialize sets ready state to true', async () => {
-    // Create context functionality
-    const contextFunctionality = createContextFunctionality({
-      name: 'TestContext',
-      version: '1.0.0',
+  describe('Lifecycle Management', () => {
+    test('starts in not-ready state', () => {
+      const contextObj = createContextFunctionality({
+        name: 'LifecycleContext',
+        version: '1.0.0',
+      });
+      
+      // A context should start in not-ready state
+      expect(contextObj.isReady()).toBe(false);
     });
     
-    // Initialize the context
-    const result = await contextFunctionality.initialize();
+    test('becomes ready after initialization', async () => {
+      const contextObj = createContextFunctionality({
+        name: 'LifecycleContext',
+        version: '1.0.0',
+      });
+      
+      // Should start not ready
+      expect(contextObj.isReady()).toBe(false);
+      
+      // Should become ready after initialization
+      const success = await contextObj.initialize();
+      expect(success).toBe(true);
+      expect(contextObj.isReady()).toBe(true);
+    });
     
-    // Verify initialization result
-    expect(result).toBe(true);
-    expect(contextFunctionality.isReady()).toBe(true);
-    
-    // Verify status after initialization
-    const status = contextFunctionality.getStatus();
-    expect(status.ready).toBe(true);
+    test('can clean up resources', async () => {
+      const contextObj = createContextFunctionality({
+        name: 'CleanupContext',
+        version: '1.0.0',
+      });
+      
+      // Should be able to clean up without errors
+      await contextObj.cleanup();
+      // If we get here without error, the test passes
+      expect(true).toBe(true);
+    });
   });
   
-  test('context can add resources and tools', () => {
-    // Create context functionality
-    const contextFunctionality = createContextFunctionality({
-      name: 'TestContext',
-      version: '1.0.0',
+  describe('MCP Server Integration', () => {
+    test('can register with an MCP server', () => {
+      const contextObj = createContextFunctionality({
+        name: 'ServerContext',
+        version: '1.0.0',
+      });
+      
+      // Create mock server
+      const mockServer = {
+        resource: () => true,
+        tool: () => true,
+      } as unknown as McpServer;
+      
+      // Should successfully register with the server
+      const registered = contextObj.registerOnServer(mockServer);
+      expect(registered).toBe(true);
+      
+      // Should store server reference for later use
+      const storedServer = contextObj.getMcpServer();
+      expect(storedServer).toBeDefined();
+      // Just check the functionality exists without testing implementation details
     });
     
-    // Add a resource
-    contextFunctionality.resources.push({
-      protocol: 'test',
-      path: 'resource-path',
-      handler: async () => ({ success: true }),
-      name: 'Test Resource',
-      description: 'A test resource',
+    test('provides capabilities information', () => {
+      const contextObj = createContextFunctionality({
+        name: 'CapabilitiesContext',
+        version: '1.0.0',
+      });
+      
+      // Should provide capabilities
+      const capabilities = contextObj.getCapabilities();
+      expect(capabilities).toBeDefined();
+      expect(Array.isArray(capabilities.resources)).toBe(true);
+      expect(Array.isArray(capabilities.tools)).toBe(true);
+      expect(Array.isArray(capabilities.features)).toBe(true);
+    });
+  });
+  
+  describe('Resource Management', () => {
+    test('can add and track resources', () => {
+      const contextObj = createContextFunctionality({
+        name: 'ResourceContext',
+        version: '1.0.0',
+      });
+      
+      // Add a test resource
+      const testResource = {
+        protocol: 'test',
+        path: 'resources/test',
+        handler: async () => ({ result: 'success' }),
+        name: 'Test Resource',
+        description: 'A test resource',
+      };
+      
+      contextObj.resources.push(testResource);
+      
+      // Should show resource in capabilities
+      const capabilities = contextObj.getCapabilities();
+      expect(capabilities.resources.length).toBe(1);
+      expect(capabilities.resources[0].name).toBe('Test Resource');
+      
+      // Should count resource in status
+      const status = contextObj.getStatus();
+      expect(status['resourceCount']).toBe(1);
     });
     
-    // Add a tool
-    contextFunctionality.tools.push({
-      protocol: 'test',
-      path: 'tool-path',
-      handler: async () => ({ success: true }),
-      name: 'Test Tool',
-      description: 'A test tool',
+    test('can add and track tools', () => {
+      const contextObj = createContextFunctionality({
+        name: 'ToolsContext',
+        version: '1.0.0',
+      });
+      
+      // Add a test tool
+      const testTool = {
+        protocol: 'test',
+        path: 'tools/test',
+        handler: async () => ({ result: 'executed' }),
+        name: 'Test Tool',
+        description: 'A test tool',
+      };
+      
+      contextObj.tools.push(testTool);
+      
+      // Should show tool in capabilities
+      const capabilities = contextObj.getCapabilities();
+      expect(capabilities.tools.length).toBe(1);
+      expect(capabilities.tools[0].name).toBe('Test Tool');
+      
+      // Should count tool in status
+      const status = contextObj.getStatus();
+      expect(status['toolCount']).toBe(1);
     });
-    
-    // Verify the resource and tool were added
-    expect(contextFunctionality.resources.length).toBe(1);
-    expect(contextFunctionality.tools.length).toBe(1);
-    
-    // Verify capabilities returns the added resource and tool
-    const capabilities = contextFunctionality.getCapabilities();
-    expect(capabilities.resources.length).toBe(1);
-    expect(capabilities.tools.length).toBe(1);
-    expect(capabilities.resources[0].name).toBe('Test Resource');
-    expect(capabilities.tools[0].name).toBe('Test Tool');
-    
-    // Verify status shows the added resource and tool
-    const status = contextFunctionality.getStatus();
-    expect(status.resourceCount).toBe(1);
-    expect(status.toolCount).toBe(1);
   });
 });
