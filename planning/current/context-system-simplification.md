@@ -67,7 +67,7 @@ The Context System currently has the following structure:
 
 ```typescript
 // Combined context interface without generic parameters
-export interface Context {
+export interface MCPContext {
   // Core functionality
   initialize(): Promise<boolean>;
   isReady(): boolean;
@@ -75,8 +75,8 @@ export interface Context {
   cleanup(): Promise<void>;
   
   // Storage and formatter access
-  getStorage(): StorageInterface;
-  getFormatter(): FormatterInterface;
+  getStorage(): MCPStorageInterface;
+  getFormatter(): MCPFormatterInterface;
   
   // MCP functionality (now part of the core interface)
   registerOnServer(server: McpServer): boolean;
@@ -89,57 +89,71 @@ export interface Context {
 }
 ```
 
-### 2. Context Implementation Base
+### 2. Simplified Context Implementation
 
-Instead of a complex abstract base class, provide utility functions and composable components:
+Instead of a complex abstract base class with separate base and MCP functionality, provide a single utility function:
 
 ```typescript
-// Context implementation helpers
-export const createContextBase = (contextName: string, contextVersion: string) => {
-  // Create a basic context implementation with common functionality
-  return {
-    getContextName: () => contextName,
-    getContextVersion: () => contextVersion,
-    getStatus: () => ({
-      name: contextName,
-      version: contextVersion,
-      ready: true,
-    }),
-    // Other common methods...
-  };
-};
-
-// MCP functionality helper
-export const createMcpFunctionality = (contextBase: Pick<Context, 'getContextName' | 'getContextVersion'>) => {
+export function createContextFunctionality(options: ContextFunctionalityOptions) {
+  const { name, version } = options;
+  const logger = options.logger || Logger.getInstance();
+  
+  // Create resources and tools collections
   const resources: ResourceDefinition[] = [];
   const tools: ResourceDefinition[] = [];
   
+  // Track ready state
+  let readyState = false;
+  
   return {
-    resources,
-    tools,
-    registerOnServer: (server: McpServer) => {
+    // Core context methods
+    getContextName: () => name,
+    getContextVersion: () => version,
+    
+    initialize: async (): Promise<boolean> => {
       try {
-        // Register resources and tools...
+        readyState = true;
         return true;
       } catch (error) {
+        readyState = false;
         return false;
       }
     },
+    
+    isReady: () => readyState,
+    
+    getStatus: () => ({
+      name,
+      version,
+      ready: readyState,
+      resourceCount: resources.length,
+      toolCount: tools.length,
+    }),
+    
+    // MCP functionality
+    resources,
+    tools,
+    
+    registerOnServer: (server: McpServer): boolean => {
+      // Implementation...
+    },
+    
     getCapabilities: () => ({
       resources: [...resources],
       tools: [...tools],
       features: [],
     }),
-    // Other MCP-related methods...
+    
+    // Other methods...
   };
-};
+}
 ```
 
 ### 3. Simplified Storage Interface
 
 ```typescript
 // More specific storage interface focused on actual use cases
-export interface StorageInterface {
+export interface MCPStorageInterface {
   // Core CRUD operations
   create(item: Record<string, unknown>): Promise<string>;
   read(id: string): Promise<Record<string, unknown> | null>;
@@ -157,29 +171,52 @@ export interface StorageInterface {
 
 ```typescript
 // More focused formatter interface
-export interface FormatterInterface {
+export interface MCPFormatterInterface {
   // Core formatting operation
   format(data: unknown, options?: Record<string, unknown>): unknown;
 }
 ```
 
+## Implementation Progress
+
+### Completed Steps
+
+#### 1. Created Simplified MCPContext Interface (2025-05-15)
+
+- Created `/src/contexts/MCPContext.ts` with:
+  - Simplified interfaces without excessive generic parameters (`MCPContext`, `MCPStorageInterface`, `MCPFormatterInterface`)
+  - Combined core and MCP functionality into one unified interface
+  - Single utility function `createContextFunctionality()` for consistent implementation
+  - Proper Logger integration
+- Added tests in `/tests/contexts/MCPContext.test.ts`
+- Verified TypeScript checks and linting pass
+- All tests are passing
+
+The implementation follows these key principles:
+- **Iterative Progress**: Started with a minimal but complete interface
+- **Parallel Implementation**: Created alongside existing interfaces without disruption
+- **Test-Driven Development**: Tests validate interface compliance
+- **Continuous Verification**: TypeScript and ESLint checks pass
+
 ## Implementation Strategy
 
-To implement these changes in a controlled manner, we will follow this phased approach:
+To complete the implementation in a controlled manner, we will follow this phased approach:
 
-### Phase 1: Interface Consolidation (1-2 weeks)
-- Create new unified Context interface
-- Develop utility functions to replace abstract base class
-- Update documentation to reflect new approach
+### Phase 1: Incremental Context Implementation (Current)
+- Implement one context at a time, starting with NoteContext
+- Create parallel MCPNoteContext implementation
+- Test against existing NoteContext for feature parity
+- Verify protocol system integration works
 
-### Phase 2: Incremental Implementation (2-3 weeks)
-- Implement one context at a time, starting with the simplest one
-- Create adapter classes if needed for backwards compatibility
-- Update tests for each context as it's refactored
+### Phase 2: Service Integration (Next)
+- Update service registration to work with new context implementations
+- Test interactions between new contexts and existing services
+- Ensure all MCP functionality works correctly
 
-### Phase 3: Migration Completion (1-2 weeks)
-- Remove deprecated interfaces and base classes
-- Update remaining usage patterns
+### Phase 3: Migration (Future)
+- Once several contexts are working with the new system, plan migration
+- Update imports gradually with backward compatibility
+- Add deprecation notices to old implementations
 - Finalize documentation
 
 ## Example Implementation: Note Context
@@ -187,45 +224,36 @@ To implement these changes in a controlled manner, we will follow this phased ap
 Here's how the NoteContext might look after simplification:
 
 ```typescript
-export class NoteContext implements Context {
+export class MCPNoteContext implements MCPContext {
   // Singleton pattern
-  private static instance: NoteContext | null = null;
+  private static instance: MCPNoteContext | null = null;
   
   // Core components
-  private readonly contextBase;
-  private readonly mcpFunctionality;
+  private readonly contextFuncs;
   private readonly storage: NoteStorageAdapter;
   private readonly formatter: NoteFormatter;
   private readonly repository: NoteRepository;
   private readonly embeddingService: NoteEmbeddingService;
   private readonly searchService: NoteSearchService;
   private readonly logger = Logger.getInstance();
-  private readyState = false;
   
   // Singleton pattern implementation
-  static getInstance(options?: NoteContextConfig): NoteContext {
-    if (!NoteContext.instance) {
-      NoteContext.instance = NoteContext.createFresh(options || {});
+  static getInstance(options?: NoteContextConfig): MCPNoteContext {
+    if (!MCPNoteContext.instance) {
+      MCPNoteContext.instance = MCPNoteContext.createFresh(options || {});
     }
-    return NoteContext.instance;
+    return MCPNoteContext.instance;
   }
   
   static resetInstance(): void {
-    NoteContext.instance = null;
+    MCPNoteContext.instance = null;
   }
   
-  static createFresh(config: NoteContextConfig, dependencies?: NoteContextDependencies): NoteContext {
-    // Similar to current implementation
-    return new NoteContext(config, dependencies);
+  static createFresh(config: NoteContextConfig, dependencies?: NoteContextDependencies): MCPNoteContext {
+    return new MCPNoteContext(config, dependencies);
   }
   
   private constructor(config: NoteContextConfig, dependencies?: NoteContextDependencies) {
-    // Create base context functionality
-    this.contextBase = createContextBase(
-      config.name || 'NoteBrain',
-      config.version || '1.0.0'
-    );
-    
     // Set up dependencies
     const serviceRegistry = ServiceRegistry.getInstance({ apiKey: config.apiKey });
     
@@ -238,88 +266,72 @@ export class NoteContext implements Context {
     this.storage = dependencies?.storageAdapter || new NoteStorageAdapter(this.repository);
     this.formatter = dependencies?.formatter || NoteFormatter.getInstance();
     
-    // Initialize MCP functionality
-    this.mcpFunctionality = createMcpFunctionality(this.contextBase);
+    // Create core context functionality
+    this.contextFuncs = createContextFunctionality({
+      name: config.name || 'NoteBrain',
+      version: config.version || '1.0.0',
+      logger: this.logger,
+    });
     
     // Set up MCP resources and tools
     this.setupMcpResources();
     this.setupMcpTools();
   }
   
-  // Implement Context interface methods
+  // Implement MCPContext interface by delegating to contextFuncs
   
   getContextName(): string {
-    return this.contextBase.getContextName();
+    return this.contextFuncs.getContextName();
   }
   
   getContextVersion(): string {
-    return this.contextBase.getContextVersion();
+    return this.contextFuncs.getContextVersion();
   }
   
   async initialize(): Promise<boolean> {
-    try {
-      // Initialization logic
-      this.readyState = true;
-      return true;
-    } catch (error) {
-      this.logger.error(`Error initializing ${this.getContextName()}`, { error });
-      this.readyState = false;
-      return false;
-    }
+    return this.contextFuncs.initialize();
   }
   
   isReady(): boolean {
-    return this.readyState;
+    return this.contextFuncs.isReady();
   }
   
   getStatus(): ContextStatus {
-    return {
-      ...this.contextBase.getStatus(),
-      ready: this.readyState,
-      resourceCount: this.mcpFunctionality.resources.length,
-      toolCount: this.mcpFunctionality.tools.length,
-    };
+    return this.contextFuncs.getStatus();
   }
   
   async cleanup(): Promise<void> {
-    // Cleanup logic
+    return this.contextFuncs.cleanup();
   }
   
-  getStorage(): NoteStorageAdapter {
+  getStorage(): MCPStorageInterface {
     return this.storage;
   }
   
-  getFormatter(): NoteFormatter {
+  getFormatter(): MCPFormatterInterface {
     return this.formatter;
   }
   
   registerOnServer(server: McpServer): boolean {
-    return this.mcpFunctionality.registerOnServer(server);
+    return this.contextFuncs.registerOnServer(server);
   }
   
   getMcpServer(): McpServer {
-    return this.mcpFunctionality.mcpServer;
+    return this.contextFuncs.getMcpServer();
   }
   
   getCapabilities(): ContextCapabilities {
-    return this.mcpFunctionality.getCapabilities();
+    return this.contextFuncs.getCapabilities();
   }
   
   // Setup methods
   
   private setupMcpResources(): void {
-    // Setup resources similar to current implementation
-    this.mcpFunctionality.resources = [
-      // Resource definitions...
-    ];
+    // Setup resources by adding to contextFuncs.resources
   }
   
   private setupMcpTools(): void {
-    // Get the tool service instance
-    const toolService = NoteToolService.getInstance();
-    
-    // Register note tools using the tool service
-    this.mcpFunctionality.tools = toolService.getTools(this);
+    // Setup tools by adding to contextFuncs.tools
   }
   
   // NoteContext specific methods
@@ -329,13 +341,20 @@ export class NoteContext implements Context {
     return note || undefined;
   }
   
-  async createNote(note: Partial<Note>): Promise<string> {
-    // Implementation similar to current
-  }
-  
   // Other specific methods...
 }
 ```
+
+## Refactoring Approach
+
+Our refactoring will follow these guiding principles:
+
+1. **Iterative Progress**: Make small, focused changes with testing after each step
+2. **Parallel Implementation**: Keep existing code functional while developing the new system
+3. **Test-Driven Development**: Write tests before or alongside implementations
+4. **Continuous Verification**: Run TypeScript checking and linting after each change
+5. **No Big Bang Rewrites**: Gradually migrate contexts one by one
+6. **Simplicity Over Complexity**: Favor direct approaches over abstraction
 
 ## Expected Benefits
 
@@ -365,12 +384,14 @@ export class NoteContext implements Context {
 
 ## Next Steps
 
-1. Create detailed implementation plan for each interface and component
-2. Prioritize contexts for refactoring based on complexity and usage
-3. Implement changes incrementally with comprehensive testing
-4. Document the new approach with examples
+1. Implement MCPNoteContext using the new pattern
+2. Test against existing NoteContext for feature parity
+3. Verify protocol system integration works
+4. Continue with other contexts (ConversationContext next)
 5. Update developer guidelines
 
 ## Conclusion
 
 Simplifying the Context System architecture will significantly improve the maintainability and clarity of the codebase. By consolidating interfaces, removing unnecessary abstractions, and using composition over inheritance, we can create a more approachable and maintainable architecture while preserving functionality.
+
+Our implementation progress so far demonstrates the viability of this approach. The simplified interface design maintains all necessary functionality while eliminating unnecessary complexity. We will continue this iterative refactoring process until all contexts have been migrated to the new pattern.
