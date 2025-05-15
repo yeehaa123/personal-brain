@@ -7,7 +7,7 @@
 import type { ConversationContext } from '@/contexts/conversations';
 import type { ExternalSourceContext } from '@/contexts/externalSources';
 import type { NoteContext } from '@/contexts/notes';
-import { ProfileContext } from '@/contexts/profiles';
+import type { ProfileContext } from '@/contexts/profiles';
 import type { WebsiteContext } from '@/contexts/website';
 import type { IContextManager } from '@/protocol/types';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';

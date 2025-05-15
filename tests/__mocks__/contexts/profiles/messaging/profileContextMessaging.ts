@@ -2,8 +2,8 @@
  * Mock ProfileContextMessaging for testing
  */
 
+import type { ProfileContext } from '@/contexts/profiles';
 import type { ProfileContextMessaging } from '@/contexts/profiles/messaging/profileContextMessaging';
-import { ProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';

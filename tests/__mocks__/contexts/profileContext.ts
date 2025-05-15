@@ -4,10 +4,10 @@
  * Follows the Component Interface Standardization pattern with
  * getInstance(), resetInstance(), and createFresh()
  */
+import type { ProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
-import { ProfileContext } from '@/contexts/profiles';
 import { Logger } from '@/utils/logger';
 
 /**

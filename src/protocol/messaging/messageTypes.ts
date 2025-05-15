@@ -134,8 +134,12 @@ export enum NotificationType {
   CONVERSATION_CLEARED = 'conversation.cleared',
   /** Notification that a turn was added to a conversation */
   CONVERSATION_TURN_ADDED = 'conversation.turnAdded',
-  /** Notification that external sources were enabled/disabled */
+  /** Notification that external sources status changed (enabled/disabled/search completed) */
   EXTERNAL_SOURCES_STATUS = 'externalSources.statusChanged',
+  /** Notification that external sources availability changed */
+  EXTERNAL_SOURCES_AVAILABILITY = 'externalSources.availability',
+  /** Notification that a search was performed on external sources */
+  EXTERNAL_SOURCES_SEARCH = 'externalSources.searchCompleted',
   /** Notification that a website was generated */
   WEBSITE_GENERATED = 'website.generated',
   /** Notification that a website was deployed */

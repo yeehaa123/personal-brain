@@ -51,18 +51,12 @@ export interface ServiceRegistryDependencies extends RegistryDependencies {
 export const ServiceIdentifiers = {
   // Repository identifiers
   NoteRepository: 'service.repositories.note',
-  ProfileRepository: 'service.repositories.profile',
 
   // Embedding service identifiers
   NoteEmbeddingService: 'service.embedding.note',
-  ProfileEmbeddingService: 'service.embedding.profile',
 
   // Search service identifiers
   NoteSearchService: 'service.search.note',
-  ProfileSearchService: 'service.search.profile',
-
-  // Tag service identifiers
-  ProfileTagService: 'service.tag.profile',
 
   // Note service identifiers
   NoteStorageAdapter: 'noteStorageAdapter', // Must match string used in LandingPageNoteAdapter
@@ -236,7 +230,7 @@ export class ServiceRegistry extends Registry {
       () => Logger.getInstance(),
     );
 
-    // Register search services with dependencies
+    // Register note search service with dependencies
     this.registerService<NoteSearchService>(
       ServiceIdentifiers.NoteSearchService,
       (container) => {
@@ -246,7 +240,7 @@ export class ServiceRegistry extends Registry {
         const textUtils = container.resolve<TextUtils>(ServiceIdentifiers.TextUtils);
         const logger = container.resolve<Logger>(ServiceIdentifiers.Logger);
 
-        // Create service with injected dependencies using the updated interface
+        // Create service with injected dependencies
         return NoteSearchService.createFresh(
           { entityName: 'note' },
           {
@@ -290,7 +284,7 @@ export class ServiceRegistry extends Registry {
       () => NoteStorageAdapter.getInstance(),
     );
 
-    // Register resource and tool services
+    // Register conversation services
     this.register(
       ServiceIdentifiers.ConversationResourceService,
       () => ConversationResourceService.getInstance(),
@@ -301,8 +295,8 @@ export class ServiceRegistry extends Registry {
       () => ConversationToolService.getInstance(),
     );
 
-    // Register query service with its dependencies
-    this.register(
+    // Register conversation query service with its dependencies
+    this.registerService<ConversationQueryService>(
       ServiceIdentifiers.ConversationQueryService,
       (container) => {
         const storageAdapter = container.resolve<ConversationStorageAdapter>(
@@ -310,10 +304,11 @@ export class ServiceRegistry extends Registry {
         );
         return ConversationQueryService.getInstance(storageAdapter);
       },
+      [ServiceIdentifiers.ConversationStorageAdapter],
     );
 
-    // Register memory service with its dependencies
-    this.register(
+    // Register conversation memory service with its dependencies
+    this.registerService<ConversationMemoryService>(
       ServiceIdentifiers.ConversationMemoryService,
       (container) => {
         const storageAdapter = container.resolve<ConversationStorageAdapter>(
@@ -321,6 +316,7 @@ export class ServiceRegistry extends Registry {
         );
         return ConversationMemoryService.getInstance(storageAdapter);
       },
+      [ServiceIdentifiers.ConversationStorageAdapter],
     );
 
     this.servicesRegistered = true;

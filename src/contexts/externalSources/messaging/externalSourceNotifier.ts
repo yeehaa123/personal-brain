@@ -133,7 +133,7 @@ export class ExternalSourceNotifier {
       const notification = MessageFactory.createNotification(
         ContextId.EXTERNAL_SOURCES,
         '*', // Broadcast to all interested contexts
-        NotificationType.EXTERNAL_SOURCES_STATUS, // Use existing notification type as best match
+        NotificationType.EXTERNAL_SOURCES_SEARCH, // Use specific notification type for search
         {
           action: 'search_completed',
           query,
@@ -172,7 +172,7 @@ export class ExternalSourceNotifier {
       const notification = MessageFactory.createNotification(
         ContextId.EXTERNAL_SOURCES,
         '*', // Broadcast to all interested contexts
-        NotificationType.EXTERNAL_SOURCES_STATUS, // Use existing notification type
+        NotificationType.EXTERNAL_SOURCES_AVAILABILITY, // Use specific notification type for availability
         {
           action: 'availability_changed',
           sourceAvailability: availability,

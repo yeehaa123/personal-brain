@@ -8,20 +8,20 @@
  */
 import { textConfig } from '@/config';
 import type { Note } from '@/models/note';
-import type { EmbeddingService } from '@/resources/ai/embedding';
-import { BaseEmbeddingService } from '@/services/common/baseEmbeddingService';
+import { EmbeddingService } from '@/resources/ai/embedding';
+import type { IEmbeddingService } from '@/services/interfaces/IEmbeddingService';
 import { ApiError, tryExec, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { assertDefined, isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteRepository } from './noteRepository';
 
-
 /**
  * Service for managing note embeddings
  */
-export class NoteEmbeddingService extends BaseEmbeddingService {
+export class NoteEmbeddingService implements IEmbeddingService {
   private noteRepository: NoteRepository;
+  private embeddingService: EmbeddingService;
   
   /**
    * Singleton instance of NoteEmbeddingService
@@ -30,10 +30,9 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
   private static instance: NoteEmbeddingService | null = null;
   
   /**
-   * Override the logger from the base class with protected visibility
-   * This allows the derived class to use the logger directly
+   * Logger instance for this service
    */
-  protected override logger = Logger.getInstance();
+  protected logger = Logger.getInstance();
   
   /**
    * Get the singleton instance of the service
@@ -112,9 +111,60 @@ export class NoteEmbeddingService extends BaseEmbeddingService {
    * @param noteRepository Optional note repository for dependency injection
    */
   constructor(embeddingService?: EmbeddingService, noteRepository?: NoteRepository) {
-    super(embeddingService);
+    this.embeddingService = embeddingService || EmbeddingService.getInstance();
     this.noteRepository = noteRepository || NoteRepository.getInstance();
     this.logger.debug('NoteEmbeddingService instance created');
+  }
+
+  /**
+   * Generate an embedding for the given text
+   * @param text The text to generate embedding for
+   * @returns The embedding vector
+   * @throws ValidationError if text is empty
+   * @throws ApiError if embedding generation fails
+   */
+  async generateEmbedding(text: string): Promise<number[]> {
+    try {
+      if (!isNonEmptyString(text)) {
+        throw new ValidationError('Empty text provided for embedding generation');
+      }
+
+      const result = await this.embeddingService.getEmbedding(text);
+      
+      if (!isDefined(result) || !Array.isArray(result) || result.length === 0) {
+        throw new ApiError('Failed to generate valid embedding', undefined, {
+          textLength: text.length,
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      this.logger.error(`Error generating embedding: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate similarity score between two embeddings
+   * @param embedding1 First embedding
+   * @param embedding2 Second embedding
+   * @returns Similarity score (0 to 1)
+   */
+  calculateSimilarity(embedding1: number[], embedding2: number[]): number {
+    try {
+      return this.embeddingService.calculateSimilarity(embedding1, embedding2);
+    } catch (error) {
+      this.logger.error(`Error calculating similarity: ${error instanceof Error ? error.message : String(error)}`);
+      return 0;
+    }
+  }
+
+  /**
+   * Get the embedding service instance
+   * @returns The embedding service instance
+   */
+  getEmbeddingService(): EmbeddingService {
+    return this.embeddingService;
   }
 
   /**

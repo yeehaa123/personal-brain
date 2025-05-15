@@ -4,8 +4,8 @@
  * Handles incoming messages for ProfileContext from other contexts.
  */
 
-import { ProfileContext } from '@/contexts/profiles';
-import type { Profile } from '@/models/profile';
+import type { ProfileContext } from '@/contexts/profiles';
+import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { 
   type ContextCommunicationMessage, 
@@ -14,7 +14,10 @@ import {
   type DataResponseMessage,
   type NotificationMessage,
 } from '@/protocol/messaging/messageTypes';
+import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
+
+import type { ProfileDataParams } from '../schemas/messageSchemas';
 
 /**
  * Options for ProfileMessageHandler
@@ -98,10 +101,24 @@ export class ProfileMessageHandler {
     if (message.category === 'request') {
       return await this.handleRequest(message as DataRequestMessage);
     } else if (message.category === 'notification') {
-      await this.handleNotification(message);
-      return;
+      await this.handleNotification(message as NotificationMessage);
+      // Return acknowledgment for notifications
+      return MessageFactory.createAcknowledgment(
+        ContextId.PROFILE,
+        message.sourceContext,
+        message.id,
+        'processed',
+      );
     }
-    return;
+    
+    // Return error for unrecognized message format
+    return MessageFactory.createErrorResponse(
+      ContextId.PROFILE,
+      message.sourceContext,
+      message.id,
+      'INVALID_MESSAGE_FORMAT',
+      'Message format not recognized',
+    );
   }
 
   /**
@@ -125,6 +142,7 @@ export class ProfileMessageHandler {
           message.sourceContext,
           message.targetContext,
           'Invalid data request message',
+          'VALIDATION_ERROR',
         );
       }
       
@@ -143,6 +161,7 @@ export class ProfileMessageHandler {
           message.sourceContext,
           message.targetContext,
           `Unsupported request type: ${message.dataType}`,
+          'UNSUPPORTED_DATA_TYPE',
         );
       }
     } catch (error) {
@@ -153,6 +172,7 @@ export class ProfileMessageHandler {
         message.sourceContext,
         message.targetContext,
         'Error handling request',
+        'INTERNAL_ERROR',
       );
     }
   }
@@ -162,32 +182,25 @@ export class ProfileMessageHandler {
    * 
    * @param message Notification message
    */
-  private async handleNotification(message: ContextCommunicationMessage): Promise<void> {
+  private async handleNotification(message: NotificationMessage): Promise<void> {
     try {
-      if (message.category !== 'notification') {
-        this.logger.error('Invalid notification message category', { message, context: 'ProfileMessageHandler' });
-        return;
-      }
-      
-      const notificationMessage = message as NotificationMessage;
-      
       this.logger.debug('Handling profile context notification', { 
-        notificationType: notificationMessage.notificationType,
+        notificationType: message.notificationType,
         context: 'ProfileMessageHandler', 
       });
       
       // Check if this is a valid notification
-      if (!notificationMessage.notificationType) {
+      if (!message.notificationType) {
         this.logger.error('Invalid notification message', { message, context: 'ProfileMessageHandler' });
         return;
       }
       
       // Handle different notification types
-      switch (notificationMessage.notificationType) {
+      switch (message.notificationType) {
       // Add specific notification handlers if needed
       default:
         this.logger.debug('Ignoring notification type', { 
-          notificationType: notificationMessage.notificationType,
+          notificationType: message.notificationType,
           context: 'ProfileMessageHandler', 
         });
         break;
@@ -205,14 +218,37 @@ export class ProfileMessageHandler {
    */
   private async handleGetProfile(message: DataRequestMessage): Promise<DataResponseMessage> {
     try {
+      // Validate parameters using schema
+      const validation = validateRequestParams<ProfileDataParams>(message);
+      
+      if (!validation.success) {
+        return MessageFactory.createErrorResponse(
+          message.id,
+          ContextId.PROFILE,
+          message.sourceContext,
+          validation.errorMessage || 'Invalid parameters',
+          'VALIDATION_ERROR',
+        );
+      }
+      
+      // No parameters to extract here, as the profile request doesn't need any
       const profile = await this.profileContext.getProfile();
       
-      return MessageFactory.createDataResponse<Profile | null>(
-        message.id,
+      if (!profile) {
+        return MessageFactory.createErrorResponse(
+          message.id,
+          ContextId.PROFILE,
+          message.sourceContext,
+          'Profile not found',
+          'PROFILE_NOT_FOUND',
+        );
+      }
+      
+      return MessageFactory.createSuccessResponse(
+        ContextId.PROFILE,
         message.sourceContext,
-        message.targetContext,
-        DataRequestType.PROFILE_DATA,
-        profile,
+        message.id,
+        { profile },
       );
     } catch (error) {
       this.logger.error('Error handling get profile request', { error, context: 'ProfileMessageHandler' });
@@ -220,7 +256,8 @@ export class ProfileMessageHandler {
         message.id,
         message.sourceContext,
         message.targetContext,
-        'Error retrieving profile',
+        `Error retrieving profile: ${error instanceof Error ? error.message : String(error)}`,
+        'READ_ERROR',
       );
     }
   }

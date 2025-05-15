@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { notes } from '@/db/schema';
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
 import { createMockNote } from '@test/__mocks__/models/note';
@@ -31,8 +30,8 @@ const initialNotes: Note[] = [
   }),
 ];
 
-// Create a mock repository instead of mocking the database
-export class MockNoteRepository extends NoteRepository {
+// Create a mock repository for testing
+class MockNoteRepository {
   private notes: Note[] = [];
   // Define NoteChunk type for the mock repository
   private chunks: {
@@ -46,38 +45,28 @@ export class MockNoteRepository extends NoteRepository {
   // Mock properties for conversation-to-notes feature (used in findBySource/findByConversationMetadata)
   
   constructor(initialNotes: Note[]) {
-    super();
     this.notes = JSON.parse(JSON.stringify(initialNotes));
   }
   
   // Add static factory methods for consistency with real implementation
-  public static override createFresh(initialNotes: Note[] = []): MockNoteRepository {
+  public static createFresh(initialNotes: Note[] = []): MockNoteRepository {
     return new MockNoteRepository(initialNotes);
   }
   
-  // Required abstract methods from BaseRepository
-  protected override get table() {
-    return notes;
-  }
-
-  protected override get entityName() {
+  // Properties included for logging
+  protected get entityName() {
     return 'note';
   }
   
-  protected override getIdColumn() {
-    return notes.id;
-  }
-  
-  // Override methods from parent class
-  override async getNoteById(id: string): Promise<Note | undefined> {
+  async getNoteById(id: string): Promise<Note | undefined> {
     return Promise.resolve(this.notes.find(note => note.id === id));
   }
   
-  override async getById(id: string): Promise<Note | undefined> {
+  async getById(id: string): Promise<Note | undefined> {
     return this.getNoteById(id);
   }
   
-  override async getRecentNotes(limit = 5): Promise<Note[]> {
+  async getRecentNotes(limit = 5): Promise<Note[]> {
     return Promise.resolve([...this.notes].slice(0, limit));
   }
   
@@ -86,7 +75,7 @@ export class MockNoteRepository extends NoteRepository {
     return Promise.resolve([...this.notes]);
   }
   
-  override async insertNote(noteData: {
+  async insertNote(noteData: {
     id?: string;
     title: string;
     content: string;
@@ -132,8 +121,8 @@ export class MockNoteRepository extends NoteRepository {
     });
   }
   
-  // Implementation of BaseRepository method
-  override async update(id: string, updates: Partial<Note>): Promise<boolean> {
+  // Implementation of IRepository method
+  async update(id: string, updates: Partial<Note>): Promise<boolean> {
     const index = this.notes.findIndex(note => note.id === id);
     if (index === -1) return Promise.resolve(false);
     
@@ -152,12 +141,17 @@ export class MockNoteRepository extends NoteRepository {
     this.notes = this.notes.filter(note => note.id !== id);
     return Promise.resolve(initialLength > this.notes.length);
   }
+
+  // Implementation of IRepository method
+  async deleteById(id: string): Promise<boolean> {
+    return this.delete(id);
+  }
   
   // Alias methods for backward compatibility
   updateNote = this.update;
   deleteNote = this.delete;
   
-  override async searchNotesByKeywords(query?: string, tags?: string[], limit: number = 10, offset: number = 0): Promise<Note[]> {
+  async searchNotesByKeywords(query?: string, tags?: string[], limit: number = 10, offset: number = 0): Promise<Note[]> {
     // If no query and no tags, return recent notes
     if ((!query || query.trim() === '') && (!tags || tags.length === 0)) {
       return this.getRecentNotes(limit);
@@ -183,7 +177,7 @@ export class MockNoteRepository extends NoteRepository {
     return Promise.resolve(matchingNotes.slice(offset, offset + limit));
   }
   
-  override async insertNoteChunk(chunk: {
+  async insertNoteChunk(chunk: {
     noteId: string;
     content: string;
     embedding: number[];
@@ -194,16 +188,16 @@ export class MockNoteRepository extends NoteRepository {
     return Promise.resolve(id);
   }
   
-  override async getNoteCount(): Promise<number> {
+  async getNoteCount(): Promise<number> {
     return Promise.resolve(this.notes.length);
   }
   
-  override async getCount(): Promise<number> {
+  async getCount(): Promise<number> {
     return this.getNoteCount();
   }
   
   // Additional mocked methods
-  override async updateNoteEmbedding(noteId: string, embedding: number[]): Promise<void> {
+  async updateNoteEmbedding(noteId: string, embedding: number[]): Promise<void> {
     const index = this.notes.findIndex(note => note.id === noteId);
     if (index !== -1) {
       this.notes[index].embedding = embedding;
@@ -211,27 +205,27 @@ export class MockNoteRepository extends NoteRepository {
     return Promise.resolve();
   }
   
-  override async getNotesWithoutEmbeddings(): Promise<Note[]> {
+  async getNotesWithoutEmbeddings(): Promise<Note[]> {
     return Promise.resolve(this.notes.filter(note => !note.embedding));
   }
   
-  override async getNotesWithEmbeddings(): Promise<Note[]> {
+  async getNotesWithEmbeddings(): Promise<Note[]> {
     return Promise.resolve(this.notes.filter(note => !!note.embedding));
   }
   
-  override async getOtherNotesWithEmbeddings(excludeNoteId: string): Promise<Note[]> {
+  async getOtherNotesWithEmbeddings(excludeNoteId: string): Promise<Note[]> {
     return Promise.resolve(
       this.notes.filter(note => note.id !== excludeNoteId && !!note.embedding),
     );
   }
   
   // Conversation-to-notes feature methods
-  override async findBySource(source: 'import' | 'conversation' | 'user-created', limit = 10, offset = 0): Promise<Note[]> {
+  async findBySource(source: 'import' | 'conversation' | 'user-created', limit = 10, offset = 0): Promise<Note[]> {
     const filtered = this.notes.filter(note => note.source === source);
     return Promise.resolve(filtered.slice(offset, offset + limit));
   }
   
-  override async findByConversationMetadata(field: string, value: string): Promise<Note[]> {
+  async findByConversationMetadata(field: string, value: string): Promise<Note[]> {
     return Promise.resolve(
       this.notes.filter(note => {
         if (!note.conversationMetadata) return false;

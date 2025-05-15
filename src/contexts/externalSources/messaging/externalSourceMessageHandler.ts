@@ -24,9 +24,14 @@ import type {
   DataResponseMessage,
   NotificationMessage,
 } from '@/protocol/messaging';
+import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
 import type { ExternalSourceContext } from '../externalSourceContext';
+import type { 
+  ExternalSourceSearchParams,
+  ExternalSourceStatusParams,
+} from '../schemas/messageSchemas';
 
 /**
  * Handler for external source context messages
@@ -237,19 +242,27 @@ export class ExternalSourceMessageHandler {
    */
   private async handleExternalSearch(request: DataRequestMessage): Promise<DataResponseMessage> {
     try {
-      const { query, limit } = request.parameters as { query?: string; limit?: number } || { query: '', limit: 5 };
+      // Validate parameters using schema
+      const validation = validateRequestParams<ExternalSourceSearchParams>(request);
       
-      if (!query) {
+      if (!validation.success || !validation.data) {
         return MessageFactory.createErrorResponse(
           ContextId.EXTERNAL_SOURCES,
           request.sourceContext,
           request.id,
-          'MISSING_QUERY',
-          'Search query is required',
+          'VALIDATION_ERROR',
+          validation.errorMessage || 'Invalid parameters',
         );
       }
       
-      const results = await this.externalSourceContext.search(query, { limit: limit || 5 });
+      // With this guard, TypeScript knows validation.data is defined
+      const { query, limit, includeEmbeddings } = validation.data;
+      
+      // Perform search with validated parameters
+      const results = await this.externalSourceContext.search(query, { 
+        limit: limit,
+        addEmbeddings: includeEmbeddings,
+      });
       
       return MessageFactory.createSuccessResponse(
         ContextId.EXTERNAL_SOURCES,
@@ -276,9 +289,33 @@ export class ExternalSourceMessageHandler {
    */
   private async handleExternalSourceStatus(request: DataRequestMessage): Promise<DataResponseMessage> {
     try {
+      // Validate parameters using schema
+      const validation = validateRequestParams<ExternalSourceStatusParams>(request);
+      
+      if (!validation.success || !validation.data) {
+        return MessageFactory.createErrorResponse(
+          ContextId.EXTERNAL_SOURCES,
+          request.sourceContext,
+          request.id,
+          'VALIDATION_ERROR',
+          validation.errorMessage || 'Invalid parameters',
+        );
+      }
+      
+      // With this guard, TypeScript knows validation.data is defined
+      // We don't need any parameters for the basic availability check
+      
       // Check availability of all sources
       const availability = await this.externalSourceContext.checkSourcesAvailability();
-      const sources = Object.entries(availability).map(([name, isAvailable]) => ({ name, isAvailable }));
+      
+      // Transform the availability data to the expected response format
+      const sources = Object.entries(availability).map(([name, isAvailable]) => {
+        // Create source object with required properties
+        return { 
+          name, 
+          isAvailable, 
+        };
+      });
       
       return MessageFactory.createSuccessResponse(
         ContextId.EXTERNAL_SOURCES,

@@ -9,9 +9,15 @@
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { DataRequestType, MessageFactory, NotificationType } from '@/protocol/messaging';
 import type { ContextCommunicationMessage, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
+import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
 import type { NoteContext } from '../noteContext';
+import type { 
+  NoteByIdParams,
+  NotesSearchParams,
+  NotesSemanticSearchParams,
+} from '../schemas/messageSchemas';
 
 /**
  * Handler for note context messages
@@ -233,23 +239,27 @@ export class NoteMessageHandler {
    */
   private async handleNotesSearch(request: DataRequestMessage) {
     try {
-      const query = request.parameters?.['query'] as string;
-      const limit = request.parameters?.['limit'] as number;
+      // Validate parameters using schema
+      const validation = validateRequestParams<NotesSearchParams>(request);
       
-      if (!query) {
+      if (!validation.success) {
         return MessageFactory.createErrorResponse(
+          request.id,
           ContextId.NOTES,
           request.sourceContext,
-          request.id,
-          'MISSING_PARAMETER',
-          'Query parameter is required for note search',
+          validation.errorMessage || 'Invalid parameters',
+          'VALIDATION_ERROR',
         );
       }
+      
+      // Now we have type-safe access to the validated parameters
+      const { query, limit, includeContent } = validation.data ?? {};
       
       // Create a search options object
       const searchOptions = {
         query,
-        limit: limit || undefined,
+        limit,
+        includeContent,
         semanticSearch: true, 
       };
       
@@ -281,27 +291,42 @@ export class NoteMessageHandler {
    */
   private async handleNoteById(request: DataRequestMessage) {
     try {
-      const noteId = request.parameters?.['id'] as string;
+      // Validate parameters using schema
+      const validation = validateRequestParams<NoteByIdParams>(request);
       
-      if (!noteId) {
+      if (!validation.success) {
         return MessageFactory.createErrorResponse(
+          request.id,
           ContextId.NOTES,
           request.sourceContext,
-          request.id,
-          'MISSING_PARAMETER',
-          'Note ID is required',
+          validation.errorMessage || 'Invalid parameters',
+          'VALIDATION_ERROR',
         );
       }
       
-      const note = await this.noteContext.getNoteById(noteId);
+      // Now we have type-safe access to the validated parameters
+      const { id } = validation.data ?? {};
+      
+      // Ensure id is not undefined
+      if (!id) {
+        return MessageFactory.createErrorResponse(
+          request.id,
+          ContextId.NOTES,
+          request.sourceContext,
+          'Note ID is required',
+          'VALIDATION_ERROR',
+        );
+      }
+      
+      const note = await this.noteContext.getNoteById(id);
       
       if (!note) {
         return MessageFactory.createErrorResponse(
+          request.id,
           ContextId.NOTES,
           request.sourceContext,
-          request.id,
+          `Note with ID ${id} not found`,
           'NOTE_NOT_FOUND',
-          `Note with ID ${noteId} not found`,
         );
       }
       
@@ -330,17 +355,30 @@ export class NoteMessageHandler {
    */
   private async handleNoteSemanticSearch(request: DataRequestMessage) {
     try {
-      const text = request.parameters?.['text'] as string;
-      const limit = request.parameters?.['limit'] as number || 10;
-      const tags = request.parameters?.['tags'] as string[] | undefined;
+      // Validate parameters using schema
+      const validation = validateRequestParams<NotesSemanticSearchParams>(request);
       
-      if (!text) {
+      if (!validation.success) {
         return MessageFactory.createErrorResponse(
+          request.id,
           ContextId.NOTES,
           request.sourceContext,
+          validation.errorMessage || 'Invalid parameters',
+          'VALIDATION_ERROR',
+        );
+      }
+      
+      // Now we have type-safe access to the validated parameters
+      const { text, limit, tags } = validation.data ?? {};
+      
+      // Ensure text is not undefined
+      if (!text) {
+        return MessageFactory.createErrorResponse(
           request.id,
-          'MISSING_PARAMETER',
-          'Text parameter is required for semantic search',
+          ContextId.NOTES,
+          request.sourceContext,
+          'Search text is required',
+          'VALIDATION_ERROR',
         );
       }
       

@@ -10,7 +10,7 @@ import type {
   NoteContext,
   WebsiteContext,
 } from '@/contexts';
-import { ProfileContext } from '@/contexts/profiles';
+import type { ProfileContext } from '@/contexts/profiles';
 import type { IContextManager } from '@/protocol/types';
 import {
   MockConversationContext,

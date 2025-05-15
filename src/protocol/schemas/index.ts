@@ -27,5 +27,33 @@ export {
   MemoryTierEnum,
 } from './conversationSchemas';
 
+// Export external source schemas
+export type {
+  ExternalSourceResult,
+  ExternalSearchOptions,
+  ExternalSourceMetadata,
+  SourceAvailability,
+  ExternalSourceSearchRequest,
+  ExternalSourceSearchResponse,
+  ExternalSourceSearchNotification,
+  ExternalSourceAvailabilityNotification,
+  ExternalSourceStatusRequest,
+  ExternalSourceStatusResponse,
+  ExternalSourceNotification,
+} from './externalSourceSchemas';
+export {
+  ExternalSourceResultSchema,
+  ExternalSearchOptionsSchema,
+  ExternalSourceMetadataSchema,
+  SourceAvailabilitySchema,
+  ExternalSourceSearchRequestSchema,
+  ExternalSourceSearchResponseSchema,
+  ExternalSourceSearchNotificationSchema,
+  ExternalSourceAvailabilityNotificationSchema,
+  ExternalSourceStatusRequestSchema,
+  ExternalSourceStatusResponseSchema,
+  ExternalSourceNotificationSchema,
+} from './externalSourceSchemas';
+
 // Export conversation context configuration
 export type { ConversationContextConfig } from './conversationContextConfig';

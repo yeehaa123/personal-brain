@@ -13,21 +13,26 @@ import { nanoid } from 'nanoid';
 import { db } from '@/db';
 import { noteChunks, notes } from '@/db/schema';
 import type { Note } from '@/models/note';
-import { BaseRepository } from '@/services/BaseRepository';
-import { DatabaseError, tryExec, ValidationError } from '@/utils/errorUtils';
+import { DatabaseError, safeExec, tryExec, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
 
+import type { IRepository } from '../interfaces/IRepository';
 
 /**
  * Repository for accessing and managing notes in the database
  */
-export class NoteRepository extends BaseRepository<typeof notes, Note> {
+export class NoteRepository implements IRepository<Note, string> {
   /**
    * Singleton instance of NoteRepository
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
   private static instance: NoteRepository | null = null;
+  
+  /**
+   * Logger instance for this repository
+   */
+  protected logger = Logger.getInstance();
 
   /**
    * Get the singleton instance of the repository
@@ -104,6 +109,169 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
     
     return new NoteRepository();
   }
+
+  /**
+   * Get an entity by ID
+   * @param id Entity ID
+   * @returns The entity or undefined if not found
+   * @throws DatabaseError If there's an error accessing the database
+   * @throws ValidationError If the ID is invalid
+   */
+  async getById(id: string): Promise<Note | undefined> {
+    if (!isNonEmptyString(id)) {
+      this.logger.warn(`Invalid note ID provided for getById: ${id}`);
+      throw new ValidationError('Invalid note ID provided', { id });
+    }
+
+    try {
+      this.logger.debug(`Getting note with ID: ${id}`);
+      const result = await db.select()
+        .from(notes)
+        .where(eq(notes.id, id))
+        .limit(1);
+      
+      if (result[0]) {
+        this.logger.debug(`Found note with ID: ${id}`);
+      } else {
+        this.logger.debug(`No note found with ID: ${id}`);
+      }
+      
+      return result[0] as Note | undefined;
+    } catch (error) {
+      this.logger.error(`Database error retrieving note with ID: ${id}`, { 
+        error: error instanceof Error ? error.message : String(error), 
+      });
+      
+      throw new DatabaseError(
+        `Failed to retrieve note with ID: ${id}`, 
+        { id, error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+  }
+  
+  /**
+   * Insert an entity
+   * @param entity The entity to insert
+   * @returns The inserted entity
+   * @throws DatabaseError If there's an error accessing the database
+   */
+  async insert(entity: Note): Promise<Note> {
+    try {
+      this.logger.debug('Inserting new note');
+      
+      // We need to use a type assertion here for Drizzle ORM
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await db.insert(notes).values(entity as any);
+      
+      // Try to get ID for better logging
+      const id = (entity as unknown as { id?: string }).id;
+      if (id) {
+        this.logger.debug(`Successfully inserted note with ID: ${id}`);
+      } else {
+        this.logger.debug('Successfully inserted note');
+      }
+      
+      return entity;
+    } catch (error) {
+      this.logger.error('Failed to insert note', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      
+      throw new DatabaseError(
+        'Failed to insert note', 
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+  }
+
+  /**
+   * Update an existing entity by ID with partial updates
+   * @param id The ID of the entity to update
+   * @param updates Partial entity with only the fields to update
+   * @returns True if the update was successful
+   * @throws ValidationError If the ID is invalid
+   * @throws DatabaseError If there's an error updating the entity
+   */
+  async update(id: string, updates: Partial<Note>): Promise<boolean> {
+    if (!isNonEmptyString(id)) {
+      throw new ValidationError('Invalid note ID for update', { id });
+    }
+
+    try {
+      this.logger.debug(`Updating note with ID: ${id}`);
+      
+      // Use Drizzle's update operation with type assertion for complex generic types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await db.update(notes).set(updates as any).where(eq(notes.id, id));
+      
+      this.logger.debug(`Successfully updated note with ID: ${id}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to update note with ID: ${id}`, {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      
+      throw new DatabaseError(
+        `Failed to update note with ID: ${id}`,
+        { id, error: error instanceof Error ? error.message : String(error) },
+      );
+    }
+  }
+
+  /**
+   * Delete an entity by ID
+   * @param id Entity ID
+   * @returns true if successful
+   */
+  async deleteById(id: string): Promise<boolean> {
+    return safeExec(async () => {
+      if (!isNonEmptyString(id)) {
+        this.logger.warn(`Invalid note ID provided for deleteById: ${id}`);
+        throw new ValidationError('note ID is required', { id });
+      }
+      
+      this.logger.debug(`Deleting note with ID: ${id}`);
+      await db.delete(notes)
+        .where(eq(notes.id, id));
+      
+      this.logger.debug(`Successfully deleted note with ID: ${id}`);
+      return true;
+    }, false, 'error');
+  }
+
+  /**
+   * Get the total count of entities in the database
+   * @returns The total count
+   */
+  async getCount(): Promise<number> {
+    return tryExec(async () => {
+      try {
+        this.logger.debug('Getting count of all note entities');
+        
+        // Get just the IDs for efficiency
+        const allEntities = await db.select({ id: notes.id })
+          .from(notes);
+        
+        // Handle potential null or undefined return
+        if (!Array.isArray(allEntities)) {
+          this.logger.warn('Database query returned non-array result for note count');
+          return 0;
+        }
+        
+        this.logger.debug(`Found ${allEntities.length} note entities`);
+        return allEntities.length;
+      } catch (error) {
+        this.logger.error('Database error getting note count', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        
+        throw new DatabaseError(
+          `Error getting note count: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }, 'Error getting note count');
+  }
+
   // New methods for conversation-to-notes feature
   
   /**
@@ -149,7 +317,6 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
     try {
       // For SQLite with JSON storage, we need a json_extract function
       // This is SQLite-specific implementation
-      // Since db.execute doesn't exist, we'll use a different approach with drizzle-orm
       const results = await db
         .select()
         .from(notes)
@@ -169,26 +336,6 @@ export class NoteRepository extends BaseRepository<typeof notes, Note> {
         { field, value },
       );
     }
-  }
-  /**
-   * Get the table that this repository uses
-   */
-  protected get table() {
-    return notes;
-  }
-
-  /**
-   * Get entity name for error messages and logging
-   */
-  protected get entityName() {
-    return 'note';
-  }
-  
-  /**
-   * Get the ID column for the table
-   */
-  protected getIdColumn() {
-    return notes.id;
   }
 
   /**

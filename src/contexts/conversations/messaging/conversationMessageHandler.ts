@@ -14,9 +14,11 @@ import {
   type NotificationMessage,
   NotificationType, 
 } from '@/protocol/messaging';
+import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
 import type { ConversationContext } from '../conversationContext';
+import type { ConversationHistoryParams } from '../schemas/messageSchemas';
 
 /**
  * Interface for message with common properties
@@ -236,20 +238,28 @@ export class ConversationMessageHandler {
    */
   private async handleConversationHistory(request: DataRequestMessage) {
     try {
-      // Extract the conversation ID from the request parameters
-      const conversationId = request.parameters?.['conversationId'] as string;
+      // Validate parameters using schema
+      const validation = validateRequestParams<ConversationHistoryParams>(request);
       
-      if (!conversationId) {
+      if (!validation.success) {
         return MessageFactory.createErrorResponse(
           ContextId.CONVERSATION,
           request.sourceContext,
           request.id,
-          'MISSING_PARAMETER',
-          'conversationId parameter is required',
+          'VALIDATION_ERROR',
+          validation.errorMessage || 'Invalid parameters',
         );
       }
       
-      const history = await this.conversationContext.getConversationHistory(conversationId);
+      // Extract parameters from validated data - validation.data is always defined when success is true
+      const data = validation.data as ConversationHistoryParams;
+      const { conversationId, limit } = data;
+      
+      // Get history from the context with optional limit
+      const history = await this.conversationContext.getConversationHistory(
+        conversationId,
+        { maxTurns: limit },
+      );
       
       return MessageFactory.createSuccessResponse(
         ContextId.CONVERSATION,

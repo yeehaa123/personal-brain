@@ -7,8 +7,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 import type { Note } from '@/models/note';
-import { BaseSearchService } from '@/services/common/baseSearchService';
-import type { BaseSearchOptions } from '@/services/common/baseSearchService';
+import type { ISearchService } from '@/services/interfaces/ISearchService';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { isDefined, isNonEmptyString } from '@/utils/safeAccessUtils';
@@ -17,6 +16,16 @@ import { TextUtils } from '@/utils/textUtils';
 import { NoteEmbeddingService } from './noteEmbeddingService';
 import { NoteRepository } from './noteRepository';
 
+/**
+ * Search options for notes
+ */
+export interface NoteSearchOptions {
+  query?: string;
+  tags?: string[];
+  limit?: number;
+  offset?: number;
+  semanticSearch?: boolean;
+}
 
 /**
  * Note search service configuration options
@@ -40,13 +49,21 @@ export interface NoteSearchServiceDependencies {
   textUtils: TextUtils;
 }
 
-export type NoteSearchOptions = BaseSearchOptions;
-
 /**
  * Service for searching notes using various strategies
  */
-export class NoteSearchService extends BaseSearchService<Note, NoteRepository, NoteEmbeddingService> {
-  protected override entityName = 'note';
+export class NoteSearchService implements ISearchService<Note> {
+  /** The name of the entity being searched */
+  protected entityName = 'note';
+  
+  /** Repository for accessing notes */
+  protected repository: NoteRepository;
+  
+  /** Embedding service for semantic operations */
+  protected embeddingService: NoteEmbeddingService;
+  
+  /** Logger instance */
+  protected logger: Logger;
   
   /** Text utilities instance for text processing */
   private readonly textUtils: TextUtils;
@@ -140,7 +157,6 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       return new NoteSearchService(config, defaultDeps);
     }
   }
-  
 
   /**
    * Create a new NoteSearchService with injected dependencies
@@ -154,21 +170,65 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
     config: NoteSearchServiceConfig,
     dependencies: NoteSearchServiceDependencies,
   ) {
-    super(
-      { entityName: config.entityName || 'note' },
-      {
-        repository: dependencies.repository,
-        embeddingService: dependencies.embeddingService,
-        logger: dependencies.logger,
-      },
-    );
-    
-    // Store the TextUtils instance
+    this.entityName = config.entityName || 'note';
+    this.repository = dependencies.repository;
+    this.embeddingService = dependencies.embeddingService;
+    this.logger = dependencies.logger;
     this.textUtils = dependencies.textUtils;
     
     dependencies.logger.debug('NoteSearchService instance created with dependencies');
   }
 
+  /**
+   * Search entities using various search strategies
+   * @param options Search options
+   * @returns Array of matching entities
+   */
+  async search(options: NoteSearchOptions): Promise<Note[]> {
+    // Validate options parameter
+    if (!options || typeof options !== 'object') {
+      throw new ValidationError(`Invalid ${this.entityName} search options`, { optionsType: typeof options });
+    }
+    
+    try {
+      // Safely extract options with defaults
+      const limit = isDefined(options.limit) ? Math.max(1, Math.min(options.limit, 100)) : 10;
+      const offset = isDefined(options.offset) ? Math.max(0, options.offset) : 0;
+      const semanticSearch = options.semanticSearch !== false; // Default to true
+      
+      // Handle query safely, ensuring it's a string
+      const query = isNonEmptyString(options.query) ? options.query : undefined;
+      
+      // Ensure tags is an array if present and filter out invalid tags
+      const tags = Array.isArray(options.tags) 
+        ? options.tags.filter(isNonEmptyString)
+        : undefined;
+        
+      this.logger.debug(`Searching ${this.entityName}s with: ${JSON.stringify({
+        query: query?.substring(0, 30) + (query && query.length > 30 ? '...' : ''),
+        tagsCount: tags?.length,
+        limit,
+        offset,
+        semanticSearch,
+      })}`);
+
+      // If semantic search is enabled and there's a query, perform vector search
+      if (semanticSearch && query) {
+        const results = await this.semanticSearch(query, tags, limit, offset);
+        this.logger.info(`Semantic search found ${results.length} ${this.entityName} results`);
+        return results;
+      }
+
+      // Otherwise, fall back to keyword search
+      const results = await this.keywordSearch(query, tags, limit, offset);
+      
+      this.logger.info(`Keyword search found ${results.length} ${this.entityName} results`);
+      return results;
+    } catch (error) {
+      this.logger.warn(`Search error: ${error instanceof Error ? error.message : String(error)}`);
+      return [];
+    }
+  }
 
   /**
    * Search notes with various strategies
@@ -187,7 +247,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  protected override async keywordSearch(
+  protected async keywordSearch(
     query?: string,
     tags?: string[],
     limit = 10,
@@ -210,7 +270,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param offset Pagination offset
    * @returns Array of matching notes
    */
-  protected override async semanticSearch(
+  protected async semanticSearch(
     query: string,
     tags?: string[],
     limit = 10,
@@ -260,7 +320,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param maxResults Maximum number of results to return
    * @returns Array of related notes
    */
-  override async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
+  async findRelated(noteId: string, maxResults = 5): Promise<Note[]> {
     try {
       // Apply safe limits
       const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
@@ -289,7 +349,7 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
    * @param maxKeywords Maximum number of keywords to extract (default: 10)
    * @returns Array of extracted keywords
    */
-  protected override extractKeywords(text: string, maxKeywords = 10): string[] {
+  protected extractKeywords(text: string, maxKeywords = 10): string[] {
     if (!isNonEmptyString(text)) {
       this.logger.debug('Empty text provided for keyword extraction');
       return [];
@@ -311,5 +371,54 @@ export class NoteSearchService extends BaseSearchService<Note, NoteRepository, N
       this.logger.warn(`Error extracting keywords: ${error instanceof Error ? error.message : String(error)}`);
       return [];
     }
+  }
+
+  /**
+   * Calculate tag match score between two sets of tags
+   * @param sourceTags First set of tags
+   * @param targetTags Second set of tags
+   * @returns Match score (higher is better match)
+   */
+  protected calculateTagMatchScore(sourceTags: string[], targetTags: string[]): number {
+    if (!isDefined(sourceTags) || !isDefined(targetTags) || 
+        sourceTags.length === 0 || targetTags.length === 0) {
+      return 0;
+    }
+    
+    return sourceTags.reduce((count, sourceTag) => {
+      // Direct match (exact tag match)
+      const directMatch = targetTags.includes(sourceTag);
+
+      // Partial match (tag contains or is contained by a target tag)
+      const partialMatch = !directMatch && targetTags.some(targetTag =>
+        sourceTag.includes(targetTag) || targetTag.includes(sourceTag),
+      );
+
+      return count + (directMatch ? 1 : partialMatch ? 0.5 : 0);
+    }, 0);
+  }
+
+  /**
+   * Filter and remove duplicate entities from results
+   * @param results Array of entities to deduplicate
+   * @param getEntityId Function to get entity ID
+   * @param excludeId Optional ID to exclude from results
+   * @returns Deduplicated array of entities
+   */
+  protected deduplicateResults<T>(
+    results: T[], 
+    getEntityId: (entity: T) => string,
+    excludeId?: string,
+  ): T[] {
+    return results.reduce<T[]>((unique, entity) => {
+      const id = getEntityId(entity);
+      if (
+        (!excludeId || id !== excludeId) && 
+        !unique.some(existing => getEntityId(existing) === id)
+      ) {
+        unique.push(entity);
+      }
+      return unique;
+    }, []);
   }
 }

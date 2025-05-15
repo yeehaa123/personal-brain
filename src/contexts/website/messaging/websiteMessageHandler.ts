@@ -22,8 +22,10 @@ import type {
   NotificationMessage,
 } from '@/protocol/messaging';
 import { MessageFactory } from '@/protocol/messaging/messageFactory';
+import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
+import type { WebsiteStatusParams } from '../schemas/messageSchemas';
 import type { WebsiteContext } from '../websiteContext';
 
 /**
@@ -202,7 +204,24 @@ export class WebsiteMessageHandler {
    */
   private async handleWebsiteStatus(request: DataRequestMessage) {
     try {
-      const status = await this.websiteContext.handleWebsiteStatus();
+      // Validate parameters using schema
+      const validation = validateRequestParams<WebsiteStatusParams>(request);
+      
+      if (!validation.success) {
+        return MessageFactory.createErrorResponse(
+          request.id,
+          ContextId.WEBSITE,
+          request.sourceContext,
+          validation.errorMessage || 'Invalid parameters',
+          'VALIDATION_ERROR',
+        );
+      }
+      
+      // Extract parameters (if any)
+      const { environment } = validation.data || {};
+      
+      // Get status from the context
+      const status = await this.websiteContext.handleWebsiteStatus(environment);
       
       return MessageFactory.createSuccessResponse(
         ContextId.WEBSITE,

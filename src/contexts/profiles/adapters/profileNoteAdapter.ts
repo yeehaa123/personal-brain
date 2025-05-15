@@ -91,7 +91,7 @@ export class ProfileNoteAdapter {
 
         return !!result;
       }
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -112,7 +112,7 @@ export class ProfileNoteAdapter {
 
       // Fallback: try to parse the entire content as JSON (for backward compatibility)
       return JSON.parse(note.content);
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }

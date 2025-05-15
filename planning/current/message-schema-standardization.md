@@ -28,99 +28,130 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
 3. **Consistent Error Handling**: Standardize error responses for validation failures
 4. **Reduce Boilerplate**: Make handlers more concise by centralizing validation logic
 5. **Maintain Backward Compatibility**: Implement changes without breaking existing functionality
+6. **Follow Domain-Driven Design**: Keep validation logic close to the domain logic that uses it
+
+## Schema Location: Hybrid Approach
+
+After considering the tradeoffs, we'll adopt a hybrid approach for schema locations:
+
+1. **Context-Specific Schemas in Each Context**: 
+   - Define schemas within the context that owns the data
+   - Example file locations:
+     ```
+     src/contexts/notes/schemas/messageSchemas.ts
+     src/contexts/profiles/schemas/messageSchemas.ts
+     src/contexts/website/schemas/messageSchemas.ts
+     ```
+
+2. **Central Registry in Protocol Layer**:
+   - Create a registry that imports and re-exports all schemas
+   - Example file location:
+     ```
+     src/protocol/messaging/schemaRegistry.ts
+     ```
+
+This hybrid approach offers several advantages:
+- **Local Ownership**: Each context team owns and maintains their schemas
+- **Proximity to Implementation**: Schemas are defined close to the code that uses them
+- **Domain-Specific Knowledge**: Context experts design schemas
+- **Independent Evolution**: Contexts can modify schemas without affecting others
+- **Central Discovery**: Registry provides a single point for all schemas
+- **Reduced Merge Conflicts**: Changes to different contexts' schemas don't collide
 
 ## Implementation Plan
 
-### Phase 1: Define Message Parameter Schemas
+### Phase 1: Define Schema Structure & Registry
 
-1. **Create a new file `messageSchemas.ts` in the messaging directory**:
+1. **Create schema files in each context**:
    ```typescript
-   // src/protocol/messaging/messageSchemas.ts
+   // src/contexts/notes/schemas/messageSchemas.ts
    import { z } from 'zod';
    
    /**
-    * Schema definitions for message parameters
-    * These schemas define the structure and validation rules for message parameters
+    * Schema for NOTE_BY_ID request parameters
+    * Used when requesting a specific note by its ID
     */
-   
-   // Schema for NOTE_BY_ID request parameters
    export const NoteByIdParamsSchema = z.object({
+     /** Note ID to retrieve */
      id: z.string().min(1, 'Note ID is required'),
    });
    
-   // Schema for NOTES_SEARCH request parameters
+   /**
+    * Schema for NOTES_SEARCH request parameters
+    * Used when searching for notes by query text
+    */
    export const NotesSearchParamsSchema = z.object({
+     /** Search query text */
      query: z.string().min(1, 'Search query is required'),
+     /** Maximum number of notes to return */
      limit: z.number().int().positive().optional(),
+     /** Whether to include note content in results */
      includeContent: z.boolean().optional().default(true),
    });
    
-   // Schema for NOTES_SEMANTIC_SEARCH request parameters
-   export const NotesSemanticSearchParamsSchema = z.object({
-     text: z.string().min(1, 'Search text is required'),
-     limit: z.number().int().positive().optional().default(10),
-     tags: z.array(z.string()).optional(),
-   });
-   
-   // Schema for PROFILE_DATA request parameters
-   export const ProfileDataParamsSchema = z.object({
-     includeAll: z.boolean().optional().default(true),
-     fields: z.array(z.string()).optional(),
-   });
-   
-   // Schema for note creation notification payload
-   export const NoteCreatedPayloadSchema = z.object({
-     noteId: z.string().min(1),
-     title: z.string(),
-     tags: z.array(z.string()).optional(),
-   });
-   
-   // Schema for note update notification payload
-   export const NoteUpdatedPayloadSchema = z.object({
-     noteId: z.string().min(1),
-     title: z.string().optional(),
-     tags: z.array(z.string()).optional(),
-   });
-   
-   // Schema for note deletion notification payload
-   export const NoteDeletedPayloadSchema = z.object({
-     noteId: z.string().min(1),
-   });
-   
-   // Add schemas for other message types...
+   // Additional schemas for notes context...
    
    // Export derived types
    export type NoteByIdParams = z.infer<typeof NoteByIdParamsSchema>;
    export type NotesSearchParams = z.infer<typeof NotesSearchParamsSchema>;
-   export type NotesSemanticSearchParams = z.infer<typeof NotesSemanticSearchParamsSchema>;
-   export type ProfileDataParams = z.infer<typeof ProfileDataParamsSchema>;
-   export type NoteCreatedPayload = z.infer<typeof NoteCreatedPayloadSchema>;
-   export type NoteUpdatedPayload = z.infer<typeof NoteUpdatedPayloadSchema>;
-   export type NoteDeletedPayload = z.infer<typeof NoteDeletedPayloadSchema>;
    ```
 
-2. **Create a schema registry to map message types to their schemas**:
+2. **Create a central schema registry**:
    ```typescript
-   // Add to messageSchemas.ts
-   
+   // src/protocol/messaging/schemaRegistry.ts
+   import { z } from 'zod';
    import { DataRequestType, NotificationType } from './messageTypes';
+   
+   // Import schemas from contexts
+   import {
+     NoteByIdParamsSchema,
+     NotesSearchParamsSchema,
+     // Other note schemas...
+   } from '@/contexts/notes/schemas/messageSchemas';
+   
+   import {
+     ProfileDataParamsSchema,
+     // Other profile schemas...
+   } from '@/contexts/profiles/schemas/messageSchemas';
+   
+   import {
+     WebsiteStatusParamsSchema,
+     // Other website schemas...
+   } from '@/contexts/website/schemas/messageSchemas';
+   
+   // Re-export all schemas for convenience
+   export {
+     NoteByIdParamsSchema,
+     NotesSearchParamsSchema,
+     ProfileDataParamsSchema,
+     WebsiteStatusParamsSchema,
+     // Other schemas...
+   };
+   
+   // Re-export all types
+   export type {
+     NoteByIdParams,
+     NotesSearchParams,
+     ProfileDataParams,
+     WebsiteStatusParams,
+     // Other types...
+   };
    
    /**
     * Registry mapping message types to their parameter schemas
+    * This provides a way to look up the appropriate schema for a given message type
     */
    export const MessageSchemaRegistry = {
      // Request parameter schemas
      [DataRequestType.NOTE_BY_ID]: NoteByIdParamsSchema,
      [DataRequestType.NOTES_SEARCH]: NotesSearchParamsSchema,
-     [DataRequestType.NOTES_SEMANTIC_SEARCH]: NotesSemanticSearchParamsSchema,
      [DataRequestType.PROFILE_DATA]: ProfileDataParamsSchema,
+     [DataRequestType.WEBSITE_STATUS]: WebsiteStatusParamsSchema,
      
      // Notification payload schemas
      [NotificationType.NOTE_CREATED]: NoteCreatedPayloadSchema,
      [NotificationType.NOTE_UPDATED]: NoteUpdatedPayloadSchema,
-     [NotificationType.NOTE_DELETED]: NoteDeletedPayloadSchema,
-     
-     // Add mappings for other message types...
+     // Other mappings...
    } as const;
    ```
 
@@ -128,9 +159,13 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
 
 1. **Create validation utility functions**:
    ```typescript
-   // Add to messageSchemas.ts
-   
-   import type { DataRequestMessage, NotificationMessage } from './messageTypes';
+   // src/protocol/messaging/validation.ts
+   import { z } from 'zod';
+   import type { 
+     DataRequestMessage, 
+     NotificationMessage,
+   } from './messageTypes';
+   import { MessageSchemaRegistry } from './schemaRegistry';
    
    /**
     * Options for validation functions
@@ -165,7 +200,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
      message: DataRequestMessage,
      options: ValidationOptions = {},
    ): ValidationResult<T> {
-     const schema = MessageSchemaRegistry[message.dataType as DataRequestType];
+     const schema = MessageSchemaRegistry[message.dataType];
      
      if (!schema) {
        return {
@@ -184,9 +219,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
        };
      } catch (error) {
        if (error instanceof z.ZodError) {
-         const errorMessage = error.errors.map(e => 
-           `${e.path.join('.')}: ${e.message}`
-         ).join('; ');
+         const errorMessage = formatZodError(error);
          
          if (options.throwOnError) {
            throw error;
@@ -224,27 +257,20 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
      message: NotificationMessage,
      options: ValidationOptions = {},
    ): ValidationResult<T> {
-     const schema = MessageSchemaRegistry[message.notificationType as NotificationType];
-     
-     if (!schema) {
-       return {
-         success: false,
-         errorMessage: `No schema defined for notification type: ${message.notificationType}`,
-       };
-     }
-     
-     try {
-       const payload = message.payload || {};
-       const result = schema.parse(payload) as T;
-       
-       return {
-         success: true,
-         data: result,
-       };
-     } catch (error) {
-       // Similar error handling as validateRequestParams
-       // ...
-     }
+     // Similar implementation as validateRequestParams
+     // ...
+   }
+   
+   /**
+    * Format a Zod error into a readable message
+    * 
+    * @param error Zod validation error
+    * @returns Formatted error message
+    */
+   function formatZodError(error: z.ZodError): string {
+     return error.errors.map(e => 
+       `${e.path.join('.')}: ${e.message}`
+     ).join('; ');
    }
    ```
 
@@ -254,8 +280,12 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    ```typescript
    // Add to messageFactory.ts
    
-   import { validateRequestParams, validateNotificationPayload } from './messageSchemas';
-   import type { ValidationOptions } from './messageSchemas';
+   import { 
+     validateRequestParams, 
+     validateNotificationPayload,
+     type ValidationOptions,
+     type ValidationResult,
+   } from './validation';
    
    // Add methods to MessageFactory class
    
@@ -320,27 +350,8 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
      options: ValidationOptions = {},
      requiresAck: boolean = false,
    ): NotificationMessage | ValidationResult<T> {
-     // Create a temporary message to validate
-     const tempMessage = this.createNotification(
-       sourceContext,
-       targetContext,
-       notificationType,
-       payload,
-       requiresAck,
-     );
-     
-     // Validate the payload
-     const validationResult = validateNotificationPayload<T>(tempMessage, {
-       throwOnError: false,
-       ...options,
-     });
-     
-     if (!validationResult.success) {
-       return validationResult;
-     }
-     
-     // Payload is valid, return the message
-     return tempMessage;
+     // Implementation similar to createValidatedDataRequest
+     // ...
    }
    ```
 
@@ -351,12 +362,11 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    // in src/contexts/notes/messaging/noteMessageHandler.ts
    
    import { 
-     NoteByIdParams, 
-     NotesSearchParams,
-     NotesSemanticSearchParams,
-     validateRequestParams, 
-     validateNotificationPayload 
-   } from '@/protocol/messaging/messageSchemas';
+     type NoteByIdParams, 
+     type NotesSearchParams,
+     type NotesSemanticSearchParams,
+   } from '@/protocol/messaging/schemaRegistry';
+   import { validateRequestParams } from '@/protocol/messaging/validation';
    
    // Update handleNoteById method
    private async handleNoteById(request: DataRequestMessage) {
@@ -366,11 +376,11 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
        
        if (!validation.success) {
          return MessageFactory.createErrorResponse(
+           request.id,
            ContextId.NOTES,
            request.sourceContext,
-           request.id,
-           'VALIDATION_ERROR',
            validation.errorMessage || 'Invalid parameters',
+           'VALIDATION_ERROR',
          );
        }
        
@@ -381,116 +391,33 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
        
        if (!note) {
          return MessageFactory.createErrorResponse(
+           request.id,
            ContextId.NOTES,
            request.sourceContext,
-           request.id,
-           'NOTE_NOT_FOUND',
            `Note with ID ${id} not found`,
+           'NOTE_NOT_FOUND',
          );
        }
        
-       return MessageFactory.createSuccessResponse(
+       return MessageFactory.createDataResponse(
+         request.id,
          ContextId.NOTES,
          request.sourceContext,
-         request.id,
-         { note },
+         'note', 
+         note,
        );
      } catch (error) {
        return MessageFactory.createErrorResponse(
+         request.id,
          ContextId.NOTES,
          request.sourceContext,
-         request.id,
-         'READ_ERROR',
          `Error retrieving note: ${error instanceof Error ? error.message : String(error)}`,
+         'READ_ERROR',
        );
      }
    }
    
-   // Update handleNotesSearch method
-   private async handleNotesSearch(request: DataRequestMessage) {
-     try {
-       // Validate parameters using schema
-       const validation = validateRequestParams<NotesSearchParams>(request);
-       
-       if (!validation.success) {
-         return MessageFactory.createErrorResponse(
-           ContextId.NOTES,
-           request.sourceContext,
-           request.id,
-           'VALIDATION_ERROR',
-           validation.errorMessage || 'Invalid parameters',
-         );
-       }
-       
-       // Now we have type-safe access to the validated parameters
-       const { query, limit, includeContent } = validation.data;
-       
-       // Create a search options object
-       const searchOptions = {
-         query,
-         limit,
-         includeContent,
-         semanticSearch: true, 
-       };
-       
-       // Search notes using the options object
-       const notes = await this.noteContext.searchNotes(searchOptions);
-       
-       return MessageFactory.createSuccessResponse(
-         ContextId.NOTES,
-         request.sourceContext,
-         request.id,
-         { notes },
-       );
-     } catch (error) {
-       return MessageFactory.createErrorResponse(
-         ContextId.NOTES,
-         request.sourceContext,
-         request.id,
-         'SEARCH_ERROR',
-         `Error searching notes: ${error instanceof Error ? error.message : String(error)}`,
-       );
-     }
-   }
-   
-   // Update handleNoteSemanticSearch method
-   private async handleNoteSemanticSearch(request: DataRequestMessage) {
-     try {
-       // Validate parameters using schema
-       const validation = validateRequestParams<NotesSemanticSearchParams>(request);
-       
-       if (!validation.success) {
-         return MessageFactory.createErrorResponse(
-           ContextId.NOTES,
-           request.sourceContext,
-           request.id,
-           'VALIDATION_ERROR',
-           validation.errorMessage || 'Invalid parameters',
-         );
-       }
-       
-       // Now we have type-safe access to the validated parameters
-       const { text, limit, tags } = validation.data;
-       
-       // Use the searchWithEmbedding method
-       const notes = await this.noteContext.searchWithEmbedding(text, limit, tags);
-       
-       return MessageFactory.createSuccessResponse(
-         ContextId.NOTES,
-         request.sourceContext,
-         request.id,
-         { notes },
-       );
-     } catch (error) {
-       return MessageFactory.createErrorResponse(
-         ContextId.NOTES,
-         request.sourceContext,
-         request.id,
-         'SEARCH_ERROR',
-         `Error in semantic search: ${error instanceof Error ? error.message : String(error)}`,
-       );
-     }
-   }
+   // Similar updates for other handlers...
    ```
 
 2. **Update NoteNotifier as an example**:
@@ -498,11 +425,8 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    // in src/contexts/notes/messaging/noteNotifier.ts
    
    import { 
-     NoteCreatedPayload, 
-     NoteUpdatedPayload,
-     NoteDeletedPayload
-   } from '@/protocol/messaging/messageSchemas';
-   import { validateRequestParams, validateNotificationPayload } from '@/protocol/messaging/messageSchemas';
+     type NoteCreatedPayload,
+   } from '@/protocol/messaging/schemaRegistry';
    
    // Update notifyNoteCreated method
    async notifyNoteCreated(note: Note): Promise<void> {
@@ -529,17 +453,14 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
 
 1. **Unit Tests for Schemas**:
    ```typescript
-   // tests/protocol/messaging/messageSchemas.test.ts
+   // tests/contexts/notes/schemas/messageSchemas.test.ts
    
    import { 
      NoteByIdParamsSchema, 
      NotesSearchParamsSchema,
-     validateRequestParams,
-     validateNotificationPayload,
-   } from '@/protocol/messaging/messageSchemas';
-   import { DataRequestType, MessageFactory } from '@/protocol/messaging';
+   } from '@/contexts/notes/schemas/messageSchemas';
    
-   describe('Message Schemas', () => {
+   describe('Note Message Schemas', () => {
      describe('NoteByIdParamsSchema', () => {
        test('should validate valid note ID parameters', () => {
          const result = NoteByIdParamsSchema.safeParse({ id: 'test-note-id' });
@@ -558,36 +479,6 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
      });
      
      // Tests for other schemas...
-     
-     describe('validateRequestParams', () => {
-       test('should validate valid parameters', () => {
-         const message = MessageFactory.createDataRequest(
-           'test-source',
-           'notes',
-           DataRequestType.NOTE_BY_ID,
-           { id: 'test-note-id' },
-         );
-         
-         const result = validateRequestParams(message);
-         expect(result.success).toBe(true);
-         expect(result.data?.id).toBe('test-note-id');
-       });
-       
-       test('should reject invalid parameters', () => {
-         const message = MessageFactory.createDataRequest(
-           'test-source',
-           'notes',
-           DataRequestType.NOTE_BY_ID,
-           { id: '' }, // Invalid: empty ID
-         );
-         
-         const result = validateRequestParams(message);
-         expect(result.success).toBe(false);
-         expect(result.errorMessage).toContain('Note ID is required');
-       });
-     });
-     
-     // Tests for validateNotificationPayload...
    });
    ```
 
@@ -597,6 +488,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    
    import { NoteMessageHandler } from '@/contexts/notes/messaging/noteMessageHandler';
    import { DataRequestType, MessageFactory } from '@/protocol/messaging';
+   import { ContextId } from '@/protocol/core/contextOrchestrator';
    import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
    
    describe('NoteMessageHandler', () => {
@@ -621,7 +513,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
          // Create a test request
          const request = MessageFactory.createDataRequest(
            'test-source',
-           'notes',
+           ContextId.NOTES,
            DataRequestType.NOTE_BY_ID,
            { id: 'test-note-id' },
          );
@@ -638,7 +530,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
          // Create a test request with invalid parameters
          const request = MessageFactory.createDataRequest(
            'test-source',
-           'notes',
+           ContextId.NOTES,
            DataRequestType.NOTE_BY_ID,
            {}, // Missing id
          );
@@ -649,6 +541,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
          // Verify response
          expect(response?.status).toBe('error');
          expect(response?.error?.code).toBe('VALIDATION_ERROR');
+         expect(response?.error?.message).toContain('Note ID is required');
        });
      });
      
@@ -656,20 +549,47 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    });
    ```
 
+3. **Tests for Schema Registry**:
+   ```typescript
+   // tests/protocol/messaging/schemaRegistry.test.ts
+   
+   import { MessageSchemaRegistry } from '@/protocol/messaging/schemaRegistry';
+   import { DataRequestType, NotificationType } from '@/protocol/messaging/messageTypes';
+   
+   describe('MessageSchemaRegistry', () => {
+     test('should have schema for each DataRequestType', () => {
+       // Check that all request types have a schema
+       Object.values(DataRequestType).forEach(type => {
+         expect(MessageSchemaRegistry[type]).toBeDefined();
+       });
+     });
+     
+     test('should have schema for each NotificationType', () => {
+       // Check that all notification types have a schema
+       Object.values(NotificationType).forEach(type => {
+         expect(MessageSchemaRegistry[type]).toBeDefined();
+       });
+     });
+   });
+   ```
+
 ### Phase 6: Implementation Strategy
 
 1. **Incremental Rollout**:
-   - Start with a single context (e.g., Notes) to validate the approach
-   - Gradually roll out to other contexts after confirming success
-   - Update unit tests alongside each context update
+   - Start with the schema registry structure
+   - Implement one context (Notes) first as a proof of concept
+   - Gradually expand to other contexts
+   - Focus on high-value/high-risk message types first
 
 2. **Backward Compatibility**:
-   - Ensure old message formats continue to work by adding fallback validation
-   - Add deprecation warnings for non-schema-validated message creation
+   - Keep original message handlers working with manual validation
+   - Add new validated versions with clear deprecation notices
+   - Set a timeline for removing the old versions
 
 3. **Documentation**:
-   - Add JSDoc comments to all schemas and validation functions
-   - Create examples for message handlers to reference
+   - Add JSDoc comments to all schemas
+   - Create examples in README files within each context
+   - Document the validation process for new developers
 
 ## Benefits
 
@@ -680,7 +600,7 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
 
 2. **Consistent Validation**:
    - Standardized validation rules across all contexts
-   - Centralized schema definitions for message parameters
+   - Domain-driven schema organization
    - Clear validation error messages
 
 3. **Reduced Boilerplate**:
@@ -693,6 +613,11 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
    - Clear type definitions for message structures
    - Documented parameter constraints
 
+5. **Domain Ownership**:
+   - Each context team owns their schemas
+   - Changes can be made independently
+   - Reduced merge conflicts
+
 ## Risks and Mitigations
 
 1. **Risk**: Breaking existing message handling
@@ -701,16 +626,16 @@ After analyzing the codebase, I've identified inconsistencies in how messages be
 2. **Risk**: Performance impact of validation
    **Mitigation**: Profile validation overhead and optimize if necessary
 
-3. **Risk**: Excessive boilerplate in schema definitions
-   **Mitigation**: Use schema composition and reuse common schemas
+3. **Risk**: Discovery challenges with distributed schemas
+   **Mitigation**: Central registry with re-exports for easy imports
 
-4. **Risk**: Learning curve for developers
-   **Mitigation**: Provide clear examples and documentation
+4. **Risk**: Inconsistent schema design across contexts
+   **Mitigation**: Provide schema templates and documentation
 
 ## Implementation Timeline
 
-1. **Week 1**: Define schemas and validation utilities
-2. **Week 2**: Implement Note context validation
+1. **Week 1**: Create schema structure and registry
+2. **Week 2**: Implement Notes context validation as proof of concept
 3. **Week 3**: Implement Profile context validation
 4. **Week 4**: Roll out to remaining contexts
-5. **Week 5**: Documentation and final testing
+5. **Week 5**: Documentation, testing, and cleanup

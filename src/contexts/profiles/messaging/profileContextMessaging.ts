@@ -5,7 +5,7 @@
  * wrapping the original context and adding notification capabilities.
  */
 
-import { ProfileContext } from '@/contexts/profiles';
+import type { ProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
