@@ -25,7 +25,7 @@ import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteFormatter } from './formatters';
 import { NoteStorageAdapter } from './noteStorageAdapter';
-import { NoteToolService, type NoteToolContext } from './tools';
+import { type NoteToolContext, NoteToolService } from './tools';
 
 /**
  * Configuration for the MCPNoteContext
