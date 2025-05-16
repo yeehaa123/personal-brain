@@ -12,8 +12,38 @@
 import { z } from 'zod';
 
 import type { ResourceDefinition } from '@/contexts/contextInterface';
-import type { ExternalSourceContext } from '@/contexts/externalSources/externalSourceContext';
+// TODO: Remove this import after ExternalSourceContext is fully migrated to MCPExternalSourceContext
+// import type { ExternalSourceContext } from '@/contexts/externalSources/externalSourceContext';
+import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
 import { Logger } from '@/utils/logger';
+
+/**
+ * TODO: Remove this interface after ExternalSourceContext is fully migrated to MCPExternalSourceContext
+ * 
+ * Temporary interface to support both the legacy ExternalSourceContext and the new MCPExternalSourceContext
+ * during the migration period. This defines the minimum functionality needed from any
+ * external source context for the tool service.
+ * 
+ * After migration is complete:
+ * 1. Remove this interface
+ * 2. Update all methods to use MCPExternalSourceContext directly
+ * 3. Remove the ExternalSourceContext import
+ */
+
+// We use `any` here temporarily during migration since both contexts return slightly different types
+// This will be replaced with proper types after migration is complete
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface ExternalSourceToolContext {
+  search(query: string, options?: any): Promise<ExternalSourceResult[]>;
+  semanticSearch(query: string, limit?: number): Promise<ExternalSourceResult[]>;
+  getEnabledSources(): any[];
+  updateEnabledSources(sourceNames: string[]): Promise<void> | any; // TODO: Remove 'any' after migration
+  checkSourcesAvailability(): Promise<Record<string, boolean>>;
+  // TODO: Remove getStorage after ExternalSourceContext is fully migrated to MCPExternalSourceContext
+  // This is a temporary compatibility layer during migration
+  getStorage?(): any;
+}
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Configuration options for ExternalSourceToolService
@@ -131,10 +161,10 @@ export class ExternalSourceToolService {
   /**
    * Get the MCP tools for the external source context
    * 
-   * @param context The external source context
+   * @param context The external source context (during migration, supports both ExternalSourceContext and MCPExternalSourceContext)
    * @returns Array of MCP tools
    */
-  getTools(context: ExternalSourceContext): ResourceDefinition[] {
+  getTools(context: ExternalSourceToolContext): ResourceDefinition[] {
     return [
       // search_external_sources
       this.searchExternalSourcesTool(context),
@@ -181,7 +211,7 @@ export class ExternalSourceToolService {
   /**
    * Create the search_external_sources tool
    */
-  private searchExternalSourcesTool(context: ExternalSourceContext): ResourceDefinition {
+  private searchExternalSourcesTool(context: ExternalSourceToolContext): ResourceDefinition {
     return {
       protocol: 'external',
       path: 'search',
@@ -229,7 +259,7 @@ export class ExternalSourceToolService {
   /**
    * Create the toggle_external_source tool
    */
-  private toggleExternalSourceTool(context: ExternalSourceContext): ResourceDefinition {
+  private toggleExternalSourceTool(context: ExternalSourceToolContext): ResourceDefinition {
     return {
       protocol: 'external',
       path: 'toggle_source',
@@ -238,10 +268,18 @@ export class ExternalSourceToolService {
           const sourceName = params['sourceName'] as string;
           const enabled = params['enabled'] as boolean;
           
-          // Get the storage adapter
-          const adapter = context.getStorage();
-          const sources = Array.from(adapter.getEnabledSources());
-          const sourceNames = sources.map(s => s.name);
+          // TODO: Remove this compatibility code after migration is complete
+          // For MCPExternalSourceContext, use getEnabledSources() directly  
+          // For ExternalSourceContext, use getStorage().getEnabledSources()
+          let sourceNames: string[] = [];
+          if (context.getStorage) {
+            const adapter = context.getStorage();
+            const sources = adapter.getEnabledSources() as { name: string }[];
+            sourceNames = sources.map((s: { name: string }) => s.name);
+          } else {
+            const sources = context.getEnabledSources();
+            sourceNames = sources.map((s: { name: string }) => s.name);
+          }
           
           // Update the enabled sources list based on the toggle
           if (enabled && !sourceNames.includes(sourceName)) {
@@ -283,7 +321,7 @@ export class ExternalSourceToolService {
   /**
    * Create the get_external_sources_status tool
    */
-  private getExternalSourcesStatusTool(context: ExternalSourceContext): ResourceDefinition {
+  private getExternalSourcesStatusTool(context: ExternalSourceToolContext): ResourceDefinition {
     return {
       protocol: 'external',
       path: 'sources_status',

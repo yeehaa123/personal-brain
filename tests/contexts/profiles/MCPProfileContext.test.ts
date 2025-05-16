@@ -8,9 +8,9 @@ import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import type { LinkedInProfileMigrationAdapter } from '@/services/profiles/linkedInProfileMigrationAdapter';
+import { Logger } from '@/utils/logger';
 import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
 import { MockProfileNoteAdapter } from '@test/__mocks__/contexts/profiles/adapters/profileNoteAdapter';
-import { MockLogger } from '@test/__mocks__/core/logger';
 import { MockLinkedInProfileMigrationAdapter } from '@test/__mocks__/services/profiles/linkedInProfileMigrationAdapter';
 
 describe('MCPProfileContext', () => {
@@ -36,7 +36,7 @@ describe('MCPProfileContext', () => {
     },
     summary: 'Experienced developer',
     industryName: 'Technology',
-  } as LinkedInProfile;
+  } as unknown as LinkedInProfile;
 
   const mockNote: Note = {
     id: MockProfileNoteAdapter.PROFILE_NOTE_ID,
@@ -46,13 +46,17 @@ describe('MCPProfileContext', () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     source: 'profile',
+    embedding: null,
+    conversationMetadata: null,
+    confidence: null,
+    verified: null,
   };
 
   // Test dependencies
   let mockNoteContext: MockNoteContext;
   let mockProfileNoteAdapter: MockProfileNoteAdapter;
   let mockProfileMigrationAdapter: MockLinkedInProfileMigrationAdapter;
-  let mockLogger: MockLogger;
+  let logger: Logger;
 
   // Helper to create testable context
   const createTestableProfileContext = (
@@ -63,7 +67,7 @@ describe('MCPProfileContext', () => {
       noteContext: mockNoteContext as unknown as NoteContext,
       profileNoteAdapter: mockProfileNoteAdapter as unknown as ProfileNoteAdapter,
       profileMigrationAdapter: mockProfileMigrationAdapter as unknown as LinkedInProfileMigrationAdapter,
-      logger: mockLogger,
+      logger,
       // We don't have mocks for these, so we'll stub them if needed
       profileFormatter: undefined,
       tagExtractor: undefined,
@@ -78,7 +82,7 @@ describe('MCPProfileContext', () => {
         noteContext: mockNoteContext,
         profileNoteAdapter: mockProfileNoteAdapter,
         profileMigrationAdapter: mockProfileMigrationAdapter,
-        logger: mockLogger,
+        logger,
       },
     };
   };
@@ -89,18 +93,17 @@ describe('MCPProfileContext', () => {
     MockNoteContext.resetInstance();
     MockProfileNoteAdapter.resetInstance();
     MockLinkedInProfileMigrationAdapter.resetInstance();
-    MockLogger.resetInstance();
 
     // Create fresh instances
     mockNoteContext = MockNoteContext.createFresh();
     mockProfileNoteAdapter = MockProfileNoteAdapter.createFresh();
     mockProfileMigrationAdapter = MockLinkedInProfileMigrationAdapter.createFresh();
-    mockLogger = MockLogger.createFresh();
+    logger = Logger.getInstance();
 
     // Mock the logger methods properly for Bun
-    spyOn(mockLogger, 'error').mockImplementation(() => {});
-    spyOn(mockLogger, 'debug').mockImplementation(() => {});
-    spyOn(mockLogger, 'warn').mockImplementation(() => {});
+    spyOn(logger, 'error').mockImplementation(() => {});
+    spyOn(logger, 'debug').mockImplementation(() => {});
+    spyOn(logger, 'warn').mockImplementation(() => {});
   });
 
   describe('System Integration', () => {
@@ -449,8 +452,8 @@ describe('MCPProfileContext', () => {
       expect(status.name).toBe('ProfileBrain');
       expect(status.version).toBe('2.0.0');
       expect(status.ready).toBe(true);
-      expect(status.resourceCount).toBe(1);
-      expect(status.toolCount).toBe(2);
+      expect(status['resourceCount']).toBe(1);
+      expect(status['toolCount']).toBe(2);
     });
 
     test('reports context capabilities', async () => {

@@ -245,6 +245,28 @@ The implementation follows these key principles:
 - Fixed mock implementation issues for Bun test runner compatibility
 - All tests passing with full coverage
 
+#### 5. Implemented MCPExternalSourceContext Using New Pattern (2025-05-16)
+
+- Created `/src/contexts/externalSources/MCPExternalSourceContext.ts` implementing the new MCPContext interface:
+  - Direct implementation without BaseContext inheritance
+  - Uses composition pattern with `createContextFunctionality()`
+  - Integrates external sources (Wikipedia, NewsAPI) with semantic search
+  - Implements in-memory state management for enabled sources
+  - Added compatibility with ExternalSourceToolContext interface for migration
+- Key implementation features:
+  - In-memory `updateEnabledSources()` that doesn't require persistence
+  - Semantic search using EmbeddingService's calculateSimilarity method
+  - MCP resource and tool integration through ExternalSourceToolService
+  - Proper error handling with fallback to regular search
+- Added comprehensive tests in `/tests/contexts/externalSources/MCPExternalSourceContext.test.ts`:
+  - Tests singleton pattern implementation
+  - Tests search operations (basic and semantic)
+  - Tests source management (get, update, check availability)
+  - Tests MCP resources and tools integration
+  - Tests verify in-memory state management works correctly
+- Updated mock implementations to support test requirements
+- All tests passing with complete type coverage
+
 ## Implementation Strategy
 
 To complete the implementation in a controlled manner, we will follow this phased approach:
@@ -437,10 +459,11 @@ Our refactoring will follow these guiding principles:
 4. ✅ Implement MCPConversationContext using the same pattern
 5. ✅ Test MCPConversationContext against existing ConversationContext
 6. ✅ Implement MCPProfileContext following simplified pattern
-7. Continue with remaining contexts (ExternalSourceContext, WebsiteContext)
-8. Update protocol layer to work with both existing and new context implementation
-9. Plan migration path for existing code to use new context implementations
-10. Update developer guidelines with new patterns and examples
+7. ✅ Implement MCPExternalSourceContext using new pattern (completed 2025-05-16)
+8. Continue with remaining contexts (WebsiteContext)
+9. Update protocol layer to work with both existing and new context implementation
+10. Plan migration path for existing code to use new context implementations
+11. Update developer guidelines with new patterns and examples
 
 ## Conclusion
 
