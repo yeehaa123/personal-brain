@@ -12,8 +12,36 @@
 import { z } from 'zod';
 
 import type { ResourceDefinition } from '@/contexts/contextInterface';
-import type { NoteContext } from '@/contexts/notes/noteContext';
+// TODO: Remove this import after NoteContext is fully migrated to MCPNoteContext
+// import type { NoteContext } from '@/contexts/notes/noteContext';
 import { Logger } from '@/utils/logger';
+
+/**
+ * TODO: Remove this interface after NoteContext is fully migrated to MCPNoteContext
+ * 
+ * Temporary interface to support both the legacy NoteContext and the new MCPNoteContext
+ * during the migration period. This defines the minimum functionality needed from any
+ * note context for the tool service.
+ * 
+ * After migration is complete:
+ * 1. Remove this interface
+ * 2. Update all methods to use MCPNoteContext directly
+ * 3. Remove the NoteContext import
+ */
+
+// We use `any` here temporarily during migration since both contexts return slightly different types
+// This will be replaced with proper types after migration is complete
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface NoteToolContext {
+  createNote(note: { title: string; content: string; tags?: string[] | null }): Promise<string>;
+  getNoteById(id: string): Promise<any | undefined>;
+  updateNote(id: string, updates: Record<string, unknown>): Promise<boolean>;
+  deleteNote(id: string): Promise<boolean>;
+  searchNotes(options: { query?: string; tags?: string[]; limit?: number; offset?: number }): Promise<any[]>;
+  searchWithEmbedding(text: string, limit?: number, tags?: string[]): Promise<any[]>;
+  generateEmbeddingsForAllNotes(): Promise<{ updated: number; failed: number }>;
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Configuration options for NoteToolService
@@ -131,10 +159,10 @@ export class NoteToolService {
   /**
    * Get the MCP tools for the note context
    * 
-   * @param context The note context
+   * @param context The note context (supports both NoteContext and MCPNoteContext)
    * @returns Array of MCP tools
    */
-  getTools(context: NoteContext): ResourceDefinition[] {
+  getTools(context: NoteToolContext): ResourceDefinition[] {
     return [
       // create_note
       this.createNoteTool(context),
@@ -221,7 +249,7 @@ export class NoteToolService {
   /**
    * Create the create_note tool
    */
-  private createNoteTool(context: NoteContext): ResourceDefinition {
+  private createNoteTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'create_note',
@@ -258,7 +286,7 @@ export class NoteToolService {
   /**
    * Create the generate_embeddings tool
    */
-  private generateEmbeddingsTool(context: NoteContext): ResourceDefinition {
+  private generateEmbeddingsTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'generate_embeddings',
@@ -286,7 +314,7 @@ export class NoteToolService {
   /**
    * Create the search_with_embedding tool
    */
-  private searchWithEmbeddingTool(context: NoteContext): ResourceDefinition {
+  private searchWithEmbeddingTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'search_with_embedding',
@@ -328,7 +356,7 @@ export class NoteToolService {
   /**
    * Create the search_notes tool
    */
-  private searchNotesTool(context: NoteContext): ResourceDefinition {
+  private searchNotesTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'search_notes',
@@ -372,7 +400,7 @@ export class NoteToolService {
   /**
    * Create the get_note tool
    */
-  private getNoteTool(context: NoteContext): ResourceDefinition {
+  private getNoteTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'get_note',
@@ -417,7 +445,7 @@ export class NoteToolService {
   /**
    * Create the update_note tool
    */
-  private updateNoteTool(context: NoteContext): ResourceDefinition {
+  private updateNoteTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'update_note',
@@ -466,7 +494,7 @@ export class NoteToolService {
   /**
    * Create the delete_note tool
    */
-  private deleteNoteTool(context: NoteContext): ResourceDefinition {
+  private deleteNoteTool(context: NoteToolContext): ResourceDefinition {
     return {
       protocol: 'notes',
       path: 'delete_note',

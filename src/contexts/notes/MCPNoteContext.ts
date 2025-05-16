@@ -8,6 +8,8 @@
  * - getInstance(): Returns the singleton instance 
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
+ * 
+ * Also implements NoteToolContext for compatibility with NoteToolService during migration
  */
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -23,7 +25,7 @@ import { isNonEmptyString } from '@/utils/safeAccessUtils';
 
 import { NoteFormatter } from './formatters';
 import { NoteStorageAdapter } from './noteStorageAdapter';
-import { NoteToolService } from './tools';
+import { NoteToolService, type NoteToolContext } from './tools';
 
 /**
  * Configuration for the MCPNoteContext
@@ -72,7 +74,7 @@ export interface MCPNoteContextDependencies {
  * Uses composition instead of inheritance by delegating to the context
  * functionality created by createContextFunctionality.
  */
-export class MCPNoteContext implements MCPContext {
+export class MCPNoteContext implements MCPContext, NoteToolContext {
   /** Logger instance */
   private logger: Logger;
 
@@ -337,9 +339,8 @@ export class MCPNoteContext implements MCPContext {
     const toolService = NoteToolService.getInstance();
 
     // Register note tools using the tool service
-    // TODO: Update NoteToolService to work with MCPNoteContext directly
-    // This is a temporary solution during migration phase
-    // @ts-expect-error Migration compatibility with existing NoteToolService
+    // The NoteToolService now uses NoteToolContext interface that works with both
+    // NoteContext and MCPNoteContext during the migration phase
     const tools = toolService.getTools(this);
     
     // Store the tools in our context implementation
