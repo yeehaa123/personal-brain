@@ -215,6 +215,36 @@ The implementation follows these key principles:
 - **Continuous Verification**: TypeScript and ESLint checks pass
 - **Behavior Over Implementation**: Tests focus on context behavior, not implementation details
 
+#### 3. Implemented MCPConversationContext Using New Pattern (2025-05-16)
+
+- Created `/src/contexts/conversations/MCPConversationContext.ts` implementing the new MCPContext interface:
+  - Direct implementation without BaseContext inheritance
+  - Delegates to existing storage and services
+  - Implements simplified MCP resource and tool registration
+  - Maintains all conversation functionality (create, add messages, search, etc.)
+- Added comprehensive tests in `/tests/contexts/conversations/MCPConversationContext.test.ts`:
+  - Tests organized by functionality: System Status, Conversation Operations, Message Management
+  - Behavior-focused testing approach
+  - Complete coverage of conversation operations
+  - Tests verify MCP integration works correctly
+- Fixed linting and type issues with proper interface definitions
+- All tests passing with complete type safety
+
+#### 4. Implemented MCPProfileContext Using New Pattern (2025-05-16)
+
+- Created `/src/contexts/profiles/MCPProfileContext.ts` implementing the new MCPContext interface:
+  - Direct implementation without BaseContext inheritance  
+  - Uses ProfileNoteAdapter for storage delegation
+  - Integrates with ProfileFormatter for formatting operations
+  - Maintains profile CRUD operations and LinkedIn migration functionality
+- Added comprehensive tests in `/tests/contexts/profiles/MCPProfileContext.test.ts`:
+  - Uses standardized mocks from `__mocks__` directory
+  - Tests profile operations, LinkedIn migration, and note interoperability
+  - Covers MCP resource and tool functionality
+  - Follows behavior-focused testing patterns
+- Fixed mock implementation issues for Bun test runner compatibility
+- All tests passing with full coverage
+
 ## Implementation Strategy
 
 To complete the implementation in a controlled manner, we will follow this phased approach:
@@ -404,12 +434,13 @@ Our refactoring will follow these guiding principles:
 1. ✅ Implement MCPNoteContext using the new pattern
 2. ✅ Test against existing NoteContext for feature parity
 3. ✅ Verify protocol system integration works
-4. Implement MCPConversationContext using the same pattern
-5. Test MCPConversationContext against existing ConversationContext
-6. Continue with remaining contexts (ProfileContext, ExternalSourceContext, WebsiteContext)
-7. Update protocol layer to work with both existing and new context implementation
-8. Plan migration path for existing code to use new context implementations
-9. Update developer guidelines with new patterns and examples
+4. ✅ Implement MCPConversationContext using the same pattern
+5. ✅ Test MCPConversationContext against existing ConversationContext
+6. ✅ Implement MCPProfileContext following simplified pattern
+7. Continue with remaining contexts (ExternalSourceContext, WebsiteContext)
+8. Update protocol layer to work with both existing and new context implementation
+9. Plan migration path for existing code to use new context implementations
+10. Update developer guidelines with new patterns and examples
 
 ## Conclusion
 
