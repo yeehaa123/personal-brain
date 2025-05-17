@@ -3,7 +3,7 @@ import { mock } from 'bun:test';
 // Import direct types we need
 import type { WebsiteIdentityData } from '@/contexts/website/schemas/websiteIdentitySchema';
 import type { LandingPageGenerationService, LandingPageQualityAssessmentOptions } from '@/contexts/website/services/landingPageGenerationService';
-import { SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
+import { type LandingPageGenerationOptions, SectionGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { LandingPageData } from '@website/schemas';
 import type { AssessedSection } from '@website/schemas/sectionQualitySchema';
@@ -91,7 +91,11 @@ export class MockLandingPageGenerationService {
   };
 
   // Mock methods
-  public generateLandingPageData = mock(async (): Promise<{
+  public generateLandingPageData = mock(async (
+    _identity: WebsiteIdentityData | null,
+    _onProgress?: (step: string, index: number) => void,
+    _options?: LandingPageGenerationOptions,
+  ): Promise<{
     landingPage: LandingPageData;
     generationStatus: Record<string, { status: string; data?: unknown; error?: string }>;
   }> => {

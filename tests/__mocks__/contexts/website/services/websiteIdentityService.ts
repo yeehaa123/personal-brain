@@ -1,11 +1,10 @@
 import type { 
   WebsiteIdentityData,
 } from '@/contexts/website/schemas/websiteIdentitySchema';
-import { 
-  IdentityGenerationError,
-  type WebsiteIdentityService,
-  type WebsiteIdentityServiceConfig,
-  type WebsiteIdentityServiceDependencies,
+import type { 
+  WebsiteIdentityService,
+  WebsiteIdentityServiceConfig,
+  WebsiteIdentityServiceDependencies,
 } from '@/contexts/website/services/websiteIdentityService';
 import type { Profile } from '@/models/profile';
 import type { BrainProtocol } from '@/protocol/brainProtocol';
@@ -69,24 +68,64 @@ export class MockWebsiteIdentityService {
   }
   
   // Mock methods
-  public async getIdentity(forceRegenerate = false): Promise<WebsiteIdentityData> {
+  // Service method that returns a result object
+  public async getWebsiteIdentity(forceRegenerate = false): Promise<{
+    success: boolean;
+    message: string;
+    data?: WebsiteIdentityData;
+  }> {
     if (!this.shouldSucceed) {
-      throw new IdentityGenerationError('Mock identity generation failed');
+      return {
+        success: false,
+        message: 'Mock identity generation failed',
+      };
     }
     
     // If not forcing regeneration and we have existing identity data
     if (!forceRegenerate) {
       // Return a copy of the identity data
-      return { ...this.identityData };
+      return {
+        success: true,
+        message: 'Identity retrieved',
+        data: { ...this.identityData },
+      };
     }
     
     // Otherwise generate new identity
-    return this.generateIdentity();
+    return this.generateWebsiteIdentity();
   }
   
+  // New simplified getIdentity method
+  public async getIdentity(_forceRegenerate = false): Promise<WebsiteIdentityData> {
+    if (!this.shouldSucceed) {
+      throw new Error('Mock identity retrieval failed');
+    }
+    
+    // Return a copy of the identity data
+    return { ...this.identityData };
+  }
+  
+  // New simplified generateIdentity method  
   public async generateIdentity(): Promise<WebsiteIdentityData> {
     if (!this.shouldSucceed) {
-      throw new IdentityGenerationError('Mock identity generation failed');
+      throw new Error('Mock identity generation failed');
+    }
+    
+    // Generate and return new identity
+    return { ...this.identityData };
+  }
+  
+  // Service method that returns a result object
+  public async generateWebsiteIdentity(): Promise<{
+    success: boolean;
+    message: string;
+    data?: WebsiteIdentityData;
+  }> {
+    if (!this.shouldSucceed) {
+      return {
+        success: false,
+        message: 'Mock identity generation failed',
+      };
     }
     
     try {
@@ -94,11 +133,16 @@ export class MockWebsiteIdentityService {
       await this.getProfileData();
       
       // If successful, return identity data
-      return { ...this.identityData };
+      return {
+        success: true,
+        message: 'Identity generated',
+        data: { ...this.identityData },
+      };
     } catch (error) {
-      throw new IdentityGenerationError(
-        `Identity generation failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      return {
+        success: false,
+        message: `Identity generation failed: ${error instanceof Error ? error.message : String(error)}`,
+      };
     }
   }
   

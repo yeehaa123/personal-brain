@@ -56,6 +56,16 @@ export class MockLocalDevDeploymentManager implements WebsiteDeploymentManager {
   promoteToLive = mock((): Promise<PromotionResult> => {
     return Promise.resolve(this.promotionResult);
   });
+  
+  // Optional startServers method
+  startServers = mock((): Promise<boolean> => {
+    return Promise.resolve(true);
+  });
+  
+  // Optional stopServers method
+  stopServers = mock((): Promise<void> => {
+    return Promise.resolve();
+  });
 
 
   /**

@@ -1230,4 +1230,32 @@ export class WebsiteContext extends BaseContext<
     }
   }
 
+  /**
+   * Promote website to production (compatibility method for migration)
+   * TODO: Remove after migration to MCPWebsiteContext is complete
+   */
+  async promoteWebsite(): Promise<{ success: boolean; message: string; url?: string }> {
+    return this.handleWebsitePromote();
+  }
+
+  /**
+   * Get website status (compatibility method for migration)
+   * TODO: Remove after migration to MCPWebsiteContext is complete
+   */
+  async getWebsiteStatus(environment: string = 'preview'): Promise<{ 
+    status: string; 
+    message: string; 
+    url?: string;
+    lastModified?: Date;
+    fileCount?: number;
+  }> {
+    const result = await this.handleWebsiteStatus(environment);
+    return {
+      status: result.data?.serverStatus || 'Unknown',
+      message: result.message,
+      url: result.data?.url,
+      fileCount: result.data?.fileCount,
+    };
+  }
+
 }

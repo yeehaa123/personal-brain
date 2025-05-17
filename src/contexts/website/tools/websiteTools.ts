@@ -10,7 +10,7 @@
 
 import type { z } from 'zod';
 
-import type { WebsiteContext } from '@/contexts';
+// import type { WebsiteContext } from '@/contexts'; // TODO: Remove after migration
 import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { Logger } from '@/utils/logger';
 import { 
@@ -25,6 +25,70 @@ import {
   GenerateWebsiteIdentityToolSchema,
   GetWebsiteIdentityToolSchema,
 } from '../schemas/websiteIdentitySchema';
+
+// Temporary interface to support both WebsiteContext and MCPWebsiteContext during migration
+// TODO: Remove after WebsiteContext is fully migrated to MCPWebsiteContext
+export interface WebsiteToolContext {
+  generateLandingPage(options?: Record<string, unknown>): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+    status?: unknown;
+  }>;
+  editLandingPage(useIdentity?: boolean): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+  }>;
+  assessLandingPage(options?: Record<string, unknown>): Promise<{
+    success: boolean;
+    message: string;
+    qualityAssessment?: unknown;
+    regenerationResult?: unknown;
+  }>;
+  regenerateFailedLandingPageSections(): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+    failedSections?: string[];
+  }>;
+  buildWebsite(): Promise<{
+    success: boolean;
+    message: string;
+    output?: string;
+  }>;
+  promoteWebsite(): Promise<{
+    success: boolean;
+    message: string;
+    url?: string;
+  }>;
+  getWebsiteStatus(environment?: string): Promise<{
+    status: string;
+    message: string;
+    url?: string;
+    lastModified?: Date;
+    fileCount?: number;
+  }>;
+  getIdentity(forceRegenerate?: boolean): Promise<unknown>;
+  generateIdentity(): Promise<{
+    success: boolean;
+    message: string;
+    data?: unknown;
+  }>;
+  // TODO: Remove these optional methods after migration is complete
+  // These exist to support the legacy WebsiteContext which uses different method names
+  handleWebsiteBuild?(): Promise<{
+    success: boolean;
+    message: string;
+    path?: string;
+    url?: string;
+  }>;
+  handleWebsitePromote?(): Promise<{
+    success: boolean;
+    message: string;
+    url?: string;
+  }>;
+}
 
 /**
  * Service responsible for providing MCP tools for website management
@@ -80,7 +144,7 @@ export class WebsiteToolService {
    * @param context The website context
    * @returns Array of MCP tools
    */
-  getTools(context: WebsiteContext): ResourceDefinition[] {
+  getTools(context: WebsiteToolContext): ResourceDefinition[] {
     return [
       // generate_landing_page
       this.generateLandingPageTool(context),
@@ -160,7 +224,7 @@ export class WebsiteToolService {
   /**
    * Create the generate_landing_page tool
    */
-  private generateLandingPageTool(context: WebsiteContext): ResourceDefinition {
+  private generateLandingPageTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'generate_landing_page',
@@ -186,7 +250,7 @@ export class WebsiteToolService {
   /**
    * Create the edit_landing_page tool
    */
-  private editLandingPageTool(context: WebsiteContext): ResourceDefinition {
+  private editLandingPageTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'edit_landing_page',
@@ -212,7 +276,7 @@ export class WebsiteToolService {
   /**
    * Create the assess_landing_page tool
    */
-  private assessLandingPageTool(context: WebsiteContext): ResourceDefinition {
+  private assessLandingPageTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'assess_landing_page',
@@ -249,7 +313,7 @@ export class WebsiteToolService {
   /**
    * Create the build_website tool
    */
-  private buildWebsiteTool(context: WebsiteContext): ResourceDefinition {
+  private buildWebsiteTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'build_website',
@@ -272,7 +336,8 @@ export class WebsiteToolService {
         }
 
         // Build and deploy website
-        const result = await context.handleWebsiteBuild();
+        // TODO: Remove conditional after WebsiteContext migration is complete
+        const result = await (context.handleWebsiteBuild ? context.handleWebsiteBuild() : context.buildWebsite());
 
         return {
           success: result.success,
@@ -288,14 +353,15 @@ export class WebsiteToolService {
   /**
    * Create the promote_website tool
    */
-  private promoteWebsiteTool(context: WebsiteContext): ResourceDefinition {
+  private promoteWebsiteTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'promote_website',
       name: 'promote_website',
       description: 'Promotes the preview website to production',
       handler: async (_params: Record<string, unknown>) => {
-        const result = await context.handleWebsitePromote();
+        // TODO: Remove conditional after WebsiteContext migration is complete
+        const result = await (context.handleWebsitePromote ? context.handleWebsitePromote() : context.promoteWebsite());
 
         return {
           success: result.success,
@@ -309,7 +375,7 @@ export class WebsiteToolService {
   /**
    * Create the get_website_status tool
    */
-  private getWebsiteStatusTool(context: WebsiteContext): ResourceDefinition {
+  private getWebsiteStatusTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'get_website_status',
@@ -318,7 +384,8 @@ export class WebsiteToolService {
       handler: async (params: Record<string, unknown>) => {
         const environment = params['environment'] ? String(params['environment']) : 'preview';
         
-        const result = await context.handleWebsiteStatus(environment);
+        // TODO: Remove conditional after WebsiteContext migration is complete
+        const result = await context.getWebsiteStatus(environment);
 
         if (!result.success) {
           throw new Error(`Failed to get website status: ${result.message}`);
@@ -336,7 +403,7 @@ export class WebsiteToolService {
   /**
    * Create the regenerate_failed_sections tool
    */
-  private regenerateFailedSectionsTool(context: WebsiteContext): ResourceDefinition {
+  private regenerateFailedSectionsTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'regenerate_failed_sections',
@@ -363,7 +430,7 @@ export class WebsiteToolService {
   /**
    * Create the get_identity tool
    */
-  private getWebsiteIdentityTool(context: WebsiteContext): ResourceDefinition {
+  private getWebsiteIdentityTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'get_identity',
@@ -389,7 +456,7 @@ export class WebsiteToolService {
   /**
    * Create the generate_identity tool
    */
-  private generateWebsiteIdentityTool(context: WebsiteContext): ResourceDefinition {
+  private generateWebsiteIdentityTool(context: WebsiteToolContext): ResourceDefinition {
     return {
       protocol: 'website',
       path: 'generate_identity',
