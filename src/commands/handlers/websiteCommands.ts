@@ -1,4 +1,4 @@
-import type { WebsiteContext } from '@/contexts/website';
+import type { MCPWebsiteContext } from '@/contexts';
 import type { IBrainProtocol } from '@/protocol/types';
 import { CLIInterface } from '@/utils/cliInterface';
 import { RendererRegistry } from '@/utils/registry/rendererRegistry';
@@ -11,7 +11,7 @@ import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
  */
 export class WebsiteCommandHandler extends BaseCommandHandler {
   private static instance: WebsiteCommandHandler | null = null;
-  private websiteContext: WebsiteContext | null = null;
+  private websiteContext: MCPWebsiteContext | null = null;
   
   /**
    * Helper method to get domain for environment (removed - now handled by WebsiteContext)
@@ -285,7 +285,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         const result = await progressTracker.withProgress(
           'Generating Landing Page',
           steps,
-          async (updateStep: (index: number) => void) => {
+          async (/*updateStep: (index: number) => void*/) => {
             // If the context is not available, handle gracefully
             if (!this.websiteContext) {
               return {
@@ -295,13 +295,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
             }
             
             // The website context and service will call updateStep with the right indices
+            // TODO: MCPWebsiteContext doesn't support onProgress callback
             return await this.websiteContext.generateLandingPage({
-              onProgress: (_step: string, index: number) => {
-                // Use the index provided by the progress callback
-                if (index >= 0 && index < steps.length) {
-                  updateStep(index);
-                }
-              },
+              // onProgress: (_step: string, index: number) => {
+              //   // Use the index provided by the progress callback
+              //   if (index >= 0 && index < steps.length) {
+              //     updateStep(index);
+              //   }
+              // },
             });
           },
           roomId, // This parameter is only used by Matrix, and ignored by CLI
@@ -356,7 +357,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         
         // Run the actual assessment
         const result = await this.websiteContext.assessLandingPage({ 
-          applyRecommendations: false, 
+          useIdentity: true,
+          regenerateFailingSections: false, 
         });
         
         // Stop the spinner with appropriate status
@@ -370,8 +372,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           type: 'landing-page',
           success: result.success,
           message: result.message,
-          data: result.data,
-          assessments: result.assessments,
+          // Leave data undefined since quality assessment is not LandingPageData type
+          data: undefined,
+          assessments: result.qualityAssessment?.sections,
           action: 'assess',
         };
       } catch (error) {
@@ -406,7 +409,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         
         // Run the actual operation
         const result = await this.websiteContext.assessLandingPage({ 
-          applyRecommendations: true, 
+          useIdentity: true,
+          regenerateFailingSections: true, 
         });
         
         // Stop the spinner with appropriate status
@@ -420,8 +424,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           type: 'landing-page',
           success: result.success,
           message: result.message,
-          data: result.data,
-          assessments: result.assessments,
+          // Only use regenerationResult data since it's the correct type
+          data: result.regenerationResult?.data,
+          assessments: result.qualityAssessment?.sections,
           action: 'apply',
         };
       } catch (error) {
@@ -442,9 +447,10 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     else if (action === 'view' || !action) {
       try {
         // Try to read from existing file first
-        // Use await since getAstroContentService returns a Promise
-        const astroService = await this.websiteContext.getAstroContentService();
-        const landingPageData = await astroService.readLandingPageContent();
+        // TODO: MCPWebsiteContext doesn't expose getAstroContentService method
+        // Can't create AstroContentService directly due to protected constructor
+        // For now, try to get landing page data directly from the context
+        const landingPageData = await this.websiteContext.getLandingPageData();
         
         return {
           type: 'landing-page',
@@ -473,9 +479,10 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         
         // Stop the spinner with appropriate status
         if (result.success) {
-          cli.stopSpinner('success', `Successfully regenerated ${result.results?.succeeded || 0} of ${result.results?.attempted || 0} sections`);
+          // Use a simplified success message since we don't have detailed results
+          cli.stopSpinner('success', result.message || 'Successfully regenerated sections');
         } else {
-          cli.stopSpinner('error', 'Failed to regenerate sections');
+          cli.stopSpinner('error', result.message || 'Failed to regenerate sections');
         }
         
         return {
@@ -483,7 +490,8 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           success: result.success,
           message: result.message,
           data: result.data,
-          results: result.results,
+          // TODO: MCPWebsiteContext doesn't return detailed results anymore
+          // results: result.results,
           action: 'regenerate-failed',
         };
       } catch (error) {
@@ -609,17 +617,23 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         await this.websiteContext.initialize();
       }
       
-      // Delegate to WebsiteContext implementation
-      const result = await this.websiteContext.handleWebsiteStatus(environment);
+      // Use the correct method name
+      const status = await this.websiteContext.getWebsiteStatus(environment);
       
-      // Pass the data through directly
-      const statusData = result.data;
-      
+      // Transform to expected format
       return {
         type: 'website-status',
-        success: result.success,
-        message: result.message,
-        data: statusData,
+        success: status.status !== 'error',
+        message: status.message,
+        data: {
+          environment: environment,
+          buildStatus: status.status,
+          fileCount: status.fileCount || 0,
+          serverStatus: status.status,
+          domain: '',
+          accessStatus: status.message,
+          url: status.url || '',
+        },
       };
     } catch (error) {
       this.logger.error(`Error in website status command: ${error}`);

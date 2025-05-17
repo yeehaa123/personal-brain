@@ -1,5 +1,5 @@
 import { conversationConfig } from '@/config';
-import { NoteContext } from '@/contexts/notes';
+import { MCPNoteContext } from '@/contexts/notes';
 import { BrainProtocol } from '@/protocol/core/brainProtocol';
 import type { IBrainProtocol } from '@/protocol/types';
 
@@ -11,8 +11,8 @@ async function main() {
   try {
     logger.info('Welcome to your Personal Brain!', { context: 'Main' });
 
-    // Initialize the context manager
-    const context = NoteContext.createFresh();
+    // Initialize the context using new MCP implementation
+    const context = MCPNoteContext.createFresh();
 
     // Fetch all notes from the database
     const allNotes = await context.searchNotes({ limit: 100 });

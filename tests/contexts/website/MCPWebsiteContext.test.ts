@@ -159,7 +159,7 @@ describe('MCPWebsiteContext', () => {
       // Arrange
       await context.initialize();
       spyOn(mockLandingPageService, 'generateLandingPageData').mockResolvedValue({
-        landingPage: null,
+        landingPage: null as unknown as LandingPageData,
         generationStatus: { 
           hero: { status: SectionGenerationStatus.Failed, error: 'Generation failed' },
         },

@@ -5,12 +5,12 @@
  * getInstance(), resetInstance(), and createFresh()
  */
 import type {
-  ConversationContext,
-  ExternalSourceContext,
-  NoteContext,
-  WebsiteContext,
+  MCPConversationContext,
+  MCPExternalSourceContext,
+  MCPNoteContext,
+  MCPWebsiteContext,
 } from '@/contexts';
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import type { IContextManager } from '@/protocol/types';
 import {
   MockConversationContext,
@@ -76,24 +76,24 @@ export class MockContextManager implements IContextManager {
     }
   }
 
-  getNoteContext(): NoteContext {
-    return this.noteContext as unknown as NoteContext;
+  getNoteContext(): MCPNoteContext {
+    return this.noteContext as unknown as MCPNoteContext;
   }
 
-  getProfileContext(): ProfileContext {
-    return this.profileContext as unknown as ProfileContext;
+  getProfileContext(): MCPProfileContext {
+    return this.profileContext as unknown as MCPProfileContext;
   }
 
-  getConversationContext(): ConversationContext {
-    return this.conversationContext as unknown as ConversationContext;
+  getConversationContext(): MCPConversationContext {
+    return this.conversationContext as unknown as MCPConversationContext;
   }
 
-  getExternalSourceContext(): ExternalSourceContext {
-    return this.externalSourceContext as unknown as ExternalSourceContext;
+  getExternalSourceContext(): MCPExternalSourceContext {
+    return this.externalSourceContext as unknown as MCPExternalSourceContext;
   }
 
-  getWebsiteContext(): WebsiteContext {
-    return this.websiteContext as unknown as WebsiteContext;
+  getWebsiteContext(): MCPWebsiteContext {
+    return this.websiteContext as unknown as MCPWebsiteContext;
   }
 
   setExternalSourcesEnabled(enabled: boolean): void {

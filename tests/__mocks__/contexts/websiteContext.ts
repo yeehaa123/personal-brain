@@ -17,6 +17,7 @@ import type { WebsiteIdentityService } from '@/contexts/website/services/website
 import type { LandingPageGenerationStatus } from '@/contexts/website/types/landingPageTypes';
 import type { LandingPageData, WebsiteConfig } from '@/contexts/website/websiteStorage';
 import type { ContextMediator } from '@/protocol/messaging/contextMediator';
+import { createTestLandingPageData } from '@test/helpers';
 
 import { MockWebsiteStorageAdapter } from './website/adapters/websiteStorageAdapter';
 
@@ -118,7 +119,7 @@ export class MockWebsiteContext {
     if (this.storage && this.storage.getLandingPageData) {
       return this.storage.getLandingPageData();
     }
-    return Promise.resolve({ title: 'Test Landing Page' } as LandingPageData);
+    return createTestLandingPageData();
   });
   
   saveLandingPageData = mock((data: LandingPageData) => {
@@ -225,39 +226,6 @@ export class MockWebsiteContext {
       },
     } as LandingPageData;
   });
-  
-  getLandingPage = mock(() => Promise.resolve({
-    title: 'Test Page',
-    name: 'Test Name',
-    tagline: 'Test Tagline',
-    description: 'Test description',
-    sectionOrder: ['hero', 'services', 'cta', 'footer'],
-    hero: {
-      headline: 'Test Headline',
-      subheading: 'Test Subheading',
-      ctaText: 'Test CTA',
-      ctaLink: '#contact',
-    },
-    services: {
-      title: 'Test Services',
-      items: [
-        {
-          title: 'Service 1',
-          description: 'Description 1',
-        },
-      ],
-    },
-    cta: {
-      title: 'Test CTA',
-      buttonText: 'Get Started',
-      buttonLink: '#contact',
-      enabled: true,
-    },
-    footer: {
-      copyrightText: 'Test Copyright',
-      enabled: true,
-    },
-  } as LandingPageData));
   
   getLandingPageStatus = mock(() => Promise.resolve({
     status: 'completed',
@@ -402,18 +370,12 @@ export class MockWebsiteContext {
     });
   });
   
-  handleWebsiteStatus = mock(() => Promise.resolve({
-    success: true,
-    message: 'Website status',
-    data: {
-      environment: 'preview',
-      buildStatus: 'built',
-      fileCount: 10,
-      serverStatus: 'running',
-      domain: 'localhost',
-      accessStatus: 'online',
-      url: 'http://localhost:4321',
-    },
+  // Use the new method that the refactored code expects
+  getWebsiteStatus = mock(() => Promise.resolve({
+    status: 'running',
+    message: 'Website is running',
+    url: 'http://localhost:4321',
+    fileCount: 10,
   }));
   
   /**
@@ -511,7 +473,7 @@ export class MockWebsiteContext {
       instance.regenerateWebsiteIdentity.mockClear();
       instance.getWebsiteIdentity.mockClear();
       instance.generateLandingPage.mockClear();
-      instance.getLandingPage.mockClear();
+      instance.getLandingPageData.mockClear();
       instance.getLandingPageStatus.mockClear();
       instance.deployWebsite.mockClear();
       instance.generateLandingPageSection.mockClear();
@@ -522,7 +484,7 @@ export class MockWebsiteContext {
       instance.buildWebsite.mockClear();
       instance.handleWebsiteBuild.mockClear();
       instance.handleWebsitePromote.mockClear();
-      instance.handleWebsiteStatus.mockClear();
+      instance.getWebsiteStatus.mockClear();
       instance.getIdentity.mockClear();
       instance.generateIdentity.mockClear();
       instance.updateIdentity.mockClear();

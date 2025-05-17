@@ -17,7 +17,7 @@ export class MockWebsiteCommandHandler {
     // Make sure the mock methods are properly bound
     this.websiteContext.handleWebsiteBuild = this.websiteContext.handleWebsiteBuild.bind(this.websiteContext);
     this.websiteContext.handleWebsitePromote = this.websiteContext.handleWebsitePromote.bind(this.websiteContext);
-    this.websiteContext.handleWebsiteStatus = this.websiteContext.handleWebsiteStatus.bind(this.websiteContext);
+    this.websiteContext.getWebsiteStatus = this.websiteContext.getWebsiteStatus.bind(this.websiteContext);
   }
   
   static getInstance(): MockWebsiteCommandHandler {
@@ -205,12 +205,20 @@ export class MockWebsiteCommandHandler {
     
     case 'website-status': {
       // We simply pass nothing to the mock handler, which will use the default 'preview' environment
-      const result = await websiteContext.handleWebsiteStatus();
+      const result = await websiteContext.getWebsiteStatus();
       return {
         type: 'website-status',
-        success: result.success,
+        success: result.status !== 'error',
         message: result.message,
-        data: result.data,
+        data: {
+          environment: 'preview',
+          buildStatus: result.status,
+          fileCount: result.fileCount || 0,
+          serverStatus: result.status,
+          domain: 'localhost',
+          accessStatus: result.message,
+          url: result.url || '',
+        },
       };
     }
         

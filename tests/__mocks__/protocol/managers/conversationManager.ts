@@ -6,14 +6,14 @@
  */
 import { mock } from 'bun:test';
 
-import type { ConversationContext } from '@/contexts';
+import type { MCPConversationContext } from '@/contexts';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { IConversationManager } from '@/protocol/types';
 import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
 
 export class MockConversationManager implements IConversationManager {
   private static instance: MockConversationManager | null = null;
-  private conversationContext: ConversationContext;
+  private conversationContext: MCPConversationContext;
   private hasActive = true;
   private currentConversationId = 'mock-conversation-1';
   private currentRoomId = 'mock-room-1';
@@ -45,9 +45,9 @@ export class MockConversationManager implements IConversationManager {
 
   private constructor(options?: Record<string, unknown>) {
     // Use provided context or create fresh one
-    const providedContext = options && options['conversationContext'] as ConversationContext;
+    const providedContext = options && options['conversationContext'] as MCPConversationContext;
     this.conversationContext = providedContext ||
-      (MockConversationContext.createFresh() as unknown as ConversationContext);
+      (MockConversationContext.createFresh() as unknown as MCPConversationContext);
 
     // Set up with options if provided
     if (options && options['hasActiveConversation'] === false) {
@@ -67,7 +67,7 @@ export class MockConversationManager implements IConversationManager {
     }
   }
 
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     return this.conversationContext;
   }
 

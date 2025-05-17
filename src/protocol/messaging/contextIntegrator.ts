@@ -6,13 +6,13 @@
  * them together through the mediator.
  */
 
-import type { ConversationContext } from '@/contexts/conversations';
-import type { ExternalSourceContext } from '@/contexts/externalSources';
-import type { NoteContext } from '@/contexts/notes';
+import type { MCPConversationContext } from '@/contexts/conversations';
+import type { MCPExternalSourceContext } from '@/contexts/externalSources';
+import type { MCPNoteContext } from '@/contexts/notes';
 import { NoteContextMessaging } from '@/contexts/notes/messaging/noteContextMessaging';
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import { ProfileContextMessaging } from '@/contexts/profiles/messaging';
-import type { WebsiteContext } from '@/contexts/website';
+import type { MCPWebsiteContext } from '@/contexts/website';
 import { WebsiteContextMessaging } from '@/contexts/website/messaging';
 import { Logger } from '@/utils/logger';
 
@@ -23,15 +23,15 @@ import type { ContextMediator } from './contextMediator';
  */
 export interface ContextIntegratorOptions {
   /** Note context to integrate */
-  noteContext: NoteContext;
+  noteContext: MCPNoteContext;
   /** Profile context to integrate */
-  profileContext: ProfileContext;
+  profileContext: MCPProfileContext;
   /** Conversation context to integrate */
-  conversationContext: ConversationContext;
+  conversationContext: MCPConversationContext;
   /** External source context to integrate */
-  externalSourceContext: ExternalSourceContext;
+  externalSourceContext: MCPExternalSourceContext;
   /** Website context to integrate */
-  websiteContext: WebsiteContext;
+  websiteContext: MCPWebsiteContext;
   /** Context mediator for messaging */
   mediator: ContextMediator;
 }
@@ -45,9 +45,9 @@ export interface MessagingContexts {
   /** Messaging-enabled profile context */
   profile: ProfileContextMessaging;
   /** Original conversation context */
-  conversation: ConversationContext;
+  conversation: MCPConversationContext;
   /** Original external source context */
-  externalSource: ExternalSourceContext;
+  externalSource: MCPExternalSourceContext;
   /** Messaging-enabled website context */
   website: WebsiteContextMessaging;
 }
@@ -118,12 +118,14 @@ export class ContextIntegrator {
     this.mediator = options.mediator;
     
     // Create messaging-enabled contexts
+    // TODO: Messaging classes expect old BaseContext-based contexts, not MCP contexts
+    // Using 'as any' temporarily until messaging system is updated
     this.contexts = {
-      note: new NoteContextMessaging(options.noteContext, this.mediator),
-      profile: new ProfileContextMessaging(options.profileContext, this.mediator),
+      note: new NoteContextMessaging(options.noteContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
+      profile: new ProfileContextMessaging(options.profileContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
       conversation: options.conversationContext,
       externalSource: options.externalSourceContext,
-      website: new WebsiteContextMessaging(options.websiteContext, this.mediator),
+      website: new WebsiteContextMessaging(options.websiteContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
     };
     
     this.logger.debug('ContextIntegrator initialized');
@@ -157,7 +159,7 @@ export class ContextIntegrator {
    * Get the conversation context
    * @returns Conversation context
    */
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     return this.contexts.conversation;
   }
   
@@ -165,7 +167,7 @@ export class ContextIntegrator {
    * Get the external source context
    * @returns External source context
    */
-  getExternalSourceContext(): ExternalSourceContext {
+  getExternalSourceContext(): MCPExternalSourceContext {
     return this.contexts.externalSource;
   }
   

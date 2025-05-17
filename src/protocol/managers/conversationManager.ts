@@ -7,7 +7,7 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import { ConversationContext } from '@/contexts/conversations';
+import { MCPConversationContext } from '@/contexts/conversations';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
@@ -39,7 +39,7 @@ export class ConversationManager implements IConversationManager {
    */
   private logger = Logger.getInstance();
   
-  private conversationContext: ConversationContext;
+  private conversationContext: MCPConversationContext;
   private currentRoomId?: string;
   private currentConversationId?: string;
   private interfaceType: InterfaceType;
@@ -120,11 +120,9 @@ export class ConversationManager implements IConversationManager {
       (config.memoryStorage as ConversationStorage) || 
       InMemoryStorage.getInstance();
     
-    // Initialize conversation context with the proper configuration
-    this.conversationContext = ConversationContext.createFresh({
+    // Initialize conversation context with the new MCP implementation
+    this.conversationContext = MCPConversationContext.createFresh({
       storage: storage,
-      anchorName: config.anchorName || 'Host',
-      defaultUserName: config.defaultUserName || 'User',
     });
     
     // Set initial room ID
@@ -143,7 +141,7 @@ export class ConversationManager implements IConversationManager {
    * Get the conversation context instance
    * @returns The conversation context
    */
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     return this.conversationContext;
   }
 
@@ -153,10 +151,9 @@ export class ConversationManager implements IConversationManager {
    */
   async setCurrentRoom(roomId: string): Promise<void> {
     this.currentRoomId = roomId;
-    this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
-      roomId,
-      this.interfaceType,
-    );
+    // TODO: MCPConversationContext doesn't have getOrCreateConversationForRoom method
+    // For now, create a new conversation directly
+    this.currentConversationId = await this.conversationContext.createConversation(`Room: ${roomId}`);
     
     this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId} using interface: ${this.interfaceType}`);
   }
@@ -180,10 +177,9 @@ export class ConversationManager implements IConversationManager {
       const roomId = this.currentRoomId || 'default-cli-room';
       
       // Always create a conversation, using the provided room ID or the default
-      this.currentConversationId = await this.conversationContext.getOrCreateConversationForRoom(
-        roomId,
-        this.interfaceType,
-      );
+      // TODO: MCPConversationContext doesn't have getOrCreateConversationForRoom method
+      // For now, create a new conversation directly
+      this.currentConversationId = await this.conversationContext.createConversation(`Default ${this.interfaceType} conversation`);
       
       // Update the current room ID if we used a default
       if (!this.currentRoomId) {
@@ -242,11 +238,15 @@ export class ConversationManager implements IConversationManager {
         }
       }
       
-      await this.conversationContext.addTurn(
+      // TODO: MCPConversationContext doesn't have addTurn method, use addMessage instead
+      await this.conversationContext.addMessage(
         this.currentConversationId,
-        query,
-        response,
-        options,
+        {
+          query,
+          response,
+          userId: options?.userId,
+          userName: options?.userName,
+        },
       );
       
       this.logger.debug(`Saved turn with userId: ${options?.userId || 'unknown'}`);
@@ -265,7 +265,17 @@ export class ConversationManager implements IConversationManager {
         return '';
       }
       
-      return await this.conversationContext.formatHistoryForPrompt(this.currentConversationId);
+      // TODO: MCPConversationContext doesn't have formatHistoryForPrompt method
+      // For now, get conversation and format its turns manually
+      const conversation = await this.conversationContext.getConversation(this.currentConversationId);
+      if (!conversation) {
+        return '';
+      }
+      
+      // Format conversation turns into a prompt
+      return conversation.activeTurns
+        .map(turn => `User: ${turn.query}\nAssistant: ${turn.response}`)
+        .join('\n\n');
     } catch (error) {
       this.logger.warn('Failed to get conversation history:', error);
       return '';

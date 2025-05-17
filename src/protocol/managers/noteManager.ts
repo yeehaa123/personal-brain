@@ -7,7 +7,7 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import type { NoteContext } from '@/contexts';
+import type { MCPNoteContext } from '@/contexts';
 import type { Note } from '@/models/note';
 import { Logger } from '@/utils/logger';
 
@@ -18,7 +18,7 @@ import type { INoteManager } from '../types';
  */
 export interface NoteManagerConfig {
   /** Note context instance */
-  noteContext: NoteContext;
+  noteContext: MCPNoteContext;
 }
 
 /**
@@ -36,7 +36,7 @@ export class NoteManager implements INoteManager {
    */
   private logger = Logger.getInstance();
   
-  private noteContext: NoteContext;
+  private noteContext: MCPNoteContext;
 
   /**
    * Get the singleton instance of NoteManager
@@ -117,7 +117,7 @@ export class NoteManager implements INoteManager {
    * Get the note context
    * @returns The note context
    */
-  getNoteContext(): NoteContext {
+  getNoteContext(): MCPNoteContext {
     return this.noteContext;
   }
 

@@ -3,7 +3,7 @@
  * Handles tag-related commands
  */
 
-import type { NoteContext } from '@/mcpServer';
+import type { MCPNoteContext } from '@/contexts';
 import type { IBrainProtocol } from '@/protocol/types';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
@@ -13,7 +13,7 @@ import type { CommandInfo, CommandResult } from '../core/commandTypes';
  * Handler for tag-related commands
  */
 export class TagCommandHandler extends BaseCommandHandler {
-  private noteContext: NoteContext;
+  private noteContext: MCPNoteContext;
 
   constructor(brainProtocol: IBrainProtocol) {
     super(brainProtocol);

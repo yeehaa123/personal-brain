@@ -8,12 +8,14 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 import {
-  ConversationContext,
-  ExternalSourceContext,
-  NoteContext,
-  WebsiteContext,
+  MCPConversationContext,
+  MCPExternalSourceContext,
+  MCPNoteContext,
+  MCPProfileContext,
+  MCPWebsiteContext,
 } from '@/contexts';
-import { ProfileContext } from '@/contexts/profiles/profileContext';
+import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
+import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import { ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 import { RendererRegistry } from '@/utils/registry/rendererRegistry';
@@ -48,12 +50,12 @@ export class ContextManager implements IContextManager {
   // Singleton instance
   private static instance: ContextManager | null = null;
 
-  // Core context objects
-  private readonly noteContext: NoteContext;
-  private readonly profileContextV2: ProfileContext;
-  private readonly externalSourceContext: ExternalSourceContext;
-  private readonly conversationContext: ConversationContext;
-  private readonly websiteContext: WebsiteContext;
+  // Core context objects - using new MCP implementations
+  private readonly noteContext: MCPNoteContext;
+  private readonly profileContextV2: MCPProfileContext;
+  private readonly externalSourceContext: MCPExternalSourceContext;
+  private readonly conversationContext: MCPConversationContext;
+  private readonly websiteContext: MCPWebsiteContext;
 
   // State
   private useExternalSources: boolean;
@@ -126,40 +128,36 @@ export class ContextManager implements IContextManager {
     const apiKey = config.getApiKey();
     const newsApiKey = config.newsApiKey;
     const interfaceType = config.interfaceType || 'cli';
-    const roomId = config.roomId;
 
     // Initialize the contexts with singletons
     // This ensures we're using the same context instances throughout the application
     try {
-      this.noteContext = NoteContext.getInstance({ apiKey });
+      this.noteContext = MCPNoteContext.getInstance({ apiKey });
 
       // Initialize profile context
-      this.profileContextV2 = ProfileContext.getInstance();
+      this.profileContextV2 = MCPProfileContext.getInstance();
 
-      this.externalSourceContext = ExternalSourceContext.getInstance({
+      this.externalSourceContext = MCPExternalSourceContext.getInstance({
         apiKey,
         newsApiKey,
       });
-      this.conversationContext = ConversationContext.getInstance({
-        // Pass any configuration needed for conversation context
-        anchorName: config.anchorName || 'Host',
-        anchorId: config.anchorId,
+      // TODO: MCPConversationContext requires options on first initialization
+      // This is a temporary workaround - need to decide if contexts should be
+      // initialized with defaults or if the API should be changed
+      const storage = config.memoryStorage || InMemoryStorage.getInstance();
+      this.conversationContext = MCPConversationContext.getInstance({
+        storage: storage as ConversationStorage,
       });
-      this.websiteContext = WebsiteContext.getInstance();
+      
+      // TODO: MCPWebsiteContext might need initialization options in the future
+      this.websiteContext = MCPWebsiteContext.getInstance({});
 
       // Set initial state
       this.useExternalSources = config.useExternalSources;
 
-      // Initialize conversation if roomId is provided
-      if (roomId) {
-        this.conversationContext.getOrCreateConversationForRoom(roomId, interfaceType)
-          .then(conversationId => {
-            this.logger.debug(`Initialized conversation for room ${roomId}: ${conversationId}`);
-          })
-          .catch(error => {
-            this.logger.warn(`Failed to initialize conversation for room ${roomId}:`, error);
-          });
-      }
+      // TODO: Initialize conversation if roomId is provided
+      // MCPConversationContext doesn't have getOrCreateConversationForRoom method
+      // This will need to be handled differently or the method needs to be added
 
       // Mark as successfully initialized
       this.initialized = true;
@@ -180,7 +178,7 @@ export class ContextManager implements IContextManager {
    * @returns The note context instance
    * @throws Error if context is not properly initialized
    */
-  getNoteContext(): NoteContext {
+  getNoteContext(): MCPNoteContext {
     this.ensureContextsReady();
     return this.noteContext;
   }
@@ -190,7 +188,7 @@ export class ContextManager implements IContextManager {
    * @returns The ProfileContext instance
    * @throws Error if context is not properly initialized
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): MCPProfileContext {
     this.ensureContextsReady();
     return this.profileContextV2;
   }
@@ -200,7 +198,7 @@ export class ContextManager implements IContextManager {
    * @returns The external source context instance
    * @throws Error if context is not properly initialized
    */
-  getExternalSourceContext(): ExternalSourceContext {
+  getExternalSourceContext(): MCPExternalSourceContext {
     this.ensureContextsReady();
     return this.externalSourceContext;
   }
@@ -210,7 +208,7 @@ export class ContextManager implements IContextManager {
    * @returns The conversation context instance
    * @throws Error if context is not properly initialized
    */
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     this.ensureContextsReady();
     return this.conversationContext;
   }
@@ -220,7 +218,7 @@ export class ContextManager implements IContextManager {
    * @returns The website context instance
    * @throws Error if context is not properly initialized
    */
-  getWebsiteContext(): WebsiteContext {
+  getWebsiteContext(): MCPWebsiteContext {
     this.ensureContextsReady();
     return this.websiteContext;
   }
@@ -319,21 +317,12 @@ export class ContextManager implements IContextManager {
   static resetContexts(): void {
     const logger = Logger.getInstance();
 
-    NoteContext.resetInstance();
-    ProfileContext.resetInstance();
-    ExternalSourceContext.resetInstance();
-    // Reset the conversation context as well
-    if (ConversationContext.resetInstance) {
-      ConversationContext.resetInstance();
-    } else {
-      logger.warn('ConversationContext does not support resetInstance');
-    }
-    // Reset the website context as well
-    if (WebsiteContext.resetInstance) {
-      WebsiteContext.resetInstance();
-    } else {
-      logger.warn('WebsiteContext does not support resetInstance');
-    }
+    MCPNoteContext.resetInstance();
+    MCPProfileContext.resetInstance();
+    MCPExternalSourceContext.resetInstance();
+    MCPConversationContext.resetInstance();
+    MCPWebsiteContext.resetInstance();
+    
     logger.debug('All context singletons have been reset');
   }
 }

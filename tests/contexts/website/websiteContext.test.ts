@@ -255,24 +255,17 @@ describe('WebsiteContext', () => {
       url: 'http://localhost:4321',
     }));
     
-    // Mock the handleWebsiteStatus method with a direct implementation
-    context.handleWebsiteStatus = mock(() => Promise.resolve({ 
-      success: true, 
+    // Mock the getWebsiteStatus method with a direct implementation
+    context.getWebsiteStatus = mock(() => Promise.resolve({ 
+      status: 'running',
       message: 'Website status retrieved', 
-      data: {
-        environment: 'preview',
-        buildStatus: 'Built',
-        fileCount: 123,
-        serverStatus: 'Running',
-        domain: 'localhost',
-        accessStatus: 'Online',
-        url: 'http://localhost:4321',
-      },
+      url: 'http://localhost:4321',
+      fileCount: 123,
     }));
     
     // Test the website status with our mock
-    const environmentStatus = await context.handleWebsiteStatus();
-    expect(environmentStatus.success).toBe(true);
+    const environmentStatus = await context.getWebsiteStatus();
+    expect(environmentStatus.status).toBe('running');
   });
   
   test('getDeploymentManager auto-creates a manager if none provided', async () => {

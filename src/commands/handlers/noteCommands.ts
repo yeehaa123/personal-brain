@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { NoteContext } from '@/mcpServer';
+import type { MCPNoteContext } from '@/contexts';
 import type { IBrainProtocol } from '@/protocol/types';
 
 import { BaseCommandHandler } from '../core/baseCommandHandler';
@@ -22,7 +22,7 @@ export class NoteCommandHandler extends BaseCommandHandler {
   private static instance: NoteCommandHandler | null = null;
   
   /** Note context for accessing note-related functionality */
-  private noteContext: NoteContext;
+  private noteContext: MCPNoteContext;
 
   /**
    * Private constructor to enforce the use of getInstance() or createFresh()

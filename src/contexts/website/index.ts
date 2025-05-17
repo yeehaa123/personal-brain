@@ -1,11 +1,16 @@
 /**
  * Website Context - Manages website generation and publication
- * Exports only the public API components.
+ * 
+ * During migration: Exports both old and new implementations
  */
 
-// Core exports - only the main context class and its configuration
+// Export both old and new implementation
 export { WebsiteContext } from './websiteContext';
+export { MCPWebsiteContext } from './MCPWebsiteContext';
+
+// Export configuration types
 export type { WebsiteContextConfig, WebsiteContextDependencies } from './websiteContext';
+export type { MCPWebsiteContextConfig, MCPWebsiteContextDependencies } from './MCPWebsiteContext';
 
 // Type exports for configuration
 export type { WebsiteStorageAdapter } from './adapters/websiteStorageAdapter';

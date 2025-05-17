@@ -6,6 +6,7 @@ import { CommandHandler } from '@commands/core/commandHandler';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
 import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
+import { createTestLandingPageData } from '@test/helpers';
 
 // Create a mock BrainProtocol that returns our mock WebsiteContext
 class TestBrainProtocol {
@@ -186,9 +187,15 @@ describe('WebsiteCommandHandler', () => {
   });
 
   test('should handle landing-page view command', async () => {
+    // Ensure the mock has landing page data
+    mockWebsiteContext.saveLandingPageData(createTestLandingPageData());
+    
     // Then view landing page
     const result = await commandHandler.processCommand('landing-page', 'view');
 
+    if (result.type === 'error') {
+      console.error('Error result:', result.message);
+    }
     expect(result.type).toBe('landing-page');
     const landingPageResult = result as Extract<WebsiteCommandResult, { type: 'landing-page' }>;
     expect(landingPageResult.data).toBeDefined();
@@ -239,19 +246,12 @@ describe('WebsiteCommandHandler', () => {
   });
 
   test('should handle website-status command', async () => {
-    // Setup mock for the new function
-    mockWebsiteContext.handleWebsiteStatus = mock(() => Promise.resolve({
-      success: true,
+    // Setup mock for the refactored method
+    mockWebsiteContext.getWebsiteStatus = mock(() => Promise.resolve({
+      status: 'running',
       message: 'preview website status: Built, Caddy: Running, Files: 42, Access: Accessible',
-      data: {
-        environment: 'preview',
-        buildStatus: 'Built' as const,
-        fileCount: 42,
-        serverStatus: 'Running' as const,
-        domain: 'preview.example.com',
-        accessStatus: 'Accessible',
-        url: 'https://preview.example.com',
-      },
+      url: 'https://preview.example.com',
+      fileCount: 42,
     }));
 
     // Check status
@@ -261,6 +261,6 @@ describe('WebsiteCommandHandler', () => {
     const statusResult = result as Extract<WebsiteCommandResult, { type: 'website-status' }>;
     expect(statusResult.success).toBe(true);
     expect(statusResult.message).toContain('preview');
-    expect(mockWebsiteContext.handleWebsiteStatus).toHaveBeenCalled();
+    expect(mockWebsiteContext.getWebsiteStatus).toHaveBeenCalled();
   });
 });

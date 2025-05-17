@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 import { relevanceConfig } from '@/config';
-import type { ProfileContext } from '@/contexts/profiles/profileContext';
+import type { MCPProfileContext } from '@/contexts';
 import type { Profile } from '@/models/profile';
 import { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import { EmbeddingService } from '@/resources/ai/embedding';
@@ -22,7 +22,7 @@ import type { IProfileManager, ProfileAnalysisResult } from '../types';
  */
 export interface ProfileManagerConfig {
   /** Profile context instance */
-  profileContext: ProfileContext;
+  profileContext: MCPProfileContext;
   /** API key for embedding service */
   apiKey?: string;
 }
@@ -42,7 +42,7 @@ export class ProfileManager implements IProfileManager {
    */
   private logger = Logger.getInstance();
   
-  private profileContext: ProfileContext;
+  private profileContext: MCPProfileContext;
   private profileAnalyzer: ProfileAnalyzer;
   private profile: Profile | undefined;
 
@@ -241,7 +241,7 @@ export class ProfileManager implements IProfileManager {
    * Get the ProfileContext instance
    * @returns The ProfileContext instance
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): MCPProfileContext {
     return this.profileContext;
   }
 }

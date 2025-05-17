@@ -1,13 +1,16 @@
 /**
  * ConversationContext module for managing conversations
  * 
- * Exports only the core public API for the conversation context
- * Consumers should import implementation details directly from their source files
+ * During migration: Exports both old and new implementations
  */
 
-// Export only the main context class and its public configuration types
+// Export both old and new implementation
 export { ConversationContext } from './conversationContext';
+export { MCPConversationContext } from './MCPConversationContext';
+
+// Export configuration types for both
 export type { ConversationContextConfig } from './conversationContext';
+export type { MCPConversationContextOptions, ConversationToolContext } from './MCPConversationContext';
 
 // Export the storage adapter as it's needed for extension/configuration
 export { ConversationStorageAdapter } from './conversationStorageAdapter';
@@ -15,10 +18,6 @@ export { ConversationStorageAdapter } from './conversationStorageAdapter';
 // Export primary storage interfaces needed by public API users
 export type { ConversationStorage } from './storage/conversationStorage';
 export type { NewConversation, ConversationSummary, ConversationInfo } from './storage/conversationStorage';
-
-// Export new MCP context during migration
-export { MCPConversationContext } from './MCPConversationContext';
-export type { MCPConversationContextOptions, ConversationToolContext } from './MCPConversationContext';
 
 // Export service interfaces needed for MCPConversationContext
 export type { ConversationResourceService } from './resources/conversationResources';

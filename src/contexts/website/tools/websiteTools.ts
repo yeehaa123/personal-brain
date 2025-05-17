@@ -300,12 +300,7 @@ export class WebsiteToolService {
           throw new Error(`Failed to assess landing page: ${result.message}`);
         }
 
-        return {
-          success: result.success,
-          message: result.message,
-          data: result.data,
-          assessments: result.assessments,
-        };
+        return result;
       },
     };
   }
@@ -320,7 +315,6 @@ export class WebsiteToolService {
       name: 'build_website',
       description: 'Builds the website using Astro and deploys to preview',
       handler: async (params: Record<string, unknown>) => {
-        const environment = params['environment'] ? String(params['environment']) : 'preview';
         const generateBeforeBuild = params['generateBeforeBuild'] !== false; // default to true
 
         // Generate landing page first if requested
@@ -339,13 +333,7 @@ export class WebsiteToolService {
         // TODO: Remove conditional after WebsiteContext migration is complete
         const result = await (context.handleWebsiteBuild ? context.handleWebsiteBuild() : context.buildWebsite());
 
-        return {
-          success: result.success,
-          message: result.message,
-          environment,
-          url: result.url,
-          path: result.path,
-        };
+        return result;
       },
     };
   }
@@ -387,15 +375,7 @@ export class WebsiteToolService {
         // TODO: Remove conditional after WebsiteContext migration is complete
         const result = await context.getWebsiteStatus(environment);
 
-        if (!result.success) {
-          throw new Error(`Failed to get website status: ${result.message}`);
-        }
-
-        return {
-          success: result.success,
-          message: result.message,
-          data: result.data,
-        };
+        return result;
       },
     };
   }
@@ -417,12 +397,7 @@ export class WebsiteToolService {
           throw new Error(`Failed to regenerate sections: ${result.message}`);
         }
 
-        return {
-          success: result.success,
-          message: result.message,
-          data: result.data,
-          results: result.results,
-        };
+        return result;
       },
     };
   }

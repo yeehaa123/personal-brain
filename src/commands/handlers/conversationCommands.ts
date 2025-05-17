@@ -8,7 +8,7 @@
  * - createFresh(): Creates a new instance without affecting the singleton
  */
 
-import type { NoteContext } from '@/mcpServer';
+import type { MCPNoteContext } from '@/contexts';
 import type { ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import type { IBrainProtocol } from '@/protocol/types';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
@@ -25,7 +25,7 @@ export class ConversationCommandHandler extends BaseCommandHandler {
   private static instance: ConversationCommandHandler | null = null;
   
   /** Note context for accessing note-related functionality */
-  private noteContext: NoteContext;
+  private noteContext: MCPNoteContext;
 
   /**
    * Private constructor to enforce the use of getInstance() or createFresh()
@@ -173,25 +173,15 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get the conversation context to access memory services
-    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
+    // TODO: Fix memory service access for MCP context
+    // const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
-    // Get tiered memory history which properly separates active, summarized, and archived turns
-    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    // TODO: MCPConversationContext doesn't have getTieredHistory method
+    // const tieredHistory = await conversationContext.getTieredHistory(conversationId);
     
-    // Use the active turns from tiered memory, which follows the tiered memory management rules
-    const turns: ConversationTurn[] = tieredHistory.activeTurns;
-    this.logger.debug(`Retrieved ${turns.length} active turns from tiered memory manager`);
-    
-    // For debugging, also check if summaries exist
-    if (tieredHistory.summaries.length > 0) {
-      this.logger.debug(`Conversation has ${tieredHistory.summaries.length} summaries`);
-    }
-    
-    // For debugging, also check if archived turns exist
-    if (tieredHistory.archivedTurns.length > 0) {
-      this.logger.debug(`Conversation has ${tieredHistory.archivedTurns.length} archived turns`);
-    }
+    // Use the conversation already fetched above
+    const turns: ConversationTurn[] = conversation?.activeTurns || [];
+    this.logger.debug(`Retrieved ${turns.length} turns from conversation`);
     
     // Enhanced debugging for conversation content
     this.logger.debug(`Conversation ID: ${conversationId}`);
@@ -256,15 +246,15 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // Get the conversation context to access memory services
-    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
+    // TODO: Fix memory service access for MCP context
+    // const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
-    // Get tiered memory history which properly separates active, summarized, and archived turns
-    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    // TODO: MCPConversationContext doesn't have getTieredHistory method
+    // const tieredHistory = await conversationContext.getTieredHistory(conversationId);
     
-    // Use the active turns from tiered memory, which follows the tiered memory management rules
-    const turns: ConversationTurn[] = tieredHistory.activeTurns;
-    this.logger.debug(`Retrieved ${turns.length} active turns from tiered memory manager for confirmation`);
+    // Use the conversation already fetched above
+    const turns: ConversationTurn[] = conversation?.activeTurns || [];
+    this.logger.debug(`Retrieved ${turns.length} turns from conversation for confirmation`);
     
     if (turns.length === 0) {
       return this.formatError('Conversation has no turns to save.');

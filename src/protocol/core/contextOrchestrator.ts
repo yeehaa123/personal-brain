@@ -12,12 +12,12 @@
  */
 
 import type {
-  ConversationContext,
-  ExternalSourceContext,
-  NoteContext,
-  WebsiteContext,
+  MCPConversationContext,
+  MCPExternalSourceContext,
+  MCPNoteContext,
+  MCPProfileContext,
+  MCPWebsiteContext,
 } from '@/contexts';
-import type { ProfileContext } from '@/contexts/profiles/profileContext';
 import { Logger } from '@/utils/logger';
 
 import type { BrainProtocolConfig } from '../config/brainProtocolConfig';
@@ -141,7 +141,7 @@ export class ContextOrchestrator {
    * Get the note context
    * @returns Note context
    */
-  getNoteContext(): NoteContext {
+  getNoteContext(): MCPNoteContext {
     return this.contextManager.getNoteContext();
   }
   
@@ -149,7 +149,7 @@ export class ContextOrchestrator {
    * Get the ProfileContext instance
    * @returns ProfileContext instance
    */
-  getProfileContext(): ProfileContext {
+  getProfileContext(): MCPProfileContext {
     return this.contextManager.getProfileContext();
   }
   
@@ -157,7 +157,7 @@ export class ContextOrchestrator {
    * Get the conversation context
    * @returns Conversation context
    */
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     return this.contextManager.getConversationContext();
   }
   
@@ -165,7 +165,7 @@ export class ContextOrchestrator {
    * Get the external source context
    * @returns External source context
    */
-  getExternalSourceContext(): ExternalSourceContext {
+  getExternalSourceContext(): MCPExternalSourceContext {
     return this.contextManager.getExternalSourceContext();
   }
   
@@ -173,7 +173,7 @@ export class ContextOrchestrator {
    * Get the website context
    * @returns Website context
    */
-  getWebsiteContext(): WebsiteContext {
+  getWebsiteContext(): MCPWebsiteContext {
     return this.contextManager.getWebsiteContext();
   }
   

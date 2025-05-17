@@ -6,14 +6,14 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
 
 import type { 
-  ConversationContext, 
-  ExternalSourceContext, 
-  NoteContext, 
-  WebsiteContext, 
+  MCPConversationContext, 
+  MCPExternalSourceContext, 
+  MCPNoteContext, 
+  MCPProfileContext,
+  MCPWebsiteContext, 
 } from '@/contexts';
 import type { ConversationStorage } from '@/contexts/conversations';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import type { ProfileContext } from '@/contexts/profiles/profileContext';
 import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { Note } from '@models/note';
@@ -176,19 +176,19 @@ export interface TurnOptions {
  */
 export interface IContextManager {
   /** Get access to the note context for data operations */
-  getNoteContext(): NoteContext;
+  getNoteContext(): MCPNoteContext;
   
   /** Get access to the profile context implementation that uses notes for storage */
-  getProfileContext(): ProfileContext;
+  getProfileContext(): MCPProfileContext;
   
   /** Get access to the external source context for external knowledge */
-  getExternalSourceContext(): ExternalSourceContext;
+  getExternalSourceContext(): MCPExternalSourceContext;
   
   /** Get access to the conversation context for conversation management */
-  getConversationContext(): ConversationContext;
+  getConversationContext(): MCPConversationContext;
   
   /** Get access to the website context for website management */
-  getWebsiteContext(): WebsiteContext;
+  getWebsiteContext(): MCPWebsiteContext;
   
   /** Enable or disable external sources functionality */
   setExternalSourcesEnabled(enabled: boolean): void;
@@ -213,7 +213,7 @@ export interface IContextManager {
  * Interface for ConversationManager
  */
 export interface IConversationManager {
-  getConversationContext(): ConversationContext;
+  getConversationContext(): MCPConversationContext;
   setCurrentRoom(roomId: string): Promise<void>;
   getCurrentRoom(): string | null;
   initializeConversation(): Promise<void>;
@@ -232,14 +232,14 @@ export interface IProfileManager {
   getProfileText(): Promise<string | null>;
   analyzeProfileRelevance(query: string): Promise<ProfileAnalysisResult>;
   getProfileAnalyzer(): ProfileAnalyzer;
-  getProfileContext(): ProfileContext; // Keep this to avoid breaking existing code
+  getProfileContext(): MCPProfileContext; // Using new MCP context
 }
 
 /**
  * Interface for NoteManager
  */
 export interface INoteManager {
-  getNoteContext(): NoteContext;
+  getNoteContext(): MCPNoteContext;
   fetchRelevantNotes(query: string): Promise<Note[]>;
   getRelatedNotes(notes: Note[], limit?: number): Promise<Note[]>;
   searchByTags(tags: string[], limit?: number): Promise<Note[]>;
