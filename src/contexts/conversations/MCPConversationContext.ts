@@ -2,6 +2,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { ConversationNotifier } from '@/contexts/conversations/messaging/conversationNotifier';
+import { TieredMemoryManager, type TieredMemoryConfig } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { 
   ConversationInfo,
   ConversationStorage,
@@ -36,6 +37,10 @@ export interface ConversationToolContext {
   generateEmbeddingsForConversation(conversationId: string): Promise<{ updated: number; failed: number }>;
   getSummary(conversationId: string): Promise<string>;
   exportConversation(conversationId: string, format?: 'json' | 'markdown'): Promise<string>;
+  
+  // Tiered memory methods
+  formatHistoryForPrompt(conversationId: string, maxTokens?: number): Promise<string>;
+  getFlatHistory(conversationId: string): Promise<ConversationTurn[]>;
 }
 
 export interface MCPConversationContextOptions {
@@ -44,6 +49,7 @@ export interface MCPConversationContextOptions {
   storage: ConversationStorage;
   notifier?: ConversationNotifier;
   logger?: Logger;
+  tieredMemoryConfig?: Partial<TieredMemoryConfig>;
 }
 
 /**
@@ -68,6 +74,7 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
   // Core services
   private storage: ConversationStorage;
   private notifier?: ConversationNotifier;
+  private tieredMemoryManager: TieredMemoryManager;
 
   // MCP resources and tools
   private resources: ResourceDefinition[] = [];
@@ -79,6 +86,12 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
     this.storage = options.storage;
     this.notifier = options.notifier;
     this.logger = options.logger || Logger.getInstance();
+    
+    // Initialize tiered memory manager with provided config or defaults
+    this.tieredMemoryManager = TieredMemoryManager.getInstance({
+      storage: this.storage,
+      config: options.tieredMemoryConfig,
+    });
   }
 
   // MCPContext interface implementation
@@ -414,9 +427,15 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
     const turnId = await this.storage.addTurn(conversationId, turn);
     turn.id = turnId;
 
+    // Check if we need to summarize after adding the new turn
+    // Only do this if the conversation exists (handle test scenarios gracefully)
+    const conversation = await this.storage.getConversation(conversationId);
+    if (conversation) {
+      await this.tieredMemoryManager.checkAndSummarize(conversationId);
+    }
+
     if (this.notifier) {
       // No specific message notification in the interface, but we could notify about conversation update
-      const conversation = await this.storage.getConversation(conversationId);
       if (conversation) {
         await this.notifier.notifyConversationStarted(conversation);
       }
@@ -470,6 +489,44 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
 
     // Default JSON export
     return JSON.stringify({ conversation, turns }, null, 2);
+  }
+
+  // Tiered memory methods
+  public async formatHistoryForPrompt(conversationId: string, maxTokens?: number): Promise<string> {
+    return await this.tieredMemoryManager.formatHistoryForPrompt(conversationId, maxTokens);
+  }
+
+  public async getFlatHistory(conversationId: string): Promise<ConversationTurn[]> {
+    const tieredHistory = await this.tieredMemoryManager.getTieredHistory(conversationId);
+    
+    // Combine summaries and active turns into a flat history
+    const flatHistory: ConversationTurn[] = [];
+    
+    // Add summarized turns as pseudo-turns
+    for (const summary of tieredHistory.summaries) {
+      flatHistory.push({
+        id: summary.id,
+        query: `[Summary of ${summary.turnCount} turns]`,
+        response: summary.content,
+        timestamp: summary.createdAt,
+        metadata: {
+          isSummary: true,
+          originalTurnIds: summary.metadata?.['originalTurnIds'],
+        },
+      });
+    }
+    
+    // Add active turns
+    flatHistory.push(...tieredHistory.activeTurns);
+    
+    // Sort by timestamp
+    flatHistory.sort((a, b) => {
+      const aTime = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const bTime = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return aTime - bTime;
+    });
+    
+    return flatHistory;
   }
 
 

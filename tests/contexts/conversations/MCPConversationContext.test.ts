@@ -6,6 +6,7 @@ import type {
   ConversationStorage,
 } from '@/contexts/conversations';
 import { MCPConversationContext } from '@/contexts/conversations/MCPConversationContext';
+import { TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 
 // Test helpers for creating testable conversation contexts
@@ -187,6 +188,7 @@ function createTestableConversationContext(overrides?: Partial<{
 describe('Conversation Management System', () => {
   beforeEach(() => {
     MCPConversationContext.resetInstance();
+    TieredMemoryManager.resetInstance();
   });
 
   describe('System Status', () => {
@@ -625,6 +627,69 @@ describe('Conversation Management System', () => {
       
       // Should throw error when accessing MCP server after cleanup
       expect(() => context.getMcpServer()).toThrow();
+    });
+  });
+
+  describe('Tiered Memory Management', () => {
+    test('formats history for prompt with tiered memory', async () => {
+      const { context } = createTestableConversationContext();
+      await context.initialize();
+
+      const conversationId = await context.createConversation('Tiered Memory Test');
+      
+      // Add some messages
+      await context.addMessage(conversationId, { 
+        query: 'What is the weather?', 
+        response: 'The weather is sunny today.',
+      });
+      
+      const history = await context.formatHistoryForPrompt(conversationId);
+      
+      expect(history).toContain('What is the weather?');
+      expect(history).toContain('The weather is sunny today.');
+    });
+
+    test('gets flat history combining summaries and active turns', async () => {
+      const { context } = createTestableConversationContext();
+      await context.initialize();
+
+      const conversationId = await context.createConversation('Flat History Test');
+      
+      // Add multiple messages
+      for (let i = 1; i <= 3; i++) {
+        await context.addMessage(conversationId, { 
+          query: `Question ${i}`, 
+          response: `Answer ${i}`,
+        });
+      }
+      
+      const flatHistory = await context.getFlatHistory(conversationId);
+      
+      expect(flatHistory).toBeArray();
+      expect(flatHistory.length).toBeGreaterThanOrEqual(3);
+      
+      // Check that turns are in chronological order
+      for (let i = 1; i < flatHistory.length; i++) {
+        const prevTimestamp = flatHistory[i - 1].timestamp;
+        const currTimestamp = flatHistory[i].timestamp;
+        if (prevTimestamp && currTimestamp) {
+          const prevTime = new Date(prevTimestamp).getTime();
+          const currTime = new Date(currTimestamp).getTime();
+          expect(currTime).toBeGreaterThanOrEqual(prevTime);
+        }
+      }
+    });
+
+    test('handles tiered memory configuration', async () => {
+      const { context } = createTestableConversationContext();
+      
+      // Context should initialize even with tiered memory config
+      await context.initialize();
+      expect(context.isReady()).toBe(true);
+      
+      // Should successfully create and manage conversations
+      const conversationId = await context.createConversation('Config Test');
+      expect(conversationId).toBeString();
     });
   });
 });
