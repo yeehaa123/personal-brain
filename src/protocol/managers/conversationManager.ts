@@ -151,8 +151,7 @@ export class ConversationManager implements IConversationManager {
    */
   async setCurrentRoom(roomId: string): Promise<void> {
     this.currentRoomId = roomId;
-    // TODO: MCPConversationContext doesn't have getOrCreateConversationForRoom method
-    // For now, create a new conversation directly
+    // Create a new conversation for the room
     this.currentConversationId = await this.conversationContext.createConversation(`Room: ${roomId}`);
     
     this.logger.debug(`Switched to room: ${roomId} with conversation: ${this.currentConversationId} using interface: ${this.interfaceType}`);
@@ -176,9 +175,7 @@ export class ConversationManager implements IConversationManager {
       // Define the room ID to use - either provided or default
       const roomId = this.currentRoomId || 'default-cli-room';
       
-      // Always create a conversation, using the provided room ID or the default
-      // TODO: MCPConversationContext doesn't have getOrCreateConversationForRoom method
-      // For now, create a new conversation directly
+      // Create a conversation, using the provided room ID or the default
       this.currentConversationId = await this.conversationContext.createConversation(`Default ${this.interfaceType} conversation`);
       
       // Update the current room ID if we used a default
@@ -238,7 +235,7 @@ export class ConversationManager implements IConversationManager {
         }
       }
       
-      // TODO: MCPConversationContext doesn't have addTurn method, use addMessage instead
+      // Use addMessage (the MCP pattern)
       await this.conversationContext.addMessage(
         this.currentConversationId,
         {
@@ -265,8 +262,7 @@ export class ConversationManager implements IConversationManager {
         return '';
       }
       
-      // TODO: MCPConversationContext doesn't have formatHistoryForPrompt method
-      // For now, get conversation and format its turns manually
+      // Get conversation and format its turns
       const conversation = await this.conversationContext.getConversation(this.currentConversationId);
       if (!conversation) {
         return '';

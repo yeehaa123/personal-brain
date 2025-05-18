@@ -446,10 +446,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // View landing page content
     else if (action === 'view' || !action) {
       try {
-        // Try to read from existing file first
-        // TODO: MCPWebsiteContext doesn't expose getAstroContentService method
-        // Can't create AstroContentService directly due to protected constructor
-        // For now, try to get landing page data directly from the context
+        // Get landing page data directly from the context
         const landingPageData = await this.websiteContext.getLandingPageData();
         
         return {
@@ -490,8 +487,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           success: result.success,
           message: result.message,
           data: result.data,
-          // TODO: MCPWebsiteContext doesn't return detailed results anymore
-          // results: result.results,
           action: 'regenerate-failed',
         };
       } catch (error) {

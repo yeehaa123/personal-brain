@@ -141,23 +141,19 @@ export class ContextManager implements IContextManager {
         apiKey,
         newsApiKey,
       });
-      // TODO: MCPConversationContext requires options on first initialization
-      // This is a temporary workaround - need to decide if contexts should be
-      // initialized with defaults or if the API should be changed
+      // Initialize conversation context with storage
       const storage = config.memoryStorage || InMemoryStorage.getInstance();
       this.conversationContext = MCPConversationContext.getInstance({
         storage: storage as ConversationStorage,
       });
       
-      // TODO: MCPWebsiteContext might need initialization options in the future
+      // Initialize website context
       this.websiteContext = MCPWebsiteContext.getInstance({});
 
       // Set initial state
       this.useExternalSources = config.useExternalSources;
 
-      // TODO: Initialize conversation if roomId is provided
-      // MCPConversationContext doesn't have getOrCreateConversationForRoom method
-      // This will need to be handled differently or the method needs to be added
+      // Room initialization is handled by ConversationManager if needed
 
       // Mark as successfully initialized
       this.initialized = true;

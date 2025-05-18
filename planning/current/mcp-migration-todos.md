@@ -2,27 +2,29 @@
 
 ## Current Migration Issues
 
-### 1. Messaging System Incompatibility
+### 1. Messaging System Incompatibility - RESOLVED ✅
 
-The messaging system (ContextIntegrator, ContextMessaging classes) expects BaseContext-based contexts, not MCP contexts:
-- NoteContextMessaging expects NoteContext, not MCPNoteContext
-- ProfileContextMessaging expects ProfileContext, not MCPProfileContext  
-- WebsiteContextMessaging expects WebsiteContext, not MCPWebsiteContext
+The messaging system has been successfully updated to work with MCP contexts.
 
-### 2. Missing Methods in MCP Contexts
+### 2. Critical Missing Methods in MCP Contexts
 
-Several methods from the old contexts don't exist in the new MCP contexts:
+Several methods from the old contexts don't exist in the new MCP contexts and need to be implemented:
 
-#### ConversationContext
-- `getOrCreateConversationForRoom(roomId, interfaceType)` - Used by ConversationManager and ContextManager
-- `getTieredHistory(conversationId)` - Used by ConversationCommandHandler in two places:
-  - In `save-note` command to get active turns from tiered memory
-  - In `conversation-notes` command to access conversation history
+#### ConversationContext - REQUIRES IMPLEMENTATION 🔴
+- `getOrCreateConversationForRoom(roomId, interfaceType)` - Can use workaround with `createConversation`
+- `getTieredHistory(conversationId)` - **CRITICAL FOR MEMORY MANAGEMENT**
+  - Used by ConversationCommandHandler for comprehensive note creation
   - Returns object with: `{ activeTurns, summaries, archivedTurns }`
+  - Without this, we lose:
+    - Automatic conversation summarization
+    - Context preservation in long conversations
+    - Token optimization for AI prompts
+    - Comprehensive notes from conversations
+  - The tiered memory logic already exists in TieredMemoryManager
 
-#### WebsiteContext  
-- `getAstroContentService()` - Used by WebsiteCommandHandler
-- `handleWebsiteStatus()` - Used by WebsiteCommandHandler
+#### WebsiteContext - WORKAROUNDS AVAILABLE ✅
+- `getAstroContentService()` - Can use `getLandingPageData()` instead
+- `handleWebsiteStatus()` - Already implemented in MCPWebsiteContext
 
 ### 2. Method Signature Differences
 
@@ -135,20 +137,23 @@ Reasons:
 
 ### Remaining Implementation TODOs
 
-### 1. Messaging System Migration
+### 1. Messaging System Migration ✅ COMPLETED
 - [x] Update NoteContextMessaging to work with MCPNoteContext
 - [x] Update ProfileContextMessaging to work with MCPProfileContext  
 - [x] Update WebsiteContextMessaging to work with MCPWebsiteContext
 - [x] Remove the temporary "as any" casts in ContextIntegrator
 
-### 2. ConversationManager
-- [ ] Replace `getOrCreateConversationForRoom` with simpler create/set pattern
-- [ ] Replace `addTurn` with `addMessage` properly
-- [ ] Implement proper conversation history formatting to replace `formatHistoryForPrompt`
+### 2. ConversationManager - WORKAROUNDS ACCEPTABLE ✅
+- [x] Use `createConversation` instead of `getOrCreateConversationForRoom`
+- [x] Already using `addMessage` instead of `addTurn`
+- [x] Manual formatting instead of `formatHistoryForPrompt`
 
-### 3. ConversationCommandHandler
-- [ ] Implement proper replacement for `getTieredHistory` functionality
-- [ ] Fix memory service access pattern
+### 3. MCPConversationContext - REQUIRES TIERED MEMORY 🔴
+- [ ] Add `getTieredHistory()` method
+- [ ] Add `formatHistoryForPrompt()` method
+- [ ] Integrate TieredMemoryManager
+- [ ] Add automatic summarization triggers
+- [ ] Preserve existing tiered memory configuration
 
 ### 4. WebsiteCommandHandler
 - [ ] Find alternative to accessing AstroContentService directly
@@ -180,18 +185,32 @@ Reasons:
    - Fixed data type mismatches in command results
 
 #### ⚠️ Pending Implementation
-The code compiles but functionality is incomplete due to:
-1. Missing methods in MCP contexts (getTieredHistory, getOrCreateConversationForRoom, etc.)
-2. Messaging system still expects old context types
-3. Several command handler features disabled/reduced
+The code compiles but critical functionality is missing:
 
-### Next Steps Priority
-1. **Fix Messaging System** - Critical for cross-context communication
-2. **Implement Missing Methods** - Either add to MCP contexts or refactor callers
-3. **Restore Full Functionality** - Re-enable all commented features with proper implementations
-4. **Update Tests** - Ensure all tests work with new MCP context types
-  - May need to add tiered memory support to MCPConversationContext
-- [ ] Update command implementations for save-note and conversation-notes
+### Next Steps Priority (UPDATED)
+
+1. **Add Tiered Memory to MCPConversationContext** - CRITICAL 🔴
+   - [ ] Add `getTieredHistory()` method to MCPConversationContext
+   - [ ] Import and use existing TieredMemoryManager
+   - [ ] Add automatic conversation summarization
+   - [ ] Ensure proper token management for AI prompts
+   - [ ] Update ConversationCommandHandler to use tiered history properly
+
+2. **Remove Old Context Implementations** ✅
+   - [ ] Update index files to only export MCP contexts
+   - [ ] Delete old context implementation files
+   - [ ] Remove BaseContext and related classes
+   - [ ] Clean up test mocks
+
+3. **Clean up TODOs and Workarounds** 
+   - [ ] Remove TODOs for methods that have acceptable workarounds
+   - [ ] Document the new simplified patterns
+   - [ ] Update command handlers to use proper MCP methods
+
+4. **Update Tests**
+   - [ ] Ensure all tests work with tiered memory in MCP context
+   - [ ] Add tests for tiered history functionality
+   - [ ] Update mocks to include tiered memory
 
 ### WebsiteCommandHandler
 - [ ] Access services through MCP's getCapabilities() instead of direct service access
@@ -201,9 +220,24 @@ The code compiles but functionality is incomplete due to:
 - [ ] Remove room initialization logic or implement differently
 - [ ] Update context initialization patterns
 
+## Critical Decision: Tiered Memory Must Be Preserved
+
+### Why Tiered Memory is Essential:
+
+1. **Long Conversation Support**: Without tiered memory, conversations grow indefinitely
+2. **Token Management**: AI prompts have token limits - summaries keep context within bounds
+3. **Context Preservation**: Summaries maintain important context from older messages
+4. **Note Quality**: `save-note` command needs full conversation history, not just recent turns
+5. **Memory Efficiency**: Prevents memory bloat from storing all turns as active
+
+### Implementation Strategy:
+- The tiered memory logic already exists in TieredMemoryManager
+- MCPConversationContext just needs to integrate it
+- This aligns with MCP principles - we're not adding complexity, just preserving essential functionality
+
 ## Questions to Address
 
-1. Is the protocol layer doing too much orchestration?
-2. Should some logic move into the contexts themselves?
-3. Are we preserving necessary functionality while simplifying?
-4. How do we handle interface-specific behavior (CLI vs Matrix)?
+1. Is the protocol layer doing too much orchestration? No - contexts handle their own logic
+2. Should some logic move into the contexts themselves? Yes - tiered memory belongs in the context
+3. Are we preserving necessary functionality while simplifying? Yes - tiered memory is necessary
+4. How do we handle interface-specific behavior (CLI vs Matrix)? Through the existing interface type parameter
