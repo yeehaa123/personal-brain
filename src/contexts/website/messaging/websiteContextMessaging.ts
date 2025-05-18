@@ -5,12 +5,12 @@
  * allowing it to participate in cross-context communication.
  */
 
+import type { MCPWebsiteContext } from '@/contexts/website';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import type { ContextMediator, DataRequestMessage, NotificationMessage } from '@/protocol/messaging';
 import { MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { WebsiteContext } from '../websiteContext';
 import type { LandingPageData, WebsiteConfig } from '../websiteStorage';
 
 import { WebsiteMessageHandler } from './websiteMessageHandler';
@@ -27,11 +27,11 @@ export class WebsiteContextMessaging {
   /**
    * Create a messaging-enabled wrapper for a WebsiteContext
    * 
-   * @param websiteContext The website context to extend
+   * @param websiteContext The MCP website context to extend
    * @param mediator The context mediator for messaging
    */
   constructor(
-    private websiteContext: WebsiteContext,
+    private websiteContext: MCPWebsiteContext,
     mediator: ContextMediator,
   ) {
     // Create notifier
@@ -68,7 +68,7 @@ export class WebsiteContextMessaging {
    * Get the singleton instance (for dependency injection)
    */
   public static getInstance(
-    websiteContext: WebsiteContext,
+    websiteContext: MCPWebsiteContext,
     mediator: ContextMediator,
   ): WebsiteContextMessaging {
     if (!WebsiteContextMessaging.instance) {
@@ -88,7 +88,7 @@ export class WebsiteContextMessaging {
    * Create a fresh instance (for testing)
    */
   public static createFresh(
-    websiteContext: WebsiteContext,
+    websiteContext: MCPWebsiteContext,
     mediator: ContextMediator,
   ): WebsiteContextMessaging {
     return new WebsiteContextMessaging(websiteContext, mediator);
@@ -98,7 +98,7 @@ export class WebsiteContextMessaging {
    * Get the underlying website context
    * @returns The website context
    */
-  getContext(): WebsiteContext {
+  getContext(): MCPWebsiteContext {
     return this.websiteContext;
   }
   
@@ -208,9 +208,6 @@ export class WebsiteContextMessaging {
     return this.websiteContext.initialize();
   }
   
-  setReadyState(ready: boolean): void {
-    return this.websiteContext.setReadyState(ready);
-  }
   
   async getConfig(): Promise<WebsiteConfig> {
     return this.websiteContext.getConfig();
@@ -222,19 +219,6 @@ export class WebsiteContextMessaging {
     return this.websiteContext.getLandingPageData();
   }
   
-  async saveLandingPageData(data: LandingPageData): Promise<void> {
-    // Use storage's saveLandingPageData since WebsiteContext doesn't have this method
-    await this.websiteContext.getStorage().saveLandingPageData(data);
-    
-    // Add notification 
-    await this.notifier.notifyWebsiteGenerated(
-      'landing-page-updated', 
-      { 
-        type: 'landing-page-update',
-        data,
-      },
-    );
-  }
   
   async handleWebsiteStatus(environment: string = 'preview'): Promise<{ 
     success: boolean; 
@@ -249,7 +233,22 @@ export class WebsiteContextMessaging {
       url: string;
     }
   }> {
-    return this.websiteContext.handleWebsiteStatus(environment);
+    const status = await this.websiteContext.getWebsiteStatus();
+    
+    // Transform the MCP response to the messaging format
+    return {
+      success: status.status !== 'error',
+      message: status.message,
+      data: status.url ? {
+        environment,
+        buildStatus: status.status,
+        fileCount: status.fileCount || 0,
+        serverStatus: status.status,
+        domain: status.url.replace(/^https?:\/\//, ''),
+        accessStatus: status.message,
+        url: status.url,
+      } : undefined,
+    };
   }
   
   // Delegate additional methods that might be needed but don't need notifications

@@ -12,6 +12,7 @@
  * - createWithDependencies(): Creates an instance with explicit dependencies
  */
 
+import type { MCPWebsiteContext } from '@/contexts/website';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { 
   DataRequestType,
@@ -26,7 +27,6 @@ import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
 import type { WebsiteStatusParams } from '../schemas/messageSchemas';
-import type { WebsiteContext } from '../websiteContext';
 
 /**
  * Interface for message with common properties
@@ -41,7 +41,7 @@ interface BaseContextMessage {
  * Options for creating a WebsiteMessageHandler
  */
 export interface WebsiteMessageHandlerOptions {
-  websiteContext: WebsiteContext;
+  websiteContext: MCPWebsiteContext;
 }
 
 /**
@@ -103,7 +103,7 @@ export class WebsiteMessageHandler {
    */
   public static createWithDependencies(
     _config: Record<string, unknown> = {},
-    dependencies: { websiteContext: WebsiteContext },
+    dependencies: { websiteContext: MCPWebsiteContext },
   ): WebsiteMessageHandler {
     if (!dependencies.websiteContext) {
       throw new Error('WebsiteContext is required to initialize WebsiteMessageHandler');
@@ -117,7 +117,7 @@ export class WebsiteMessageHandler {
    * 
    * @param websiteContext The website context to handle messages for
    */
-  private constructor(private websiteContext: WebsiteContext) {}
+  private constructor(private websiteContext: MCPWebsiteContext) {}
   
   /**
    * Get a message handler function for registering with a mediator
@@ -221,13 +221,13 @@ export class WebsiteMessageHandler {
       const { environment } = validation.data || {};
       
       // Get status from the context
-      const status = await this.websiteContext.handleWebsiteStatus(environment);
+      const status = await this.websiteContext.getWebsiteStatus(environment);
       
       return MessageFactory.createSuccessResponse(
         ContextId.WEBSITE,
         request.sourceContext,
         request.id,
-        { status: status.data || {} },
+        { status },
       );
     } catch (error) {
       return MessageFactory.createErrorResponse(

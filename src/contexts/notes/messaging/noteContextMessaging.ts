@@ -10,7 +10,7 @@ import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { type ContextMediator, MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { NoteContext } from '../noteContext';
+import type { MCPNoteContext } from '../MCPNoteContext';
 
 import { NoteMessageHandler } from './noteMessageHandler';
 import { NoteNotifier } from './noteNotifier';
@@ -23,13 +23,13 @@ export class NoteContextMessaging {
   private notifier: NoteNotifier;
   
   /**
-   * Create a messaging-enabled wrapper for a NoteContext
+   * Create a messaging-enabled wrapper for a MCPNoteContext
    * 
-   * @param noteContext The note context to extend
+   * @param noteContext The MCP note context to extend
    * @param mediator The context mediator for messaging
    */
   constructor(
-    private noteContext: NoteContext,
+    private noteContext: MCPNoteContext,
     mediator: ContextMediator,
   ) {
     // Create notifier
@@ -66,10 +66,10 @@ export class NoteContextMessaging {
   }
   
   /**
-   * Get the underlying note context
-   * @returns The note context
+   * Get the underlying MCP note context
+   * @returns The MCP note context
    */
-  getContext(): NoteContext {
+  getContext(): MCPNoteContext {
     return this.noteContext;
   }
   
@@ -103,13 +103,7 @@ export class NoteContextMessaging {
    */
   async updateNote(id: string, data: Partial<Note>): Promise<boolean> {
     // Delegate to the original context 
-    // Use a method that exists on NoteContext
-    const updated = await this.noteContext.getNoteById(id);
-    if (!updated) return false;
-    
-    // Merge the updates with the existing note
-    const merged = { ...updated, ...data };
-    const success = await this.createOrReplaceNote(merged);
+    const success = await this.noteContext.updateNote(id, data);
     
     // Notify other contexts if the update was successful
     if (success) {
@@ -134,9 +128,8 @@ export class NoteContextMessaging {
     const noteToDelete = await this.noteContext.getNoteById(id);
     if (!noteToDelete) return false;
     
-    // Implementation would depend on what methods are available
-    // For now, we'll just simulate success
-    const success = true;
+    // Delete the note
+    const success = await this.noteContext.deleteNote(id);
     
     // Notify other contexts if the deletion was successful
     if (success) {
@@ -146,18 +139,6 @@ export class NoteContextMessaging {
     return success;
   }
   
-  /**
-   * Create or replace a note
-   * Helper method for updateNote
-   * 
-   * @param note Note to create or replace
-   * @returns ID of the created note
-   */
-  private async createOrReplaceNote(note: Note): Promise<boolean> {
-    // Use the createNote method from the original context
-    await this.noteContext.createNote(note);
-    return true;
-  }
   
   /**
    * Delegate all other methods to the original context

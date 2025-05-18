@@ -12,7 +12,7 @@ import type { ContextCommunicationMessage, DataRequestMessage, NotificationMessa
 import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
-import type { NoteContext } from '../noteContext';
+import type { MCPNoteContext } from '../MCPNoteContext';
 import type { 
   NoteByIdParams,
   NotesSearchParams,
@@ -49,7 +49,7 @@ export class NoteMessageHandler {
    * @param noteContext The note context to handle messages for
    * @returns The shared NoteMessageHandler instance
    */
-  public static getInstance(noteContext?: NoteContext): NoteMessageHandler {
+  public static getInstance(noteContext?: MCPNoteContext): NoteMessageHandler {
     if (!NoteMessageHandler.instance && noteContext) {
       NoteMessageHandler.instance = new NoteMessageHandler(noteContext);
       
@@ -99,7 +99,7 @@ export class NoteMessageHandler {
    * @param noteContext The note context to handle messages for
    * @returns A new NoteMessageHandler instance
    */
-  public static createFresh(noteContext: NoteContext): NoteMessageHandler {
+  public static createFresh(noteContext: MCPNoteContext): NoteMessageHandler {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh NoteMessageHandler instance');
     
@@ -110,25 +110,17 @@ export class NoteMessageHandler {
    * Create a new handler instance with explicit dependencies
    * 
    * Part of the Component Interface Standardization pattern.
-   * Uses the configOrDependencies pattern for flexible dependency injection.
    * 
-   * @param configOrDependencies Configuration or explicit dependencies
+   * @param noteContext The note context to handle messages for
    * @returns A new NoteMessageHandler instance with the provided dependencies
    */
   public static createWithDependencies(
-    configOrDependencies: Record<string, unknown> = {},
+    noteContext: MCPNoteContext,
   ): NoteMessageHandler {
     const logger = Logger.getInstance();
     logger.debug('Creating NoteMessageHandler with dependencies');
     
-    // Handle the case where dependencies are explicitly provided
-    if ('noteContext' in configOrDependencies) {
-      const noteContext = configOrDependencies['noteContext'] as NoteContext;
-      return new NoteMessageHandler(noteContext);
-    }
-    
-    // Cannot create without a note context
-    throw new Error('NoteMessageHandler requires a noteContext dependency');
+    return new NoteMessageHandler(noteContext);
   }
   
   /**
@@ -139,7 +131,7 @@ export class NoteMessageHandler {
    * @param noteContext The note context to handle messages for
    * @returns Message handler function
    */
-  static createHandler(noteContext: NoteContext) {
+  static createHandler(noteContext: MCPNoteContext) {
     return async (message: ContextCommunicationMessage) => {
       const handler = new NoteMessageHandler(noteContext);
       
@@ -172,7 +164,7 @@ export class NoteMessageHandler {
    * 
    * @param noteContext The note context to handle messages for
    */
-  private constructor(private noteContext: NoteContext) {}
+  private constructor(private noteContext: MCPNoteContext) {}
   
   /** 
    * Handle data request messages

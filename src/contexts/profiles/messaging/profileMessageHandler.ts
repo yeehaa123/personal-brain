@@ -4,7 +4,7 @@
  * Handles incoming messages for ProfileContext from other contexts.
  */
 
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import { ContextId } from '@/protocol/core/contextOrchestrator';
 import { MessageFactory } from '@/protocol/messaging/messageFactory';
 import { 
@@ -23,7 +23,7 @@ import type { ProfileDataParams } from '../schemas/messageSchemas';
  * Options for ProfileMessageHandler
  */
 export interface ProfileMessageHandlerOptions {
-  profileContext?: ProfileContext;
+  profileContext?: MCPProfileContext;
 }
 
 /**
@@ -32,8 +32,8 @@ export interface ProfileMessageHandlerOptions {
 export class ProfileMessageHandler {
   private static instance: ProfileMessageHandler | null = null;
   
-  /** Profile context */
-  private profileContext: ProfileContext;
+  /** MCP Profile context */
+  private profileContext: MCPProfileContext;
   
   /** Logger instance */
   private logger: Logger;
@@ -42,7 +42,7 @@ export class ProfileMessageHandler {
    * Private constructor to enforce getInstance() usage
    */
   private constructor(
-    profileContext: ProfileContext,
+    profileContext: MCPProfileContext,
   ) {
     this.profileContext = profileContext;
     this.logger = Logger.getInstance();
@@ -57,7 +57,7 @@ export class ProfileMessageHandler {
    * @returns The singleton instance
    */
   public static getInstance(
-    profileContext: ProfileContext,
+    profileContext: MCPProfileContext,
   ): ProfileMessageHandler {
     if (!ProfileMessageHandler.instance) {
       ProfileMessageHandler.instance = new ProfileMessageHandler(

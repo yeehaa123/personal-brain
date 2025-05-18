@@ -136,10 +136,10 @@ Reasons:
 ### Remaining Implementation TODOs
 
 ### 1. Messaging System Migration
-- [ ] Update NoteContextMessaging to work with MCPNoteContext
-- [ ] Update ProfileContextMessaging to work with MCPProfileContext  
-- [ ] Update WebsiteContextMessaging to work with MCPWebsiteContext
-- [ ] Remove the temporary "as any" casts in ContextIntegrator
+- [x] Update NoteContextMessaging to work with MCPNoteContext
+- [x] Update ProfileContextMessaging to work with MCPProfileContext  
+- [x] Update WebsiteContextMessaging to work with MCPWebsiteContext
+- [x] Remove the temporary "as any" casts in ContextIntegrator
 
 ### 2. ConversationManager
 - [ ] Replace `getOrCreateConversationForRoom` with simpler create/set pattern

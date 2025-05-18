@@ -117,15 +117,13 @@ export class ContextIntegrator {
     // Store the mediator
     this.mediator = options.mediator;
     
-    // Create messaging-enabled contexts
-    // TODO: Messaging classes expect old BaseContext-based contexts, not MCP contexts
-    // Using 'as any' temporarily until messaging system is updated
+    // Create messaging-enabled contexts with MCP contexts
     this.contexts = {
-      note: new NoteContextMessaging(options.noteContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
-      profile: new ProfileContextMessaging(options.profileContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
+      note: new NoteContextMessaging(options.noteContext, this.mediator),
+      profile: new ProfileContextMessaging(options.profileContext, this.mediator),
       conversation: options.conversationContext,
       externalSource: options.externalSourceContext,
-      website: new WebsiteContextMessaging(options.websiteContext as any, this.mediator), // eslint-disable-line @typescript-eslint/no-explicit-any
+      website: new WebsiteContextMessaging(options.websiteContext, this.mediator),
     };
     
     this.logger.debug('ContextIntegrator initialized');

@@ -5,7 +5,7 @@
  * wrapping the original context and adding notification capabilities.
  */
 
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
@@ -20,8 +20,8 @@ import { ProfileNotifier } from './profileNotifier';
  * Delegates operations to the original context and adds notification capabilities
  */
 export class ProfileContextMessaging {
-  /** Original profile context */
-  private profileContext: ProfileContext;
+  /** Original MCP profile context */
+  private profileContext: MCPProfileContext;
   
   /** Context mediator for messaging */
   private mediator: ContextMediator;
@@ -35,10 +35,10 @@ export class ProfileContextMessaging {
   /**
    * Create a new ProfileContextMessaging instance
    * 
-   * @param profileContext Original profile context to wrap
+   * @param profileContext Original MCP profile context to wrap
    * @param mediator Context mediator for messaging
    */
-  constructor(profileContext: ProfileContext, mediator: ContextMediator) {
+  constructor(profileContext: MCPProfileContext, mediator: ContextMediator) {
     this.profileContext = profileContext;
     this.mediator = mediator;
     this.logger = Logger.getInstance();
@@ -59,7 +59,7 @@ export class ProfileContextMessaging {
    * Get the wrapped profile context
    * @returns Original profile context
    */
-  getContext(): ProfileContext {
+  getContext(): MCPProfileContext {
     return this.profileContext;
   }
   
