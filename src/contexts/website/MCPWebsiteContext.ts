@@ -419,7 +419,7 @@ export class MCPWebsiteContext implements MCPContext {
    * Generate landing page from profile data
    */
   async generateLandingPage(
-    options?: { useIdentity?: boolean; skipEdit?: boolean },
+    options?: { useIdentity?: boolean; skipEdit?: boolean; onProgress?: (step: string, index: number) => void },
   ): Promise<{ success: boolean; message: string; data?: LandingPageData; status?: LandingPageGenerationStatus }> {
     try {
       const useIdentity = options?.useIdentity ?? false;
@@ -442,7 +442,8 @@ export class MCPWebsiteContext implements MCPContext {
       
       // Use LandingPageGenerationService to generate the page
       const { landingPage, generationStatus } = await this.landingPageGenerationService.generateLandingPageData(
-        identityData!,
+        identityData || {} as WebsiteIdentityData,
+        options?.onProgress,
       );
       
       if (!landingPage) {

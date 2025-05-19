@@ -1,7 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { v4 as uuidv4 } from 'uuid';
 
-import { type TieredMemoryConfig, TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
+import { type TieredHistory, type TieredMemoryConfig, TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationNotifier } from '@/contexts/conversations/messaging/conversationNotifier';
 import type { 
   ConversationInfo,
@@ -21,6 +21,8 @@ import type {
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { AppError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
+
+import { ConversationToolService, type ConversationToolServiceContext } from './tools';
 
 // Bridge interface during migration - supports both ConversationContext and MCPConversationContext
 export interface ConversationToolContext {
@@ -42,6 +44,10 @@ export interface ConversationToolContext {
   // Tiered memory methods
   formatHistoryForPrompt(conversationId: string, maxTokens?: number): Promise<string>;
   getFlatHistory(conversationId: string): Promise<ConversationTurn[]>;
+  getTieredHistory(conversationId: string): Promise<TieredHistory>;
+  
+  // Room lookup method
+  getConversationIdByRoom(roomId: string, interfaceType?: 'cli' | 'matrix'): Promise<string | null>;
 }
 
 export interface MCPConversationContextOptions {
@@ -59,10 +65,11 @@ export interface MCPConversationContextOptions {
  * This implementation:
  * - Follows the MCPContext interface pattern (no BaseContext inheritance)
  * - Implements ConversationToolContext for gradual migration support
+ * - Implements ConversationToolServiceContext for tool service compatibility
  * - Integrates with MCP servers through registerOnServer
  * - Uses composition over inheritance
  */
-export class MCPConversationContext implements MCPContext, ConversationToolContext {
+export class MCPConversationContext implements MCPContext, ConversationToolContext, ConversationToolServiceContext {
   private static instance: MCPConversationContext | null = null;
   
   private name: string;
@@ -128,60 +135,11 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
       ];
       
       // Setup basic MCP tools
-      this.tools = [
-        {
-          protocol: 'tool',
-          path: 'create_conversation',
-          name: 'create_conversation',
-          description: 'Create a new conversation',
-          handler: async (params: Record<string, unknown>) => {
-            const title = params['title'] as string;
-            const conversationId = await this.createConversation(title);
-            return { conversationId };
-          },
-        },
-        {
-          protocol: 'tool',
-          path: 'add_message',
-          name: 'add_message',
-          description: 'Add a message to a conversation',
-          handler: async (params: Record<string, unknown>) => {
-            const conversationId = params['conversationId'] as string;
-            const query = params['query'] as string;
-            const response = params['response'] as string;
-            const userId = params['userId'] as string;
-            
-            const message = await this.addMessage(conversationId, { query, response, userId });
-            return { message };
-          },
-        },
-        {
-          protocol: 'tool',
-          path: 'list_conversations',
-          name: 'list_conversations',
-          description: 'List all conversations',
-          handler: async (params: Record<string, unknown>) => {
-            const limit = params['limit'] as number;
-            const offset = params['offset'] as number;
-            
-            const result = await this.listConversations({ limit, offset });
-            return result;
-          },
-        },
-        {
-          protocol: 'tool',
-          path: 'export_conversation',
-          name: 'export_conversation', 
-          description: 'Export a conversation',
-          handler: async (params: Record<string, unknown>) => {
-            const conversationId = params['conversationId'] as string;
-            const format = (params['format'] as string) || 'json';
-            
-            const exported = await this.exportConversation(conversationId, format as 'json' | 'markdown');
-            return { content: exported };
-          },
-        },
-      ];
+      // Get the tool service instance
+      const toolService = ConversationToolService.getInstance();
+      
+      // Register conversation tools using the tool service
+      this.tools = toolService.getTools(this);
 
       this.initialized = true;
       this.logger.debug(`${this.name} initialized successfully`);
@@ -205,6 +163,14 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
       resourceCount: this.resources.length,
       toolCount: this.tools.length,
     };
+  }
+
+  /**
+   * Get the underlying conversation storage
+   * This is needed for services that require the raw ConversationStorage interface
+   */
+  public getConversationStorage(): ConversationStorage {
+    return this.storage;
   }
 
   public getStorage(): MCPStorageInterface {
@@ -465,6 +431,10 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
     return 'No summary available';
   }
 
+  public async getConversationIdByRoom(roomId: string, interfaceType?: 'cli' | 'matrix'): Promise<string | null> {
+    return await this.storage.getConversationByRoom(roomId, interfaceType);
+  }
+
   public async exportConversation(conversationId: string, format: 'json' | 'markdown' = 'json'): Promise<string> {
     const conversation = await this.storage.getConversation(conversationId);
     if (!conversation) {
@@ -530,6 +500,9 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
     return flatHistory;
   }
 
+  public getTieredHistory(conversationId: string): Promise<TieredHistory> {
+    return this.tieredMemoryManager.getTieredHistory(conversationId);
+  }
 
   // Singleton pattern
   public static getInstance(options?: MCPConversationContextOptions): MCPConversationContext {

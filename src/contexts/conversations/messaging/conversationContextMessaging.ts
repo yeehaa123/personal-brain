@@ -162,10 +162,8 @@ export class ConversationContextMessaging {
     return this.conversationContext.getFlatHistory(conversationId);
   }
   
-  getConversationIdByRoom(_roomId: string): Promise<string | null> {
-    // TODO: MCPConversationContext doesn't have getConversationIdByRoom
-    // This would need to be implemented using storage.getConversationByRoom
-    throw new Error('getConversationIdByRoom not implemented in MCPConversationContext');
+  getConversationIdByRoom(roomId: string, interfaceType?: 'cli' | 'matrix'): Promise<string | null> {
+    return this.conversationContext.getConversationIdByRoom(roomId, interfaceType);
   }
   
   getConversationHistory(conversationId: string): Promise<string> {

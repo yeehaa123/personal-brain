@@ -10,7 +10,6 @@
 
 import type { z } from 'zod';
 
-// import type { WebsiteContext } from '@/contexts'; // TODO: Remove after migration
 import type { ResourceDefinition } from '@/contexts/contextInterface';
 import { Logger } from '@/utils/logger';
 import { 
@@ -26,10 +25,17 @@ import {
   GetWebsiteIdentityToolSchema,
 } from '../schemas/websiteIdentitySchema';
 
-// Temporary interface to support both WebsiteContext and MCPWebsiteContext during migration
-// TODO: Remove after WebsiteContext is fully migrated to MCPWebsiteContext
+/**
+ * Interface that defines the required methods for any website context implementation.
+ * This interface is implemented by MCPWebsiteContext and provides the contract
+ * that the tool service expects from a website context.
+ */
 export interface WebsiteToolContext {
-  generateLandingPage(options?: Record<string, unknown>): Promise<{
+  generateLandingPage(options?: {
+    useIdentity?: boolean;
+    skipEdit?: boolean;
+    onProgress?: (step: string, index: number) => void;
+  }): Promise<{
     success: boolean;
     message: string;
     data?: unknown;

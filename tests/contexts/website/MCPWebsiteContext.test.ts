@@ -152,6 +152,7 @@ describe('MCPWebsiteContext', () => {
       // Check that the method was called with the identity
       expect(generateLandingPageDataSpy).toHaveBeenCalledWith(
         mockIdentity,
+        undefined, // onProgress callback
       );
     });
 

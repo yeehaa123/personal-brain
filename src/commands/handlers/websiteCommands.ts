@@ -285,7 +285,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         const result = await progressTracker.withProgress(
           'Generating Landing Page',
           steps,
-          async (/*updateStep: (index: number) => void*/) => {
+          async (updateStep: (index: number) => void) => {
             // If the context is not available, handle gracefully
             if (!this.websiteContext) {
               return {
@@ -294,15 +294,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
               };
             }
             
-            // The website context and service will call updateStep with the right indices
-            // TODO: MCPWebsiteContext doesn't support onProgress callback
+            // Pass the progress callback to the website context
             return await this.websiteContext.generateLandingPage({
-              // onProgress: (_step: string, index: number) => {
-              //   // Use the index provided by the progress callback
-              //   if (index >= 0 && index < steps.length) {
-              //     updateStep(index);
-              //   }
-              // },
+              onProgress: (_step: string, index: number) => {
+                // Use the index provided by the progress callback
+                if (index >= 0 && index < steps.length) {
+                  updateStep(index);
+                }
+              },
             });
           },
           roomId, // This parameter is only used by Matrix, and ignored by CLI

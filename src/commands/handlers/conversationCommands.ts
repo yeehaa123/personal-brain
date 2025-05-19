@@ -173,14 +173,14 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // TODO: Fix memory service access for MCP context
-    // const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
+    // Get the conversation context from the conversation manager
+    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
-    // TODO: MCPConversationContext doesn't have getTieredHistory method
-    // const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    // Get the tiered history from the context
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
     
-    // Use the conversation already fetched above
-    const turns: ConversationTurn[] = conversation?.activeTurns || [];
+    // Use the active turns from tiered history
+    const turns: ConversationTurn[] = tieredHistory.activeTurns;
     this.logger.debug(`Retrieved ${turns.length} turns from conversation`);
     
     // Enhanced debugging for conversation content
@@ -246,14 +246,14 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       return this.formatError('Conversation not found.');
     }
 
-    // TODO: Fix memory service access for MCP context
-    // const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
+    // Get the conversation context from the conversation manager
+    const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
     
-    // TODO: MCPConversationContext doesn't have getTieredHistory method
-    // const tieredHistory = await conversationContext.getTieredHistory(conversationId);
+    // Get the tiered history from the context
+    const tieredHistory = await conversationContext.getTieredHistory(conversationId);
     
-    // Use the conversation already fetched above
-    const turns: ConversationTurn[] = conversation?.activeTurns || [];
+    // Use the active turns from tiered history
+    const turns: ConversationTurn[] = tieredHistory.activeTurns;
     this.logger.debug(`Retrieved ${turns.length} turns from conversation for confirmation`);
     
     if (turns.length === 0) {
@@ -311,11 +311,15 @@ export class ConversationCommandHandler extends BaseCommandHandler {
       const noteRepository = this.noteContext.getNoteRepository();
       const noteEmbeddingService = this.noteContext.getNoteEmbeddingService();
       
-      // Create new service without explicitly passing memory storage,
-      // it will use the singleton instance internally
+      // Get the conversation storage from the conversation context
+      const conversationContext = this.brainProtocol.getConversationManager().getConversationContext();
+      const conversationStorage = conversationContext.getConversationStorage();
+      
+      // Create new service with all dependencies
       const conversationToNoteService = new ConversationToNoteService(
         noteRepository,
         noteEmbeddingService,
+        conversationStorage,
       );
       
       // Register for future use

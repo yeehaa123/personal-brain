@@ -352,11 +352,10 @@ export class MCPNoteContext implements MCPContext, NoteToolContext {
   /**
    * Retrieve a note by its ID
    * @param id The ID of the note to retrieve
-   * @returns The note object or undefined if not found
+   * @returns The note object or null if not found
    */
-  async getNoteById(id: string): Promise<Note | undefined> {
-    const note = await this.storage.read(id);
-    return note as Note | undefined;
+  async getNoteById(id: string): Promise<Note | null> {
+    return await this.storage.read(id);
   }
 
   /**

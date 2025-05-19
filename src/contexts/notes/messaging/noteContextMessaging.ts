@@ -145,7 +145,7 @@ export class NoteContextMessaging {
    * This ensures that the messaging-enabled context behaves
    * exactly like the original context, just with added messaging.
    */
-  getNoteById(id: string): Promise<Note | undefined> {
+  getNoteById(id: string): Promise<Note | null> {
     return this.noteContext.getNoteById(id);
   }
   

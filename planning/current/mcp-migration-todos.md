@@ -243,6 +243,18 @@ The code compiles but critical functionality is missing:
 - [ ] Remove room initialization logic or implement differently
 - [ ] Update context initialization patterns
 
+### Tool Service Pattern Standardization 🆕
+- [ ] **Migrate ProfileContext to use ProfileToolService pattern**
+  - Currently defines tools directly in `setupTools()` method
+  - Should follow the same pattern as Note, Website, and ExternalSource contexts
+  - Create `ProfileToolService` class with Component Interface Standardization pattern
+  - Define `ProfileToolContext` interface for consistency
+- [ ] **Migrate ConversationContext to use ConversationToolService pattern**
+  - Currently defines tools directly in the context
+  - Should follow the same pattern as Note, Website, and ExternalSource contexts
+  - Create `ConversationToolService` class with Component Interface Standardization pattern
+  - Define `ConversationToolContext` interface for consistency
+
 ## Critical Decision: Tiered Memory Must Be Preserved
 
 ### Why Tiered Memory is Essential:

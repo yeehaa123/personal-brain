@@ -20,6 +20,8 @@ import type {
 import { createContextFunctionality } from '../MCPContext';
 import { MCPNoteContext } from '../notes/MCPNoteContext';
 
+import { type ProfileToolContext, ProfileToolService } from './tools';
+
 /**
  * Configuration for MCPProfileContext
  */
@@ -44,8 +46,10 @@ export interface MCPProfileContextDependencies {
  * 
  * This implementation follows the new MCPContext pattern, eliminating BaseContext
  * and implementing functionality directly.
+ * 
+ * Also implements ProfileToolContext for compatibility with ProfileToolService.
  */
-export class MCPProfileContext implements MCPContext {
+export class MCPProfileContext implements MCPContext, ProfileToolContext {
   // Singleton pattern
   private static instance: MCPProfileContext | null = null;
   
@@ -254,53 +258,14 @@ export class MCPProfileContext implements MCPContext {
   }
   
   private setupTools(): void {
-    this.tools = [
-      {
-        protocol: 'profile',
-        path: '/profile/update',
-        name: 'update-profile',
-        description: 'Update or create the user profile',
-        handler: async (params: Record<string, unknown>) => {
-          const profileData = params['profile'] as Partial<Profile>;
-          if (!profileData) {
-            throw new Error('Profile data is required');
-          }
-          
-          const existingProfile = await this.getProfile();
-          let result;
-          
-          if (existingProfile) {
-            await this.updateProfile(profileData);
-            result = { success: true, action: 'updated' };
-          } else {
-            // Add required display name field if it doesn't exist
-            const profileWithName = {
-              ...profileData,
-              displayName: profileData.displayName || 'New User',
-            };
-            const success = await this.saveProfile(profileWithName as Profile);
-            result = { success, action: 'created' };
-          }
-          
-          return result;
-        },
-      },
-      {
-        protocol: 'profile',
-        path: '/profile/migrate-linkedin',
-        name: 'migrate-linkedin-profile',
-        description: 'Migrate a LinkedIn profile to the new format',
-        handler: async (params: Record<string, unknown>) => {
-          const linkedInProfileData = params['linkedInProfile'] as LinkedInProfile;
-          if (!linkedInProfileData) {
-            throw new Error('LinkedIn profile data is required');
-          }
-          
-          const success = await this.migrateLinkedInProfile(linkedInProfileData);
-          return { success };
-        },
-      },
-    ];
+    // Get the tool service instance
+    const toolService = ProfileToolService.getInstance();
+    
+    // Register profile tools using the tool service
+    const tools = toolService.getTools(this);
+    
+    // Store the tools in our context
+    this.tools = tools;
   }
   
   // Profile-specific methods

@@ -12,36 +12,69 @@
 import { z } from 'zod';
 
 import type { ResourceDefinition } from '@/contexts/contextInterface';
-// TODO: Remove this import after NoteContext is fully migrated to MCPNoteContext
-// import type { NoteContext } from '@/contexts/notes/noteContext';
+import type { Note } from '@/models/note';
 import { Logger } from '@/utils/logger';
 
 /**
- * TODO: Remove this interface after NoteContext is fully migrated to MCPNoteContext
- * 
- * Temporary interface to support both the legacy NoteContext and the new MCPNoteContext
- * during the migration period. This defines the minimum functionality needed from any
- * note context for the tool service.
- * 
- * After migration is complete:
- * 1. Remove this interface
- * 2. Update all methods to use MCPNoteContext directly
- * 3. Remove the NoteContext import
+ * Schema definitions for note tools
  */
+const CreateNoteSchema = z.object({
+  title: z.string().optional(),
+  content: z.string().min(1, 'Content must not be empty'),
+  tags: z.array(z.string()).optional(),
+});
 
-// We use `any` here temporarily during migration since both contexts return slightly different types
-// This will be replaced with proper types after migration is complete
-/* eslint-disable @typescript-eslint/no-explicit-any */
+const GenerateEmbeddingsSchema = z.object({});
+
+const SearchWithEmbeddingSchema = z.object({
+  text: z.string().min(1, 'Text must not be empty'),
+  limit: z.number().positive().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+const SearchNotesSchema = z.object({
+  query: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  limit: z.number().positive().optional(),
+  offset: z.number().nonnegative().optional(),
+  semanticSearch: z.boolean().optional(),
+});
+
+const GetNoteSchema = z.object({
+  id: z.string().min(1, 'Note ID must not be empty'),
+});
+
+const UpdateNoteSchema = z.object({
+  id: z.string().min(1, 'Note ID must not be empty'),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+});
+
+const DeleteNoteSchema = z.object({
+  id: z.string().min(1, 'Note ID must not be empty'),
+});
+
+/**
+ * Interface that defines the required methods for any note context implementation.
+ * This interface is implemented by MCPNoteContext and provides the contract
+ * that the tool service expects from a note context.
+ */
 export interface NoteToolContext {
-  createNote(note: { title: string; content: string; tags?: string[] | null }): Promise<string>;
-  getNoteById(id: string): Promise<any | undefined>;
-  updateNote(id: string, updates: Record<string, unknown>): Promise<boolean>;
-  deleteNote(id: string): Promise<boolean>;
-  searchNotes(options: { query?: string; tags?: string[]; limit?: number; offset?: number }): Promise<any[]>;
-  searchWithEmbedding(text: string, limit?: number, tags?: string[]): Promise<any[]>;
+  createNote(data: Partial<Note>): Promise<string>;
   generateEmbeddingsForAllNotes(): Promise<{ updated: number; failed: number }>;
-};
-/* eslint-enable @typescript-eslint/no-explicit-any */
+  searchWithEmbedding(text: string, limit: number, tags?: string[]): Promise<Array<Note & { similarity?: number }>>;
+  searchNotes(options: {
+    query?: string;
+    tags?: string[];
+    limit?: number;
+    offset?: number;
+    semanticSearch?: boolean;
+  }): Promise<Note[]>;
+  getNoteById(id: string): Promise<Note | null>;
+  updateNote(id: string, updates: Partial<Note>): Promise<boolean>;
+  deleteNote(id: string): Promise<boolean>;
+}
 
 /**
  * Configuration options for NoteToolService
@@ -159,7 +192,7 @@ export class NoteToolService {
   /**
    * Get the MCP tools for the note context
    * 
-   * @param context The note context (supports both NoteContext and MCPNoteContext)
+   * @param context The note context
    * @returns Array of MCP tools
    */
   getTools(context: NoteToolContext): ResourceDefinition[] {
@@ -187,64 +220,6 @@ export class NoteToolService {
     ];
   }
 
-  /**
-   * Get the Zod schema for a tool based on its name
-   * 
-   * @param tool Tool definition with parameters
-   * @returns Zod schema object for tool parameters
-   */
-  getToolSchema(tool: { name?: string }): Record<string, z.ZodTypeAny> {
-    // Return appropriate Zod schema based on tool name
-    switch (tool.name) {
-    case 'create_note':
-      return {
-        title: z.string().optional(),
-        content: z.string().min(1, 'Content must not be empty'),
-        tags: z.array(z.string()).optional(),
-      };
-
-    case 'generate_embeddings':
-      return {}; // No parameters needed
-
-    case 'search_with_embedding':
-      return {
-        text: z.string().min(1, 'Text must not be empty'),
-        limit: z.number().positive().optional(),
-        tags: z.array(z.string()).optional(),
-      };
-      
-    case 'search_notes':
-      return {
-        query: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-        limit: z.number().positive().optional(),
-        offset: z.number().nonnegative().optional(),
-        semanticSearch: z.boolean().optional(),
-      };
-      
-    case 'get_note':
-      return {
-        id: z.string().min(1, 'Note ID must not be empty'),
-      };
-      
-    case 'update_note':
-      return {
-        id: z.string().min(1, 'Note ID must not be empty'),
-        title: z.string().optional(),
-        content: z.string().optional(),
-        tags: z.array(z.string()).optional(),
-      };
-      
-    case 'delete_note':
-      return {
-        id: z.string().min(1, 'Note ID must not be empty'),
-      };
-      
-    default:
-      // For unknown tools, return an empty schema
-      return {};
-    }
-  }
 
   /**
    * Create the create_note tool
@@ -255,15 +230,10 @@ export class NoteToolService {
       path: 'create_note',
       name: 'create_note',
       description: 'Create a new note with optional title and tags',
+      inputSchema: CreateNoteSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
-          const title = params['title'] as string;
-          const content = params['content'] as string;
-          const tags = params['tags'] as string[] | undefined;
-          
-          if (!content) {
-            throw new Error('Note content is required');
-          }
+          const { title, content, tags } = CreateNoteSchema.parse(params);
           
           const noteId = await context.createNote({
             title: title || '',
@@ -292,8 +262,10 @@ export class NoteToolService {
       path: 'generate_embeddings',
       name: 'generate_embeddings',
       description: 'Generate or update embeddings for all notes in the database',
-      handler: async () => {
+      inputSchema: GenerateEmbeddingsSchema,
+      handler: async (params: Record<string, unknown>) => {
         try {
+          GenerateEmbeddingsSchema.parse(params); // No parameters expected, just validate
           const result = await context.generateEmbeddingsForAllNotes();
           return {
             success: true,
@@ -320,17 +292,13 @@ export class NoteToolService {
       path: 'search_with_embedding',
       name: 'search_with_embedding',
       description: 'Search notes using semantic similarity with a text passage',
+      inputSchema: SearchWithEmbeddingSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
-          const text = params['text'] as string;
-          const limit = params['limit'] as number || this.config.defaultSearchLimit;
-          const tags = params['tags'] as string[] | undefined;
+          const { text, limit, tags } = SearchWithEmbeddingSchema.parse(params);
+          const effectiveLimit = limit || this.config.defaultSearchLimit || 10;
           
-          if (!text) {
-            throw new Error('Text is required');
-          }
-          
-          const notes = await context.searchWithEmbedding(text, limit, tags);
+          const notes = await context.searchWithEmbedding(text, effectiveLimit, tags);
           
           return {
             count: notes.length,
@@ -362,16 +330,16 @@ export class NoteToolService {
       path: 'search_notes',
       name: 'search_notes',
       description: 'Search notes by query and/or tags',
+      inputSchema: SearchNotesSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
+          const parsed = SearchNotesSchema.parse(params);
           const options = {
-            query: params['query'] as string | undefined,
-            tags: params['tags'] as string[] | undefined,
-            limit: (params['limit'] as number) || this.config.defaultSearchLimit,
-            offset: (params['offset'] as number) || 0,
-            semanticSearch: params['semanticSearch'] !== undefined 
-              ? Boolean(params['semanticSearch']) 
-              : this.config.defaultSemanticSearch,
+            query: parsed.query,
+            tags: parsed.tags,
+            limit: parsed.limit || this.config.defaultSearchLimit || 10,
+            offset: parsed.offset || 0,
+            semanticSearch: parsed.semanticSearch ?? this.config.defaultSemanticSearch,
           };
           
           const notes = await context.searchNotes(options);
@@ -406,13 +374,10 @@ export class NoteToolService {
       path: 'get_note',
       name: 'get_note',
       description: 'Get a note by ID',
+      inputSchema: GetNoteSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
-          const id = params['id'] as string;
-          
-          if (!id) {
-            throw new Error('Note ID is required');
-          }
+          const { id } = GetNoteSchema.parse(params);
           
           const note = await context.getNoteById(id);
           
@@ -451,16 +416,10 @@ export class NoteToolService {
       path: 'update_note',
       name: 'update_note',
       description: 'Update an existing note',
+      inputSchema: UpdateNoteSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
-          const id = params['id'] as string;
-          const title = params['title'] as string | undefined;
-          const content = params['content'] as string | undefined;
-          const tags = params['tags'] as string[] | undefined;
-          
-          if (!id) {
-            throw new Error('Note ID is required');
-          }
+          const { id, title, content, tags } = UpdateNoteSchema.parse(params);
           
           if (!title && !content && !tags) {
             throw new Error('At least one field to update is required');
@@ -500,13 +459,10 @@ export class NoteToolService {
       path: 'delete_note',
       name: 'delete_note',
       description: 'Delete a note by ID',
+      inputSchema: DeleteNoteSchema,
       handler: async (params: Record<string, unknown>) => {
         try {
-          const id = params['id'] as string;
-          
-          if (!id) {
-            throw new Error('Note ID is required');
-          }
+          const { id } = DeleteNoteSchema.parse(params);
           
           const success = await context.deleteNote(id);
           
