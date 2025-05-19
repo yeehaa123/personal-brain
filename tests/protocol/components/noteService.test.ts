@@ -1,25 +1,25 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import type { NoteContext } from '@/contexts/notes';
+import type { MCPNoteContext } from '@/contexts/notes';
 import { NoteService } from '@/protocol/components/noteService';
 import type { NoteSearchOptions } from '@/services/notes/noteSearchService';
-import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
+import { MockMCPNoteContext } from '@test/__mocks__/contexts/notes/MCPNoteContext';
 import { createMockNote } from '@test/__mocks__/models/note';
 
 describe('NoteService', () => {
   let noteService: NoteService;
-  let mockContext: MockNoteContext;
+  let mockContext: MockMCPNoteContext;
 
   beforeEach(() => {
     // Reset the standardized NoteContext mock before each test
-    MockNoteContext.resetInstance();
+    MockMCPNoteContext.resetInstance();
 
     // Create fresh context using our standardized mock
-    mockContext = MockNoteContext.createFresh();
+    mockContext = MockMCPNoteContext.createFresh();
     
     // Use factory method to create the service with the mock context
     noteService = NoteService.createFresh({ 
-      context: mockContext as unknown as NoteContext, 
+      context: mockContext as unknown as MCPNoteContext, 
     });
   });
 
@@ -69,7 +69,7 @@ describe('NoteService', () => {
 
   test('should try tags-only search if combined search fails', async () => {
     // Create a custom instance for this specific test scenario
-    const customContext = MockNoteContext.createFresh();
+    const customContext = MockMCPNoteContext.createFresh();
     
     // Override the searchNotes method for this specific test case
     customContext.searchNotes = async (params: NoteSearchOptions) => {
@@ -90,7 +90,7 @@ describe('NoteService', () => {
     };
 
     const service = NoteService.createFresh({
-      context: customContext as unknown as NoteContext,
+      context: customContext as unknown as MCPNoteContext,
     });
     const results = await service.fetchRelevantContext('#test query with tags');
 
@@ -101,7 +101,7 @@ describe('NoteService', () => {
 
   test('should fall back to keyword search if semantic search fails', async () => {
     // Create a custom instance for this specific test scenario
-    const customContext = MockNoteContext.createFresh();
+    const customContext = MockMCPNoteContext.createFresh();
     
     // Override the searchNotes method for this specific test case
     customContext.searchNotes = async (params: NoteSearchOptions) => {
@@ -117,7 +117,7 @@ describe('NoteService', () => {
     };
 
     const service = NoteService.createFresh({
-      context: customContext as unknown as NoteContext,
+      context: customContext as unknown as MCPNoteContext,
     });
     const results = await service.fetchRelevantContext('keyword search');
 
@@ -128,7 +128,7 @@ describe('NoteService', () => {
 
   test('should fall back to recent notes if all search methods fail', async () => {
     // Create a custom instance for this specific test scenario
-    const customContext = MockNoteContext.createFresh();
+    const customContext = MockMCPNoteContext.createFresh();
     
     // Override methods for this specific test case
     customContext.searchNotes = async () => [];
@@ -137,7 +137,7 @@ describe('NoteService', () => {
     ].slice(0, limit);
 
     const service = NoteService.createFresh({
-      context: customContext as unknown as NoteContext,
+      context: customContext as unknown as MCPNoteContext,
     });
     const results = await service.fetchRelevantContext('query with no results');
 

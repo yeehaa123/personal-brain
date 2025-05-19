@@ -27,7 +27,7 @@ import type {
 import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
-import type { ExternalSourceContext } from '../externalSourceContext';
+import type { MCPExternalSourceContext } from '../MCPExternalSourceContext';
 import type { 
   ExternalSourceSearchParams,
   ExternalSourceStatusParams,
@@ -53,7 +53,7 @@ export class ExternalSourceMessageHandler {
    * 
    * @param externalSourceContext The external source context to handle messages for
    */
-  private constructor(private externalSourceContext: ExternalSourceContext) {}
+  private constructor(private externalSourceContext: MCPExternalSourceContext) {}
   
   /**
    * Get the singleton instance of the handler
@@ -63,7 +63,7 @@ export class ExternalSourceMessageHandler {
    * @param externalSourceContext The external source context to handle messages for
    * @returns The shared ExternalSourceMessageHandler instance
    */
-  public static getInstance(externalSourceContext?: ExternalSourceContext): ExternalSourceMessageHandler {
+  public static getInstance(externalSourceContext?: MCPExternalSourceContext): ExternalSourceMessageHandler {
     if (!ExternalSourceMessageHandler.instance && externalSourceContext) {
       ExternalSourceMessageHandler.instance = new ExternalSourceMessageHandler(externalSourceContext);
       
@@ -113,7 +113,7 @@ export class ExternalSourceMessageHandler {
    * @param externalSourceContext The external source context to handle messages for
    * @returns A new ExternalSourceMessageHandler instance
    */
-  public static createFresh(externalSourceContext: ExternalSourceContext): ExternalSourceMessageHandler {
+  public static createFresh(externalSourceContext: MCPExternalSourceContext): ExternalSourceMessageHandler {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ExternalSourceMessageHandler instance');
     
@@ -137,7 +137,7 @@ export class ExternalSourceMessageHandler {
     
     // Handle the case where dependencies are explicitly provided
     if ('externalSourceContext' in configOrDependencies) {
-      const externalSourceContext = configOrDependencies['externalSourceContext'] as ExternalSourceContext;
+      const externalSourceContext = configOrDependencies['externalSourceContext'] as MCPExternalSourceContext;
       return new ExternalSourceMessageHandler(externalSourceContext);
     }
     
@@ -153,7 +153,7 @@ export class ExternalSourceMessageHandler {
    * @param externalSourceContext The external source context to handle messages for
    * @returns Message handler function
    */
-  static createHandler(externalSourceContext: ExternalSourceContext) {
+  static createHandler(externalSourceContext: MCPExternalSourceContext) {
     return async (message: ContextMessage): Promise<DataResponseMessage> => {
       const handler = new ExternalSourceMessageHandler(externalSourceContext);
       

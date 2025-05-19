@@ -165,6 +165,28 @@ Reasons:
 - [ ] Fix MockConversationManager to properly mock MCPConversationContext
 - [ ] Update MockContextManager to use correct MCP types
 
+### 5. Architectural Issues - Cross-Context Dependencies 🔴
+- [ ] **ProfileNoteAdapter creates direct dependency between ProfileContext and NoteContext**
+  - Currently ProfileContext directly imports and uses NoteContext
+  - This violates the architectural pattern of contexts communicating through messaging
+  - Should be refactored to use messaging layer for cross-context communication
+  - Alternative: Create a generic storage interface that doesn't directly depend on NoteContext
+  - See: `src/contexts/profiles/adapters/profileNoteAdapter.ts`
+
+### 6. Test Failures to Fix 🔴
+- [ ] **Mock Context Type Mismatches**
+  - Many test mocks still reference old context types
+  - MockConversationManager expects different interface than MCPConversationContext provides
+  - Need to update all mocks to work with MCP context interfaces
+- [ ] **Failing Integration Tests**
+  - Protocol integration tests failing due to changed method signatures
+  - Context mediator tests need updating for new message handling
+  - Command handler tests need mock updates
+- [ ] **Website Context Tests**
+  - Landing page generation tests failing
+  - Section generation service errors
+  - Local deployment manager test issues
+
 ### Current Migration Status
 
 #### ✅ Completed
@@ -196,11 +218,12 @@ The code compiles but critical functionality is missing:
    - [x] Ensure proper token management for AI prompts
    - [x] Update ConversationCommandHandler to use tiered history properly
 
-2. **Remove Old Context Implementations** ✅
-   - [ ] Update index files to only export MCP contexts
-   - [ ] Delete old context implementation files
-   - [ ] Remove BaseContext and related classes
-   - [ ] Clean up test mocks
+2. **Remove Old Context Implementations** - COMPLETED ✅
+   - [x] Update index files to only export MCP contexts
+   - [x] Delete old context implementation files (baseContext.ts, conversationContext.ts, etc.)
+   - [x] Remove unused ConversationResourceService and ConversationToolService
+   - [x] Update test mocks to use actual MCP contexts
+   - [x] Fix import issues in ServiceRegistry and other files
 
 3. **Clean up TODOs and Workarounds** 
    - [ ] Remove TODOs for methods that have acceptable workarounds

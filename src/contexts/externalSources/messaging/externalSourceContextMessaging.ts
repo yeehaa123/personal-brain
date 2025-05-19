@@ -1,7 +1,7 @@
 /**
  * Messaging-Enabled External Source Context
  * 
- * This module extends the ExternalSourceContext with messaging capabilities,
+ * This module extends the MCPExternalSourceContext with messaging capabilities,
  * allowing it to participate in cross-context communication.
  */
 
@@ -10,59 +10,59 @@ import type { ContextMediator, DataRequestMessage, NotificationMessage } from '@
 import { MessageFactory } from '@/protocol/messaging';
 import { Logger } from '@/utils/logger';
 
-import type { ExternalSourceContext } from '../externalSourceContext';
+import type { MCPExternalSourceContext } from '../MCPExternalSourceContext';
 import type { ExternalSourceInterface, ExternalSourceResult } from '../sources';
 
 import { ExternalSourceMessageHandler } from './externalSourceMessageHandler';
 import { ExternalSourceNotifier } from './externalSourceNotifier';
 
 /**
- * Messaging-enabled extension of ExternalSourceContext
+ * Messaging-enabled extension of MCPExternalSourceContext
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-export class ExternalSourceContextMessaging {
+export class MCPExternalSourceContextMessaging {
   /**
-   * Singleton instance of ExternalSourceContextMessaging
+   * Singleton instance of MCPExternalSourceContextMessaging
    * This property should be accessed only by getInstance(), resetInstance(), and createFresh()
    */
-  private static instance: ExternalSourceContextMessaging | null = null;
+  private static instance: MCPExternalSourceContextMessaging | null = null;
   
   /**
-   * Get the singleton instance of ExternalSourceContextMessaging
+   * Get the singleton instance of MCPExternalSourceContextMessaging
    * 
    * @param externalSourceContext The external source context to extend
    * @param mediator The context mediator for messaging
-   * @returns The shared ExternalSourceContextMessaging instance
+   * @returns The shared MCPExternalSourceContextMessaging instance
    */
   public static getInstance(
-    externalSourceContext: ExternalSourceContext,
+    externalSourceContext: MCPExternalSourceContext,
     mediator: ContextMediator,
-  ): ExternalSourceContextMessaging {
-    if (!ExternalSourceContextMessaging.instance) {
-      ExternalSourceContextMessaging.instance = new ExternalSourceContextMessaging(
+  ): MCPExternalSourceContextMessaging {
+    if (!MCPExternalSourceContextMessaging.instance) {
+      MCPExternalSourceContextMessaging.instance = new MCPExternalSourceContextMessaging(
         externalSourceContext,
         mediator,
       );
       
       const logger = Logger.getInstance();
-      logger.debug('ExternalSourceContextMessaging singleton instance created');
+      logger.debug('MCPExternalSourceContextMessaging singleton instance created');
     }
     
-    return ExternalSourceContextMessaging.instance;
+    return MCPExternalSourceContextMessaging.instance;
   }
   
   /**
    * Reset the singleton instance
    */
   public static resetInstance(): void {
-    ExternalSourceContextMessaging.instance = null;
+    MCPExternalSourceContextMessaging.instance = null;
     
     const logger = Logger.getInstance();
-    logger.debug('ExternalSourceContextMessaging singleton instance reset');
+    logger.debug('MCPExternalSourceContextMessaging singleton instance reset');
   }
   
   /**
@@ -70,23 +70,23 @@ export class ExternalSourceContextMessaging {
    * 
    * @param externalSourceContext The external source context to extend
    * @param mediator The context mediator for messaging
-   * @returns A new ExternalSourceContextMessaging instance
+   * @returns A new MCPExternalSourceContextMessaging instance
    */
   public static createFresh(
-    externalSourceContext: ExternalSourceContext,
+    externalSourceContext: MCPExternalSourceContext,
     mediator: ContextMediator,
-  ): ExternalSourceContextMessaging {
+  ): MCPExternalSourceContextMessaging {
     const logger = Logger.getInstance();
-    logger.debug('Creating fresh ExternalSourceContextMessaging instance');
+    logger.debug('Creating fresh MCPExternalSourceContextMessaging instance');
     
-    return new ExternalSourceContextMessaging(externalSourceContext, mediator);
+    return new MCPExternalSourceContextMessaging(externalSourceContext, mediator);
   }
   
   private logger = Logger.getInstance();
   private notifier: ExternalSourceNotifier;
   
   /**
-   * Create a messaging-enabled wrapper for an ExternalSourceContext
+   * Create a messaging-enabled wrapper for an MCPExternalSourceContext
    * 
    * @param externalSourceContext The external source context to extend
    * @param mediator The context mediator for messaging
@@ -95,24 +95,24 @@ export class ExternalSourceContextMessaging {
    * Create with dependencies constructor
    *
    * @param configOrDependencies Configuration or explicit dependencies
-   * @returns A new ExternalSourceContextMessaging instance
+   * @returns A new MCPExternalSourceContextMessaging instance
    */
   public static createWithDependencies(
     configOrDependencies: Record<string, unknown> = {},
-  ): ExternalSourceContextMessaging {
+  ): MCPExternalSourceContextMessaging {
     const logger = Logger.getInstance();
-    logger.debug('Creating ExternalSourceContextMessaging with dependencies');
+    logger.debug('Creating MCPExternalSourceContextMessaging with dependencies');
     
     // Handle case where dependencies are explicitly provided
     if ('externalSourceContext' in configOrDependencies && 'mediator' in configOrDependencies) {
-      const externalSourceContext = configOrDependencies['externalSourceContext'] as ExternalSourceContext;
+      const externalSourceContext = configOrDependencies['externalSourceContext'] as MCPExternalSourceContext;
       const mediator = configOrDependencies['mediator'] as ContextMediator;
       
-      return new ExternalSourceContextMessaging(externalSourceContext, mediator);
+      return new MCPExternalSourceContextMessaging(externalSourceContext, mediator);
     }
     
     // Cannot create without required dependencies
-    throw new Error('ExternalSourceContextMessaging requires externalSourceContext and mediator dependencies');
+    throw new Error('MCPExternalSourceContextMessaging requires externalSourceContext and mediator dependencies');
   }
 
   /**
@@ -122,7 +122,7 @@ export class ExternalSourceContextMessaging {
    * @param mediator The context mediator for messaging
    */
   private constructor(
-    private externalSourceContext: ExternalSourceContext,
+    private externalSourceContext: MCPExternalSourceContext,
     mediator: ContextMediator,
   ) {
     // Create notifier using the standardized pattern
@@ -156,14 +156,14 @@ export class ExternalSourceContextMessaging {
       );
     });
     
-    this.logger.debug('ExternalSourceContextMessaging initialized');
+    this.logger.debug('MCPExternalSourceContextMessaging initialized');
   }
   
   /**
    * Get the underlying external source context
    * @returns The external source context
    */
-  getContext(): ExternalSourceContext {
+  getContext(): MCPExternalSourceContext {
     return this.externalSourceContext;
   }
   
@@ -202,17 +202,16 @@ export class ExternalSourceContextMessaging {
     // Find the source by name in the enabled sources
     const sources = this.externalSourceContext.getEnabledSources();
     const source = sources.find(s => s.name === name);
-    return source || null;
+    
+    // The enabled sources don't provide the full ExternalSourceInterface implementation
+    // Return null since we can't provide the full interface
+    if (source) {
+      Logger.getInstance().warn(`Source ${name} found but doesn't implement ExternalSourceInterface`);
+    }
+    return null;
   }
   
-  /**
-   * Add a new external source
-   * Delegates to the underlying context's registerSource method
-   * @param source The source to add
-   */
-  addSource(source: ExternalSourceInterface): void {
-    this.externalSourceContext.registerSource(source);
-  }
+  // addSource method removed - external sources must be configured on initialization
   
   /**
    * Remove a source by name

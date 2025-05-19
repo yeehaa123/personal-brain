@@ -5,15 +5,15 @@ import { RendererRegistry } from '@/utils/registry/rendererRegistry';
 import { CommandHandler } from '@commands/core/commandHandler';
 import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
-import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
+import { MockMCPWebsiteContext } from '@test/__mocks__/contexts/website/MCPWebsiteContext';
 import { createTestLandingPageData } from '@test/helpers';
 
 // Create a mock BrainProtocol that returns our mock WebsiteContext
 class TestBrainProtocol {
-  private websiteContext: MockWebsiteContext;
+  private websiteContext: MockMCPWebsiteContext;
 
   constructor() {
-    this.websiteContext = MockWebsiteContext.createFresh();
+    this.websiteContext = MockMCPWebsiteContext.createFresh();
   }
 
   // The new method that follows the refactored pattern
@@ -26,7 +26,7 @@ class TestBrainProtocol {
   }
 
   // Keep old method for backward compatibility
-  getWebsiteContext(): MockWebsiteContext {
+  getWebsiteContext(): MockMCPWebsiteContext {
     return this.websiteContext;
   }
   
@@ -47,14 +47,14 @@ describe('WebsiteCommandHandler', () => {
   let commandHandler: CommandHandler;
   let websiteCommandHandler: WebsiteCommandHandler;
   let mockBrainProtocol: TestBrainProtocol;
-  let mockWebsiteContext: MockWebsiteContext;
+  let mockWebsiteContext: MockMCPWebsiteContext;
 
 
   beforeEach(() => {
     // Reset all instances
     CommandHandler.resetInstance();
     WebsiteCommandHandler.resetInstance();
-    MockWebsiteContext.resetInstance();
+    MockMCPWebsiteContext.resetInstance();
     RendererRegistry.resetInstance();
 
     // Create fresh test instances
@@ -188,7 +188,7 @@ describe('WebsiteCommandHandler', () => {
 
   test('should handle landing-page view command', async () => {
     // Ensure the mock has landing page data
-    mockWebsiteContext.saveLandingPageData(createTestLandingPageData());
+    await mockWebsiteContext.saveLandingPageData(createTestLandingPageData());
     
     // Then view landing page
     const result = await commandHandler.processCommand('landing-page', 'view');

@@ -1,7 +1,7 @@
 import type { mock} from 'bun:test';
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
-import type { NoteContext } from '@/contexts/notes/noteContext';
+import type { MCPNoteContext } from '@/contexts/notes';
 import { ProfileNoteAdapter } from '@/contexts/profiles/adapters/profileNoteAdapter';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
@@ -46,14 +46,14 @@ describe('ProfileNoteAdapter', () => {
     
     // Create a fresh adapter with mocked dependencies
     adapter = ProfileNoteAdapter.createFresh({
-      noteContext: mockNoteContext as unknown as NoteContext,
+      noteContext: mockNoteContext as unknown as MCPNoteContext,
       tagExtractor: mockTagExtractor as unknown as TagExtractor,
     });
   });
   
   test('should create singleton instance', () => {
     const instance1 = ProfileNoteAdapter.getInstance({
-      noteContext: mockNoteContext as unknown as NoteContext,
+      noteContext: mockNoteContext as unknown as MCPNoteContext,
       tagExtractor: mockTagExtractor as unknown as TagExtractor,
     });
     

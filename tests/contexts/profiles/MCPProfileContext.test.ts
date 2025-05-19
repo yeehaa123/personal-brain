@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 
-import type { NoteContext } from '@/contexts/notes/noteContext';
+import type { MCPNoteContext } from '@/contexts/notes';
 import type { ProfileNoteAdapter } from '@/contexts/profiles/adapters/profileNoteAdapter';
+import type { ProfileFormatter } from '@/contexts/profiles/formatters/profileFormatter';
 import type { MCPProfileContextDependencies } from '@/contexts/profiles/MCPProfileContext';
 import { MCPProfileContext } from '@/contexts/profiles/MCPProfileContext';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
@@ -9,9 +10,11 @@ import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import type { LinkedInProfileMigrationAdapter } from '@/services/profiles/linkedInProfileMigrationAdapter';
 import { Logger } from '@/utils/logger';
-import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
+import { MockMCPNoteContext } from '@test/__mocks__/contexts/notes/MCPNoteContext';
 import { MockProfileNoteAdapter } from '@test/__mocks__/contexts/profiles/adapters/profileNoteAdapter';
+import { MockProfileFormatter } from '@test/__mocks__/contexts/profiles/formatters/profileFormatter';
 import { MockLinkedInProfileMigrationAdapter } from '@test/__mocks__/services/profiles/linkedInProfileMigrationAdapter';
+// MockTagExtractor no longer needed after architecture simplification
 
 describe('MCPProfileContext', () => {
   // Sample data for testing
@@ -53,9 +56,10 @@ describe('MCPProfileContext', () => {
   };
 
   // Test dependencies
-  let mockNoteContext: MockNoteContext;
+  let mockNoteContext: MockMCPNoteContext;
   let mockProfileNoteAdapter: MockProfileNoteAdapter;
   let mockProfileMigrationAdapter: MockLinkedInProfileMigrationAdapter;
+  let mockProfileFormatter: ProfileFormatter;
   let logger: Logger;
 
   // Helper to create testable context
@@ -64,13 +68,11 @@ describe('MCPProfileContext', () => {
     overrides?: Partial<MCPProfileContextDependencies>,
   ) => {
     const dependencies: MCPProfileContextDependencies = {
-      noteContext: mockNoteContext as unknown as NoteContext,
+      noteContext: mockNoteContext as unknown as MCPNoteContext,
       profileNoteAdapter: mockProfileNoteAdapter as unknown as ProfileNoteAdapter,
       profileMigrationAdapter: mockProfileMigrationAdapter as unknown as LinkedInProfileMigrationAdapter,
       logger,
-      // We don't have mocks for these, so we'll stub them if needed
-      profileFormatter: undefined,
-      tagExtractor: undefined,
+      profileFormatter: overrides?.profileFormatter || mockProfileFormatter,
       ...overrides,
     };
 
@@ -82,6 +84,7 @@ describe('MCPProfileContext', () => {
         noteContext: mockNoteContext,
         profileNoteAdapter: mockProfileNoteAdapter,
         profileMigrationAdapter: mockProfileMigrationAdapter,
+        profileFormatter: mockProfileFormatter,
         logger,
       },
     };
@@ -90,14 +93,15 @@ describe('MCPProfileContext', () => {
   beforeEach(() => {
     // Reset singletons before each test
     MCPProfileContext.resetInstance();
-    MockNoteContext.resetInstance();
+    MockMCPNoteContext.resetInstance();
     MockProfileNoteAdapter.resetInstance();
     MockLinkedInProfileMigrationAdapter.resetInstance();
-
+    MockProfileFormatter.resetInstance();
     // Create fresh instances
-    mockNoteContext = MockNoteContext.createFresh();
+    mockNoteContext = MockMCPNoteContext.createFresh();
     mockProfileNoteAdapter = MockProfileNoteAdapter.createFresh();
     mockProfileMigrationAdapter = MockLinkedInProfileMigrationAdapter.createFresh();
+    mockProfileFormatter = MockProfileFormatter.createFresh();
     logger = Logger.getInstance();
 
     // Mock the logger methods properly for Bun
@@ -282,10 +286,16 @@ describe('MCPProfileContext', () => {
       const { context, mocks } = createTestableProfileContext();
       await context.initialize();
 
-      // Set up the mock note in the storage 
-      await mocks.noteContext.createNote({ ...mockNote, id: MockProfileNoteAdapter.PROFILE_NOTE_ID });
-      // Spy on getNoteById to return the specific note
-      spyOn(mocks.noteContext, 'getNoteById').mockResolvedValue(mockNote);
+      // Set up the mock note in the storage with the correct ID
+      const profileNote = { ...mockNote, id: MockProfileNoteAdapter.PROFILE_NOTE_ID };
+      
+      // Use the mock's public addMockNote method
+      mocks.noteContext.addMockNote(profileNote);
+      
+      // Override getNoteById to ensure it returns the right note
+      mocks.noteContext.getNoteById = async (id: string) => {
+        return id === MockProfileNoteAdapter.PROFILE_NOTE_ID ? profileNote : undefined;
+      };
 
       const note = await context.getProfileAsNote();
       expect(note?.id).toBe(MockProfileNoteAdapter.PROFILE_NOTE_ID);
@@ -436,7 +446,7 @@ describe('MCPProfileContext', () => {
 
     test('createFresh creates new instance', () => {
       const instance1 = MCPProfileContext.getInstance();
-      const instance2 = MCPProfileContext.createFresh();
+      const instance2 = createTestableProfileContext({}).context;
 
       expect(instance1).not.toBe(instance2);
     });

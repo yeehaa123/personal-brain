@@ -7,7 +7,7 @@ import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { LinkedInProfileMigrationAdapter } from '@/services/profiles/linkedInProfileMigrationAdapter';
 import { Logger } from '@/utils/logger';
-import { TagExtractor } from '@/utils/tagExtractor';
+import { TagExtractor } from '@/utils/tagExtractor'; // Needed for ProfileNoteAdapter dependency
 
 import type {
   ContextCapabilities,
@@ -18,7 +18,7 @@ import type {
   ResourceDefinition,
 } from '../MCPContext';
 import { createContextFunctionality } from '../MCPContext';
-import { NoteContext } from '../notes/noteContext';
+import { MCPNoteContext } from '../notes/MCPNoteContext';
 
 /**
  * Configuration for MCPProfileContext
@@ -32,12 +32,11 @@ export interface MCPProfileContextConfig {
  * Dependencies for MCPProfileContext
  */
 export interface MCPProfileContextDependencies {
-  noteContext?: NoteContext;
-  profileNoteAdapter?: ProfileNoteAdapter;
-  profileMigrationAdapter?: LinkedInProfileMigrationAdapter;
-  profileFormatter?: ProfileFormatter;
-  tagExtractor?: TagExtractor;
-  logger?: Logger;
+  noteContext: MCPNoteContext;
+  profileNoteAdapter: ProfileNoteAdapter;
+  profileMigrationAdapter: LinkedInProfileMigrationAdapter;
+  profileFormatter: ProfileFormatter;
+  logger: Logger;
 }
 
 /**
@@ -52,11 +51,10 @@ export class MCPProfileContext implements MCPContext {
   
   // Core components
   private readonly contextFuncs: ReturnType<typeof createContextFunctionality>;
-  private readonly noteContext: NoteContext;
+  private readonly noteContext: MCPNoteContext;
   private readonly profileNoteAdapter: ProfileNoteAdapter;
   private readonly profileMigrationAdapter: LinkedInProfileMigrationAdapter;
   private readonly profileFormatter: ProfileFormatter;
-  private readonly tagExtractor: TagExtractor;
   private readonly logger: Logger;
   
   // MCP resources and tools
@@ -71,7 +69,18 @@ export class MCPProfileContext implements MCPContext {
     dependencies?: MCPProfileContextDependencies,
   ): MCPProfileContext {
     if (!MCPProfileContext.instance) {
-      MCPProfileContext.instance = new MCPProfileContext(config || {}, dependencies);
+      // Create default dependencies if not provided
+      const defaultDependencies: MCPProfileContextDependencies = dependencies || {
+        logger: Logger.getInstance(),
+        noteContext: MCPNoteContext.getInstance(),
+        profileNoteAdapter: ProfileNoteAdapter.getInstance({
+          noteContext: MCPNoteContext.getInstance(),
+          tagExtractor: TagExtractor.getInstance(),
+        }),
+        profileMigrationAdapter: LinkedInProfileMigrationAdapter.getInstance(),
+        profileFormatter: ProfileFormatter.getInstance(),
+      };
+      MCPProfileContext.instance = new MCPProfileContext(config || {}, defaultDependencies);
     }
     return MCPProfileContext.instance;
   }
@@ -87,28 +96,22 @@ export class MCPProfileContext implements MCPContext {
    * Create a fresh instance (for testing)
    */
   public static createFresh(
-    config?: MCPProfileContextConfig,
-    dependencies?: MCPProfileContextDependencies,
+    config: MCPProfileContextConfig,
+    dependencies: MCPProfileContextDependencies,
   ): MCPProfileContext {
-    return new MCPProfileContext(config || {}, dependencies);
+    return new MCPProfileContext(config, dependencies);
   }
   
   private constructor(
     config: MCPProfileContextConfig,
-    dependencies?: MCPProfileContextDependencies,
+    dependencies: MCPProfileContextDependencies,
   ) {
     // Initialize dependencies
-    this.logger = dependencies?.logger || Logger.getInstance();
-    this.noteContext = dependencies?.noteContext || NoteContext.getInstance();
-    this.tagExtractor = dependencies?.tagExtractor || TagExtractor.getInstance();
-    
-    // Initialize adapters and formatter
-    this.profileNoteAdapter = dependencies?.profileNoteAdapter || ProfileNoteAdapter.getInstance({
-      noteContext: this.noteContext,
-      tagExtractor: this.tagExtractor,
-    });
-    this.profileMigrationAdapter = dependencies?.profileMigrationAdapter || LinkedInProfileMigrationAdapter.getInstance();
-    this.profileFormatter = dependencies?.profileFormatter || ProfileFormatter.getInstance();
+    this.logger = dependencies.logger;
+    this.noteContext = dependencies.noteContext;
+    this.profileNoteAdapter = dependencies.profileNoteAdapter;
+    this.profileMigrationAdapter = dependencies.profileMigrationAdapter;
+    this.profileFormatter = dependencies.profileFormatter;
     
     // Create core context functionality
     this.contextFuncs = createContextFunctionality({

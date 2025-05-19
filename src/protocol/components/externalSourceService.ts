@@ -3,7 +3,7 @@
  */
 
 import { relevanceConfig } from '@/config';
-import type { ExternalSourceContext } from '@/contexts';
+import type { MCPExternalSourceContext } from '@/contexts';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@models/note';
 import { Logger } from '@utils/logger';
@@ -16,7 +16,7 @@ import type { PromptFormatter } from './promptFormatter';
  */
 export interface ExternalSourceServiceConfig {
   /** External source context for fetching information */
-  externalContext: ExternalSourceContext;
+  externalContext: MCPExternalSourceContext;
   /** Profile analyzer for determining query relevance */
   profileAnalyzer: ProfileAnalyzer;
   /** Prompt formatter for calculating coverage */
@@ -38,7 +38,7 @@ export class ExternalSourceService {
   /** Logger instance for this class */
   private logger = Logger.getInstance();
   
-  private externalContext: ExternalSourceContext;
+  private externalContext: MCPExternalSourceContext;
   private profileAnalyzer: ProfileAnalyzer;
   private promptFormatter: PromptFormatter;
 
@@ -99,7 +99,7 @@ export class ExternalSourceService {
    * @param promptFormatter Prompt formatter for coverage calculation
    */
   private constructor(
-    externalContext: ExternalSourceContext, 
+    externalContext: MCPExternalSourceContext, 
     profileAnalyzer: ProfileAnalyzer,
     promptFormatter: PromptFormatter,
   ) {

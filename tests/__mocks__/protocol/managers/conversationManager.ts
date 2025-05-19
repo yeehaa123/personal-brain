@@ -6,14 +6,14 @@
  */
 import { mock } from 'bun:test';
 
-import type { MCPConversationContext } from '@/contexts';
+import type { MCPConversationContext } from '@/contexts/conversations';
 import type { Conversation } from '@/protocol/schemas/conversationSchemas';
 import type { IConversationManager } from '@/protocol/types';
-import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
+import { MockMCPConversationContext } from '@test/__mocks__/contexts/conversations/MCPConversationContext';
 
 export class MockConversationManager implements IConversationManager {
   private static instance: MockConversationManager | null = null;
-  private conversationContext: MCPConversationContext;
+  private conversationContext: MockMCPConversationContext;
   private hasActive = true;
   private currentConversationId = 'mock-conversation-1';
   private currentRoomId = 'mock-room-1';
@@ -44,31 +44,28 @@ export class MockConversationManager implements IConversationManager {
   }
 
   private constructor(options?: Record<string, unknown>) {
-    // Use provided context or create fresh one
-    const providedContext = options && options['conversationContext'] as MCPConversationContext;
-    this.conversationContext = providedContext ||
-      (MockConversationContext.createFresh() as unknown as MCPConversationContext);
+    // Create mock conversation context
+    this.conversationContext = MockMCPConversationContext.createFresh();
 
-    // Set up with options if provided
-    if (options && options['hasActiveConversation'] === false) {
-      this.hasActive = false;
-    }
-
-    if (options && typeof options['currentRoomId'] === 'string') {
-      this.currentRoomId = options['currentRoomId'] as string;
-    }
-
-    if (options && typeof options['currentConversationId'] === 'string') {
-      this.currentConversationId = options['currentConversationId'] as string;
-    }
-
-    if (options && typeof options['conversationHistory'] === 'string') {
-      this.conversationHistory = options['conversationHistory'] as string;
+    // Set up mock state with options
+    if (options) {
+      if (options['hasActiveConversation'] === false) {
+        this.hasActive = false;
+      }
+      if (options['currentRoomId']) {
+        this.currentRoomId = options['currentRoomId'] as string;
+      }
+      if (options['currentConversationId']) {
+        this.currentConversationId = options['currentConversationId'] as string;
+      }
+      if (options['conversationHistory']) {
+        this.conversationHistory = options['conversationHistory'] as string;
+      }
     }
   }
 
   getConversationContext(): MCPConversationContext {
-    return this.conversationContext;
+    return this.conversationContext as unknown as MCPConversationContext;
   }
 
   async setCurrentRoom(roomId: string): Promise<void> {

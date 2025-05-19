@@ -7,14 +7,7 @@
  * PUBLIC API: These exports are intended for use by upstream consumers
  */
 
-// Export domain contexts - the old implementations (to be removed)
-export { ConversationContext } from './conversations';
-export { ExternalSourceContext } from './externalSources'; 
-export { NoteContext } from './notes';
-export { ProfileContext } from './profiles';
-export { WebsiteContext } from './website';
-
-// Export new MCP implementations - the future public API
+// Export MCP implementations
 export { MCPConversationContext } from './conversations';
 export { MCPExternalSourceContext } from './externalSources';
 export { MCPNoteContext } from './notes';

@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-import { WebsiteContext } from '@/contexts';
+import { MCPWebsiteContext } from '@/contexts';
 import { 
   getDeploymentAdapter, 
   PM2DeploymentAdapter, 
@@ -91,9 +91,13 @@ describe('WebsiteContext cleanup', () => {
     stopServers: stopServersMock,
   } as unknown as { stopServers(): Promise<void> };
   
-  test('resetInstance should stop servers when cleaning up', () => {
+  test('resetInstance should stop servers when cleaning up', async () => {
     // Create a context instance with our mock manager
-    const context = WebsiteContext.createFresh();
+    const context = MCPWebsiteContext.createFresh({
+      deployment: {
+        type: 'localdev',
+      },
+    });
     
     // Replace the deploymentManager property with our mock
     Object.defineProperty(context, 'deploymentManager', {
@@ -103,10 +107,13 @@ describe('WebsiteContext cleanup', () => {
     
     // Set the singleton instance to our context
     // @ts-expect-error - Accessing private static property
-    WebsiteContext.instance = context;
+    MCPWebsiteContext.instance = context;
     
     // Reset the instance, which should call the stopServers method
-    WebsiteContext.resetInstance();
+    MCPWebsiteContext.resetInstance();
+    
+    // Wait a bit for the async call to complete
+    await new Promise(resolve => global.setTimeout(resolve, 10));
     
     // Verify the stopServers method was called
     expect(stopServersMock).toHaveBeenCalled();

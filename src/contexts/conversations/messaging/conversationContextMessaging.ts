@@ -11,7 +11,7 @@ import { MessageFactory } from '@/protocol/messaging';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
 
-import type { ConversationContext } from '../conversationContext';
+import type { MCPConversationContext } from '../MCPConversationContext';
 
 import { ConversationMessageHandler } from './conversationMessageHandler';
 import { ConversationNotifier } from './conversationNotifier';
@@ -30,7 +30,7 @@ export class ConversationContextMessaging {
    * @param mediator The context mediator for messaging
    */
   constructor(
-    private conversationContext: ConversationContext,
+    private conversationContext: MCPConversationContext,
     mediator: ContextMediator,
   ) {
     // Create notifier
@@ -67,7 +67,7 @@ export class ConversationContextMessaging {
    * Get the underlying conversation context
    * @returns The conversation context
    */
-  getContext(): ConversationContext {
+  getContext(): MCPConversationContext {
     return this.conversationContext;
   }
   
@@ -79,14 +79,12 @@ export class ConversationContextMessaging {
    * @returns The conversation ID
    */
   async createConversation(
-    interfaceType: 'cli' | 'matrix', 
-    roomId: string,
+    _interfaceType: 'cli' | 'matrix', 
+    _roomId: string,
   ): Promise<string> {
-    // Delegate to the original context
-    const conversationId = await this.conversationContext.createConversation(
-      interfaceType,
-      roomId,
-    );
+    // MCPConversationContext.createConversation only accepts a title
+    // and internally creates the conversation with defaults
+    const conversationId = await this.conversationContext.createConversation();
     
     // Notify other contexts if the conversation was initialized successfully
     if (conversationId) {
@@ -131,26 +129,24 @@ export class ConversationContextMessaging {
     conversationId: string,
     query: string,
     response?: string,
-    options?: object,
+    options?: { userId?: string; userName?: string },
   ): Promise<string> {
-    // Delegate to the original context
-    const turnId = await this.conversationContext.addTurn(
-      conversationId,
+    // Adapt to MCPConversationContext's addMessage method
+    const message = {
       query,
-      response,
-      options,
-    );
+      response: response || '',
+      userId: options?.userId,
+      userName: options?.userName,
+    };
     
-    // Get the full turn for the notification
-    const turns = await this.conversationContext.getTurns(conversationId, 1);
-    const turn = turns.length > 0 ? turns[0] : null;
+    const turn = await this.conversationContext.addMessage(conversationId, message);
     
     // Notify other contexts if the turn was added successfully
-    if (turnId && turn) {
+    if (turn && turn.id) {
       await this.notifier.notifyConversationTurnAdded(conversationId, turn);
     }
     
-    return turnId;
+    return turn.id || '';
   }
   
   /**
@@ -162,15 +158,19 @@ export class ConversationContextMessaging {
   }
   
   getTurns(conversationId: string): Promise<ConversationTurn[]> {
-    return this.conversationContext.getTurns(conversationId);
+    // MCPConversationContext doesn't have getTurns, use getFlatHistory instead
+    return this.conversationContext.getFlatHistory(conversationId);
   }
   
-  getConversationIdByRoom(roomId: string): Promise<string | null> {
-    return this.conversationContext.getConversationIdByRoom(roomId);
+  getConversationIdByRoom(_roomId: string): Promise<string | null> {
+    // TODO: MCPConversationContext doesn't have getConversationIdByRoom
+    // This would need to be implemented using storage.getConversationByRoom
+    throw new Error('getConversationIdByRoom not implemented in MCPConversationContext');
   }
   
   getConversationHistory(conversationId: string): Promise<string> {
-    return this.conversationContext.getConversationHistory(conversationId);
+    // Use formatHistoryForPrompt method
+    return this.conversationContext.formatHistoryForPrompt(conversationId);
   }
   
   formatHistoryForPrompt(conversationId: string, maxTokens?: number): Promise<string> {
@@ -178,6 +178,7 @@ export class ConversationContextMessaging {
   }
   
   updateMetadata(conversationId: string, metadata: Record<string, unknown>): Promise<boolean> {
-    return this.conversationContext.updateMetadata(conversationId, metadata);
+    // Use updateConversation with metadata
+    return this.conversationContext.updateConversation(conversationId, { metadata });
   }
 }

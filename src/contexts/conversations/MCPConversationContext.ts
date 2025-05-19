@@ -1,14 +1,15 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { v4 as uuidv4 } from 'uuid';
 
+import { type TieredMemoryConfig, TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { ConversationNotifier } from '@/contexts/conversations/messaging/conversationNotifier';
-import { TieredMemoryManager, type TieredMemoryConfig } from '@/contexts/conversations/memory/tieredMemoryManager';
 import type { 
   ConversationInfo,
   ConversationStorage,
   NewConversation,
   SearchCriteria,
 } from '@/contexts/conversations/storage/conversationStorage';
+import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 import type { 
   ContextCapabilities, 
   ContextStatus, 
@@ -533,10 +534,11 @@ export class MCPConversationContext implements MCPContext, ConversationToolConte
   // Singleton pattern
   public static getInstance(options?: MCPConversationContextOptions): MCPConversationContext {
     if (!MCPConversationContext.instance) {
-      if (!options) {
-        throw new AppError('Options required for first initialization', 'INITIALIZATION_ERROR');
-      }
-      MCPConversationContext.instance = new MCPConversationContext(options);
+      // Provide default storage if none specified
+      const defaultOptions: MCPConversationContextOptions = options || {
+        storage: InMemoryStorage.getInstance(),
+      };
+      MCPConversationContext.instance = new MCPConversationContext(defaultOptions);
     }
     return MCPConversationContext.instance;
   }

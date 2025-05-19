@@ -2,16 +2,17 @@ import * as fs from 'fs';
 
 import * as yaml from 'js-yaml';
 
-import { ProfileContext } from '@/contexts/profiles/profileContext';
+import { MCPProfileContext } from '@/contexts/profiles/MCPProfileContext';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 
 import logger from '../utils/logger';
 
 export class ProfileImporter {
-  private profileContext: ProfileContext;
+  private profileContext: MCPProfileContext;
 
   constructor() {
-    this.profileContext = ProfileContext.createFresh();
+    // Use getInstance for default initialization instead of createFresh
+    this.profileContext = MCPProfileContext.getInstance();
   }
 
   /**

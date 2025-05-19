@@ -4,12 +4,15 @@ import { basename, extname, join } from 'path';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-import { NoteContext } from '@/contexts';
+// MCPNoteContext will be imported and used later
+import { MCPNoteContext } from '@/contexts';
 import { db } from '@/db';
 import { notes } from '@/db/schema';
 import { EmbeddingService } from '@/resources/ai/embedding';
 import logger from '@/utils/logger';
 import { TagExtractor } from '@/utils/tagExtractor';
+
+// Context initialization will be moved to where it's used
 
 interface MarkdownMetadata {
   title?: string;
@@ -22,8 +25,7 @@ interface ParsedMarkdown {
   metadata: MarkdownMetadata;
   content: string;
 }
-
-const context = NoteContext.createFresh();
+const context = MCPNoteContext.createFresh();
 const embeddingService = EmbeddingService.getInstance();
 
 /**

@@ -2,7 +2,7 @@
  * Mock ProfileContextMessaging for testing
  */
 
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import type { ProfileContextMessaging } from '@/contexts/profiles/messaging/profileContextMessaging';
 import type { LinkedInProfile } from '@/models/linkedInProfile';
 import type { Note } from '@/models/note';
@@ -19,7 +19,7 @@ export class MockProfileContextMessaging {
   /**
    * Get the singleton instance
    */
-  public static getInstance(profileContext: ProfileContext, mediator?: ContextMediator) {
+  public static getInstance(profileContext: MCPProfileContext, mediator?: ContextMediator) {
     if (!MockProfileContextMessaging.instance) {
       MockProfileContextMessaging.instance = new MockProfileContextMessaging(profileContext, mediator);
     }
@@ -36,17 +36,17 @@ export class MockProfileContextMessaging {
   /**
    * Create a fresh instance
    */
-  public static createFresh(profileContext: ProfileContext, mediator?: ContextMediator) {
+  public static createFresh(profileContext: MCPProfileContext, mediator?: ContextMediator) {
     return new MockProfileContextMessaging(profileContext, mediator) as unknown as ProfileContextMessaging;
   }
-  private profileContext: ProfileContext;
+  private profileContext: MCPProfileContext;
   
   // Add missing properties to match the real implementation
   mediator: ContextMediator;
   notifier: { notifyProfileUpdated: () => Promise<void> };
   logger: Logger;
   
-  constructor(profileContext: ProfileContext, mediator?: ContextMediator) {
+  constructor(profileContext: MCPProfileContext, mediator?: ContextMediator) {
     this.profileContext = profileContext;
     this.mediator = mediator || {} as ContextMediator;
     this.notifier = { notifyProfileUpdated: async () => {} };
@@ -56,7 +56,7 @@ export class MockProfileContextMessaging {
   /**
    * Get the wrapped profile context
    */
-  getContext(): ProfileContext {
+  getContext(): MCPProfileContext {
     return this.profileContext;
   }
   

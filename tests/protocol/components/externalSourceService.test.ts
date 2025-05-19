@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from 'bun:test';
 
+import type { MCPExternalSourceContext } from '@/contexts';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
-import type { ExternalSourceContext } from '@/mcpServer';
 import { ExternalSourceService } from '@/protocol/components/externalSourceService';
 import type { ProfileAnalyzer } from '@/protocol/components/profileAnalyzer';
 import type { PromptFormatter } from '@/protocol/components/promptFormatter';
@@ -62,7 +62,7 @@ describe('ExternalSourceService', () => {
       }
       return [];
     }),
-  } as unknown as ExternalSourceContext;
+  } as unknown as MCPExternalSourceContext;
 
   const mockProfileAnalyzer = {
     isProfileQuery: mock((query: string) => {
@@ -154,7 +154,7 @@ describe('ExternalSourceService', () => {
     
     const errorContext = {
       semanticSearch: mockSearchFn,
-    } as unknown as ExternalSourceContext;
+    } as unknown as MCPExternalSourceContext;
     
     const service = ExternalSourceService.createFresh({
       externalContext: errorContext,

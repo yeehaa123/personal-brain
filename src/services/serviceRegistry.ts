@@ -13,10 +13,8 @@
 import { ConversationStorageAdapter } from '@/contexts/conversations/conversationStorageAdapter';
 import { ConversationFormatter } from '@/contexts/conversations/formatters/conversationFormatter';
 import { ConversationMcpFormatter } from '@/contexts/conversations/formatters/conversationMcpFormatter';
-import { ConversationResourceService } from '@/contexts/conversations/resources';
 import { ConversationMemoryService, ConversationQueryService } from '@/contexts/conversations/services';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
-import { ConversationToolService } from '@/contexts/conversations/tools';
 import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import { ContextMediator } from '@/protocol/messaging/contextMediator';
 import { ResourceRegistry } from '@/resources/resourceRegistry';
@@ -62,8 +60,6 @@ export const ServiceIdentifiers = {
   NoteStorageAdapter: 'noteStorageAdapter', // Must match string used in LandingPageNoteAdapter
 
   // Conversation service identifiers
-  ConversationResourceService: 'service.conversation.resources',
-  ConversationToolService: 'service.conversation.tools',
   ConversationQueryService: 'service.conversation.query',
   ConversationMemoryService: 'service.conversation.memory',
   ConversationStorageAdapter: 'service.conversation.storage',
@@ -284,16 +280,7 @@ export class ServiceRegistry extends Registry {
       () => NoteStorageAdapter.getInstance(),
     );
 
-    // Register conversation services
-    this.register(
-      ServiceIdentifiers.ConversationResourceService,
-      () => ConversationResourceService.getInstance(),
-    );
-
-    this.register(
-      ServiceIdentifiers.ConversationToolService,
-      () => ConversationToolService.getInstance(),
-    );
+    // No longer registering resource and tool services - they're built into MCPConversationContext
 
     // Register conversation query service with its dependencies
     this.registerService<ConversationQueryService>(

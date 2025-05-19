@@ -5,18 +5,15 @@
  */
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
-import { ConversationContext } from '@/contexts/conversations';
-import { ExternalSourceContext } from '@/contexts/externalSources';
-import { NoteContext } from '@/contexts/notes';
-import { ProfileContext } from '@/contexts/profiles';
-import { WebsiteContext } from '@/contexts/website';
+import { MCPConversationContext } from '@/contexts/conversations';
+import { MCPExternalSourceContext } from '@/contexts/externalSources';
+import { MCPNoteContext } from '@/contexts/notes';
+import { MCPProfileContext } from '@/contexts/profiles';
+import { MCPWebsiteContext } from '@/contexts/website';
 import { isTestEnvironment } from '@/utils/configUtils';
 
 // Export the McpServer type directly
 export type { McpServer };
-
-// Export the context types directly
-export type { ConversationContext, ExternalSourceContext, NoteContext, ProfileContext, WebsiteContext };
 
 /**
  * Configuration options for the MCP server
@@ -48,16 +45,16 @@ export function createUnifiedMcpServer(config: McpServerConfig = {}): McpServer 
   });
   
   // Use singleton instances of all contexts
-  const noteContext = NoteContext.getInstance({ apiKey: config.apiKey });
-  const profileContext = ProfileContext.getInstance();
-  const externalSourceContext = ExternalSourceContext.getInstance({ 
+  const noteContext = MCPNoteContext.getInstance({ apiKey: config.apiKey });
+  const profileContext = MCPProfileContext.getInstance();
+  const externalSourceContext = MCPExternalSourceContext.getInstance({ 
     apiKey: config.apiKey, 
     newsApiKey: config.newsApiKey,
     // Initialize external sources as enabled or disabled based on config
     enabledSources: config.enableExternalSources === false ? [] : undefined,
   });
-  const conversationContext = ConversationContext.getInstance();
-  const websiteContext = WebsiteContext.getInstance();
+  const conversationContext = MCPConversationContext.getInstance();
+  const websiteContext = MCPWebsiteContext.getInstance();
   
   // Initialize contexts first (this should be done asynchronously in a real scenario)
   // Skip registration in test environment

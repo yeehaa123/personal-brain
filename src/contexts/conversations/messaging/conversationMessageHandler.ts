@@ -17,7 +17,7 @@ import {
 import { validateRequestParams } from '@/protocol/messaging/validation';
 import { Logger } from '@/utils/logger';
 
-import type { ConversationContext } from '../conversationContext';
+import type { MCPConversationContext } from '../MCPConversationContext';
 import type { ConversationHistoryParams } from '../schemas/messageSchemas';
 
 /**
@@ -59,7 +59,7 @@ export class ConversationMessageHandler {
    * @param conversationContext The conversation context to handle messages for
    * @returns The shared ConversationMessageHandler instance
    */
-  public static getInstance(conversationContext?: ConversationContext): ConversationMessageHandler {
+  public static getInstance(conversationContext?: MCPConversationContext): ConversationMessageHandler {
     if (!ConversationMessageHandler.instance && conversationContext) {
       ConversationMessageHandler.instance = new ConversationMessageHandler(conversationContext);
       
@@ -109,7 +109,7 @@ export class ConversationMessageHandler {
    * @param conversationContext The conversation context to handle messages for
    * @returns A new ConversationMessageHandler instance
    */
-  public static createFresh(conversationContext: ConversationContext): ConversationMessageHandler {
+  public static createFresh(conversationContext: MCPConversationContext): ConversationMessageHandler {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationMessageHandler instance');
     
@@ -119,8 +119,8 @@ export class ConversationMessageHandler {
   /**
    * Create a new handler instance with explicit dependencies
    * 
-   * Part of the Component Interface Standardization pattern.
-   * Uses the configOrDependencies pattern for flexible dependency injection.
+   * TODO: This method follows the old Component Interface Standardization pattern
+   * and should be removed or simplified for MCP contexts.
    * 
    * @param configOrDependencies Configuration or explicit dependencies
    * @returns A new ConversationMessageHandler instance with the provided dependencies
@@ -133,7 +133,7 @@ export class ConversationMessageHandler {
     
     // Handle the case where dependencies are explicitly provided
     if ('conversationContext' in configOrDependencies) {
-      const conversationContext = configOrDependencies['conversationContext'] as ConversationContext;
+      const conversationContext = configOrDependencies['conversationContext'] as MCPConversationContext;
       return new ConversationMessageHandler(conversationContext);
     }
     
@@ -144,12 +144,12 @@ export class ConversationMessageHandler {
   /**
    * Create a message handler function for the conversation context
    * 
-   * This is the original functionality, maintained for backward compatibility.
+   * TODO: This method should be updated or removed for MCP contexts.
    * 
    * @param conversationContext The conversation context to handle messages for
    * @returns Message handler function
    */
-  static createHandler(conversationContext: ConversationContext) {
+  static createHandler(conversationContext: MCPConversationContext) {
     return async (message: BaseContextMessage) => {
       const handler = new ConversationMessageHandler(conversationContext);
       
@@ -182,7 +182,7 @@ export class ConversationMessageHandler {
    * 
    * @param conversationContext The conversation context to handle messages for
    */
-  private constructor(private conversationContext: ConversationContext) {}
+  private constructor(private conversationContext: MCPConversationContext) {}
   
   /**
    * Handle data request messages
@@ -255,10 +255,10 @@ export class ConversationMessageHandler {
       const data = validation.data as ConversationHistoryParams;
       const { conversationId, limit } = data;
       
-      // Get history from the context with optional limit
-      const history = await this.conversationContext.getConversationHistory(
+      // Use formatHistoryForPrompt method since MCPConversationContext doesn't have getConversationHistory
+      const history = await this.conversationContext.formatHistoryForPrompt(
         conversationId,
-        { maxTurns: limit },
+        limit,
       );
       
       return MessageFactory.createSuccessResponse(

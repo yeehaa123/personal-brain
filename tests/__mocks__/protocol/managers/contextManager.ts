@@ -12,30 +12,15 @@ import type {
 } from '@/contexts';
 import type { MCPProfileContext } from '@/contexts/profiles';
 import type { IContextManager } from '@/protocol/types';
-import {
-  MockConversationContext,
-} from '@test/__mocks__/contexts/conversationContext';
-import {
-  MockExternalSourceContext,
-} from '@test/__mocks__/contexts/externalSourceContext';
-import {
-  MockNoteContext,
-} from '@test/__mocks__/contexts/noteContext';
-import {
-  MockProfileContext,
-} from '@test/__mocks__/contexts/profileContext';
-import {
-  MockWebsiteContext,
-} from '@test/__mocks__/contexts/websiteContext';
 
 export class MockContextManager implements IContextManager {
   private static instance: MockContextManager | null = null;
   private externalSourcesEnabled = false;
-  private noteContext = MockNoteContext.createFresh();
-  private profileContext = MockProfileContext.createFresh();
-  private conversationContext = MockConversationContext.createFresh();
-  private externalSourceContext = MockExternalSourceContext.createFresh();
-  private websiteContext = MockWebsiteContext.createFresh();
+  private noteContext: MCPNoteContext | null = null;
+  private profileContext: MCPProfileContext | null = null;
+  private conversationContext: MCPConversationContext | null = null;
+  private externalSourceContext: MCPExternalSourceContext | null = null;
+  private websiteContext: MCPWebsiteContext | null = null;
   private renderer = null;
 
   /**
@@ -53,13 +38,6 @@ export class MockContextManager implements IContextManager {
    */
   static resetInstance(): void {
     MockContextManager.instance = null;
-
-    // Reset all context instances too
-    MockNoteContext.resetInstance();
-    MockProfileContext.resetInstance();
-    MockConversationContext.resetInstance();
-    MockExternalSourceContext.resetInstance();
-    MockWebsiteContext.resetInstance();
   }
 
   /**
@@ -77,23 +55,39 @@ export class MockContextManager implements IContextManager {
   }
 
   getNoteContext(): MCPNoteContext {
-    return this.noteContext as unknown as MCPNoteContext;
+    if (!this.noteContext) {
+      // Create a mock MCP context
+      this.noteContext = {} as MCPNoteContext;
+    }
+    return this.noteContext;
   }
 
   getProfileContext(): MCPProfileContext {
-    return this.profileContext as unknown as MCPProfileContext;
+    if (!this.profileContext) {
+      this.profileContext = {} as MCPProfileContext;
+    }
+    return this.profileContext;
   }
 
   getConversationContext(): MCPConversationContext {
-    return this.conversationContext as unknown as MCPConversationContext;
+    if (!this.conversationContext) {
+      this.conversationContext = {} as MCPConversationContext;
+    }
+    return this.conversationContext;
   }
 
   getExternalSourceContext(): MCPExternalSourceContext {
-    return this.externalSourceContext as unknown as MCPExternalSourceContext;
+    if (!this.externalSourceContext) {
+      this.externalSourceContext = {} as MCPExternalSourceContext;
+    }
+    return this.externalSourceContext;
   }
 
   getWebsiteContext(): MCPWebsiteContext {
-    return this.websiteContext as unknown as MCPWebsiteContext;
+    if (!this.websiteContext) {
+      this.websiteContext = {} as MCPWebsiteContext;
+    }
+    return this.websiteContext;
   }
 
   setExternalSourcesEnabled(enabled: boolean): void {

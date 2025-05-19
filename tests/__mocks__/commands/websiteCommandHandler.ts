@@ -4,15 +4,15 @@
 
 import type { LandingPageData } from '@/contexts/website/websiteStorage';
 import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
-import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
+import { MockMCPWebsiteContext } from '@test/__mocks__/contexts/MCPWebsiteContext';
 
 export class MockWebsiteCommandHandler {
   static instance: MockWebsiteCommandHandler | null = null;
-  private websiteContext: MockWebsiteContext;
+  private websiteContext: MockMCPWebsiteContext;
   
   constructor() {
     // Get a reference to the MockWebsiteContext singleton
-    this.websiteContext = MockWebsiteContext.getInstance();
+    this.websiteContext = MockMCPWebsiteContext.getInstance();
     
     // Make sure the mock methods are properly bound
     this.websiteContext.handleWebsiteBuild = this.websiteContext.handleWebsiteBuild.bind(this.websiteContext);

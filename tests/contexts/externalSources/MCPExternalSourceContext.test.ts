@@ -6,7 +6,7 @@ import { MCPExternalSourceContext } from '@/contexts/externalSources/MCPExternal
 import type { ExternalSourceInterface, ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
 import type { EmbeddingService } from '@/resources/ai/embedding';
 import { Logger } from '@/utils/logger';
-import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
+// MockExternalSourceContext not needed - using real MCPExternalSourceContext
 import { MockExternalSourceStorageAdapter } from '@test/__mocks__/contexts/externalSourceStorageAdapter';
 
 describe('MCPExternalSourceContext', () => {
@@ -65,7 +65,7 @@ describe('MCPExternalSourceContext', () => {
   beforeEach(() => {
     // Reset singletons before each test
     MCPExternalSourceContext.resetInstance();
-    MockExternalSourceContext.resetInstance();
+    // MockExternalSourceContext removed - not using mocks
     MockExternalSourceStorageAdapter.resetInstance();
 
     // Create fresh instances

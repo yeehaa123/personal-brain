@@ -5,7 +5,7 @@ import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 
-import { NoteContext } from '@/contexts/notes';
+// MCPNoteContext will be imported if needed later
 
 import logger from '../utils/logger';
 
@@ -23,7 +23,9 @@ async function runMigration() {
     
     // Generate embeddings for existing notes
     logger.info('Generating embeddings for existing notes...', { context: 'DBMigration' });
-    const context = NoteContext.createFresh();
+    // TODO: Replace with MCPNoteContext when migration is updated
+    const { MCPNoteContext } = await import('@/contexts/notes');
+    const context = MCPNoteContext.createFresh();
     const result = await context.generateEmbeddingsForAllNotes();
     
     logger.info('Embedding generation complete', { 

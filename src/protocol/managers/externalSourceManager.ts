@@ -7,7 +7,7 @@
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
  */
-import type { ExternalSourceContext } from '@/contexts';
+import type { MCPExternalSourceContext } from '@/contexts';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources';
 import type { Note } from '@/models/note';
 import { ExternalSourceService } from '@/protocol/components/externalSourceService';
@@ -22,7 +22,7 @@ import type { IExternalSourceManager } from '../types';
  */
 export interface ExternalSourceManagerConfig {
   /** External source context instance */
-  externalSourceContext: ExternalSourceContext | null;
+  externalSourceContext: MCPExternalSourceContext | null;
   /** Profile analyzer for relevance checks */
   profileAnalyzer: ProfileAnalyzer;
   /** Prompt formatter for excerpts */
@@ -133,7 +133,7 @@ export class ExternalSourceManager implements IExternalSourceManager {
    * @param enabled Whether external sources are enabled
    */
   public constructor(
-    externalSourceContext: ExternalSourceContext | null,
+    externalSourceContext: MCPExternalSourceContext | null,
     profileAnalyzer: ProfileAnalyzer,
     promptFormatter: PromptFormatter,
     enabled: boolean = false,

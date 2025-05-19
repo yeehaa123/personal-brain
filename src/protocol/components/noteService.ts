@@ -2,7 +2,7 @@
  * Service for handling note-related operations
  */
 
-import type { NoteContext } from '@/contexts';
+import type { MCPNoteContext } from '@/contexts';
 import type { Note } from '@models/note';
 import { Logger } from '@utils/logger';
 
@@ -11,7 +11,7 @@ import { Logger } from '@utils/logger';
  */
 export interface NoteServiceConfig {
   /** Note context for data access */
-  context: NoteContext;
+  context: MCPNoteContext;
 }
 
 /**
@@ -29,7 +29,7 @@ export class NoteService {
   /** Logger instance for this class */
   private logger = Logger.getInstance();
   
-  private context: NoteContext;
+  private context: MCPNoteContext;
 
   /**
    * Get the singleton instance of NoteService
@@ -77,7 +77,7 @@ export class NoteService {
    * 
    * @param context Note context for data access
    */
-  private constructor(context: NoteContext) {
+  private constructor(context: MCPNoteContext) {
     this.context = context;
     this.logger.debug('NoteService initialized');
   }

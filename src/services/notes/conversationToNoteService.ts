@@ -8,7 +8,7 @@
  */
 import { nanoid } from 'nanoid';
 
-import { ConversationContext, type ConversationStorage } from '@/contexts/conversations';
+import { type ConversationStorage } from '@/contexts/conversations';
 import type { NewNote, Note } from '@/models/note';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
@@ -151,19 +151,10 @@ export class ConversationToNoteService {
       this.logger.debug('Using provided conversation storage');
       this.conversationStorage = conversationStorage;
     } else {
-      this.logger.debug('Getting conversation storage from ConversationContext');
-      const contextStorage = ConversationContext.getInstance().getStorage();
-      
-      // If it's the adapter, get the underlying storage
-      if ('getStorageImplementation' in contextStorage) {
-        this.logger.debug('Using storage implementation from adapter');
-        this.conversationStorage = (contextStorage as unknown as { 
-          getStorageImplementation(): ConversationStorage 
-        }).getStorageImplementation();
-      } else {
-        this.logger.debug('Using storage directly from context');
-        this.conversationStorage = contextStorage as ConversationStorage;
-      }
+      this.logger.debug('Getting conversation storage from MCPConversationContext');
+      // MCPConversationContext returns MCPStorageInterface, but we need ConversationStorage
+      // TODO: This is an architectural mismatch between MCPStorageInterface and ConversationStorage
+      throw new Error('ConversationToNoteService cannot use MCPStorageInterface directly - provide ConversationStorage instance');
     }
     
     this.logger.debug('ConversationToNoteService instance created');

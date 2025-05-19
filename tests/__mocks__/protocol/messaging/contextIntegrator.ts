@@ -5,21 +5,16 @@
  * getInstance(), resetInstance(), and createFresh()
  */
 
-import type { ConversationContext } from '@/contexts/conversations';
-import type { ExternalSourceContext } from '@/contexts/externalSources';
-import type { NoteContext } from '@/contexts/notes';
+import type { MCPConversationContext } from '@/contexts/conversations';
+import type { MCPExternalSourceContext } from '@/contexts/externalSources';
+import type { MCPNoteContext } from '@/contexts/notes';
 import type { NoteContextMessaging } from '@/contexts/notes/messaging/noteContextMessaging';
-import type { ProfileContext } from '@/contexts/profiles';
+import type { MCPProfileContext } from '@/contexts/profiles';
 import type { ProfileContextMessaging } from '@/contexts/profiles/messaging';
-import type { WebsiteContext } from '@/contexts/website';
+import type { MCPWebsiteContext } from '@/contexts/website';
 import type { WebsiteContextMessaging } from '@/contexts/website/messaging';
 import type { ContextMediator } from '@/protocol/messaging/contextMediator';
-import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
-import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
-import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
-import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
 import { MockProfileContextMessaging } from '@test/__mocks__/contexts/profiles/messaging/profileContextMessaging';
-import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
 
 import { MockContextMediator } from './contextMediator';
 
@@ -27,11 +22,11 @@ import { MockContextMediator } from './contextMediator';
  * Interface for constructor options
  */
 interface MockContextIntegratorOptions {
-  noteContext?: NoteContext;
-  profileContext?: ProfileContext;
-  conversationContext?: ConversationContext;
-  externalSourceContext?: ExternalSourceContext;
-  websiteContext?: WebsiteContext;
+  noteContext?: MCPNoteContext;
+  profileContext?: MCPProfileContext;
+  conversationContext?: MCPConversationContext;
+  externalSourceContext?: MCPExternalSourceContext;
+  websiteContext?: MCPWebsiteContext;
   mediator?: ContextMediator;
 }
 
@@ -42,11 +37,11 @@ export class MockContextIntegrator {
   private static instance: MockContextIntegrator | null = null;
   
   // Base contexts
-  private noteContext: NoteContext;
-  private profileContext: ProfileContext;
-  private conversationContext: ConversationContext;
-  private externalSourceContext: ExternalSourceContext;
-  private websiteContext: WebsiteContext;
+  private noteContext: MCPNoteContext;
+  private profileContext: MCPProfileContext;
+  private conversationContext: MCPConversationContext;
+  private externalSourceContext: MCPExternalSourceContext;
+  private websiteContext: MCPWebsiteContext;
   
   // Context mediator
   private mediator: ContextMediator;
@@ -84,12 +79,12 @@ export class MockContextIntegrator {
    * Constructor
    */
   constructor(options?: MockContextIntegratorOptions) {
-    // Initialize base contexts with type assertions to avoid type errors
-    this.noteContext = (options?.noteContext || MockNoteContext.getInstance()) as NoteContext;
-    this.profileContext = (options?.profileContext || MockProfileContext.getInstance()) as ProfileContext;
-    this.conversationContext = (options?.conversationContext || MockConversationContext.getInstance()) as ConversationContext;
-    this.externalSourceContext = (options?.externalSourceContext || MockExternalSourceContext.getInstance()) as ExternalSourceContext;
-    this.websiteContext = (options?.websiteContext || MockWebsiteContext.getInstance()) as WebsiteContext;
+    // Initialize base contexts
+    this.noteContext = options?.noteContext || {} as MCPNoteContext;
+    this.profileContext = options?.profileContext || {} as MCPProfileContext;
+    this.conversationContext = options?.conversationContext || {} as MCPConversationContext;
+    this.externalSourceContext = options?.externalSourceContext || {} as MCPExternalSourceContext;
+    this.websiteContext = options?.websiteContext || {} as MCPWebsiteContext;
     
     // Initialize mediator (use provided or create new instance)
     this.mediator = (options?.mediator || MockContextMediator.getInstance()) as ContextMediator;
@@ -139,8 +134,8 @@ export class MockContextIntegrator {
   getContexts(): {
     note: NoteContextMessaging;
     profile: ProfileContextMessaging;
-    conversation: ConversationContext;
-    externalSource: ExternalSourceContext;
+    conversation: MCPConversationContext;
+    externalSource: MCPExternalSourceContext;
     website: WebsiteContextMessaging;
     } {
     return {
@@ -169,14 +164,14 @@ export class MockContextIntegrator {
   /**
    * Get the conversation context
    */
-  getConversationContext(): ConversationContext {
+  getConversationContext(): MCPConversationContext {
     return this.conversationContext;
   }
   
   /**
    * Get the external source context
    */
-  getExternalSourceContext(): ExternalSourceContext {
+  getExternalSourceContext(): MCPExternalSourceContext {
     return this.externalSourceContext;
   }
   

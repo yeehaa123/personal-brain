@@ -4,31 +4,31 @@
  * Follows the Component Interface Standardization pattern with
  * getInstance(), resetInstance(), and createFresh()
  */
-import type { ConversationContext } from '@/contexts/conversations';
-import type { ExternalSourceContext } from '@/contexts/externalSources';
-import type { NoteContext } from '@/contexts/notes';
-import type { ProfileContext } from '@/contexts/profiles';
-import type { WebsiteContext } from '@/contexts/website';
+import type { MCPConversationContext } from '@/contexts/conversations';
+import type { MCPExternalSourceContext } from '@/contexts/externalSources';
+import type { MCPNoteContext } from '@/contexts/notes';
+import type { MCPProfileContext } from '@/contexts/profiles';
+import type { MCPWebsiteContext } from '@/contexts/website';
 import type { IContextManager } from '@/protocol/types';
-import { MockConversationContext } from '@test/__mocks__/contexts/conversationContext';
-import { MockExternalSourceContext } from '@test/__mocks__/contexts/externalSourceContext';
-import { MockNoteContext } from '@test/__mocks__/contexts/noteContext';
-import { MockProfileContext } from '@test/__mocks__/contexts/profileContext';
-import { MockWebsiteContext } from '@test/__mocks__/contexts/websiteContext';
+import { MockMCPConversationContext } from '@test/__mocks__/contexts/conversations/MCPConversationContext';
+import { MockMCPExternalSourceContext } from '@test/__mocks__/contexts/externalSources/MCPExternalSourceContext';
+import { MockMCPWebsiteContext } from '@test/__mocks__/contexts/MCPWebsiteContext';
+import { MockMCPNoteContext } from '@test/__mocks__/contexts/notes/MCPNoteContext';
+import { MockMCPProfileContext } from '@test/__mocks__/contexts/profiles/MCPProfileContext';
 
 /**
  * Mock ContextOrchestrator options
  */
 interface MockContextOrchestratorOptions {
-  ready?: boolean;
-  contextManager?: IContextManager;
-  noteContext?: NoteContext;
-  profileContext?: ProfileContext;
-  conversationContext?: ConversationContext;
-  externalSourceContext?: ExternalSourceContext;
-  websiteContext?: WebsiteContext;
-  mediator?: unknown; // For messaging tests
-  config?: unknown; // For config options
+  ready: boolean;
+  contextManager: IContextManager;
+  noteContext: MockMCPNoteContext;
+  profileContext: MockMCPProfileContext;
+  conversationContext: MockMCPConversationContext;
+  externalSourceContext: MockMCPExternalSourceContext;
+  websiteContext: MockMCPWebsiteContext;
+  mediator: unknown; // For messaging tests
+  config: unknown; // For config options
 }
 
 /**
@@ -42,11 +42,11 @@ export class MockContextOrchestrator {
   } as unknown as IContextManager;
   
   // Individual contexts
-  private noteContext: NoteContext;
-  private profileContext: ProfileContext;
-  private conversationContext: ConversationContext;
-  private externalSourceContext: ExternalSourceContext;
-  private websiteContext: WebsiteContext;
+  private noteContext: MockMCPNoteContext;
+  private profileContext: MockMCPProfileContext;
+  private conversationContext: MockMCPConversationContext;
+  private externalSourceContext: MockMCPExternalSourceContext;
+  private websiteContext: MockMCPWebsiteContext;
   
   /**
    * Get the singleton instance
@@ -83,20 +83,15 @@ export class MockContextOrchestrator {
     }
     
     // Initialize contexts with provided options or defaults
-    this.noteContext = options?.noteContext || 
-      MockNoteContext.getInstance() as unknown as NoteContext;
+    this.noteContext = options?.noteContext || MockMCPNoteContext.getInstance();
       
-    this.profileContext = options?.profileContext || 
-      MockProfileContext.getInstance() as unknown as ProfileContext;
+    this.profileContext = options?.profileContext || MockMCPProfileContext.getInstance();
       
-    this.conversationContext = options?.conversationContext || 
-      MockConversationContext.getInstance() as unknown as ConversationContext;
+    this.conversationContext = options?.conversationContext || MockMCPConversationContext.getInstance();
       
-    this.externalSourceContext = options?.externalSourceContext || 
-      MockExternalSourceContext.getInstance() as unknown as ExternalSourceContext;
+    this.externalSourceContext = options?.externalSourceContext || MockMCPExternalSourceContext.getInstance();
       
-    this.websiteContext = options?.websiteContext || 
-      MockWebsiteContext.getInstance() as unknown as WebsiteContext;
+    this.websiteContext = options?.websiteContext || MockMCPWebsiteContext.getInstance();
   }
   
   /**
@@ -116,36 +111,36 @@ export class MockContextOrchestrator {
   /**
    * Get the note context
    */
-  getNoteContext(): NoteContext {
-    return this.noteContext;
+  getNoteContext(): MCPNoteContext {
+    return this.noteContext as unknown as MCPNoteContext;
   }
   
   /**
    * Get the profile context
    */
-  getProfileContext(): ProfileContext {
-    return this.profileContext;
+  getProfileContext(): MCPProfileContext {
+    return this.profileContext as unknown as MCPProfileContext;
   }
   
   /**
    * Get the conversation context
    */
-  getConversationContext(): ConversationContext {
-    return this.conversationContext;
+  getConversationContext(): MCPConversationContext {
+    return this.conversationContext as unknown as MCPConversationContext;
   }
   
   /**
    * Get the external source context
    */
-  getExternalSourceContext(): ExternalSourceContext {
-    return this.externalSourceContext;
+  getExternalSourceContext(): MCPExternalSourceContext {
+    return this.externalSourceContext as unknown as MCPExternalSourceContext;
   }
   
   /**
    * Get the website context
    */
-  getWebsiteContext(): WebsiteContext {
-    return this.websiteContext;
+  getWebsiteContext(): MCPWebsiteContext {
+    return this.websiteContext as unknown as MCPWebsiteContext;
   }
   
   /**

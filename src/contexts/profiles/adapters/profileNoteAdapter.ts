@@ -1,13 +1,16 @@
-import { NoteContext } from '@/contexts/notes/noteContext';
+import { MCPNoteContext } from '@/contexts/notes/MCPNoteContext';
 import type { Note } from '@/models/note';
 import type { Profile } from '@/models/profile';
 import { TagExtractor } from '@/utils/tagExtractor';
 
 /**
  * Dependencies for ProfileNoteAdapter
+ * 
+ * TODO: This creates a direct dependency between ProfileContext and NoteContext.
+ * Should be refactored to use messaging layer for cross-context communication.
  */
 export interface ProfileNoteAdapterDependencies {
-  noteContext: NoteContext;
+  noteContext: MCPNoteContext;
   tagExtractor: TagExtractor;
 }
 
@@ -24,7 +27,7 @@ export class ProfileNoteAdapter {
   // Fixed ID for the single profile
   public static readonly PROFILE_NOTE_ID = 'user-profile';
 
-  private noteContext: NoteContext;
+  private noteContext: MCPNoteContext;
   private tagExtractor: TagExtractor;
 
   private constructor(dependencies: ProfileNoteAdapterDependencies) {
@@ -36,7 +39,7 @@ export class ProfileNoteAdapter {
     if (!ProfileNoteAdapter.instance) {
       // If dependencies are not provided, use default instances
       if (!dependencies) {
-        const noteContext = NoteContext.getInstance();
+        const noteContext = MCPNoteContext.getInstance();
         const tagExtractor = TagExtractor.getInstance();
         dependencies = { noteContext, tagExtractor };
       }
@@ -52,7 +55,7 @@ export class ProfileNoteAdapter {
   public static createFresh(dependencies?: ProfileNoteAdapterDependencies): ProfileNoteAdapter {
     // If dependencies are not provided, use default instances
     if (!dependencies) {
-      const noteContext = NoteContext.getInstance();
+      const noteContext = MCPNoteContext.getInstance();
       const tagExtractor = TagExtractor.getInstance();
       dependencies = { noteContext, tagExtractor };
     }
