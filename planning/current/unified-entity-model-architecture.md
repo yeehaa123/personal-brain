@@ -681,84 +681,216 @@ export class ProfileAdapter implements IEntityAdapter<Profile> {
 }
 ```
 
-## Implementation Plan
+## Implementation Plan: Phased Approach with Feature Flags
 
-### Phase 1: Schema and Model Updates
+To minimize risk and ensure functionality throughout the transition, we'll use a **feature flag approach**:
 
-1. **Update the database schema**
+1. Create a feature flag system to conditionally enable/disable contexts
+2. Implement the unified model with only Note context enabled initially
+3. Verify core functionality works with minimal context configuration
+4. Gradually enable and migrate each context one by one
+5. Use feature flags rather than physically moving code until proven stable
+
+This approach will:
+- Allow testing the architecture without major structural changes
+- Minimize risk by keeping original code intact until verified
+- Provide easy rollback capabilities if needed
+- Let us test the system's behavior with partial context availability
+
+### Phase 1: Feature Flag System (3 days)
+
+1. **Create Context Feature Flags** (Day 1)
+   - Implement `ContextFeatureFlags` configuration in `ConfigurationManager`
+   - Add flags for each context type (Note, Profile, Conversation, etc.)
+   - Set up environment variable-based configuration
+   - Create fallback mechanism for disabled contexts
+
+   ```typescript
+   // In src/protocol/core/configurationManager.ts
+   export interface ContextFeatureFlags {
+     enableNoteContext: boolean;
+     enableProfileContext: boolean;
+     enableConversationContext: boolean;
+     enableWebsiteContext: boolean;
+     enableExternalSourceContext: boolean;
+   }
+
+   export const DEFAULT_CONTEXT_FEATURE_FLAGS: ContextFeatureFlags = {
+     enableNoteContext: true,
+     enableProfileContext: true, 
+     enableConversationContext: true,
+     enableWebsiteContext: true,
+     enableExternalSourceContext: true
+   };
+
+   // Add to ConfigurationManager class
+   public getContextFeatureFlags(): ContextFeatureFlags {
+     return {
+       enableNoteContext: this.getBooleanFromEnv('ENABLE_NOTE_CONTEXT', true),
+       enableProfileContext: this.getBooleanFromEnv('ENABLE_PROFILE_CONTEXT', true),
+       enableConversationContext: this.getBooleanFromEnv('ENABLE_CONVERSATION_CONTEXT', true),
+       enableWebsiteContext: this.getBooleanFromEnv('ENABLE_WEBSITE_CONTEXT', true),
+       enableExternalSourceContext: this.getBooleanFromEnv('ENABLE_EXTERNAL_SOURCE_CONTEXT', true),
+     };
+   }
+   ```
+
+2. **Update ContextManager** (Day 2)
+   - Modify context initialization to respect feature flags
+   - Add graceful degradation when contexts are disabled
+   - Implement context availability checking
+   - Create logging for disabled contexts
+   
+   ```typescript
+   // In src/protocol/managers/contextManager.ts
+   public initializeContexts(): void {
+     const featureFlags = this.configManager.getContextFeatureFlags();
+     
+     // Always initialize NoteContext as our base functionality
+     if (featureFlags.enableNoteContext) {
+       this.noteContext = MCPNoteContext.getInstance();
+       this.noteContext.initialize();
+     } else {
+       this.logger.warn('Note context is disabled by feature flags!');
+     }
+     
+     // Initialize other contexts based on feature flags
+     if (featureFlags.enableProfileContext) {
+       this.profileContext = MCPProfileContext.getInstance();
+       this.profileContext.initialize();
+     } else {
+       this.logger.info('Profile context is disabled by feature flags');
+     }
+     
+     // Similar conditional initialization for other contexts...
+   }
+   ```
+
+3. **Modify BrainProtocol** (Day 3)
+   - Update to handle missing contexts gracefully
+   - Implement fallback behavior for disabled contexts
+   - Add context availability checking before operations
+   - Add diagnostic commands to show feature flag status
+
+### Phase 2: Schema and Model Updates with Minimal Context (1 week)
+
+1. **Test with Only Note Context** (Days 1-2)
+   - Set feature flags to enable only NoteContext
+   - Verify system starts and operates with minimal functionality
+   - Identify and fix critical dependencies
+   - Document basic supported operations
+
+2. **Update the database schema**
    - Add entityType to notes table (replacing source field where applicable)
    - Update note_chunks table to include entityType
    - Let Drizzle generate the migration
    - Update schemas and types
 
-2. **Enhance the Note model**
+3. **Enhance the Note model**
    - Implement IContentModel interface
    - Add entityType property
    - Add standardized toMarkdown method
 
-3. **Create the EntityType enum**
+4. **Create the EntityType enum**
    - Define all supported entity types
    - Update existing code to use the enum
 
-### Phase 2: Standardize Entity Adapters
+### Phase 3: Standardize Entity Adapters and Note Processing (1 week)
 
 1. **Define the enhanced IEntityAdapter interface**
    - Add toMarkdown method requirement
    - Add getEntityType method
 
-2. **Update existing adapters**
-   - Profile adapter
-   - Website section adapter
-   - Conversation adapter
-   - External source adapter
-
-3. **Implement consistent markdown generation**
+2. **Update Note adapter first**
+   - Focus on getting the base Note adapter working properly
+   - Implement consistent markdown generation for Notes
    - Create helpers for common markdown patterns
-   - Ensure adapters generate consistent markdown
+   - Keep other adapters unchanged but flag-disabled
 
-### Phase 3: Create Unified Processing Service
-
-1. **Implement the ContentProcessingService**
+3. **Implement the ContentProcessingService for Notes**
    - Create the adapter registry
-   - Implement processModel method
-   - Implement search method that works across entity types
+   - Implement processModel method for Notes
+   - Implement search method that works for Note entities
+   - Ensure embeddings and tagging work for Notes
 
-2. **Update NoteRepository**
+4. **Update NoteRepository**
    - Add entityType-based queries
    - Enhance chunk storage and retrieval
    - Implement manual vector similarity for SQLite
 
-3. **Update the EmbeddingService**
-   - Ensure it can handle any content type via markdown
-   - Add batch processing capabilities
+### Phase 4: Enable and Migrate Profile Context (1 week)
 
-4. **Enhance the TagService**
-   - Make it work with all entity types via markdown
-   - Improve extraction algorithm for consistency
+1. **Update Profile adapter**
+   - Implement to use the enhanced interface with toMarkdown method
+   - Ensure proper entityType handling
+   - Test with sample profiles
 
-### Phase 4: Integration and Migration
+2. **Extend ContentProcessingService for Profiles**
+   - Update to handle Profile entities
+   - Ensure embeddings and tagging work for Profiles
 
-1. **Update context classes to use the ContentProcessingService**
-   - NoteContext
-   - ProfileContext
-   - WebsiteContext
-   - ConversationContext
-   - ExternalSourceContext
+3. **Update ProfileContext**
+   - Modify to use the new ContentProcessingService
+   - Retain backward compatibility through feature flags
+   - Test with flag enabled vs disabled
 
-2. **Create a migration script**
-   - Process existing notes to add entityType based on metadata or source
-   - Process existing content to generate standardized markdown
-   - Create chunks for existing content
-   - Generate embeddings for all chunks
+4. **Enable Profile Context**
+   - Set feature flag to enable ProfileContext
+   - Test full system with both Note and Profile contexts
+   - Verify interoperability and search across types
 
-### Phase 5: Search Enhancement
+### Phase 5: Enable and Migrate Website Context (1 week)
+
+1. **Update Website adapters**
+   - Implement enhanced interface for website sections
+   - Add toMarkdown method for website content
+   - Test markdown generation for website content
+
+2. **Extend ContentProcessingService for Website**
+   - Update to handle Website entities
+   - Ensure embeddings and tagging work for website content
+
+3. **Update WebsiteContext**
+   - Modify to use the new ContentProcessingService
+   - Retain backward compatibility through feature flags
+   - Test website generation and deployment
+
+4. **Enable Website Context**
+   - Set feature flag to enable WebsiteContext
+   - Test full system with Note, Profile, and Website contexts
+   - Verify interoperability and search across types
+
+### Phase 6: Enable Remaining Contexts (1 week)
+
+1. **Update Conversation adapter**
+   - Implement enhanced interface for conversations
+   - Add toMarkdown method for conversation content
+   - Test with tiered memory system
+
+2. **Update ExternalSource adapter**
+   - Implement enhanced interface for external sources
+   - Add toMarkdown method for external content
+   - Test with news and Wikipedia
+
+3. **Enable All Contexts**
+   - Set feature flags to enable all contexts
+   - Test full system with all contexts enabled
+   - Verify interoperability and search across all types
+
+### Phase 7: Search Enhancement and Migration Completion (1 week)
 
 1. **Implement unified search across all entity types**
    - Create a common search interface
    - Support filtering by entity type
    - Implement relevance ranking that works across types
 
-2. **Implement advanced relationship features**
+2. **Complete migration and cleanup**
+   - Process existing notes to add entityType based on metadata or source
+   - Process existing content to generate standardized markdown
+   - Create chunks for existing content
+   - Generate embeddings for all chunks
+
+3. **Implement advanced relationship features**
    - Content recommendation across entity types
    - Related content discovery
    - Content clustering
@@ -777,27 +909,94 @@ export class ProfileAdapter implements IEntityAdapter<Profile> {
 ## Risks and Mitigation
 
 1. **Migration complexity**
-   - Mitigation: Use Drizzle to handle schema changes
-   - Implement changes incrementally, one entity type at a time
+   - Mitigation: Use feature flags to enable only the Note context initially
+   - Gradually enable additional contexts one at a time after verification
+   - Use Drizzle to handle schema changes
    - Create data validation tools to ensure integrity
+   - Keep original code paths intact until full verification
 
 2. **Performance impact**
    - Mitigation: Add appropriate indexes for entityType
    - Implement manual vector similarity calculation optimized for SQLite
    - Optimize chunk size and embedding generation
    - Implement batch processing and caching
+   - Test performance with different feature flag configurations
 
 3. **SQLite limitations**
    - Mitigation: Implement custom vector similarity calculation
    - Consider using SQLite extensions for vector operations if needed
    - Optimize queries for SQLite's strengths
 
+4. **Integration failures**
+   - Mitigation: Use feature flags to isolate problematic components
+   - Test system with only Note context before adding others
+   - Implement graceful degradation for disabled contexts
+   - Add comprehensive error handling for partial context configurations
+
 ## Next Steps
 
-1. Review the existing Note model and database schema
-2. Create the EntityType enum and update the schema
-3. Let Drizzle generate the migration
-4. Update the Note model to include entityType
-5. Create a prototype of the ContentProcessingService
-6. Update one adapter (e.g., Profile) to implement the enhanced interface
-7. Test the approach with a single entity type before expanding
+1. **Implement Feature Flag System**
+   - Create ContextFeatureFlags interface in ConfigurationManager
+   - Add environment variable controls for each context
+   - Implement context initialization with feature flag checks
+   - Update BrainProtocol to handle partial context configurations
+
+2. **Start with Note Context Only**
+   - Set feature flags to enable only NoteContext initially
+   - Create the EntityType enum and update Note schema
+   - Update the Note model to implement IContentModel interface
+   - Let Drizzle generate the migration
+
+3. **Build Core Processing Service**
+   - Create a prototype of the ContentProcessingService for Notes only
+   - Implement essential services (embedding, tagging, chunking) for Notes
+   - Test thoroughly with only Note context enabled
+
+4. **Validate with Note Context**
+   - Run full system tests with only Note context
+   - Verify all note-based functionality works properly
+   - Fix any issues before proceeding to other contexts
+
+5. **Gradually Enable Profile Context**
+   - Update Profile adapter to implement enhanced interface
+   - Enable ProfileContext via feature flag
+   - Test system with both Note and Profile contexts
+   - Verify cross-entity functionality works
+
+6. **Continue with Remaining Contexts**
+   - Enable each additional context one by one via feature flags
+   - Test thoroughly after each addition
+   - Maintain the ability to disable problematic contexts
+
+7. **Testing Command for Feature Flag Configurations**
+   ```bash
+   # Test with only NoteContext enabled
+   ENABLE_PROFILE_CONTEXT=false ENABLE_CONVERSATION_CONTEXT=false ENABLE_WEBSITE_CONTEXT=false ENABLE_EXTERNAL_SOURCE_CONTEXT=false bun run src/index.ts
+   
+   # Test with Note and Profile contexts
+   ENABLE_CONVERSATION_CONTEXT=false ENABLE_WEBSITE_CONTEXT=false ENABLE_EXTERNAL_SOURCE_CONTEXT=false bun run src/index.ts
+   
+   # Gradually enable more contexts as implementation progresses
+   ```
+
+## Implementation Principles
+
+1. **Feature Flag-Driven Development**: Use feature flags as the primary control mechanism for enabling/disabling components during the transition.
+
+2. **Minimal Context First**: Start with only the Note context enabled and verify all core functionality before proceeding.
+
+3. **Gradual Migration**: Enable contexts one by one, ensuring each is thoroughly tested before moving to the next.
+
+4. **Parallel Code Paths**: Keep original code intact alongside new implementations until fully verified with feature flags.
+
+5. **Test-First Approach**: Update tests for each context before changing implementation to ensure they pass in both configurations.
+
+6. **Fallback Mechanisms**: Implement graceful degradation for disabled contexts to maintain partial functionality.
+
+7. **Composition Over Inheritance**: Use composition patterns consistently across all entity implementations.
+
+8. **Clear Interfaces**: Maintain explicit interfaces between components to enable easy feature flagging.
+
+9. **Documentation**: Document the feature flag approach and provide examples of different configurations.
+
+10. **Performance Awareness**: Monitor and optimize performance with each context addition.

@@ -10,31 +10,51 @@ The unified entity model is the **current top priority** for architectural impro
 4. Clean interfaces using composition over inheritance
 5. Simplified cross-entity search and operations
 
-## Implementation Strategy: Iterative Approach
+## Implementation Strategy: Phased Approach with Feature Flags
 
-For this implementation, we'll use an **iterative approach**:
+To minimize risk and ensure functionality throughout the transition, we'll use a **feature flag approach**:
 
-1. Start with BrainProtocol and NoteContext only
-2. Move other contexts to a temporary location
-3. Implement the unified model for Notes first
-4. Update BrainProtocol to work with the new model
-5. Get tests passing with this minimal implementation
-6. Then gradually reintroduce each context one by one
+1. Create a feature flag system to conditionally enable/disable contexts
+2. Implement the unified model with only Note context enabled initially
+3. Verify core functionality works with minimal context configuration
+4. Gradually enable and migrate each context one by one
+5. Use feature flags rather than physically moving code until proven stable
 
-This "minimum viable architecture" approach will:
-- Validate the core design early
-- Keep the codebase functional throughout the transition
-- Reduce risk by allowing backtracking if needed
-- Provide clearer checkpoints for progress
+This approach will:
+- Allow testing the architecture without major structural changes
+- Minimize risk by keeping original code intact until verified
+- Provide easy rollback capabilities if needed
+- Let us test the system's behavior with partial context availability
 
 ## Implementation Phases
 
-### Phase 1: Minimal Viable Architecture (1 week)
+### Phase 1: Feature Flag System (3 days)
 
-1. **Prepare Codebase** (Days 1-2)
-   - Move non-Note contexts to temporary location
-   - Update imports and fix compilation errors
-   - Ensure tests still pass with minimal functionality
+1. **Create Context Feature Flags** (Day 1)
+   - Implement `ContextFeatureFlags` configuration in `ConfigurationManager`
+   - Add flags for each context type (Note, Profile, Conversation, etc.)
+   - Set up environment variable-based configuration
+   - Create fallback mechanism for disabled contexts
+
+2. **Update ContextManager** (Day 2)
+   - Modify context initialization to respect feature flags
+   - Add graceful degradation when contexts are disabled
+   - Implement context availability checking
+   - Create logging for disabled contexts
+
+3. **Modify BrainProtocol** (Day 3)
+   - Update to handle missing contexts gracefully
+   - Implement fallback behavior for disabled contexts
+   - Add context availability checking before operations
+   - Add diagnostic commands to show feature flag status
+
+### Phase 2: Minimal Viable Architecture (1 week)
+
+1. **Test with Only Note Context** (Days 1-2)
+   - Set feature flags to enable only NoteContext
+   - Verify system starts and operates with minimal functionality
+   - Identify and fix critical dependencies
+   - Document basic supported operations
 
 2. **Update Note Model** (Days 2-3)
    - Add `entityType` field to Note model
@@ -54,7 +74,7 @@ This "minimum viable architecture" approach will:
    - Standardize tag extraction
    - Create content chunking utilities
 
-### Phase 2: BrainProtocol & Note Layer (1 week)
+### Phase 3: BrainProtocol & Note Layer (1 week)
 
 1. **Adapt Repository** (Days 1-2)
    - Update NoteRepository to support EntityType filtering
@@ -74,7 +94,7 @@ This "minimum viable architecture" approach will:
    - Update command handlers for notes
    - Get all note-related tests passing
 
-### Phase 3: Reintroduce Profile Context (1 week)
+### Phase 4: Enable and Migrate Profile Context (1 week)
 
 1. **Profile Entity Implementation** (Days 1-2)
    - Create Profile entity implementation
@@ -82,47 +102,58 @@ This "minimum viable architecture" approach will:
    - Update Profile schema to use entityType
    - Create ProfileAdapter
 
-2. **Reintroduce ProfileContext** (Days 3-5)
-   - Restore ProfileContext from temporary location
-   - Update to use BaseEntity and ContentProcessingService
+2. **Update ProfileContext** (Days 3-5)
+   - Update MCPProfileContext to use BaseEntity and ContentProcessingService
    - Remove direct NoteContext dependency
    - Update profile tools to use new model
    - Fix cross-context dependencies
    - Update profile test suite
 
-### Phase 4: Reintroduce Website Context (1 week)
+3. **Enable Profile Context** (Day 5)
+   - Update feature flags to enable ProfileContext
+   - Test system with both Note and Profile contexts
+   - Verify all profile-related functionality works
+   - Fix any integration issues
+
+### Phase 5: Enable and Migrate Website Context (1 week)
 
 1. **Website Entity Implementation** (Days 1-2)
    - Create WebsiteSection entity implementation
    - Implement WebsiteSection toMarkdown method
    - Create WebsiteSectionAdapter
 
-2. **Reintroduce WebsiteContext** (Days 3-5)
-   - Restore WebsiteContext from temporary location
-   - Update to use BaseEntity
+2. **Update WebsiteContext** (Days 3-4)
+   - Update MCPWebsiteContext to use BaseEntity
    - Fix related tools and services
    - Update tests for website functionality
 
-### Phase 5: Reintroduce Remaining Contexts (1 week)
+3. **Enable Website Context** (Day 5)
+   - Update feature flags to enable WebsiteContext
+   - Test system with Note, Profile, and Website contexts
+   - Verify landing page generation works
+   - Fix any integration issues
+
+### Phase 6: Enable and Migrate Remaining Contexts (1 week)
 
 1. **Conversation Entity Implementation** (Days 1-2)
    - Add Conversation entity
    - Implement Conversation toMarkdown method
-   - Restore ConversationContext
+   - Update ConversationContext
    - Ensure compatibility with tiered memory
 
 2. **ExternalSource Entity Implementation** (Days 3-4)
    - Create ExternalSource entity
    - Implement ExternalSource toMarkdown method
-   - Restore ExternalSourceContext
+   - Update ExternalSourceContext
    - Fix tests and functionality
 
-3. **Final Integration** (Day 5)
-   - Verify all contexts working together
-   - Fix any remaining cross-context issues
-   - Ensure all tests pass
+3. **Enable All Contexts** (Day 5)
+   - Update feature flags to enable all contexts
+   - Test system with all contexts enabled
+   - Fix any remaining integration issues
+   - Verify all functionality works end-to-end
 
-### Phase 6: Query Enhancements & Documentation (1 week)
+### Phase 7: Query Enhancements & Documentation (1 week)
 
 1. **Query Enhancements** (Days 1-3)
    - Create unified search interface across entity types
@@ -137,11 +168,95 @@ This "minimum viable architecture" approach will:
    - Clean up deprecated code
    - Update type definitions
    - Create developer guides for the new model
+   - Remove feature flag system if no longer needed
+
+## Feature Flag System Design
+
+```typescript
+// In src/protocol/core/configurationManager.ts
+
+export interface ContextFeatureFlags {
+  enableNoteContext: boolean;
+  enableProfileContext: boolean;
+  enableConversationContext: boolean;
+  enableWebsiteContext: boolean;
+  enableExternalSourceContext: boolean;
+}
+
+export const DEFAULT_CONTEXT_FEATURE_FLAGS: ContextFeatureFlags = {
+  enableNoteContext: true,
+  enableProfileContext: true, 
+  enableConversationContext: true,
+  enableWebsiteContext: true,
+  enableExternalSourceContext: true
+};
+
+// Add to ConfigurationManager class
+public getContextFeatureFlags(): ContextFeatureFlags {
+  return {
+    enableNoteContext: this.getBooleanFromEnv('ENABLE_NOTE_CONTEXT', true),
+    enableProfileContext: this.getBooleanFromEnv('ENABLE_PROFILE_CONTEXT', true),
+    enableConversationContext: this.getBooleanFromEnv('ENABLE_CONVERSATION_CONTEXT', true),
+    enableWebsiteContext: this.getBooleanFromEnv('ENABLE_WEBSITE_CONTEXT', true),
+    enableExternalSourceContext: this.getBooleanFromEnv('ENABLE_EXTERNAL_SOURCE_CONTEXT', true),
+  };
+}
+
+private getBooleanFromEnv(name: string, defaultValue: boolean): boolean {
+  const value = process.env[name];
+  if (value === undefined) return defaultValue;
+  return value.toLowerCase() === 'true';
+}
+```
+
+```typescript
+// In src/protocol/managers/contextManager.ts
+
+export class ContextManager {
+  // Existing code...
+
+  public initializeContexts(): void {
+    const featureFlags = this.configManager.getContextFeatureFlags();
+    
+    // Always initialize NoteContext
+    if (featureFlags.enableNoteContext) {
+      this.noteContext = MCPNoteContext.getInstance();
+      this.noteContext.initialize();
+    } else {
+      this.logger.warn('Note context is disabled by feature flags!');
+    }
+    
+    // Initialize other contexts based on feature flags
+    if (featureFlags.enableProfileContext) {
+      this.profileContext = MCPProfileContext.getInstance();
+      this.profileContext.initialize();
+    } else {
+      this.logger.info('Profile context is disabled by feature flags');
+    }
+    
+    // Similar conditional initialization for other contexts...
+  }
+  
+  // Helper to check context availability
+  public isContextAvailable(contextType: 'note' | 'profile' | 'conversation' | 'website' | 'external'): boolean {
+    const featureFlags = this.configManager.getContextFeatureFlags();
+    
+    switch (contextType) {
+      case 'note': return featureFlags.enableNoteContext;
+      case 'profile': return featureFlags.enableProfileContext;
+      case 'conversation': return featureFlags.enableConversationContext;
+      case 'website': return featureFlags.enableWebsiteContext;
+      case 'external': return featureFlags.enableExternalSourceContext;
+      default: return false;
+    }
+  }
+}
+```
 
 ## Implementation Principles
 
-1. **Iterative Development**: Start minimal and expand gradually
-2. **Clean Break Approach**: Implement the new model directly rather than maintaining backward compatibility
+1. **Feature Flag-Driven Development**: Use flags to control context availability
+2. **Gradual Implementation**: Verify functionality with minimal contexts before expanding
 3. **Test-First Approach**: Update tests before changing implementation
 4. **Composition Over Inheritance**: Use composition patterns consistently
 5. **Clean Interfaces**: Maintain clear and explicit interfaces between components
@@ -284,24 +399,19 @@ export class ContentProcessingService {
 }
 ```
 
-## Temporary Code Structure During Transition
+## Testing with Feature Flags
 
-During the iterative implementation, we'll use a temporary folder structure to store contexts that haven't been migrated yet:
+To test the system with only NoteContext enabled:
 
+```bash
+# Test with only NoteContext enabled
+ENABLE_PROFILE_CONTEXT=false ENABLE_CONVERSATION_CONTEXT=false ENABLE_WEBSITE_CONTEXT=false ENABLE_EXTERNAL_SOURCE_CONTEXT=false bun run src/index.ts
+
+# Test with Note and Profile contexts
+ENABLE_CONVERSATION_CONTEXT=false ENABLE_WEBSITE_CONTEXT=false ENABLE_EXTERNAL_SOURCE_CONTEXT=false bun run src/index.ts
+
+# Gradually enable more contexts as implementation progresses
 ```
-src/
-  contexts/
-    MCPContext.ts              # Keep the base interface
-    notes/                     # Start with just the Note context
-      MCPNoteContext.ts        # Update to use the new model
-    _temp/                     # Temporary storage for other contexts
-      profiles/                # Move here during implementation
-      conversations/           # Move here during implementation
-      website/                 # Move here during implementation
-      externalSources/         # Move here during implementation
-```
-
-This allows us to maintain a clean separation between migrated and non-migrated code while keeping the codebase compilable throughout the transition.
 
 ## Post-Implementation Benefits
 
