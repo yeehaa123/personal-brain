@@ -1,14 +1,17 @@
-# Personal Brain Planning
+# Unified Entity Model Roadmap
 
-## Current Priority: Unified Entity Model Architecture
+## Executive Summary
 
-The unified entity model is the **current top priority** for architectural improvements. This approach will standardize all entities (notes, profiles, conversations, website content) under a single model interface with consistent patterns for:
+This roadmap consolidates our planning efforts toward implementing a unified entity model architecture that will significantly simplify our codebase, improve maintainability, and enable more powerful cross-entity functionality. Analyzing all planning documents indicates this initiative is the next logical architectural improvement following our successful MCP context migration and service architecture simplification.
 
-1. Storage as notes with specific `entityType` values
-2. Markdown representation via `toMarkdown()` methods
-3. Centralized embedding, tagging, and chunking
-4. Clean interfaces using composition over inheritance
-5. Simplified cross-entity search and operations
+The unified entity model approach will:
+
+1. Standardize all entities (notes, profiles, conversations, website content) under a single model interface
+2. Provide consistent markdown representation via `toMarkdown()` methods
+3. Centralize embedding, tagging, and chunking functionality
+4. Eliminate unnecessary abstractions and complex inheritance
+5. Significantly improve cross-entity search capabilities
+6. Prepare the codebase for future enhancements
 
 ## Implementation Strategy: Iterative Approach
 
@@ -26,6 +29,49 @@ This "minimum viable architecture" approach will:
 - Keep the codebase functional throughout the transition
 - Reduce risk by allowing backtracking if needed
 - Provide clearer checkpoints for progress
+
+## Current Status Assessment
+
+### Completed Initiatives ✅
+
+1. **Context System Simplification**
+   - Completed migration to MCPContext pattern
+   - Removed excessive generic type parameters
+   - Replaced inheritance with composition
+   - Simplified interfaces to be more specific
+   - Implemented all context types with the MCP pattern
+
+2. **Service Architecture Simplification**
+   - Removed unnecessary abstraction layers
+   - Simplified repository, search, and embedding services
+   - Implemented direct service interfaces
+   - Significantly reduced cognitive load
+
+3. **MCP Context Migration**
+   - Migrated 21/78 test files to behavioral testing approach
+   - Implemented tiered memory in MCPConversationContext
+   - Completed storage adapter implementations
+   - Resolved TypeScript compilation errors
+
+4. **MVP Core Components**
+   - Protocol response simplification
+   - Deployment architecture with Caddy
+   - Website context and basic Astro setup
+   - Website identity service
+
+### Current Work In Progress ⏳
+
+1. **MCP Migration TODOs**
+   - Cross-context dependencies in ProfileNoteAdapter
+   - Mock context type mismatches
+   - Website context test failures
+   - Test refactoring (behavioral approach)
+
+2. **Landing Page Refinements**
+   - Segmented landing page generation
+   - Section quality assessment
+   - Two-phase editorial process
+   - Quality metrics integration
 
 ## Implementation Phases
 
@@ -138,152 +184,6 @@ This "minimum viable architecture" approach will:
    - Update type definitions
    - Create developer guides for the new model
 
-## Implementation Principles
-
-1. **Iterative Development**: Start minimal and expand gradually
-2. **Clean Break Approach**: Implement the new model directly rather than maintaining backward compatibility
-3. **Test-First Approach**: Update tests before changing implementation
-4. **Composition Over Inheritance**: Use composition patterns consistently
-5. **Clean Interfaces**: Maintain clear and explicit interfaces between components
-6. **Performance Awareness**: Consider query performance, especially for vector operations
-7. **Implementation Simplicity**: Focus on the simplest implementation that works
-
-## Completed Initiatives
-
-1. **Context System Simplification** ✅
-   - Successfully migrated to MCPContext pattern
-   - Removed excessive generic type parameters
-   - Replaced inheritance with composition
-   - Simplified interfaces to be more specific
-   - Implemented all context types with the MCP pattern
-
-2. **Service Architecture Simplification** ✅
-   - Removed unnecessary abstraction layers
-   - Simplified repository, search, and embedding services
-   - Implemented direct service interfaces
-   - Significantly reduced cognitive load
-
-3. **MCP Context Migration** ⏳
-   - Migrated 21/78 test files to behavioral testing approach
-   - Implemented tiered memory in MCPConversationContext
-   - Completed storage adapter implementations
-   - Resolved TypeScript compilation errors
-
-4. **MVP Core Components** ⏳
-   - Protocol response simplification ✅
-   - Deployment architecture with Caddy ✅
-   - Website context and basic Astro setup ✅
-   - Website identity service ✅
-   - Landing page refinements 🔄
-
-## Entity Type Schema
-
-```typescript
-// EntityType enum to standardize entity types across the system
-export enum EntityType {
-  Note = 'note',
-  Profile = 'profile',
-  WebsiteSection = 'website_section',
-  Conversation = 'conversation',
-  ExternalSource = 'external_source',
-  // Add more as needed
-}
-
-// Update notes table to include entityType
-export const notes = sqliteTable('notes', {
-  id: text('id').primaryKey(),
-  title: text('title').notNull(),
-  content: text('content').notNull(),
-  tags: text('tags', { mode: 'json' }).$type<string[]>().default('[]'),
-  created: text('created').notNull(),
-  updated: text('updated').notNull(),
-  // Replace source field with entityType
-  entityType: text('entity_type').default(EntityType.Note),
-  // Keep metadata for entity-specific properties
-  metadata: text('metadata', { mode: 'json' }).$type<Record<string, unknown>>().default('{}'),
-});
-```
-
-## BaseEntity Interface
-
-```typescript
-export interface BaseEntity {
-  // Core properties
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  created: string;
-  updated: string;
-  entityType: EntityType;
-  metadata: Record<string, unknown>;
-  
-  // Core methods
-  toMarkdown(): string;
-  toSearchableText(): string;
-  
-  // Optional helper methods
-  getMetadata<T>(key: string): T | undefined;
-  setMetadata<T>(key: string, value: T): void;
-}
-```
-
-## ContentProcessingService
-
-```typescript
-export class ContentProcessingService {
-  // Singleton implementation
-  private static instance: ContentProcessingService | null = null;
-  
-  static getInstance(): ContentProcessingService {
-    if (!ContentProcessingService.instance) {
-      ContentProcessingService.instance = new ContentProcessingService();
-    }
-    return ContentProcessingService.instance;
-  }
-  
-  static resetInstance(): void {
-    ContentProcessingService.instance = null;
-  }
-  
-  static createFresh(options?: Record<string, unknown>): ContentProcessingService {
-    return new ContentProcessingService();
-  }
-  
-  // Core functionality
-  async generateEmbedding(text: string): Promise<number[]> {
-    // Implementation...
-  }
-  
-  extractTags(text: string): string[] {
-    // Implementation...
-  }
-  
-  chunkContent(text: string, maxChunkSize = 1000): string[] {
-    // Implementation...
-  }
-  
-  // Utility methods for different entity types
-  processEntityContent(entity: BaseEntity): Promise<{
-    embedding: number[];
-    tags: string[];
-    chunks: string[];
-  }> {
-    const markdownContent = entity.toMarkdown();
-    
-    return Promise.all([
-      this.generateEmbedding(markdownContent),
-      Promise.resolve(this.extractTags(markdownContent)),
-      Promise.resolve(this.chunkContent(markdownContent))
-    ]).then(([embedding, tags, chunks]) => ({
-      embedding,
-      tags,
-      chunks
-    }));
-  }
-}
-```
-
 ## Temporary Code Structure During Transition
 
 During the iterative implementation, we'll use a temporary folder structure to store contexts that haven't been migrated yet:
@@ -303,6 +203,28 @@ src/
 
 This allows us to maintain a clean separation between migrated and non-migrated code while keeping the codebase compilable throughout the transition.
 
+## Implementation Principles
+
+1. **Iterative Development**: Start minimal and expand gradually
+2. **Clean Break Approach**: Implement the new model directly rather than maintaining backward compatibility
+3. **Test-First Approach**: Update tests before changing implementation
+4. **Composition Over Inheritance**: Use composition patterns consistently
+5. **Clean Interfaces**: Maintain clear and explicit interfaces between components
+6. **Performance Awareness**: Consider query performance, especially for vector operations
+7. **Implementation Simplicity**: Focus on the simplest implementation that works
+
+## Risk Assessment & Mitigation
+
+| Risk | Impact | Likelihood | Mitigation |
+|------|--------|------------|------------|
+| Breaking changes | High | High | Accept breaking changes; clearly document new approach |
+| Test coverage gaps | Medium | Medium | Update tests before implementation and use TDD |
+| Complex dependencies | High | High | Use careful dependency tracking and incremental changes |
+| Implementation delays | Medium | Medium | Focus on core functionality first, add refinements later |
+| Performance issues | Medium | Low | Benchmark critical operations and optimize as needed |
+| Integration problems | High | Medium | Use the iterative approach to identify issues early |
+| Temporary structure confusion | Medium | Medium | Clearly document what's in _temp and migration status |
+
 ## Post-Implementation Benefits
 
 1. **Simplified Codebase**: Significant reduction in code complexity and mental model
@@ -321,12 +243,8 @@ This allows us to maintain a clean separation between migrated and non-migrated 
 5. **Developer Experience**: Simplified onboarding and development workflow
 6. **Feature Velocity**: Increased speed of feature development after implementation
 
-## Next Steps
+## Conclusion
 
-For detailed implementation plans, see:
-- [Unified Entity Model Roadmap](/planning/current/unified-entity-model-roadmap.md)
-- [MCP Migration TODOs](/planning/current/mcp-migration-todos.md)
-- [MVP Implementation Plan](/planning/current/mvp-implementation-plan.md)
-- [Service Architecture Simplification](/planning/current/service-architecture-simplification.md)
-- [Context System Simplification](/planning/current/context-system-simplification.md)
-- [Codebase Simplification Opportunities](/planning/current/codebase-simplification-opportunities.md)
+The unified entity model represents the next logical step in our architectural evolution. Building on our successful MCP context migration and service architecture simplification, this initiative will further streamline our codebase, improve maintainability, and enable powerful new capabilities. 
+
+Our iterative implementation approach starting with just BrainProtocol and NoteContext will allow us to validate the core architecture quickly before gradually reintroducing other contexts. This minimizes risk while keeping the codebase functional throughout the transition.
