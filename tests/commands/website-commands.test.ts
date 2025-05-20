@@ -1,65 +1,76 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { RendererRegistry } from '@/utils/registry/rendererRegistry';
+import type { IBrainProtocol } from '@/protocol/types';
+import type { RendererRegistry } from '@/utils/registry/rendererRegistry';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
+import { MockMCPWebsiteContext } from '@test/__mocks__/contexts/website/MCPWebsiteContext';
 
 describe('WebsiteCommandHandler Behavior', () => {
   let handler: WebsiteCommandHandler;
+  let mockWebsiteContext: MockMCPWebsiteContext;
   
   beforeEach(() => {
-    // Mock RendererRegistry - register a mock CLI renderer that implements IProgressTracker
-    RendererRegistry.resetInstance();
-    const mockCLIRenderer = {
-      withProgress: async (_title: string, _steps: string[], fn: (update: () => void) => Promise<unknown>) => {
-        // Call the progress function immediately
-        const result = await fn(() => {});
-        return result;
+    // Create a mock progress tracker for the CLI interface
+    const mockProgressTracker = {
+      withProgress: async (_title: string, _steps: string[], fn: (updateStep: (index: number) => void) => Promise<unknown>) => {
+        // Call the function with a simple update function that does nothing
+        return await fn(() => {});
       },
     };
-    RendererRegistry.getInstance().registerRenderer('cli', mockCLIRenderer);
     
-    // Simple mock that simulates website context behavior
-    const mockContext = {
-      isReady: () => true,
-      initialize: () => Promise.resolve(),
-      getConfig: () => ({
-        title: 'Test Site',
-        description: 'Test Description',
-        author: 'Test Author',
-        baseUrl: 'https://test.com',
-      }),
-      generateLandingPage: () => Promise.resolve({
-        success: true,
-        message: 'Generated',
-        data: {
-          name: 'Test Page',
-          title: 'Test Title',
-          tagline: 'Test Tagline',
-        },
-      }),
-      getLandingPageData: () => ({
+    // Create a mock renderer registry that returns our progress tracker
+    const mockRendererRegistry = {
+      getProgressTracker: () => mockProgressTracker,
+    } as unknown as RendererRegistry;
+    
+    // Create a fresh website context mock
+    MockMCPWebsiteContext.resetInstance();
+    mockWebsiteContext = MockMCPWebsiteContext.createFresh();
+    
+    // Enhance the mock with test-specific data
+    mockWebsiteContext.generateLandingPage = async () => ({
+      success: true,
+      message: 'Generated',
+      data: {
         name: 'Test Page',
         title: 'Test Title',
         tagline: 'Test Tagline',
-      }),
-      handleWebsiteBuild: () => Promise.resolve({
-        success: true,
-        message: 'Built successfully',
-      }),
-      handleWebsitePromote: () => Promise.resolve({
-        success: true,
-        message: 'Promoted successfully',
-      }),
-      getWebsiteStatus: () => Promise.resolve({
-        status: 'running',
-        message: 'Website is running',
-        url: 'https://test.com',
-      }),
-    };
+      },
+    });
     
+    mockWebsiteContext.getConfig = async () => ({
+      title: 'Test Site',
+      description: 'Test Description',
+      author: 'Test Author',
+      baseUrl: 'https://test.com',
+    });
+    
+    mockWebsiteContext.handleWebsiteBuild = async () => ({
+      success: true, 
+      message: 'Built successfully',
+    });
+    
+    mockWebsiteContext.handleWebsitePromote = async () => ({
+      success: true,
+      message: 'Promoted successfully',
+    });
+    
+    mockWebsiteContext.getWebsiteStatus = async () => ({
+      status: 'running',
+      message: 'Website is running',
+      url: 'https://test.com',
+    });
+    
+    mockWebsiteContext.getLandingPageData = async () => ({
+      name: 'Test Page',
+      title: 'Test Title',
+      tagline: 'Test Tagline',
+    });
+    
+    // Create a simple mock brain protocol that just returns our website context
     const mockBrainProtocol = {
       getContextManager: () => ({
-        getWebsiteContext: () => mockContext,
+        getWebsiteContext: () => mockWebsiteContext,
       }),
       getInterfaceType: () => 'cli',
       getConversationManager: () => ({
@@ -67,12 +78,12 @@ describe('WebsiteCommandHandler Behavior', () => {
       }),
     };
     
-    // Type assertion for mock brain protocol
-    handler = WebsiteCommandHandler.createFresh(mockBrainProtocol as unknown as {
-      getContextManager: () => { getWebsiteContext: () => typeof mockContext };
-      getInterfaceType: () => string;
-      getConversationManager: () => { getCurrentRoom: () => string };
-    });
+    // Create handler with our simplified mock and renderer registry
+    // Cast to IBrainProtocol to satisfy the type system without adding all methods
+    handler = WebsiteCommandHandler.createFresh(
+      mockBrainProtocol as unknown as IBrainProtocol, 
+      mockRendererRegistry,
+    );
   });
 
   test('provides website commands', () => {

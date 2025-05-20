@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import type { drizzle } from 'drizzle-orm/bun-sqlite';
 
-import type { Note } from '@/models/note';
+import type { NewNoteChunk, Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
 import { ValidationError } from '@/utils/errorUtils';
 import { MockLogger } from '@test/__mocks__/core/logger';
@@ -153,12 +153,15 @@ describe('NoteRepository Behavior', () => {
         embedding: [0.1, 0.2, 0.3],
       });
 
+      // Use the proper type for note chunk data that will be inserted
+      type ValidatedNoteChunk = Required<NewNoteChunk>;
+
       // Mock the insertNoteChunk method for tracking
       // Type assertion to access private db property
       const db = repository as unknown as {
         db: {
           insert: (table: unknown) => {
-            values: (data: Record<string, unknown>) => {
+            values: (data: ValidatedNoteChunk) => {
               execute: () => Promise<unknown>;
             };
           };
@@ -166,13 +169,13 @@ describe('NoteRepository Behavior', () => {
       };
       const originalInsert = db.db.insert;
       let insertCalled = false;
-      let insertedData: Record<string, unknown> | null = null;
+      let insertedData: ValidatedNoteChunk | null = null;
 
       try {
         // Track insert calls
         db.db.insert = (_: unknown) => {
           return {
-            values: (data: Record<string, unknown>) => {
+            values: (data: ValidatedNoteChunk) => {
               insertCalled = true;
               insertedData = data;
               return { execute: async () => ({}) };
@@ -191,10 +194,13 @@ describe('NoteRepository Behavior', () => {
         // Check that insertion was called with correct data
         expect(insertCalled).toBe(true);
         expect(insertedData).toBeDefined();
-        expect(insertedData.noteId).toBe(noteId);
-        expect(insertedData.content).toBe('This is a chunk of the parent note');
-        expect(Array.isArray(insertedData.embedding)).toBe(true);
-        expect(insertedData.chunkIndex).toBe(0);
+
+        // Use a non-null assertion since we've verified it's defined
+        const data = insertedData!;
+        expect(data.noteId).toBe(noteId);
+        expect(data.content).toBe('This is a chunk of the parent note');
+        expect(Array.isArray(data.embedding)).toBe(true);
+        expect(data.chunkIndex).toBe(0);
         expect(chunkId).toBeDefined();
       } finally {
         // Restore original implementation

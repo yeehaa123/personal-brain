@@ -1,7 +1,7 @@
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 import { z } from 'zod';
 
-import { notes } from '../db/schema';
+import { noteChunks, notes } from '../db/schema';
 
 // Use drizzle-zod to automatically generate schemas from the database schema
 export const insertNoteSchema = createInsertSchema(notes, {
@@ -58,3 +58,18 @@ export const noteSearchSchema = z.object({
 });
 
 export type NoteSearchParams = z.infer<typeof noteSearchSchema>;
+
+// Note chunk schemas
+export const insertNoteChunkSchema = createInsertSchema(noteChunks, {
+  // Override JSON field types
+  embedding: z.array(z.number()).min(1, 'Embedding array cannot be empty'),
+});
+
+export const selectNoteChunkSchema = createSelectSchema(noteChunks, {
+  // Override JSON field types
+  embedding: z.array(z.number()),
+});
+
+// Type definitions for note chunks
+export type NoteChunk = z.infer<typeof selectNoteChunkSchema>;
+export type NewNoteChunk = z.infer<typeof insertNoteChunkSchema>;

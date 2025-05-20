@@ -132,43 +132,6 @@ export class QueryProcessor implements IQueryProcessor {
     );
   }
 
-  /**
-   * Create a new instance with explicit dependencies
-   * 
-   * @param config Configuration as a generic record
-   * @param dependencies External dependencies
-   * @returns A new QueryProcessor instance with the provided dependencies
-   */
-  public static createWithDependencies(
-    config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {},
-  ): QueryProcessor {
-    const logger = Logger.getInstance();
-    logger.debug('Creating QueryProcessor with explicit dependencies');
-
-    // Extract required dependencies
-    const contextManager = dependencies['contextManager'] as IContextManager;
-    const conversationManager = dependencies['conversationManager'] as IConversationManager;
-
-    // Verify required dependencies are present
-    if (!contextManager) {
-      throw new Error('QueryProcessor requires a contextManager dependency');
-    }
-
-    if (!conversationManager) {
-      throw new Error('QueryProcessor requires a conversationManager dependency');
-    }
-
-    // Extract config values
-    const apiKey = config['apiKey'] as string | undefined;
-
-    // Create with explicit dependencies
-    return new QueryProcessor(
-      contextManager,
-      conversationManager,
-      apiKey,
-    );
-  }
 
   /**
    * Private constructor to enforce factory method usage

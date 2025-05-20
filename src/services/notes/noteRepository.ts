@@ -12,8 +12,8 @@ import { z } from 'zod';
 
 import { db as defaultDb } from '@/db';
 import { noteChunks, notes } from '@/db/schema';
-import { insertNoteSchema, noteSearchSchema, selectNoteSchema, updateNoteSchema } from '@/models/note';
-import type { NewNote, Note, NoteSearchParams } from '@/models/note';
+import { insertNoteChunkSchema, insertNoteSchema, noteSearchSchema, selectNoteSchema, updateNoteSchema } from '@/models/note';
+import type { NewNote, NewNoteChunk, Note, NoteSearchParams } from '@/models/note';
 import { DatabaseError, ValidationError } from '@/utils/errorUtils';
 import { Logger } from '@/utils/logger';
 
@@ -459,61 +459,50 @@ export class NoteRepository {
    * @throws {ValidationError} If chunk data is invalid
    * @throws {DatabaseError} If database operation fails
    */
-  async insertNoteChunk(chunk: {
-    noteId: string;
-    content: string;
-    embedding: number[];
-    chunkIndex: number;
-  }): Promise<string> {
+  async insertNoteChunk(chunkData: Partial<NewNoteChunk>): Promise<string> {
     try {
-      // Validate input
-      if (!chunk.noteId) {
-        throw new ValidationError('Note ID is required for chunk');
-      }
-      
-      if (!chunk.content) {
-        throw new ValidationError('Content is required for chunk');
-      }
-      
-      if (!Array.isArray(chunk.embedding) || chunk.embedding.length === 0) {
-        throw new ValidationError('Valid embedding is required for chunk');
-      }
-      
-      if (typeof chunk.chunkIndex !== 'number') {
-        throw new ValidationError('Chunk index must be a number');
-      }
-      
       // Generate ID and prepare data
       const id = nanoid();
       const now = new Date();
       
+      // Create chunk with all required fields
+      const inputData = {
+        ...chunkData,
+        id,
+        createdAt: now,
+      };
+      
       try {
-        // Insert chunk into database
-        await this.db.insert(noteChunks).values({
-          id,
-          noteId: chunk.noteId,
-          content: chunk.content,
-          embedding: chunk.embedding,
-          chunkIndex: chunk.chunkIndex,
-          createdAt: now,
-        });
+        // Validate with Zod schema
+        const validatedData = insertNoteChunkSchema.parse(inputData);
         
-        this.logger.debug(`Created note chunk ${id} for note ${chunk.noteId} at index ${chunk.chunkIndex}`);
+        // Insert chunk into database
+        await this.db.insert(noteChunks).values(validatedData);
+        
+        this.logger.debug(`Created note chunk ${id} for note ${validatedData.noteId} at index ${validatedData.chunkIndex}`);
         return id;
-      } catch (dbError) {
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          this.logger.error('Validation error in insertNoteChunk', {
+            error: error.errors,
+            data: JSON.stringify(chunkData),
+          });
+          throw new ValidationError('Invalid note chunk data', { errors: error.errors });
+        }
+        
         this.logger.error('Database error inserting note chunk', { 
-          noteId: chunk.noteId,
-          chunkIndex: chunk.chunkIndex,
-          error: dbError, 
+          noteId: chunkData.noteId,
+          chunkIndex: chunkData.chunkIndex,
+          error, 
         });
-        throw new DatabaseError('Failed to insert note chunk', { error: dbError });
+        throw new DatabaseError('Failed to insert note chunk', { error });
       }
     } catch (error) {
       if (error instanceof ValidationError) throw error;
       if (error instanceof DatabaseError) throw error;
       
       this.logger.error('Failed to insert note chunk', { 
-        noteId: chunk.noteId,
+        noteId: chunkData.noteId,
         error, 
       });
       throw new DatabaseError('Failed to insert note chunk', { error });

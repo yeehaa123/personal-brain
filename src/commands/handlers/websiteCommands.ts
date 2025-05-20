@@ -12,6 +12,7 @@ import type { CommandInfo, CommandResult } from '@commands/core/commandTypes';
 export class WebsiteCommandHandler extends BaseCommandHandler {
   private static instance: WebsiteCommandHandler | null = null;
   private websiteContext: MCPWebsiteContext | null = null;
+  private rendererRegistry: RendererRegistry;
   
   /**
    * Helper method to get domain for environment (removed - now handled by WebsiteContext)
@@ -20,9 +21,12 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   /**
    * Get singleton instance of WebsiteCommandHandler
    */
-  public static getInstance(brainProtocol: IBrainProtocol): WebsiteCommandHandler {
+  public static getInstance(brainProtocol: IBrainProtocol, rendererRegistry?: RendererRegistry): WebsiteCommandHandler {
     if (!WebsiteCommandHandler.instance) {
-      WebsiteCommandHandler.instance = new WebsiteCommandHandler(brainProtocol);
+      WebsiteCommandHandler.instance = new WebsiteCommandHandler(
+        brainProtocol, 
+        rendererRegistry || RendererRegistry.getInstance(),
+      );
     }
     return WebsiteCommandHandler.instance;
   }
@@ -37,15 +41,19 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
   /**
    * Create a fresh instance (primarily for testing)
    */
-  public static createFresh(brainProtocol: IBrainProtocol): WebsiteCommandHandler {
-    return new WebsiteCommandHandler(brainProtocol);
+  public static createFresh(brainProtocol: IBrainProtocol, rendererRegistry?: RendererRegistry): WebsiteCommandHandler {
+    return new WebsiteCommandHandler(
+      brainProtocol, 
+      rendererRegistry || RendererRegistry.getInstance(),
+    );
   }
   
   /**
    * Constructor
    */
-  constructor(brainProtocol: IBrainProtocol) {
+  constructor(brainProtocol: IBrainProtocol, rendererRegistry: RendererRegistry) {
     super(brainProtocol);
+    this.rendererRegistry = rendererRegistry;
     // Initialize the website context from contextManager
     this.websiteContext = brainProtocol.getContextManager().getWebsiteContext();
   }
@@ -257,9 +265,9 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Get the unified progress tracker through the context manager
         const interfaceType = this.brainProtocol.getInterfaceType();
         
-        // Import the renderer registry
+        // Use the injected renderer registry
         // Get the progress tracker from the registry
-        const progressTracker = RendererRegistry.getInstance().getProgressTracker(interfaceType);
+        const progressTracker = this.rendererRegistry.getProgressTracker(interfaceType);
         
         if (!progressTracker) {
           this.logger.error(`No progress tracker available for interface type: ${interfaceType}`);

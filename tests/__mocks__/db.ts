@@ -141,7 +141,8 @@ export class MockDatabase {
           // Handle ID conditions (most common case)
           if (condition?.operator === '=' && condition?.left?.name === 'id') {
             const id = condition.right;
-            const record = this.getRecord('notes', id);
+            // Make sure id is defined and is a string
+            const record = id !== undefined ? this.getRecord('notes', id) : undefined;
             return {
               limit: () => record ? [record] : [],
               all: async () => record ? [record] : [],
@@ -221,6 +222,15 @@ export class MockDatabase {
         where: (condition: { operator?: string; left?: { name?: string }; right?: string }) => {
           if (condition?.operator === '=' && condition?.left?.name === 'id') {
             const id = condition.right;
+            
+            // Skip if id is undefined
+            if (id === undefined) {
+              return {
+                returning: () => [],
+                execute: async () => ({ success: false }),
+              };
+            }
+            
             const record = this.getRecord('notes', id);
 
             if (record) {
@@ -253,7 +263,10 @@ export class MockDatabase {
       where: (condition: { operator?: string; left?: { name?: string }; right?: string }) => {
         if (condition?.operator === '=' && condition?.left?.name === 'id') {
           const id = condition.right;
-          this.deleteRecord('notes', id);
+          // Only proceed if id is defined
+          if (id !== undefined) {
+            this.deleteRecord('notes', id);
+          }
         }
         return {
           execute: async () => ({ success: true }),

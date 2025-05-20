@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
+import type { CLIInterface } from '@/utils/cliInterface';
 import { CLIRenderer } from '@commands/cli-renderer';
 import { createMockNotes, createTestNote } from '@test/__mocks__/models/note';
 
@@ -33,7 +34,7 @@ describe('CLIRenderer Behavior', () => {
   beforeEach(() => {
     outputCapture = [];
     // Type assertion for mock CLI, since it's a partial implementation of the interface
-    renderer = CLIRenderer.createFresh({ cliInterface: mockCLI as unknown as typeof mockCLI });
+    renderer = CLIRenderer.createFresh({ cliInterface: mockCLI as unknown as CLIInterface });
   });
 
   test('displays notes list', () => {

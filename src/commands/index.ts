@@ -5,6 +5,7 @@
  */
 
 import type { IBrainProtocol } from '@/protocol/types';
+import { RendererRegistry } from '@/utils/registry/rendererRegistry';
 
 import { CommandHandler } from './core/commandHandler';
 import { ConversationCommandHandler } from './handlers/conversationCommands';
@@ -31,7 +32,9 @@ export function createCommandHandler(brainProtocol: IBrainProtocol): CommandHand
   commandHandler.registerHandler(new ProfileCommandHandler(brainProtocol));
   commandHandler.registerHandler(new SystemCommandHandler(brainProtocol));
   commandHandler.registerHandler(new ConversationCommandHandler(brainProtocol));
-  commandHandler.registerHandler(new WebsiteCommandHandler(brainProtocol));
+  commandHandler.registerHandler(
+    WebsiteCommandHandler.createFresh(brainProtocol, RendererRegistry.getInstance()),
+  );
   
   return commandHandler;
 }

@@ -9,8 +9,9 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
+import type { BrainProtocol } from '@/protocol/brainProtocol';
 import type { BrainProtocolOptions, IContextManager, IConversationManager, QueryOptions, QueryResult } from '@/protocol/types';
-import { Logger } from '@/utils/logger';
+import { MockLogger } from '@test/__mocks__/core/logger';
 import { createMockMcpServer } from '@test/__mocks__/core/MockMcpServer';
 
 import type { MockConfigurationManager } from './core/configurationManager';
@@ -49,18 +50,18 @@ export class MockBrainProtocol {
   private mcpServerManager: MockMcpServerManager;
   private mcpServer: McpServer;
   private options: MockBrainProtocolOptions = {};
-  private logger = Logger.getInstance();
+  private logger = MockLogger.createFresh();
 
   /**
    * Get the singleton instance
    */
-  static getInstance(options?: MockBrainProtocolOptions): MockBrainProtocol {
+  static getInstance(options?: MockBrainProtocolOptions): BrainProtocol {
     if (!MockBrainProtocol.instance) {
       MockBrainProtocol.instance = new MockBrainProtocol(options);
     } else if (options) {
       MockBrainProtocol.instance.setOptions(options);
     }
-    return MockBrainProtocol.instance;
+    return MockBrainProtocol.instance as unknown as BrainProtocol;
   }
 
   /**
@@ -73,7 +74,7 @@ export class MockBrainProtocol {
    * This perfectly matches the behavior of the real BrainProtocol.resetInstance()
    */
   static resetInstance(): void {
-    const logger = Logger.getInstance();
+    const logger = MockLogger.createFresh();
     
     // Only reset the BrainProtocol instance - proper DI means we don't touch dependencies
     if (MockBrainProtocol.instance) {
@@ -85,8 +86,8 @@ export class MockBrainProtocol {
   /**
    * Create a fresh instance
    */
-  static createFresh(options?: MockBrainProtocolOptions): MockBrainProtocol {
-    return new MockBrainProtocol(options);
+  static createFresh(options?: MockBrainProtocolOptions): BrainProtocol {
+    return new MockBrainProtocol(options) as unknown as BrainProtocol;
   }
 
   /**

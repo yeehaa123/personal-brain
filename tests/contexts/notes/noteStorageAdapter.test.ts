@@ -7,7 +7,6 @@ import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository'
 
 describe('NoteStorageAdapter Behavior', () => {
   let adapter: NoteStorageAdapter;
-  let mockRepo: MockNoteRepository;
 
   beforeEach(() => {
     // Set up a fresh mock repository with test data
@@ -19,8 +18,8 @@ describe('NoteStorageAdapter Behavior', () => {
       createMockNote('note-5', 'Vue Fundamentals', ['programming', 'vue']),
     ];
     
-    mockRepo = MockNoteRepository.createFresh(testNotes);
-    adapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
+    const repo = MockNoteRepository.createFresh(testNotes);
+    adapter = NoteStorageAdapter.createFresh({}, { repository: repo });
   });
 
   describe('CRUD Operations', () => {

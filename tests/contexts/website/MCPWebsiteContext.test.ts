@@ -8,8 +8,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
 
-import type { FormatterInterface } from '@/contexts/formatterInterface';
 import type { WebsiteData } from '@/contexts/website/formatters';
+import type { WebsiteFormatter } from '@/contexts/website/formatters/websiteFormatter';
 import { MCPWebsiteContext } from '@/contexts/website/MCPWebsiteContext';
 import type { MCPWebsiteContextDependencies } from '@/contexts/website/MCPWebsiteContext';
 // Use standardized mocks from the __mocks__ directory
@@ -46,7 +46,7 @@ describe('Website Context Behavior', () => {
     mockDependencies = {
       logger: MockLogger.createFresh(),
       storage: MockWebsiteStorageAdapter.createFresh(),
-      formatter: mockFormatter as FormatterInterface<WebsiteData, string>,
+      formatter: mockFormatter as unknown as WebsiteFormatter,
       astroContentService: MockAstroContentService.createFresh(),
       landingPageGenerationService: MockLandingPageGenerationService.createFresh(),
       mediator: MockContextMediator.createFresh(),

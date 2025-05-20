@@ -140,7 +140,7 @@ export class ClaudeModel {
         const validatedObject = options.schema.parse(response.object);
         return {
           ...response,
-          object: validatedObject,
+          object: validatedObject as T,
         };
       } catch {
         // If validation fails, return without object
