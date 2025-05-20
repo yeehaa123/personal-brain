@@ -21,18 +21,8 @@ async function runMigration() {
     
     logger.info('Database migration completed successfully', { context: 'DBMigration' });
     
-    // Generate embeddings for existing notes
-    logger.info('Generating embeddings for existing notes...', { context: 'DBMigration' });
-    // TODO: Replace with MCPNoteContext when migration is updated
-    const { MCPNoteContext } = await import('@/contexts/notes');
-    const context = MCPNoteContext.createFresh();
-    const result = await context.generateEmbeddingsForAllNotes();
-    
-    logger.info('Embedding generation complete', { 
-      context: 'DBMigration',
-      updated: result.updated,
-      failed: result.failed,
-    });
+    // Note: Embeddings generation removed as embeddings are now required for all notes
+    logger.info('Embeddings are now required for all notes in the schema', { context: 'DBMigration' });
   } catch (error) {
     logger.error('Error running database migration:', { error, context: 'DBMigration' });
     process.exit(1);

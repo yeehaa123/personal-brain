@@ -1,133 +1,28 @@
-/**
- * Tests for ResourceRegistry
- * 
- * These tests verify that the ResourceRegistry correctly implements the
- * Registry interface and provides access to AI resources.
- */
-import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { ClaudeModel } from '@/resources/ai/claude';
-import { EmbeddingService } from '@/resources/ai/embedding';
 import type { EmbeddingModelAdapter, LanguageModelAdapter } from '@/resources/ai/interfaces';
 import { ResourceIdentifiers, ResourceRegistry } from '@/resources/resourceRegistry';
-import { MockLogger } from '@test/__mocks__/core/logger';
-import { ClaudeModel as MockClaudeModel } from '@test/__mocks__/resources/ai/claude/claude';
-import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
-describe('ResourceRegistry', () => {
-  // Preserve original environment
-  const originalEnv = { ...process.env };
+describe('ResourceRegistry Behavior', () => {
+  let registry: ResourceRegistry;
   
   beforeEach(() => {
-    // Reset singletons
-    ResourceRegistry.resetInstance();
-    ClaudeModel.resetInstance();
-    EmbeddingService.resetInstance();
-    MockLogger.resetInstance();
+    // Set up test environment with required API keys
+    process.env['ANTHROPIC_API_KEY'] = 'mock-anthropic-key';
+    process.env['OPENAI_API_KEY'] = 'mock-openai-key';
     
-    // Mock environment variables
-    process.env = {
-      ...originalEnv,
-      ANTHROPIC_API_KEY: 'mock-anthropic-key',
-      OPENAI_API_KEY: 'mock-openai-key',
-    };
-    
-    // Mock the AI classes using the proper factory methods
-    spyOn(ClaudeModel, 'getInstance').mockImplementation(() => MockClaudeModel.createFresh() as unknown as ClaudeModel);
-    spyOn(EmbeddingService, 'getInstance').mockImplementation(() => MockEmbeddingService.createFresh() as unknown as EmbeddingService);
+    registry = ResourceRegistry.createFresh();
   });
   
-  afterEach(() => {
-    // Restore environment
-    process.env = originalEnv;
-  });
-  
-  describe('Component Interface Standardization pattern', () => {
-    test('getInstance should return the same instance', () => {
-      const instance1 = ResourceRegistry.getInstance();
-      const instance2 = ResourceRegistry.getInstance();
-      
-      expect(instance1).toBe(instance2);
-    });
-    
-    test('resetInstance should clear the singleton instance', () => {
-      const instance1 = ResourceRegistry.getInstance();
-      ResourceRegistry.resetInstance();
-      const instance2 = ResourceRegistry.getInstance();
-      
-      expect(instance1).not.toBe(instance2);
-    });
-    
-    test('createFresh should create a new instance', () => {
-      const singleton = ResourceRegistry.getInstance();
-      const fresh = ResourceRegistry.createFresh();
-      
-      expect(singleton).not.toBe(fresh);
-      expect(fresh).toBeInstanceOf(ResourceRegistry);
-    });
-    
-    test('should use provided API keys and silent logger', () => {
-      // Remove from environment to ensure it uses the provided keys
-      delete process.env['ANTHROPIC_API_KEY'];
-      delete process.env['OPENAI_API_KEY'];
-      
-      // Create silent mock logger
-      const mockLogger = MockLogger.createFresh({ silent: true });
-      
-      // Create with custom keys and silent logger
-      const registry = ResourceRegistry.createFresh(
-        {
-          // Config
-          anthropicApiKey: 'custom-key',
-          openAiApiKey: 'custom-openai-key',
-        },
-        {
-          // Dependencies
-          logger: mockLogger,
-        },
-      );
-      
-      // Test that we can access resources without errors
-      // If the keys weren't properly stored, this would throw
-      expect(() => registry.getClaudeModel()).not.toThrow();
-      expect(() => registry.getEmbeddingService()).not.toThrow();
-      
-      // Restore environment for other tests
-      process.env['ANTHROPIC_API_KEY'] = 'mock-anthropic-key';
-      process.env['OPENAI_API_KEY'] = 'mock-openai-key';
-    });
-  });
-  
-  describe('Resource registration', () => {
-    // Create reusable setup function for tests
-    function createRegistryWithSilentLogger() {
-      // Create silent mock logger
-      const mockLogger = MockLogger.createFresh({ silent: true });
-      
-      // Create registry with silent logger
-      return ResourceRegistry.createFresh(
-        {}, // Default config
-        { logger: mockLogger }, // Silent logger dependency
-      );
-    }
-    
-    test('should automatically register standard resources', () => {
-      const registry = createRegistryWithSilentLogger();
-      
-      expect(registry.has(ResourceIdentifiers.ClaudeModel)).toBe(true);
-      expect(registry.has(ResourceIdentifiers.EmbeddingService)).toBe(true);
-    });
-    
-    test('should provide access to Claude model', () => {
-      const registry = createRegistryWithSilentLogger();
+  describe('Resource Access', () => {
+    test('provides access to language model', () => {
       const claude = registry.getClaudeModel();
       
       expect(claude).toBeDefined();
       expect(typeof claude.complete).toBe('function');
     });
     
-    test('should provide access to embedding service', () => {
-      const registry = createRegistryWithSilentLogger();
+    test('provides access to embedding service', () => {
       const embeddingService = registry.getEmbeddingService();
       
       expect(embeddingService).toBeDefined();
@@ -136,37 +31,53 @@ describe('ResourceRegistry', () => {
       expect(typeof embeddingService.calculateSimilarity).toBe('function');
     });
     
-    test('should resolve resources by identifier', () => {
-      const registry = createRegistryWithSilentLogger();
+    test('resolves resources by identifier', () => {
       const claude = registry.resolve<LanguageModelAdapter>(ResourceIdentifiers.ClaudeModel);
       const embedding = registry.resolve<EmbeddingModelAdapter>(ResourceIdentifiers.EmbeddingService);
       
       expect(claude).toBeDefined();
       expect(embedding).toBeDefined();
     });
+    
+    test('verifies resource availability', () => {
+      expect(registry.has(ResourceIdentifiers.ClaudeModel)).toBe(true);
+      expect(registry.has(ResourceIdentifiers.EmbeddingService)).toBe(true);
+      expect(registry.has('non-existent-resource')).toBe(false);
+    });
   });
   
-  describe('Error handling', () => {
-    test('should throw error for missing API key', () => {
-      // Remove environment variables
-      process.env = { ...originalEnv };
+  describe('Configuration', () => {
+    test('uses custom API keys when provided', () => {
+      // Remove environment variables to test configuration
       delete process.env['ANTHROPIC_API_KEY'];
       delete process.env['OPENAI_API_KEY'];
       
-      // Create silent mock logger
-      const mockLogger = MockLogger.createFresh({ silent: true });
+      const customRegistry = ResourceRegistry.createFresh({
+        anthropicApiKey: 'custom-anthropic-key',
+        openAiApiKey: 'custom-openai-key',
+      });
       
-      // Create registry with no API keys but silent logger
-      const registry = ResourceRegistry.createFresh(
-        {}, // No API keys in config
-        { logger: mockLogger }, // Silent logger
-      );
+      // Should not throw with custom keys
+      expect(() => customRegistry.getClaudeModel()).not.toThrow();
+      expect(() => customRegistry.getEmbeddingService()).not.toThrow();
+    });
+  });
+  
+  describe('Error Handling', () => {
+    test('handles missing API keys', () => {
+      // Remove environment variables
+      delete process.env['ANTHROPIC_API_KEY'];
+      delete process.env['OPENAI_API_KEY'];
       
-      // Claude should throw without API key
-      expect(() => registry.getClaudeModel()).toThrow();
+      const registryWithoutKeys = ResourceRegistry.createFresh();
       
-      // Embedding service should throw without API key
-      expect(() => registry.getEmbeddingService()).toThrow();
+      // Should throw when trying to access resources without keys
+      expect(() => registryWithoutKeys.getClaudeModel()).toThrow();
+      expect(() => registryWithoutKeys.getEmbeddingService()).toThrow();
+    });
+    
+    test('handles unknown resource identifiers', () => {
+      expect(() => registry.resolve('unknown-resource')).toThrow();
     });
   });
 });

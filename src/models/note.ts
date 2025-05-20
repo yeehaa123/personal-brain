@@ -3,39 +3,29 @@ import { z } from 'zod';
 
 import { notes } from '../db/schema';
 
-// Create Zod schemas from Drizzle schema
-const baseInsertNoteSchema = createInsertSchema(notes);
-const baseSelectNoteSchema = createSelectSchema(notes);
-
-// Fix JSON field types by explicitly defining the correct types
-export const insertNoteSchema = baseInsertNoteSchema.extend({
-  tags: z.array(z.string()).nullable().optional(),
-  embedding: z.array(z.number()).nullable().optional(),
-  // New fields for conversation-to-notes feature, landing page, and profile
-  source: z.enum(['import', 'conversation', 'user-created', 'landing-page', 'profile']).default('import'),
+// Use drizzle-zod to automatically generate schemas from the database schema
+export const insertNoteSchema = createInsertSchema(notes, {
+  // Only override what's necessary - mainly JSON field types
+  tags: z.array(z.string()),
+  embedding: z.array(z.number()).min(1, 'Embedding array cannot be empty'),
   conversationMetadata: z.object({
     conversationId: z.string(),
     timestamp: z.date(),
     userName: z.string().optional(),
     promptSegment: z.string().optional(),
-  }).optional(),
-  confidence: z.number().min(0).max(100).optional(),
-  verified: z.boolean().default(false),
+  }).nullable().optional(),
 });
 
-export const selectNoteSchema = baseSelectNoteSchema.extend({
-  tags: z.array(z.string()).nullable(),
-  embedding: z.array(z.number()).nullable(),
-  // New fields for conversation-to-notes feature, landing page, and profile
-  source: z.enum(['import', 'conversation', 'user-created', 'landing-page', 'profile']).default('import'),
+export const selectNoteSchema = createSelectSchema(notes, {
+  // Override JSON field types for proper parsing
+  tags: z.array(z.string()),
+  embedding: z.array(z.number()),
   conversationMetadata: z.object({
     conversationId: z.string(),
     timestamp: z.date(),
     userName: z.string().optional(),
     promptSegment: z.string().optional(),
   }).nullable(),
-  confidence: z.number().min(0).max(100).nullable(),
-  verified: z.boolean().nullable(),
 });
 
 // Type definitions based on the schemas
@@ -47,12 +37,24 @@ export function validateNote(data: unknown): NewNote {
   return insertNoteSchema.parse(data);
 }
 
-// Validation function for searching notes
+// Create update schema from insert schema, making all fields optional
+export const updateNoteSchema = insertNoteSchema.partial().extend({
+  // If updating embedding, it must be valid (not empty)
+  embedding: z.array(z.number()).min(1, 'Embedding array cannot be empty').optional(),
+});
+
+export type UpdateNote = z.infer<typeof updateNoteSchema>;
+
+// Enhanced validation schema for searching notes
 export const noteSearchSchema = z.object({
   query: z.string().optional(),
   tags: z.array(z.string()).optional(),
+  source: z.enum(['import', 'conversation', 'user-created', 'landing-page', 'profile']).optional(),
+  conversationId: z.string().optional(),
   limit: z.number().min(1).max(100).default(20),
   offset: z.number().min(0).default(0),
+  orderBy: z.enum(['createdAt', 'updatedAt', 'relevance']).default('updatedAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
 });
 
 export type NoteSearchParams = z.infer<typeof noteSearchSchema>;

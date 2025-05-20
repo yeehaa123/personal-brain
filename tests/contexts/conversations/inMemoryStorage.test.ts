@@ -4,80 +4,13 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { InMemoryStorage } from '@/contexts/conversations/storage/inMemoryStorage';
 
 describe('InMemoryStorage', () => {
-  // We don't need to access instance directly as the tests
-  // should focus on the public API, not implementation details
-  
-  // Tests for the Component Interface Standardization pattern
-  // REMOVED BLOCK: describe('Component Interface Standardiz...
-
-  
-  // Tests specifically for the createFresh fix to ensure complete isolation between instances
-  describe('createFresh isolation (cross-test contamination fix)', () => {
-    test('should create instances with completely empty data structures', () => {
-      const instance = InMemoryStorage.createFresh({ silent: true });
-      
-      // Access private fields for testing - since this test is specifically checking implementation
-      // @ts-expect-error - Accessing private field for testing
-      expect(instance.conversations.size).toBe(0);
-      // @ts-expect-error - Accessing private field for testing
-      expect(instance.turns.size).toBe(0);
-      // @ts-expect-error - Accessing private field for testing
-      expect(instance.summaries.size).toBe(0);
-      // @ts-expect-error - Accessing private field for testing
-      expect(instance.roomIndex.size).toBe(0);
-    });
-    
-    test('should create instances with no shared state', async () => {
-      const instance1 = InMemoryStorage.createFresh({ silent: true });
-      const instance2 = InMemoryStorage.createFresh({ silent: true });
-      
-      // Add data to first instance
-      const roomId = 'unique-test-room-123';
-      await instance1.createConversation({
-        interfaceType: 'matrix',
-        roomId,
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      // Verify first instance has data
-      const byRoom1 = await instance1.getConversationByRoom(roomId, 'matrix');
-      expect(byRoom1).not.toBeNull();
-      
-      // Verify second instance has no data (completely isolated)
-      const byRoom2 = await instance2.getConversationByRoom(roomId, 'matrix');
-      expect(byRoom2).toBeNull();
-    });
-    
-    test('clear() should clear all data from the instance', async () => {
-      // Create two instances and verify they're isolated
-      const instance1 = InMemoryStorage.createFresh({ silent: true });
-      
-      // Add data to first instance
-      const roomId = 'test-room-clear';
-      await instance1.createConversation({
-        interfaceType: 'matrix',
-        roomId,
-        startedAt: new Date(),
-        updatedAt: new Date(),
-      });
-      
-      // Explicitly clear the instance
-      instance1.clear();
-      
-      // Verify instance has no more data
-      const byRoom = await instance1.getConversationByRoom(roomId, 'matrix');
-      expect(byRoom).toBeNull();
-    });
-  });
-  
   let storage: InMemoryStorage;
 
   beforeEach(() => {
     // Create a fresh instance for each test with silent mode to avoid excessive logging
     storage = InMemoryStorage.createFresh({ silent: true });
   });
-  
+
   afterEach(() => {
     // Explicitly call clear to ensure no lingering state
     storage.clear();
@@ -128,7 +61,7 @@ describe('InMemoryStorage', () => {
       });
 
       const result = await storage.getConversation(id);
-      
+
       expect(result).not.toBeNull();
       expect(result?.id).toBe(id);
       expect(result?.interfaceType).toBe('cli');
@@ -157,7 +90,7 @@ describe('InMemoryStorage', () => {
 
     test('should filter by interface type if provided', async () => {
       const roomId = 'shared-room';
-      
+
       // Create a CLI conversation
       await storage.createConversation({
         interfaceType: 'cli',

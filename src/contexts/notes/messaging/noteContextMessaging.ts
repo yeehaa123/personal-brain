@@ -164,9 +164,7 @@ export class NoteContextMessaging {
     return this.noteContext.searchWithEmbedding(text, limit, tags);
   }
   
-  generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
-    return this.noteContext.generateEmbeddingsForAllNotes();
-  }
+  // Method removed - Embeddings are now required for all notes
   
   /**
    * Search notes by tag (commented out if method doesn't exist on NoteContext)

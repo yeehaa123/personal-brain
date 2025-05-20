@@ -110,7 +110,7 @@ export class MockMCPNoteContext implements MCPContext {
       conversationMetadata: note.conversationMetadata || null,
       confidence: note.confidence || null,
       verified: note.verified || false,
-      embedding: note.embedding || null,
+      embedding: note.embedding || [0.1, 0.2, 0.3, 0.4],
     };
     this.notes.set(newNote.id, newNote);
     return newNote.id;

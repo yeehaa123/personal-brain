@@ -140,6 +140,32 @@ export class MockExternalSourceStorageAdapter implements StorageInterface<Extern
    * Mock search that returns pre-configured results
    */
   async search(criteria: SearchCriteria): Promise<ExternalSourceResult[]> {
+    // If we have registered sources, use them instead of static mock results
+    if (this.sources.size > 0) {
+      const results: ExternalSourceResult[] = [];
+      const sourcesFilter = criteria['sources'] as string[] | undefined;
+      
+      // Search through each registered source
+      for (const [sourceName, source] of this.sources.entries()) {
+        // Skip if sources filter is specified and doesn't include this source
+        if (sourcesFilter && !sourcesFilter.includes(sourceName)) {
+          continue;
+        }
+        
+        try {
+          // Call the source's search method
+          const sourceResults = await source.search({ query: criteria['query'] as string || '' });
+          results.push(...sourceResults);
+        } catch (error) {
+          // If a source fails, log the error but continue with other sources
+          console.error(`Source ${sourceName} failed:`, error);
+        }
+      }
+      
+      return results;
+    }
+    
+    // Fallback to static mock results if no sources registered
     const query = criteria['query'] as string;
     if (!query) {
       return [];

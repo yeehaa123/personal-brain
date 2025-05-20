@@ -58,8 +58,12 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   /**
    * Get a note by ID - BaseRepository method
    */
-  getById = async (id: string): Promise<Note | undefined> => {
-    return this.notes.find(note => note.id === id);
+  getById = async (id: string): Promise<Note> => {
+    const note = this.notes.find(note => note.id === id);
+    if (!note) {
+      throw new Error(`Note with ID ${id} not found`);
+    }
+    return note;
   };
 
   /**
@@ -110,7 +114,21 @@ export class MockNoteRepository implements Partial<NoteRepository> {
    * Create a new note
    */
   create = async (note: Omit<Note, 'id'>): Promise<Note> => {
-    const newNote = { ...note, id: `note-${Date.now()}` } as Note;
+    const now = new Date();
+    const id = `note-${Date.now()}`;
+    const newNote: Note = {
+      id,
+      title: note.title || 'Untitled Note',
+      content: note.content || '',
+      tags: note.tags || [],
+      source: note.source || 'user-created',
+      embedding: note.embedding || [0.1, 0.2, 0.3, 0.4],
+      confidence: note.confidence || null,
+      conversationMetadata: note.conversationMetadata || null,
+      verified: note.verified || null,
+      createdAt: note.createdAt || now,
+      updatedAt: note.updatedAt || now,
+    };
     this.notes.push(newNote);
     return newNote;
   };
@@ -126,6 +144,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
     createdAt?: Date;
     updatedAt?: Date;
     tags?: string[];
+    source?: 'import' | 'conversation' | 'user-created';
   }): Promise<string> => {
     const now = new Date();
     const id = noteData.id || `note-${Date.now()}`;
@@ -136,11 +155,11 @@ export class MockNoteRepository implements Partial<NoteRepository> {
       id,
       title: noteData.title || 'Untitled Note',
       content: noteData.content || '',
-      embedding: noteData.embedding || null,
+      embedding: noteData.embedding || [0.1, 0.2, 0.3, 0.4],
       createdAt,
       updatedAt,
       tags: noteData.tags || [],
-      source: 'import',
+      source: noteData.source || 'user-created',
       confidence: null,
       conversationMetadata: null,
       verified: null,
@@ -153,12 +172,14 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   /**
    * Update an existing note - matches the BaseRepository implementation
    */
-  update = async (id: string, updates: Partial<Note>): Promise<boolean> => {
+  update = async (id: string, updates: Partial<Note>): Promise<Note> => {
     const index = this.notes.findIndex(note => note.id === id);
-    if (index === -1) return false;
+    if (index === -1) {
+      throw new Error(`Note with ID ${id} not found`);
+    }
 
     this.notes[index] = { ...this.notes[index], ...updates };
-    return true;
+    return this.notes[index];
   };
 
   /**
@@ -172,6 +193,7 @@ export class MockNoteRepository implements Partial<NoteRepository> {
       return false;
     });
   };
+
 
   /**
    * Update a note's embedding - matches the real implementation
@@ -238,14 +260,15 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   /**
    * Get recent notes with optional limit - matches the real implementation
    */
-  getRecentNotes = async (limit: number = 5): Promise<Note[]> => {
+  getRecentNotes = async (limit: number = 5, offset: number = 0): Promise<Note[]> => {
     // Sort by updatedAt in descending order
     const sorted = [...this.notes].sort((a, b) =>
       b.updatedAt.getTime() - a.updatedAt.getTime(),
     );
     // Apply safe limits
     const safeLimit = Math.max(1, Math.min(limit, 100));
-    return sorted.slice(0, safeLimit);
+    const safeOffset = Math.max(0, offset);
+    return sorted.slice(safeOffset, safeOffset + safeLimit);
   };
 
   /**
@@ -309,16 +332,9 @@ export class MockNoteRepository implements Partial<NoteRepository> {
   };
 
   /**
-   * Get count of notes - matches the real implementation
+   * Count method - matches the real implementation
    */
-  getNoteCount = async (): Promise<number> => {
-    return this.notes.length;
-  };
-
-  /**
-   * BaseRepository getCount implementation
-   */
-  getCount = async (): Promise<number> => {
+  count = async (): Promise<number> => {
     return this.notes.length;
   };
 
@@ -336,6 +352,68 @@ export class MockNoteRepository implements Partial<NoteRepository> {
 
       return false;
     });
+  };
+  
+  /**
+   * Search notes with filters - matches the real implementation
+   */
+  search = async (params: {
+    query?: string;
+    tags?: string[];
+    limit?: number;
+    offset?: number;
+    source?: 'import' | 'conversation' | 'user-created' | 'landing-page' | 'profile';
+    conversationId?: string;
+  } = {}): Promise<Note[]> => {
+    const { query, tags, limit = 10, offset = 0, source, conversationId } = params;
+    
+    // Start with all notes
+    let results = [...this.notes];
+    
+    // Filter by source if specified
+    if (source) {
+      results = results.filter(note => note.source === source);
+    }
+    
+    // Filter by conversationId if specified
+    if (conversationId) {
+      results = results.filter(note => 
+        note.conversationMetadata?.conversationId === conversationId,
+      );
+    }
+    
+    // Filter by keywords if provided
+    if (query) {
+      const lowerQuery = query.toLowerCase();
+      // Split by spaces and filter out short words
+      const keywords = lowerQuery.split(/\s+/).filter(word => word.length > 2);
+      
+      if (keywords.length > 0) {
+        results = results.filter(note => {
+          const lowerTitle = note.title.toLowerCase();
+          const lowerContent = note.content.toLowerCase();
+          
+          return keywords.some(keyword => 
+            lowerTitle.includes(keyword) || lowerContent.includes(keyword),
+          );
+        });
+      }
+    }
+    
+    // Filter by tags if provided
+    if (tags && tags.length > 0) {
+      results = results.filter(note => 
+        tags.some(tag => note.tags?.includes(tag)),
+      );
+    }
+    
+    // Sort by updatedAt in descending order
+    results.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+    
+    // Apply pagination
+    const safeLimit = Math.max(1, Math.min(limit, 100));
+    const safeOffset = Math.max(0, offset);
+    return results.slice(safeOffset, safeOffset + safeLimit);
   };
 
   /**

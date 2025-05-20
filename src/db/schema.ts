@@ -11,12 +11,14 @@ export const notes = sqliteTable('notes', {
   id: text('id').primaryKey(),
   title: text('title').notNull(),
   content: text('content').notNull(),
-  tags: text('tags', { mode: 'json' }).$type<string[]>(),
-  embedding: text('embedding', { mode: 'json' }).$type<number[]>(),
+  tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  embedding: text('embedding', { mode: 'json' }).$type<number[]>().notNull(), // Required for all notes
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-  // New fields for conversation-to-notes feature
-  source: text('source').default('import'),  // 'import', 'conversation', 'user-created'
+  // Source tracking for different note types
+  source: text('source', { enum: ['import', 'conversation', 'user-created', 'landing-page', 'profile'] })
+    .notNull()
+    .default('user-created'),
   conversationMetadata: text('conversation_metadata', { mode: 'json' }).$type<ConversationSourceMetadata>(),
   confidence: integer('confidence'),  // 0-100 scale for AI-generated content confidence
   verified: integer('verified', { mode: 'boolean' }).default(false),

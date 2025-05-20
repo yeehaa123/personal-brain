@@ -1,251 +1,183 @@
-/**
- * Tests for NoteStorageAdapter
- */
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
 import { NoteStorageAdapter } from '@/contexts/notes/noteStorageAdapter';
 import type { Note } from '@/models/note';
 import { createMockNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 
-// Create mock notes for testing
-const mockNotes = [createMockNote('note-1', 'Test Note')];
-
-describe('NoteStorageAdapter', () => {
-  // Create an instance of the adapter with the mock repository
+describe('NoteStorageAdapter Behavior', () => {
   let adapter: NoteStorageAdapter;
+  let mockRepo: MockNoteRepository;
 
   beforeEach(() => {
-    // Reset mock repository instance
-    MockNoteRepository.resetInstance();
-
-    // Create a fresh repository using the factory pattern
-    const mockRepo = MockNoteRepository.createFresh();
+    // Set up a fresh mock repository with test data
+    const testNotes = [
+      createMockNote('note-1', 'Test Note', ['tag1']),
+      createMockNote('note-2', 'JavaScript Tutorial', ['programming', 'javascript']),
+      createMockNote('note-3', 'TypeScript Guide', ['programming', 'typescript']),
+      createMockNote('note-4', 'React Basics', ['programming', 'react']),
+      createMockNote('note-5', 'Vue Fundamentals', ['programming', 'vue']),
+    ];
     
-    // We need to cast to access the find method that exists on MockNoteRepository
-    // but might not be visible through the NoteRepository interface
-    const typedRepo = mockRepo as unknown as MockNoteRepository;
-    typedRepo.find = mock(async () => {
-      return [...mockNotes];
-    });
-
-    // Create a new adapter for each test using the factory method
+    mockRepo = MockNoteRepository.createFresh(testNotes);
     adapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
   });
 
-  test('create should call repository insertNote', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const insertNoteSpy = mock(() => Promise.resolve('note-1'));
-    mockRepo.insertNote = insertNoteSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the create method
-    const note = { title: 'Test Note', content: 'Test content' } as Partial<Note>;
-    await testAdapter.create(note);
-
-    // Verify the insertNote method was called
-    expect(insertNoteSpy).toHaveBeenCalled();
-  });
-
-  test('read should call repository getNoteById', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const getNoteByIdSpy = mock(() => Promise.resolve(createMockNote('note-1', 'Test Note')));
-    mockRepo.getNoteById = getNoteByIdSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the read method
-    await testAdapter.read('note-1');
-
-    // Verify the getNoteById method was called with the correct ID
-    expect(getNoteByIdSpy).toHaveBeenCalledWith('note-1');
-  });
-
-  test('read should return null for non-matching ID', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Mock getNoteById to return undefined (not found)
-    mockRepo.getNoteById = mock(() => Promise.resolve(undefined));
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the read method
-    const result = await testAdapter.read('non-existent');
-
-    // Verify the result is null (adapter converts undefined to null)
-    expect(result).toBeNull();
-  });
-
-  test('update should call repository getById and update', async () => {
-    const updates = { title: 'Updated Title' };
-
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([createMockNote('note-1', 'Test Note')]);
-
-    // Spy on the methods
-    const getByIdSpy = mock(() => Promise.resolve(createMockNote('note-1', 'Test Note')));
-    const updateSpy = mock(() => Promise.resolve(true));
-
-    mockRepo.getById = getByIdSpy;
-    mockRepo.update = updateSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the update method
-    await testAdapter.update('note-1', updates);
-
-    // Verify the correct methods were called
-    expect(getByIdSpy).toHaveBeenCalledWith('note-1');
-    expect(updateSpy).toHaveBeenCalled();
-  });
-
-  test('delete should call repository deleteById', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([createMockNote('note-1', 'Test Note')]);
-
-    // Spy on the method
-    const deleteByIdSpy = mock(() => Promise.resolve(true));
-    mockRepo.deleteById = deleteByIdSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the delete method
-    await testAdapter.delete('note-1');
-
-    // Verify the correct method was called
-    expect(deleteByIdSpy).toHaveBeenCalledWith('note-1');
-  });
-
-  test('search should call repository searchNotesByKeywords with query and tags', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const searchSpy = mock(() => Promise.resolve([createMockNote('note-2', 'JavaScript Test', ['tag1'])]));
-    mockRepo.searchNotesByKeywords = searchSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the search method
-    const criteria = { query: 'javascript', tags: ['tag1'], limit: 5 };
-    await testAdapter.search(criteria);
-
-    // Verify the searchNotesByKeywords method was called with the correct arguments
-    expect(searchSpy).toHaveBeenCalledWith('javascript', ['tag1'], 5, undefined);
-  });
-
-  test('search should fall back to list when no query or tags', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const getRecentNotesSpy = mock(() => Promise.resolve([createMockNote('note-1', 'Test Note')]));
-    mockRepo.getRecentNotes = getRecentNotesSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the search method without query or tags
-    const criteria = { limit: 5 };
-    await testAdapter.search(criteria);
-
-    // Verify the getRecentNotes method was called
-    expect(getRecentNotesSpy).toHaveBeenCalledWith(5);
-  });
-
-  test('list should call repository getRecentNotes', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const getRecentNotesSpy = mock(() => Promise.resolve([createMockNote('note-1', 'Test Note')]));
-    mockRepo.getRecentNotes = getRecentNotesSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the list method
-    const options = { limit: 20 };
-    await testAdapter.list(options);
-
-    // Verify the getRecentNotes method was called with the correct limit
-    expect(getRecentNotesSpy).toHaveBeenCalledWith(20);
-  });
-
-  test('count should call repository getNoteCount', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const getNoteCountSpy = mock(() => Promise.resolve(3));
-    mockRepo.getNoteCount = getNoteCountSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the count method
-    await testAdapter.count();
-
-    // Verify the getNoteCount method was called
-    expect(getNoteCountSpy).toHaveBeenCalled();
-  });
-
-  test('findBySource should call repository findBySource', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Spy on the method
-    const findBySourceSpy = mock(() => Promise.resolve([createMockNote('note-2', 'Conversation Note')]));
-    mockRepo.findBySource = findBySourceSpy;
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the findBySource method
-    await testAdapter.findBySource('conversation', 5, 0);
-
-    // Verify the findBySource method was called with the correct arguments
-    expect(findBySourceSpy).toHaveBeenCalledWith('conversation', 5, 0);
-  });
-
-  test('adapter should handle repository errors gracefully', async () => {
-    // Create a new mock repository for this test
-    const mockRepo = MockNoteRepository.createFresh([]);
-
-    // Mock getNoteById to throw an error
-    mockRepo.getNoteById = mock(() => {
-      throw new Error('Repository error');
+  describe('CRUD Operations', () => {
+    test('creates new notes', async () => {
+      const newNote = {
+        title: 'New Test Note',
+        content: 'Test content',
+        tags: ['test'],
+      };
+      
+      const noteId = await adapter.create(newNote);
+      expect(noteId).toBeTruthy();
+      
+      // Verify the note was actually created
+      const createdNote = await adapter.read(noteId);
+      expect(createdNote).toBeDefined();
+      expect(createdNote?.title).toBe(newNote.title);
     });
-
-    // Create adapter with the configured mock using the factory method
-    const testAdapter = NoteStorageAdapter.createFresh({}, { repository: mockRepo });
-
-    // Call the read method - should handle the error and return null
-    const result = await testAdapter.read('note-1');
-
-    // Verify the error was handled gracefully
-    expect(result).toBeNull();
+    
+    test('reads existing notes', async () => {
+      const note = await adapter.read('note-1');
+      
+      expect(note).toBeDefined();
+      expect(note?.id).toBe('note-1');
+      expect(note?.title).toBe('Test Note');
+    });
+    
+    test('returns null for non-existent notes', async () => {
+      const note = await adapter.read('non-existent');
+      expect(note).toBeNull();
+    });
+    
+    test('updates existing notes', async () => {
+      // Update note
+      const updates = { title: 'Updated Title', content: 'Updated content' };
+      const success = await adapter.update('note-1', updates);
+      expect(success).toBe(true);
+      
+      // Verify update
+      const updatedNote = await adapter.read('note-1');
+      expect(updatedNote?.title).toBe('Updated Title');
+      expect(updatedNote?.content).toBe('Updated content');
+    });
+    
+    test('fails to update non-existent notes', async () => {
+      const success = await adapter.update('non-existent', { title: 'New Title' });
+      expect(success).toBe(false);
+    });
+    
+    test('deletes notes', async () => {
+      // Verify note exists
+      const noteBeforeDeletion = await adapter.read('note-1');
+      expect(noteBeforeDeletion).toBeDefined();
+      
+      // Delete note
+      const success = await adapter.delete('note-1');
+      expect(success).toBe(true);
+      
+      // Verify deletion
+      const noteAfterDeletion = await adapter.read('note-1');
+      expect(noteAfterDeletion).toBeNull();
+    });
   });
 
-  test('getRepository should return the repository instance', () => {
-    // Get the current repository instance used by the adapter
-    const result = adapter.getRepository();
-    // Check that it's a NoteRepository
-    expect(result).toBeInstanceOf(Object);
-    expect(result).toHaveProperty('getNoteById');
+  describe('Search and Retrieval', () => {
+    test('searches notes by keywords', async () => {
+      const results = await adapter.search({ 
+        query: 'JavaScript',
+        limit: 5, 
+      });
+      
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.some(n => n.title.includes('JavaScript'))).toBe(true);
+    });
+    
+    test('searches notes by tags', async () => {
+      const results = await adapter.search({ 
+        tags: ['programming'],
+        limit: 5, 
+      });
+      
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.every(n => n.tags?.includes('programming'))).toBe(true);
+    });
+    
+    test('searches by both keywords and tags', async () => {
+      const results = await adapter.search({ 
+        query: 'Script',
+        tags: ['programming'],
+        limit: 5, 
+      });
+      
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.every(n => 
+        (n.title.toLowerCase().includes('script') || n.content.toLowerCase().includes('script')) &&
+        n.tags?.includes('programming'),
+      )).toBe(true);
+    });
+    
+    test('lists recent notes when no search criteria', async () => {
+      const results = await adapter.search({ limit: 2 });
+      expect(results.length).toBeLessThanOrEqual(2);
+    });
+    
+    test('retrieves notes with limitation', async () => {
+      // Test that the list method respects the limit
+      const page1 = await adapter.list({ limit: 2 });
+      expect(page1.length).toBeLessThanOrEqual(2);
+      
+      const page2 = await adapter.list({ limit: 3 });
+      expect(page2.length).toBeLessThanOrEqual(3);
+      
+      // Get all notes to verify total count
+      const all = await adapter.list({ limit: 10 });
+      expect(all.length).toBe(5); // We have 5 test notes
+    });
+  });
+
+  describe('Additional Features', () => {
+    test('counts total notes', async () => {
+      // Add a test note to ensure count is greater than 0
+      await adapter.create({
+        title: 'Count Test Note',
+        content: 'This note ensures count is > 0',
+        embedding: [0.1, 0.2, 0.3],
+      });
+      
+      const count = await adapter.count();
+      expect(count).toBeGreaterThan(0);
+    });
+    
+    test('finds notes by source', async () => {
+      // Add a note with specific source
+      await adapter.create({
+        title: 'Conversation Note',
+        content: 'From conversation',
+        source: 'conversation',
+      } as Partial<Note>);
+      
+      // Find by source
+      const results = await adapter.findBySource('conversation', 10, 0);
+      expect(results.length).toBeGreaterThan(0);
+      expect(results.every(n => n.source === 'conversation')).toBe(true);
+    });
+    
+    test('handles repository errors gracefully', async () => {
+      // Create adapter with error-throwing repository
+      const errorRepo = MockNoteRepository.createFresh();
+      errorRepo.getById = () => {
+        throw new Error('Repository error');
+      };
+      
+      const errorAdapter = NoteStorageAdapter.createFresh({}, { repository: errorRepo });
+      
+      // Should handle error and return null
+      const result = await errorAdapter.read('any-id');
+      expect(result).toBeNull();
+    });
   });
 });

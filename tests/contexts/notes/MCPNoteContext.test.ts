@@ -115,7 +115,7 @@ describe('Note Management System', () => {
       expect(updateResult).toBe(true);
       
       // Repository should have the updated note
-      const updatedNote = await repository.getNoteById('update-test-id');
+      const updatedNote = await repository.getById('update-test-id');
       expect(updatedNote).toBeDefined();
       expect(updatedNote?.title).toBe('Updated Title');
       expect(updatedNote?.tags).toContain('updated');
@@ -135,8 +135,13 @@ describe('Note Management System', () => {
       expect(deleteResult).toBe(true);
       
       // Repository should no longer have the note
-      const deletedNote = await repository.getNoteById('delete-test-id');
-      expect(deletedNote).toBeUndefined();
+      try {
+        await repository.getById('delete-test-id');
+        expect(false).toBe(true); // This should not execute if note is properly deleted
+      } catch (error) {
+        // We expect an error because the note should no longer exist
+        expect(error).toBeDefined();
+      }
     });
   });
 

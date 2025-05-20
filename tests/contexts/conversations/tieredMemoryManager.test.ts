@@ -1,20 +1,14 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 
-import { ConversationSummarizer } from '@/contexts/conversations/memory/summarizer';
 import { TieredMemoryManager } from '@/contexts/conversations/memory/tieredMemoryManager';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
 
-// We'll skip more complex mocking for now and focus on the basic functionality
 describe('TieredMemoryManager', () => {
   let manager: TieredMemoryManager;
   let storage: MockConversationStorage;
   let conversationId: string;
 
   beforeEach(async () => {
-    // Reset the singleton instances before each test
-    TieredMemoryManager.resetInstance();
-    ConversationSummarizer.resetInstance();
-
     // Create a fresh storage instance
     storage = MockConversationStorage.createFresh();
 

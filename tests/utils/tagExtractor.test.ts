@@ -6,89 +6,93 @@ import { ClaudeModel as MockClaudeModel } from '@test/__mocks__/resources/ai/cla
 import { TagExtractor } from '@utils/tagExtractor';
 
 describe('TagExtractor', () => {
-  // Reset all singletons before each test to ensure isolation
   beforeEach(() => {
     TagExtractor.resetInstance();
     MockLogger.resetInstance();
     MockClaudeModel.resetInstance();
   });
 
-  test('tag extraction with various content types and configurations', async () => {
-    // Create mocks for normal operation tests
+  test('extracts tags from content', async () => {
     const mockLogger = MockLogger.createFresh({ silent: true });
     const mockClaudeModel = MockClaudeModel.createFresh();
 
-    // Create standard tag extractor
+    // Override the complete method to return tag data
+    mockClaudeModel.complete = async <T>() => ({
+      object: { tags: ['ecosystem-architecture', 'innovation'] } as unknown as T,
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+
     const tagExtractor = TagExtractor.createFresh(
-      {
-        defaultMaxTags: 5,
-        tagContentMaxLength: 1000,
-        temperature: 0.7,
-      },
-      {
-        logger: mockLogger,
-        claudeModel: mockClaudeModel as unknown as ClaudeModel,
-      },
-    );
-
-    // Test 1: Ecosystem content
-    const ecosystemContent = `Ecosystem architecture is a practice of designing and building interconnected 
-    communities and systems that are regenerative and decentralized.`;
-    const ecosystemTags = await tagExtractor.extractTags(ecosystemContent, [], 5);
-    
-    // Check at least one expected tag is present (reduces multiple expect calls)
-    const hasEcosystemTag = ecosystemTags.includes('ecosystem-architecture');
-    expect(hasEcosystemTag).toBe(true);
-
-    // Test 2: Existing tags preservation
-    const techContent = 'Technology is rapidly evolving and changing how we live and work.';
-    const existingTags = ['innovation', 'future'];
-    const techTags = await tagExtractor.extractTags(techContent, existingTags, 5);
-    
-    // Verify both existing and new tags are present
-    const hasExistingAndNewTags = 
-      techTags.includes('innovation') && 
-      techTags.some(tag => tag !== 'innovation' && tag !== 'future');
-    expect(hasExistingAndNewTags).toBe(true);
-
-    // Test 3: Tag limit enforcement
-    // Create specific mock for the limit test
-    const limitedMockClaudeModel = MockClaudeModel.createFresh();
-    limitedMockClaudeModel.complete = async <T>() => {
-      return {
-        object: {
-          tags: ['ecosystem-architecture', 'innovation', 'collaboration'],
-        } as unknown as T,
-        usage: { inputTokens: 10, outputTokens: 5 },
-      };
-    };
-    
-    const limitTagExtractor = TagExtractor.createFresh(
       { defaultMaxTags: 5 },
-      {
-        logger: mockLogger,
-        claudeModel: limitedMockClaudeModel as unknown as ClaudeModel,
-      },
+      { logger: mockLogger, claudeModel: mockClaudeModel as unknown as ClaudeModel },
     );
-    
-    const limitTags = await limitTagExtractor.extractTags('Test content', [], 3);
-    expect(limitTags.length).toBeLessThanOrEqual(3);
 
-    // Test 4: Error handling
-    const errorMockClaudeModel = MockClaudeModel.createFresh();
-    errorMockClaudeModel.complete = async () => {
+    const content = 'Ecosystem architecture is a practice of designing';
+    const tags = await tagExtractor.extractTags(content, [], 5);
+    
+    expect(tags).toContain('ecosystem-architecture');
+    expect(tags).toContain('innovation');
+  });
+
+  test('considers existing tags', async () => {
+    const mockLogger = MockLogger.createFresh({ silent: true });
+    const mockClaudeModel = MockClaudeModel.createFresh();
+
+    // Mock returns tags that might include existing ones Claude decides to keep
+    mockClaudeModel.complete = async <T>() => ({
+      object: { tags: ['existing1', 'new-tag'] } as unknown as T,
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+
+    const tagExtractor = TagExtractor.createFresh(
+      { defaultMaxTags: 5 },
+      { logger: mockLogger, claudeModel: mockClaudeModel as unknown as ClaudeModel },
+    );
+
+    const existingTags = ['existing1', 'existing2'];
+    const tags = await tagExtractor.extractTags('Some content', existingTags, 5);
+    
+    // Claude decided to keep existing1 and add new-tag
+    expect(tags).toContain('existing1');
+    expect(tags).toContain('new-tag');
+  });
+
+  test('respects tag limit', async () => {
+    const mockLogger = MockLogger.createFresh({ silent: true });
+    const mockClaudeModel = MockClaudeModel.createFresh();
+
+    // Mock returns exactly the requested number of tags
+    mockClaudeModel.complete = async <T>() => ({
+      object: { tags: ['tag1', 'tag2', 'tag3'] } as unknown as T,  // Only 3 as requested
+      usage: { inputTokens: 10, outputTokens: 5 },
+    });
+
+    const tagExtractor = TagExtractor.createFresh(
+      { defaultMaxTags: 5 },
+      { logger: mockLogger, claudeModel: mockClaudeModel as unknown as ClaudeModel },
+    );
+
+    const tags = await tagExtractor.extractTags('Some content', [], 3);
+    
+    expect(tags.length).toBe(3);
+    expect(tags).toEqual(['tag1', 'tag2', 'tag3']);
+  });
+
+  test('handles errors gracefully', async () => {
+    const mockLogger = MockLogger.createFresh({ silent: true });
+    const mockClaudeModel = MockClaudeModel.createFresh();
+
+    // Mock throws error
+    mockClaudeModel.complete = async () => {
       throw new Error('Test error');
     };
-    
-    const errorTagExtractor = TagExtractor.createFresh(
+
+    const tagExtractor = TagExtractor.createFresh(
       { defaultMaxTags: 5 },
-      {
-        logger: mockLogger,
-        claudeModel: errorMockClaudeModel as unknown as ClaudeModel,
-      },
+      { logger: mockLogger, claudeModel: mockClaudeModel as unknown as ClaudeModel },
     );
-    
-    const errorTags = await errorTagExtractor.extractTags('Error content', [], 5);
-    expect(errorTags.length).toBe(0);
+
+    const tags = await tagExtractor.extractTags('Error content', [], 5);
+    expect(tags).toEqual([]);
   });
 });

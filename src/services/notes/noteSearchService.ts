@@ -255,7 +255,7 @@ export class NoteSearchService implements ISearchService<Note> {
   ): Promise<Note[]> {
     try {
       this.logger.debug(`Performing keyword search with query: ${query}, tags: ${tags?.join(', ')}`);
-      return await this.repository.searchNotesByKeywords(query, tags, limit, offset);
+      return await this.repository.search({ query, tags, limit, offset });
     } catch (error) {
       this.logger.error(`Keyword search failed: ${error instanceof Error ? error.message : String(error)}`);
       return this.repository.getRecentNotes(limit);

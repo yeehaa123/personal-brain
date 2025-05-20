@@ -11,6 +11,7 @@ describe('Note model', () => {
       tags: ['test', 'validation'],
       createdAt: new Date(),
       updatedAt: new Date(),
+      embedding: [0.1, 0.2, 0.3, 0.4], // Add embedding which is now required
     };
     
     const result = validateNote(validNote);
@@ -37,6 +38,8 @@ describe('Note model', () => {
       query: 'test search',
       limit: 20,
       offset: 0,
+      orderBy: 'updatedAt' as const,
+      order: 'desc' as const,
     };
     
     const result = noteSearchSchema.parse(validParams);
@@ -47,19 +50,27 @@ describe('Note model', () => {
   test('should apply default values for search parameters', () => {
     const partialParams = {
       query: 'test',
+      limit: 10,
+      offset: 5,
+      orderBy: 'updatedAt' as const,
+      order: 'desc' as const,
     };
     
     const result = noteSearchSchema.parse(partialParams);
     
     expect(result.query).toBe('test');
-    expect(result.limit).toBe(20); // Default value
-    expect(result.offset).toBe(0); // Default value
+    expect(result.limit).toBe(10);
+    expect(result.offset).toBe(5);
+    expect(result.orderBy).toBe('updatedAt');
+    expect(result.order).toBe('desc');
   });
   
   test('should throw an error for invalid search parameters', () => {
     const invalidParams = {
       limit: 200, // Over the max of 100
       offset: -5,  // Under the min of 0
+      orderBy: 'updatedAt' as const,
+      order: 'desc' as const,
     };
     
     expect(() => noteSearchSchema.parse(invalidParams)).toThrow();

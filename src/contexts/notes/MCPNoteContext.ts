@@ -482,13 +482,6 @@ export class MCPNoteContext implements MCPContext, NoteToolContext {
     return this.storage.list({ limit });
   }
 
-  /**
-   * Generate or update embeddings for existing notes
-   * @returns Statistics on the update operation
-   */
-  async generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
-    return this.embeddingService.generateEmbeddingsForAllNotes();
-  }
 
   /**
    * Get the total count of notes in the database

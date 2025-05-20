@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { Note } from '@/models/note';
 import type { EmbeddingService } from '@/resources/ai/embedding/embeddings';
 import { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
+import type { NoteRepository } from '@/services/notes/noteRepository';
 import { createTestNote } from '@test/__mocks__/models/note';
+import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { EmbeddingService as MockEmbeddingService } from '@test/__mocks__/resources/ai/embedding/embeddings';
 
 // Create sample notes with embeddings
@@ -43,25 +45,7 @@ const createSampleNotes = async (): Promise<Note[]> => {
 
 // Will be initialized in beforeEach
 let mockNotes: Note[];
-
-// Mock the required repository methods
-const mockRepositoryMethods = {
-  getNoteById: (id: string) => Promise.resolve(mockNotes.find(note => note.id === id)),
-  getNotesWithoutEmbeddings: () => Promise.resolve(mockNotes.filter(n => !n.embedding)),
-  getNotesWithEmbeddings: () => Promise.resolve(mockNotes.filter(n => n.embedding)),
-  getOtherNotesWithEmbeddings: (noteId: string) => 
-    Promise.resolve(mockNotes.filter(n => n.embedding && n.id !== noteId)),
-  updateNoteEmbedding: (id: string, embedding: number[]) => {
-    const index = mockNotes.findIndex(note => note.id === id);
-    if (index >= 0) {
-      mockNotes[index].embedding = embedding;
-      mockNotes[index].updatedAt = new Date();
-    }
-    return Promise.resolve(true);
-  },
-  insertNoteChunk: (chunk: { noteId: string; content: string; embedding?: number[] }) => 
-    Promise.resolve(`chunk-${chunk.noteId}-${Math.floor(Math.random() * 1000)}`),
-};
+let mockRepository: NoteRepository;
 
 // Define a class to override the factory methods with mocks
 class TestNoteEmbeddingService extends NoteEmbeddingService {
@@ -73,7 +57,7 @@ class TestNoteEmbeddingService extends NoteEmbeddingService {
       const mockEmbedding = MockEmbeddingService.createFresh();
       TestNoteEmbeddingService.testInstance = new TestNoteEmbeddingService(
         mockEmbedding as unknown as EmbeddingService,
-        mockRepositoryMethods as unknown as NoteEmbeddingService['noteRepository'],
+        mockRepository,
       );
     }
     return TestNoteEmbeddingService.testInstance;
@@ -91,14 +75,14 @@ class TestNoteEmbeddingService extends NoteEmbeddingService {
     const mockEmbedding = MockEmbeddingService.createFresh();
     return new TestNoteEmbeddingService(
       mockEmbedding as unknown as EmbeddingService,
-      mockRepositoryMethods as unknown as NoteEmbeddingService['noteRepository'],
+      mockRepository,
     );
   }
   
   // Private constructor that lets us pass all dependencies
   private constructor(
     embeddingService: EmbeddingService,
-    repository: NoteEmbeddingService['noteRepository'],
+    repository: NoteEmbeddingService['repository'],
   ) {
     super(embeddingService, repository);
   }
@@ -110,9 +94,23 @@ describe('NoteEmbeddingService', () => {
   beforeEach(async () => {
     // Reset singleton instances
     NoteEmbeddingService.resetInstance();
+    MockNoteRepository.resetInstance();
     
     // Initialize mock notes
     mockNotes = await createSampleNotes();
+    
+    // Create a mock repository with our test notes
+    mockRepository = MockNoteRepository.createFresh(mockNotes);
+    
+    // Setup mock methods that we'll need for testing
+    // We need to cast to access the internal methods
+    const mockRepoInstance = mockRepository as unknown as MockNoteRepository;
+    mockRepoInstance.setNotes(mockNotes);
+    
+    // Make sure the search method is configured properly
+    mockRepoInstance.search = async (): Promise<Note[]> => {
+      return mockNotes;
+    };
     
     // Create a fresh service instance for testing
     embeddingService = TestNoteEmbeddingService.createFresh();
@@ -132,29 +130,28 @@ describe('NoteEmbeddingService', () => {
     expect(embedding.length).toBeGreaterThan(0);
   });
   
-  test('should generate embeddings for all notes', async () => {
-    const result = await embeddingService.generateEmbeddingsForAllNotes();
-    
-    expect(result).toBeDefined();
-    expect(typeof result.updated).toBe('number');
-    expect(typeof result.failed).toBe('number');
-  });
+  // Test removed - embeddings are now required for all notes
   
   test('should create note chunks', async () => {
     // Create a tracking variable to check if our mock was called
     let insertChunkCalled = false;
     
-    // Create a simple mock that sets our tracking variable
-    const insertChunkMock = async (chunk: { noteId: string; content: string; embedding?: number[] }) => {
+    // Get the mock repository instance to modify its behavior
+    const mockRepoInstance = mockRepository as unknown as {
+      insertNoteChunk: (chunk: { noteId: string; content: string; embedding: number[]; chunkIndex: number }) => Promise<string>
+    };
+    const originalInsertNoteChunk = mockRepoInstance.insertNoteChunk;
+    
+    // Replace with our tracking version
+    mockRepoInstance.insertNoteChunk = async (chunk: { noteId: string; content: string; embedding: number[]; chunkIndex: number }) => {
       insertChunkCalled = true;
-      return `chunk-${chunk.noteId}-${Math.floor(Math.random() * 1000)}`;
+      return `chunk-${chunk.noteId}-${chunk.chunkIndex}`;
     };
     
     // Also add a mock embeddingService to ensure our chunks are properly handled
     // Use type assertion to access private properties
     const testService = embeddingService as unknown as { 
       embeddingService: Record<string, unknown>; 
-      noteRepository: Record<string, unknown>; 
     };
     const originalEmbeddingService = testService.embeddingService;
     testService.embeddingService = {
@@ -170,13 +167,6 @@ describe('NoteEmbeddingService', () => {
       },
     };
     
-    // Replace the repository just for this test
-    const originalRepo = testService.noteRepository;
-    testService.noteRepository = {
-      ...(originalRepo as object),
-      insertNoteChunk: insertChunkMock,
-    };
-    
     const noteId = 'note-1';
     const content = 'This is the first sentence. This is the second sentence. This is the third sentence.';
     
@@ -187,36 +177,96 @@ describe('NoteEmbeddingService', () => {
       // We just verify the mock was called
       expect(insertChunkCalled).toBe(true);
       
-      // Restore the original repository and embedding service
-      testService.noteRepository = originalRepo;
+      // Restore the original embedding service
       testService.embeddingService = originalEmbeddingService;
+      // Restore the original repository method
+      mockRepoInstance.insertNoteChunk = originalInsertNoteChunk;
     } catch (err) {
-      // Restore the original repository and embedding service even if the test fails
-      testService.noteRepository = originalRepo;
+      // Restore the original embedding service and repository method even if the test fails
       testService.embeddingService = originalEmbeddingService;
+      mockRepoInstance.insertNoteChunk = originalInsertNoteChunk;
       throw err;
     }
   });
   
   test('should search similar notes', async () => {
-    const mockService = MockEmbeddingService.createFresh();
-    const embedding = await mockService.getEmbedding('search embedding');
+    // Setup mock repository to return notes with embeddings for search
+    const mockRepoInstance = mockRepository as unknown as MockNoteRepository;
+    const originalSearch = mockRepoInstance.search;
     
-    const results = await embeddingService.searchSimilarNotes(embedding, 5);
-    
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
-    
-    // Ensure results have similarity scores
-    if (results.length > 0) {
-      expect(typeof results[0].score).toBe('number');
+    try {
+      // Ensure the mock notes have valid embeddings
+      mockNotes.forEach(note => {
+        if (!note.embedding || note.embedding.length === 0) {
+          note.embedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+        }
+      });
+      
+      // Make sure the mock repository returns these notes
+      mockRepoInstance.search = async () => {
+        return mockNotes;
+      };
+      
+      const mockService = MockEmbeddingService.createFresh();
+      const embedding = await mockService.getEmbedding('search embedding');
+      
+      // Create a fresh service with our updated repository
+      embeddingService = TestNoteEmbeddingService.createFresh();
+      
+      const results = await embeddingService.searchSimilarNotes(embedding, 5);
+      
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+      
+      // Ensure results have similarity scores
+      if (results.length > 0) {
+        expect(typeof results[0].score).toBe('number');
+      }
+    } finally {
+      // Restore original search method
+      mockRepoInstance.search = originalSearch;
     }
   });
   
   test('should find related notes', async () => {
-    const results = await embeddingService.findRelatedNotes('note-1', 5);
+    // Setup mock repository for related notes search
+    const mockRepoInstance = mockRepository as unknown as MockNoteRepository;
+    const originalGetById = mockRepoInstance.getById;
+    const originalSearch = mockRepoInstance.search;
     
-    expect(results).toBeDefined();
-    expect(Array.isArray(results)).toBe(true);
+    try {
+      // Make sure each note has a valid embedding for similarity calculation
+      mockNotes.forEach(note => {
+        if (!note.embedding || note.embedding.length === 0) {
+          note.embedding = [0.1, 0.2, 0.3, 0.4, 0.5];
+        }
+      });
+      
+      // Mock getById to return a note with embedding
+      mockRepoInstance.getById = async (id: string) => {
+        const note = mockNotes.find(n => n.id === id);
+        if (!note) {
+          throw new Error(`Note with ID ${id} not found`);
+        }
+        return note;
+      };
+      
+      // Mock search to return all notes for similarity calculation
+      mockRepoInstance.search = async () => {
+        return mockNotes;
+      };
+      
+      // Create a fresh service with our updated repository
+      embeddingService = TestNoteEmbeddingService.createFresh();
+      
+      const results = await embeddingService.findRelatedNotes('note-1', 5);
+      
+      expect(results).toBeDefined();
+      expect(Array.isArray(results)).toBe(true);
+    } finally {
+      // Restore original methods
+      mockRepoInstance.getById = originalGetById;
+      mockRepoInstance.search = originalSearch;
+    }
   });
 });

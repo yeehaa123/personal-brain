@@ -1,105 +1,84 @@
-import { beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 
-import type { BrainProtocol } from '@/protocol/brainProtocol';
 import { RendererRegistry } from '@/utils/registry/rendererRegistry';
-import { CommandHandler } from '@commands/core/commandHandler';
-import type { WebsiteCommandResult } from '@commands/core/commandTypes';
 import { WebsiteCommandHandler } from '@commands/handlers/websiteCommands';
-import { MockMCPWebsiteContext } from '@test/__mocks__/contexts/website/MCPWebsiteContext';
-import { createTestLandingPageData } from '@test/helpers';
 
-// Create a mock BrainProtocol that returns our mock WebsiteContext
-class TestBrainProtocol {
-  private websiteContext: MockMCPWebsiteContext;
-
-  constructor() {
-    this.websiteContext = MockMCPWebsiteContext.createFresh();
-  }
-
-  // The new method that follows the refactored pattern
-  getContextManager() {
-    return {
-      getWebsiteContext: () => this.websiteContext,
-      // Added for renderer registry tests
-      getRenderer: () => null,
-    };
-  }
-
-  // Keep old method for backward compatibility
-  getWebsiteContext(): MockMCPWebsiteContext {
-    return this.websiteContext;
-  }
+describe('WebsiteCommandHandler Behavior', () => {
+  let handler: WebsiteCommandHandler;
   
-  // Added for renderer registry tests
-  getInterfaceType() {
-    return 'cli';
-  }
-  
-  // Added for Matrix-specific tests
-  getConversationManager() {
-    return {
-      getCurrentRoom: () => null,
-    };
-  }
-}
-
-describe('WebsiteCommandHandler', () => {
-  let commandHandler: CommandHandler;
-  let websiteCommandHandler: WebsiteCommandHandler;
-  let mockBrainProtocol: TestBrainProtocol;
-  let mockWebsiteContext: MockMCPWebsiteContext;
-
-
   beforeEach(() => {
-    // Reset all instances
-    CommandHandler.resetInstance();
-    WebsiteCommandHandler.resetInstance();
-    MockMCPWebsiteContext.resetInstance();
+    // Mock RendererRegistry - register a mock CLI renderer that implements IProgressTracker
     RendererRegistry.resetInstance();
-
-    // Create fresh test instances
-    mockBrainProtocol = new TestBrainProtocol();
-    mockWebsiteContext = mockBrainProtocol.getWebsiteContext();
-
-    // Create a mock progress tracker
-    const mockProgressTracker = {
-      withProgress: async <T>(
-        _title: string,
-        steps: string[],
-        task: (updateStep: (stepIndex: number) => void) => Promise<T>,
-        _roomId?: string,
-      ): Promise<T> => {
-        // Simple implementation that just runs the task without tracking
-        return task((stepIndex) => {
-          // No-op update step function
-          console.log(`Mock progress update: step ${stepIndex + 1}/${steps.length}`);
-        });
+    const mockCLIRenderer = {
+      withProgress: async (_title: string, _steps: string[], fn: (update: () => void) => Promise<unknown>) => {
+        // Call the progress function immediately
+        const result = await fn(() => {});
+        return result;
       },
     };
-
-    // Create a mock renderer registry that returns our mock progress tracker
-    const mockRegistry = {
-      getProgressTracker: () => mockProgressTracker,
+    RendererRegistry.getInstance().registerRenderer('cli', mockCLIRenderer);
+    
+    // Simple mock that simulates website context behavior
+    const mockContext = {
+      isReady: () => true,
+      initialize: () => Promise.resolve(),
+      getConfig: () => ({
+        title: 'Test Site',
+        description: 'Test Description',
+        author: 'Test Author',
+        baseUrl: 'https://test.com',
+      }),
+      generateLandingPage: () => Promise.resolve({
+        success: true,
+        message: 'Generated',
+        data: {
+          name: 'Test Page',
+          title: 'Test Title',
+          tagline: 'Test Tagline',
+        },
+      }),
+      getLandingPageData: () => ({
+        name: 'Test Page',
+        title: 'Test Title',
+        tagline: 'Test Tagline',
+      }),
+      handleWebsiteBuild: () => Promise.resolve({
+        success: true,
+        message: 'Built successfully',
+      }),
+      handleWebsitePromote: () => Promise.resolve({
+        success: true,
+        message: 'Promoted successfully',
+      }),
+      getWebsiteStatus: () => Promise.resolve({
+        status: 'running',
+        message: 'Website is running',
+        url: 'https://test.com',
+      }),
     };
-
-    // Mock the static getInstance method to return our mock registry
-    spyOn(RendererRegistry, 'getInstance').mockImplementation(() => mockRegistry as unknown as RendererRegistry);
-
-    // Create the command handler with our test BrainProtocol
-    commandHandler = CommandHandler.createFresh(mockBrainProtocol as unknown as BrainProtocol);
-
-    // Create the real website command handler (what we're testing)
-    websiteCommandHandler = WebsiteCommandHandler.createFresh(mockBrainProtocol as unknown as BrainProtocol);
-
-    // Register the handler with the command handler
-    commandHandler.registerHandler(websiteCommandHandler);
+    
+    const mockBrainProtocol = {
+      getContextManager: () => ({
+        getWebsiteContext: () => mockContext,
+      }),
+      getInterfaceType: () => 'cli',
+      getConversationManager: () => ({
+        getCurrentRoom: () => 'test-room',
+      }),
+    };
+    
+    // Type assertion for mock brain protocol
+    handler = WebsiteCommandHandler.createFresh(mockBrainProtocol as unknown as {
+      getContextManager: () => { getWebsiteContext: () => typeof mockContext };
+      getInterfaceType: () => string;
+      getConversationManager: () => { getCurrentRoom: () => string };
+    });
   });
 
-  test('should register website commands', () => {
-    const commands = commandHandler.getCommands();
-    const commandNames = commands.map((cmd) => cmd.command);
-
-    // Check if website commands are registered
+  test('provides website commands', () => {
+    const commands = handler.getCommands();
+    const commandNames = commands.map(cmd => cmd.command);
+    
     expect(commandNames).toContain('website-config');
     expect(commandNames).toContain('landing-page');
     expect(commandNames).toContain('website-build');
@@ -107,160 +86,63 @@ describe('WebsiteCommandHandler', () => {
     expect(commandNames).toContain('website-status');
   });
 
-  // });
-
-  test('should handle website config command with no args', async () => {
-    // Then get the config
-    const result = await commandHandler.processCommand('website-config', '');
-
+  test('shows website configuration', async () => {
+    const result = await handler.execute('website-config', '');
+    
     expect(result.type).toBe('website-config');
-    const configResult = result as Extract<WebsiteCommandResult, { type: 'website-config' }>;
-    expect(configResult.config).toBeDefined();
-
-    const config = configResult.config;
-    expect(config?.title).toBeDefined();
-    expect(config?.description).toBeDefined();
-    expect(config?.author).toBeDefined();
-    expect(config?.baseUrl).toBeDefined();
-  });
-
-  // test for updating website config removed since updateConfig functionality has been removed
-
-  test('should handle landing-page generate command', async () => {
-    // Use a type assertion for the mock function
-    // This tells TypeScript to treat our mock as having the correct signature
-    mockWebsiteContext.generateLandingPage = mock(function mockLandingPageGenerator(options?: Record<string, unknown>) {
-      // Simulate progress updates
-      if (options && 'onProgress' in options && typeof options['onProgress'] === 'function') {
-        for (let i = 0; i < 11; i++) {
-          (options['onProgress'] as (step: string, index: number) => void)(`Step ${i+1}`, i);
-        }
-      }
-      
-      // Return success with mock data that matches the expected format
-      return Promise.resolve({
-        success: true,
-        message: 'Landing page generated successfully',
-        data: {
-          name: 'Mock Landing Page',
-          title: 'Mock Title',
-          tagline: 'Mock Tagline',
-          description: 'Mock description',
-          // The keys below are required to satisfy the LandingPageData type
-          services: {
-            title: 'Services',
-            items: [{ title: 'Service 1', description: 'Description 1' }],
-            introduction: 'Our services',
-          },
-          hero: {
-            headline: 'Headline',
-            subheading: 'Subheading',
-            ctaText: 'Click here',
-          },
-          problemStatement: {
-            title: 'Problems We Solve',
-            problems: ['Problem 1'],
-          },
-          sections: {},
-          sectionOrder: ['hero', 'services'],
-        },
-      });
-    }) as unknown as typeof mockWebsiteContext.generateLandingPage;
-    
-    // Then generate landing page
-    const result = await commandHandler.processCommand('landing-page', 'generate');
-
-    // Log the result for debugging if it fails
-    if (result.type !== 'landing-page') {
-      console.error('Landing page generate command failed:', result);
+    if (result.type === 'website-config') {
+      expect(result.config).toBeDefined();
+      expect(result.config?.title).toBe('Test Site');
     }
-
-    expect(result.type).toBe('landing-page');
-    const landingPageResult = result as Extract<WebsiteCommandResult, { type: 'landing-page' }>;
-    expect(landingPageResult.success).toBe(true);
-    expect(landingPageResult.data).toBeDefined();
-
-    const data = landingPageResult.data;
-    expect(data?.name).toBeDefined();
-    expect(data?.title).toBeDefined();
-    expect(data?.tagline).toBeDefined();
   });
 
-  test('should handle landing-page view command', async () => {
-    // Ensure the mock has landing page data
-    await mockWebsiteContext.saveLandingPageData(createTestLandingPageData());
+  test('generates landing page', async () => {
+    const result = await handler.execute('landing-page', 'generate');
     
-    // Then view landing page
-    const result = await commandHandler.processCommand('landing-page', 'view');
-
-    if (result.type === 'error') {
-      console.error('Error result:', result.message);
-    }
     expect(result.type).toBe('landing-page');
-    const landingPageResult = result as Extract<WebsiteCommandResult, { type: 'landing-page' }>;
-    expect(landingPageResult.data).toBeDefined();
-
-    const data = landingPageResult.data;
-    expect(data?.name).toBeDefined();
-    expect(data?.title).toBeDefined();
-    expect(data?.tagline).toBeDefined();
+    if (result.type === 'landing-page') {
+      expect(result.success).toBe(true);
+      expect(result.data?.name).toBe('Test Page');
+    }
   });
 
-  // PM2 and preview tests are no longer needed with Caddy approach
+  test('views landing page', async () => {
+    const result = await handler.execute('landing-page', 'view');
+    
+    expect(result.type).toBe('landing-page');
+    if (result.type === 'landing-page') {
+      expect(result.data).toBeDefined();
+      expect(result.data?.title).toBe('Test Title');
+    }
+  });
 
-  test('should handle website-build command (always to preview)', async () => {
-    // Setup mock for the new function
-    mockWebsiteContext.handleWebsiteBuild = mock(() => Promise.resolve({
-      success: true,
-      message: 'Website built successfully',
-      path: '/dist/preview',
-      url: 'https://preview.example.com',
-    }));
-
-    // Build website
-    const result = await commandHandler.processCommand('website-build', '');
-
+  test('builds website', async () => {
+    const result = await handler.execute('website-build', '');
+    
     expect(result.type).toBe('website-build');
-    const buildResult = result as Extract<WebsiteCommandResult, { type: 'website-build' }>;
-    expect(buildResult.success).toBe(true);
-    expect(buildResult.message).toContain('Run "website-status"');
-    expect(mockWebsiteContext.handleWebsiteBuild).toHaveBeenCalled();
+    if (result.type === 'website-build') {
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Website built successfully');
+    }
   });
 
-  test('should handle website-promote command', async () => {
-    // Setup mock for the new function
-    mockWebsiteContext.handleWebsitePromote = mock(() => Promise.resolve({
-      success: true,
-      message: 'Preview successfully promoted to production',
-      url: 'https://example.com',
-    }));
-
-    // Promote preview to production
-    const result = await commandHandler.processCommand('website-promote', '');
-
+  test('promotes website to production', async () => {
+    const result = await handler.execute('website-promote', '');
+    
     expect(result.type).toBe('website-promote');
-    const promoteResult = result as Extract<WebsiteCommandResult, { type: 'website-promote' }>;
-    expect(promoteResult.success).toBe(true);
-    expect(promoteResult.message).toContain('production');
-    expect(mockWebsiteContext.handleWebsitePromote).toHaveBeenCalled();
+    if (result.type === 'website-promote') {
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Promoted successfully');
+    }
   });
 
-  test('should handle website-status command', async () => {
-    // Setup mock for the refactored method
-    mockWebsiteContext.getWebsiteStatus = mock(() => Promise.resolve({
-      status: 'running',
-      message: 'preview website status: Built, Caddy: Running, Files: 42, Access: Accessible',
-      url: 'https://preview.example.com',
-      fileCount: 42,
-    }));
-
-    // Check status
-    const result = await commandHandler.processCommand('website-status', '');
-
+  test('checks website status', async () => {
+    const result = await handler.execute('website-status', '');
+    
     expect(result.type).toBe('website-status');
-    const statusResult = result as Extract<WebsiteCommandResult, { type: 'website-status' }>;
-    expect(statusResult.success).toBe(true);
-    expect(statusResult.message).toContain('preview');
-    expect(mockWebsiteContext.getWebsiteStatus).toHaveBeenCalled();
+    if (result.type === 'website-status') {
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Website is running');
+    }
   });
 });

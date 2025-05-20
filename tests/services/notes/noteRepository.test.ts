@@ -1,328 +1,246 @@
+/**
+ * Behavioral tests for NoteRepository
+ * 
+ * These tests focus on the observable behavior of the NoteRepository
+ * from a client's perspective, not on implementation details.
+ */
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { drizzle } from 'drizzle-orm/bun-sqlite';
 
 import type { Note } from '@/models/note';
 import { NoteRepository } from '@/services/notes/noteRepository';
-import { createMockNote } from '@test/__mocks__/models/note';
-import { createTestNote } from '@test/__mocks__/models/note';
+import { ValidationError } from '@/utils/errorUtils';
+import { MockLogger } from '@test/__mocks__/core/logger';
+import { db, resetMockDb } from '@test/__mocks__/db';
 
+describe('NoteRepository Behavior', () => {
+  let repository: NoteRepository;
 
-// Define initial data for testing
-const initialNotes: Note[] = [
-  createTestNote({
-    id: 'note-1', 
-    title: 'Test Note 1', 
-    content: 'This is the content of Test Note 1',
-    tags: ['tag1', 'tag2'],
-    embedding: [0.1, 0.2, 0.3],
-    createdAt: new Date('2023-01-01'),
-    updatedAt: new Date('2023-01-02'),
-    source: 'import',
-  }),
-  createTestNote({
-    id: 'note-2', 
-    title: 'Test Note 2', 
-    content: 'This is the content of Test Note 2',
-    tags: [], // Empty array instead of null
-    embedding: undefined, // Use undefined instead of null
-    createdAt: new Date('2023-02-01'),
-    updatedAt: new Date('2023-02-02'),
-    source: 'import',
-  }),
-];
-
-// Create a mock repository for testing
-class MockNoteRepository {
-  private notes: Note[] = [];
-  // Define NoteChunk type for the mock repository
-  private chunks: {
-    id?: string;
-    noteId: string;
-    content: string;
-    embedding: number[];
-    chunkIndex: number;
-  }[] = [];
-  
-  // Mock properties for conversation-to-notes feature (used in findBySource/findByConversationMetadata)
-  
-  constructor(initialNotes: Note[]) {
-    this.notes = JSON.parse(JSON.stringify(initialNotes));
-  }
-  
-  // Add static factory methods for consistency with real implementation
-  public static createFresh(initialNotes: Note[] = []): MockNoteRepository {
-    return new MockNoteRepository(initialNotes);
-  }
-  
-  // Properties included for logging
-  protected get entityName() {
-    return 'note';
-  }
-  
-  async getNoteById(id: string): Promise<Note | undefined> {
-    return Promise.resolve(this.notes.find(note => note.id === id));
-  }
-  
-  async getById(id: string): Promise<Note | undefined> {
-    return this.getNoteById(id);
-  }
-  
-  async getRecentNotes(limit = 5): Promise<Note[]> {
-    return Promise.resolve([...this.notes].slice(0, limit));
-  }
-  
-  // Implementation of BaseRepository method
-  async getAll(): Promise<Note[]> {
-    return Promise.resolve([...this.notes]);
-  }
-  
-  async insertNote(noteData: {
-    id?: string;
-    title: string;
-    content: string;
-    embedding?: number[];
-    createdAt?: Date;
-    updatedAt?: Date;
-    tags?: string[];
-    source?: 'import' | 'conversation' | 'user-created';
-    confidence?: number | null;
-    conversationMetadata?: { conversationId: string; timestamp: Date; userName?: string; promptSegment?: string; } | null;
-    verified?: boolean | null;
-  }): Promise<string> {
-    const id = noteData.id || 'new-note-id';
-    const tags = noteData.tags || [];
-    
-    // Use createMockNote as the base
-    const newNote: Note = {
-      ...createMockNote(id, noteData.title || 'Untitled', tags),
-      // Override with any specific properties provided
-      content: noteData.content || '',
-      embedding: noteData.embedding || null,
-      createdAt: noteData.createdAt || new Date(),
-      updatedAt: noteData.updatedAt || new Date(),
-      source: noteData.source || 'import',
-      confidence: noteData.confidence !== undefined ? noteData.confidence : null,
-      conversationMetadata: noteData.conversationMetadata || null,
-      verified: noteData.verified !== undefined ? noteData.verified : null,
-    };
-    
-    this.notes.push(newNote);
-    return Promise.resolve(id);
-  }
-  
-  // Implementation of BaseRepository method
-  async create(data: Omit<Note, 'id'>): Promise<string> {
-    return this.insertNote({
-      title: data.title,
-      content: data.content,
-      embedding: data.embedding || undefined,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-      tags: data.tags || undefined,
-    });
-  }
-  
-  // Implementation of IRepository method
-  async update(id: string, updates: Partial<Note>): Promise<boolean> {
-    const index = this.notes.findIndex(note => note.id === id);
-    if (index === -1) return Promise.resolve(false);
-    
-    this.notes[index] = {
-      ...this.notes[index],
-      ...updates,
-      updatedAt: new Date(),
-    };
-    
-    return Promise.resolve(true);
-  }
-  
-  // Implementation of BaseRepository method
-  async delete(id: string): Promise<boolean> {
-    const initialLength = this.notes.length;
-    this.notes = this.notes.filter(note => note.id !== id);
-    return Promise.resolve(initialLength > this.notes.length);
-  }
-
-  // Implementation of IRepository method
-  async deleteById(id: string): Promise<boolean> {
-    return this.delete(id);
-  }
-  
-  // Alias methods for backward compatibility
-  updateNote = this.update;
-  deleteNote = this.delete;
-  
-  async searchNotesByKeywords(query?: string, tags?: string[], limit: number = 10, offset: number = 0): Promise<Note[]> {
-    // If no query and no tags, return recent notes
-    if ((!query || query.trim() === '') && (!tags || tags.length === 0)) {
-      return this.getRecentNotes(limit);
-    }
-    
-    const keywords = query ? query.split(/\s+/).filter(k => k.length > 0) : [];
-    
-    const matchingNotes = this.notes.filter(note => {
-      // Match by keywords in title and content
-      const keywordMatch = keywords.length === 0 || keywords.some(keyword => {
-        const noteText = `${note.title} ${note.content}`.toLowerCase();
-        return noteText.includes(keyword.toLowerCase());
-      });
-      
-      // Match by tags
-      const tagMatch = !tags || tags.length === 0 || (
-        note.tags && note.tags.some(tag => tags.includes(tag))
-      );
-      
-      return keywordMatch && tagMatch;
-    });
-    
-    return Promise.resolve(matchingNotes.slice(offset, offset + limit));
-  }
-  
-  async insertNoteChunk(chunk: {
-    noteId: string;
-    content: string;
-    embedding: number[];
-    chunkIndex: number;
-  }): Promise<string> {
-    const id = `chunk-${Date.now()}`;
-    this.chunks.push({ ...chunk, id });
-    return Promise.resolve(id);
-  }
-  
-  async getNoteCount(): Promise<number> {
-    return Promise.resolve(this.notes.length);
-  }
-  
-  async getCount(): Promise<number> {
-    return this.getNoteCount();
-  }
-  
-  // Additional mocked methods
-  async updateNoteEmbedding(noteId: string, embedding: number[]): Promise<void> {
-    const index = this.notes.findIndex(note => note.id === noteId);
-    if (index !== -1) {
-      this.notes[index].embedding = embedding;
-    }
-    return Promise.resolve();
-  }
-  
-  async getNotesWithoutEmbeddings(): Promise<Note[]> {
-    return Promise.resolve(this.notes.filter(note => !note.embedding));
-  }
-  
-  async getNotesWithEmbeddings(): Promise<Note[]> {
-    return Promise.resolve(this.notes.filter(note => !!note.embedding));
-  }
-  
-  async getOtherNotesWithEmbeddings(excludeNoteId: string): Promise<Note[]> {
-    return Promise.resolve(
-      this.notes.filter(note => note.id !== excludeNoteId && !!note.embedding),
-    );
-  }
-  
-  // Conversation-to-notes feature methods
-  async findBySource(source: 'import' | 'conversation' | 'user-created', limit = 10, offset = 0): Promise<Note[]> {
-    const filtered = this.notes.filter(note => note.source === source);
-    return Promise.resolve(filtered.slice(offset, offset + limit));
-  }
-  
-  async findByConversationMetadata(field: string, value: string): Promise<Note[]> {
-    return Promise.resolve(
-      this.notes.filter(note => {
-        if (!note.conversationMetadata) return false;
-        const metadata = note.conversationMetadata as Record<string, unknown>;
-        return metadata[field] === value;
-      }),
-    );
-  }
-}
-
-describe('NoteRepository', () => {
-  let repository: MockNoteRepository;
-  
   beforeEach(() => {
-    // Clean up any singleton instances
+    // Reset mock DB to clean state
+    resetMockDb();
+
+    // Use our standardized MockLogger
+    MockLogger.resetInstance();
+    const mockLogger = MockLogger.createFresh({ silent: true });
+
+    // Create a fresh repository for each test
     NoteRepository.resetInstance();
-    
-    // Create a fresh repository with the initial notes
-    repository = MockNoteRepository.createFresh(initialNotes);
-  });
-  
-  test('basic note operations should work correctly', () => {
-    // Test initialization
-    expect(repository).toBeDefined();
-    
-    // Test note count
-    return repository.getNoteCount().then(count => {
-      expect(count).toBeGreaterThan(0);
+    repository = NoteRepository.createFresh({
+      // @ts-expect-error - Mock DB doesn't match exact drizzle schema structure but provides needed functionality 
+      db: db as unknown as ReturnType<typeof drizzle>, // Use standardized mock DB
+      logger: mockLogger,
     });
   });
-  
-  test('CRUD operations should work correctly', async () => {
-    // 1. Get note by ID - only check critical properties
-    const note = await repository.getNoteById('note-1');
-    expect(note?.id).toBe('note-1');
-    
-    // Non-existent note
-    const nonExistentNote = await repository.getNoteById('non-existent');
-    expect(nonExistentNote).toBeUndefined();
-    
-    // 2. Get all notes - just check it returns something without inspecting details
-    const allNotes = await repository.getAll();
-    expect(allNotes.length).toBeGreaterThan(0);
-    
-    // 3. Insert a new note - minimal validation
-    const newNote = createTestNote({
-      title: 'New Test Note',
-      content: 'This is a new test note.',
+
+  describe('Content Creation', () => {
+    test('should create notes with required fields and return them with an ID', async () => {
+      // WHEN a user creates a valid note
+      const result = await repository.create({
+        title: 'Test Note',
+        content: 'This is a test note',
+        embedding: [0.1, 0.2, 0.3],
+      });
+
+      // THEN the note should be created with an ID and the provided data
+      expect(result.id).toBeDefined();
+      expect(result.title).toBe('Test Note');
+      expect(result.content).toBe('This is a test note');
+      expect(result.embedding).toEqual([0.1, 0.2, 0.3]);
+      expect(result.tags).toBeInstanceOf(Array);
+      expect(result.createdAt).toBeDefined();
+      expect(result.updatedAt).toBeDefined();
+      expect(result.source).toBe('user-created');
     });
-    
-    const noteDataForInsert = {
-      id: newNote.id,
-      title: newNote.title,
-      content: newNote.content,
-      embedding: newNote.embedding === null ? undefined : newNote.embedding,
-      tags: newNote.tags === null ? undefined : newNote.tags,
-      createdAt: newNote.createdAt,
-      updatedAt: newNote.updatedAt,
-    };
-    await repository.insertNote(noteDataForInsert);
-    
-    // 4. Update a note - minimal validation
-    const updateSuccess = await repository.updateNote('note-1', {
-      title: 'Updated Test Note',
-      content: 'This content has been updated',
+
+    test('should reject notes without required fields', async () => {
+      // WHEN a user tries to create a note without a title
+      // THEN it should throw a validation error
+      try {
+        // Type assertion for test - we intentionally omit required fields
+        await repository.create({
+          content: 'Content without title',
+          embedding: [0.1, 0.2, 0.3],
+        } as Partial<Note>);
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      // WHEN a user tries to create a note without embeddings
+      // THEN it should throw a validation error
+      try {
+        // Type assertion for test - we intentionally omit required fields
+        await repository.create({
+          title: 'Title without embedding',
+          content: 'Content without embedding',
+        } as Partial<Note>);
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      // WHEN a user tries to create a note with an empty embedding array
+      // THEN it should throw a validation error
+      try {
+        // Type assertion for test - we intentionally use invalid data
+        await repository.create({
+          title: 'Title with empty embedding',
+          content: 'Content with empty embedding',
+          embedding: [],
+        } as Partial<Note>);
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
     });
-    expect(updateSuccess).toBe(true);
-    
-    // 5. Delete a note - just verify success, no need to check deletion details
-    expect(await repository.deleteNote('note-1')).toBe(true);
   });
-  
-  test('advanced operations should work correctly', async () => {
-    // Test all specialized operations with minimal assertions
-    
-    // 1. Verify that search returns results
-    const searchResults = await repository.searchNotesByKeywords('test content');
-    expect(searchResults.length).toBeGreaterThan(0);
-    
-    // 2. Verify chunk insertion works
-    const chunkId = await repository.insertNoteChunk({
-      noteId: 'note-2',
-      content: 'This is a chunk of content',
-      embedding: [0.4, 0.5, 0.6],
-      chunkIndex: 0,
+
+  describe('Content Retrieval', () => {
+    test('should retrieve a note by ID', async () => {
+      // GIVEN a note exists in the repository
+      const created = await repository.create({
+        title: 'Note to Retrieve',
+        content: 'This note should be retrievable by ID',
+        embedding: [0.1, 0.2, 0.3],
+      });
+
+      // Mock the getById behavior since our mock DB is simplified
+      repository.getById = async (id: string) => {
+        // Type assertion for mock DB
+        const note = (db as { getRecord(table: string, id: string): Note | undefined }).getRecord('notes', id);
+        if (!note) throw new ValidationError(`Note with ID ${id} not found`);
+        return note;
+      };
+
+      // WHEN a user requests the note by ID
+      const retrieved = await repository.getById(created.id);
+
+      // THEN the correct note should be returned
+      expect(retrieved.id).toBe(created.id);
+      expect(retrieved.title).toBe(created.title);
+      expect(retrieved.content).toBe(created.content);
     });
-    expect(typeof chunkId).toBe('string');
-    
-    // 3. Combine multiple read operations with minimal validation
-    await Promise.all([
-      repository.getNotesWithEmbeddings(),
-      repository.getNotesWithoutEmbeddings(),
-      repository.getOtherNotesWithEmbeddings('note-1'),
-      repository.findBySource('import', 5),
-    ]);
-    
-    // One assertion to verify we got here without errors
-    expect(true).toBe(true);
+
+    test('should throw when trying to retrieve a non-existent note', async () => {
+      // Mock the getById behavior
+      repository.getById = async (id: string) => {
+        // Type assertion for mock DB
+        const note = (db as { getRecord(table: string, id: string): Note | undefined }).getRecord('notes', id);
+        if (!note) throw new ValidationError(`Note with ID ${id} not found`);
+        return note;
+      };
+
+      // WHEN a user tries to retrieve a note that doesn't exist
+      // THEN it should throw a validation error
+      try {
+        await repository.getById('non-existent-id');
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+    });
+  });
+
+  describe('Note Chunks', () => {
+    test('should insert note chunks with embeddings', async () => {
+      // Create a parent note first
+      const noteId = 'test-note-with-chunks';
+      await repository.create({
+        id: noteId,
+        title: 'Note with Chunks',
+        content: 'This is a test note that will have chunks',
+        embedding: [0.1, 0.2, 0.3],
+      });
+
+      // Mock the insertNoteChunk method for tracking
+      // Type assertion to access private db property
+      const db = repository as unknown as {
+        db: {
+          insert: (table: unknown) => {
+            values: (data: Record<string, unknown>) => {
+              execute: () => Promise<unknown>;
+            };
+          };
+        };
+      };
+      const originalInsert = db.db.insert;
+      let insertCalled = false;
+      let insertedData: Record<string, unknown> | null = null;
+
+      try {
+        // Track insert calls
+        db.db.insert = (_: unknown) => {
+          return {
+            values: (data: Record<string, unknown>) => {
+              insertCalled = true;
+              insertedData = data;
+              return { execute: async () => ({}) };
+            },
+          };
+        };
+
+        // Test chunk insertion with required fields
+        const chunkId = await repository.insertNoteChunk({
+          noteId,
+          content: 'This is a chunk of the parent note',
+          embedding: [0.4, 0.5, 0.6],
+          chunkIndex: 0,
+        });
+
+        // Check that insertion was called with correct data
+        expect(insertCalled).toBe(true);
+        expect(insertedData).toBeDefined();
+        expect(insertedData.noteId).toBe(noteId);
+        expect(insertedData.content).toBe('This is a chunk of the parent note');
+        expect(Array.isArray(insertedData.embedding)).toBe(true);
+        expect(insertedData.chunkIndex).toBe(0);
+        expect(chunkId).toBeDefined();
+      } finally {
+        // Restore original implementation
+        db.db.insert = originalInsert;
+      }
+    });
+
+    test('should reject chunks with invalid data', async () => {
+      // Test missing noteId
+      try {
+        await repository.insertNoteChunk({
+          noteId: '',
+          content: 'Chunk with no parent note ID',
+          embedding: [0.1, 0.2],
+          chunkIndex: 0,
+        });
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      // Test missing content
+      try {
+        await repository.insertNoteChunk({
+          noteId: 'test-note',
+          content: '',
+          embedding: [0.1, 0.2],
+          chunkIndex: 0,
+        });
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+
+      // Test missing embedding
+      try {
+        await repository.insertNoteChunk({
+          noteId: 'test-note',
+          content: 'Chunk with no embedding',
+          embedding: [] as number[],
+          chunkIndex: 0,
+        });
+        expect(false).toBe(true); // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined();
+      }
+    });
   });
 });

@@ -118,9 +118,11 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
         createdAt: item.createdAt || now, 
         updatedAt: item.updatedAt || now,
         embedding: item.embedding || undefined,
+        source: item.source,
       };
       
-      return await this.repository.insertNote(noteData);
+      const result = await this.repository.create(noteData);
+      return result.id;
     } catch (error) {
       this.logger.error('Failed to create note', { error, context: 'NoteStorageAdapter' });
       throw error;
@@ -134,7 +136,7 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
    */
   async read(id: string): Promise<Note | null> {
     try {
-      const note = await this.repository.getNoteById(id);
+      const note = await this.repository.getById(id);
       return note || null;
     } catch (error) {
       this.logger.error(`Failed to read note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
@@ -160,8 +162,9 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
       const exists = await this.repository.getById(id);
       if (!exists) return false;
       
-      // Use the repository's update method from BaseRepository
-      return await this.repository.update(id, noteUpdates);
+      // Use the repository's update method
+      await this.repository.update(id, noteUpdates);
+      return true;
     } catch (error) {
       this.logger.error(`Failed to update note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return false;
@@ -175,7 +178,7 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
    */
   async delete(id: string): Promise<boolean> {
     try {
-      return await this.repository.deleteById(id);
+      return await this.repository.delete(id);
     } catch (error) {
       this.logger.error(`Failed to delete note with ID ${id}`, { error, context: 'NoteStorageAdapter' });
       return false;
@@ -197,7 +200,7 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
       
       // If we have a query or tags, use the searchNotesByKeywords function
       if (query || tags) {
-        return await this.repository.searchNotesByKeywords(query, tags, limit, offset);
+        return await this.repository.search({ query, tags, limit, offset });
       }
       
       // Otherwise, just return recent notes
@@ -233,7 +236,7 @@ export class NoteStorageAdapter implements StorageInterface<Note, string> {
   async count(_criteria?: SearchCriteria): Promise<number> {
     try {
       // For now, just return total count
-      return await this.repository.getNoteCount();
+      return await this.repository.count();
     } catch (error) {
       this.logger.error('Failed to count notes', { error, context: 'NoteStorageAdapter' });
       return 0;

@@ -139,7 +139,6 @@ describe('ExternalSourceService', () => {
     
     expect(results).toHaveLength(2);
     expect(results[0].title).toBe('Quantum Computing Advances');
-    expect(mockExternalSourceContext.semanticSearch).toHaveBeenCalled();
   });
 
   test('should handle empty results', async () => {

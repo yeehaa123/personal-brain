@@ -20,7 +20,7 @@ import { NoteRepository } from './noteRepository';
  * Service for managing note embeddings
  */
 export class NoteEmbeddingService implements IEmbeddingService {
-  private noteRepository: NoteRepository;
+  private repository: NoteRepository;
   private embeddingService: EmbeddingService;
   
   /**
@@ -112,7 +112,7 @@ export class NoteEmbeddingService implements IEmbeddingService {
    */
   constructor(embeddingService?: EmbeddingService, noteRepository?: NoteRepository) {
     this.embeddingService = embeddingService || EmbeddingService.getInstance();
-    this.noteRepository = noteRepository || NoteRepository.getInstance();
+    this.repository = noteRepository || NoteRepository.getInstance();
     this.logger.debug('NoteEmbeddingService instance created');
   }
 
@@ -261,15 +261,20 @@ export class NoteEmbeddingService implements IEmbeddingService {
           continue;
         }
         
-        // Insert the chunk
-        const chunkId = await this.noteRepository.insertNoteChunk({
-          noteId,
-          content: chunkContent,
-          embedding: embeddingResult,
-          chunkIndex: i,
-        });
-        
-        chunkIds.push(chunkId);
+        // Insert the chunk using the repository
+        try {
+          const chunkId = await this.repository.insertNoteChunk({
+            noteId,
+            content: chunkContent,
+            embedding: embeddingResult,
+            chunkIndex: i,
+          });
+          
+          this.logger.debug(`Inserted chunk ${i} for note ${noteId}`);
+          chunkIds.push(chunkId);
+        } catch (chunkError) {
+          this.logger.error(`Failed to insert chunk ${i} for note ${noteId}: ${chunkError}`);
+        }
       }
       
       this.logger.info(`Successfully stored ${chunkIds.length} chunks for note ${noteId}`);
@@ -277,73 +282,7 @@ export class NoteEmbeddingService implements IEmbeddingService {
     }, `Error creating note chunks for note ${noteId}`);
   }
 
-  /**
-   * Generate or update embeddings for all notes that don't have them
-   * @returns Statistics on the update operation
-   */
-  async generateEmbeddingsForAllNotes(): Promise<{ updated: number, failed: number }> {
-    let updated = 0;
-    let failed = 0;
-    
-    try {
-      // Get all notes without embeddings
-      const notesWithoutEmbeddings = await this.noteRepository.getNotesWithoutEmbeddings();
-      
-      this.logger.info(`Found ${notesWithoutEmbeddings.length} notes without embeddings`);
-      
-      if (notesWithoutEmbeddings.length === 0) {
-        return { updated, failed };
-      }
-      
-      // Process each note
-      for (const note of notesWithoutEmbeddings) {
-        try {
-          if (!isDefined(note) || !isNonEmptyString(note.id)) {
-            this.logger.warn('Found invalid note in database, skipping');
-            failed++;
-            continue;
-          }
-          
-          // Create the text to embed
-          const title = isNonEmptyString(note.title) ? note.title : '';
-          const content = isNonEmptyString(note.content) ? note.content : '';
-          
-          // Skip notes with no content
-          if (title.length === 0 && content.length === 0) {
-            this.logger.warn(`Note ${note.id} has no content to embed, skipping`);
-            failed++;
-            continue;
-          }
-          
-          // Generate embedding
-          const embedding = await this.generateNoteEmbedding(title, content);
-          
-          // Update the note with the embedding
-          await this.noteRepository.updateNoteEmbedding(note.id, embedding);
-          
-          // Also create chunks for longer notes
-          const chunkThreshold = textConfig.defaultChunkThreshold || 1000;
-          if (content.length > chunkThreshold) {
-            await this.createNoteChunks(note.id, content)
-              .catch(chunkError => {
-                // Log but don't fail the whole operation
-                this.logger.error(`Failed to create chunks for note ${note.id}: ${chunkError instanceof Error ? chunkError.message : String(chunkError)}`);
-              });
-          }
-          
-          updated++;
-          this.logger.info(`Updated embedding for note: ${note.id}`);
-        } catch (error) {
-          failed++;
-          this.logger.error(`Failed to update embedding for note ${note.id}: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    } catch (error) {
-      this.logger.error(`Error in embedding generation: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    
-    return { updated, failed };
-  }
+  // Method removed - Embeddings are now required for all notes in the schema
 
   /**
    * Search notes by embedding similarity
@@ -365,7 +304,7 @@ export class NoteEmbeddingService implements IEmbeddingService {
       const safeMaxResults = Math.max(1, Math.min(maxResults || 5, 50));
       
       // Get all notes with embeddings
-      const notesWithEmbeddings = await this.noteRepository.getNotesWithEmbeddings();
+      const notesWithEmbeddings = await this.repository.search({});
       
       this.logger.debug(`Found ${notesWithEmbeddings.length} notes with embeddings for similarity search`);
       
@@ -422,7 +361,7 @@ export class NoteEmbeddingService implements IEmbeddingService {
     
     try {
       // Find the source note
-      const sourceNote = await this.noteRepository.getNoteById(noteId);
+      const sourceNote = await this.repository.getById(noteId);
       
       if (!isDefined(sourceNote)) {
         this.logger.warn(`Source note not found: ${noteId}`);
@@ -434,8 +373,10 @@ export class NoteEmbeddingService implements IEmbeddingService {
         return [];
       }
       
-      // Get all other notes with embeddings
-      const otherNotes = await this.noteRepository.getOtherNotesWithEmbeddings(noteId);
+      // Get all other notes
+      const allNotes = await this.repository.search({});
+      // Filter out the source note
+      const otherNotes = allNotes.filter(note => note.id !== noteId);
       
       this.logger.debug(`Found ${otherNotes.length} other notes with embeddings`);
       

@@ -9,6 +9,7 @@
 import { nanoid } from 'nanoid';
 
 import type { ConversationStorage } from '@/contexts/conversations';
+import { ConversationNoteAdapter } from '@/contexts/notes/adapters/conversationNoteAdapter';
 import type { NewNote, Note } from '@/models/note';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { Logger } from '@/utils/logger';
@@ -18,9 +19,10 @@ import { NoteEmbeddingService } from './noteEmbeddingService';
 import { NoteRepository } from './noteRepository';
 
 export class ConversationToNoteService {
-  private noteRepository: NoteRepository;
+  private repository: NoteRepository;
   private embeddingService: NoteEmbeddingService;
   private conversationStorage: ConversationStorage;
+  private conversationNoteAdapter: ConversationNoteAdapter;
   
   /**
    * Singleton instance of ConversationToNoteService
@@ -41,27 +43,31 @@ export class ConversationToNoteService {
    * @param noteRepository Repository for accessing notes (defaults to singleton instance)
    * @param embeddingService Service for note embeddings (defaults to singleton instance)
    * @param conversationStorage Optional custom conversation storage
+   * @param conversationNoteAdapter Optional custom conversation note adapter
    * @returns The singleton instance
    */
   public static getInstance(
     noteRepository?: NoteRepository,
     embeddingService?: NoteEmbeddingService,
     conversationStorage?: ConversationStorage,
+    conversationNoteAdapter?: ConversationNoteAdapter,
   ): ConversationToNoteService {
     if (!ConversationToNoteService.instance) {
       // Get dependencies from their respective singletons if not provided
       const actualRepository = noteRepository ?? NoteRepository.getInstance();
       const actualEmbeddingService = embeddingService ?? NoteEmbeddingService.getInstance();
+      const actualConversationNoteAdapter = conversationNoteAdapter ?? ConversationNoteAdapter.getInstance();
       
       ConversationToNoteService.instance = new ConversationToNoteService(
         actualRepository,
         actualEmbeddingService,
         conversationStorage,
+        actualConversationNoteAdapter,
       );
       
       const logger = Logger.getInstance();
       logger.debug('ConversationToNoteService singleton instance created');
-    } else if (noteRepository || embeddingService || conversationStorage) {
+    } else if (noteRepository || embeddingService || conversationStorage || conversationNoteAdapter) {
       // Log a warning if trying to get instance with different dependencies
       const logger = Logger.getInstance();
       logger.warn('getInstance called with dependencies but instance already exists. Dependencies ignored.');
@@ -103,17 +109,24 @@ export class ConversationToNoteService {
    * @param noteRepository Repository for accessing notes
    * @param embeddingService Service for note embeddings
    * @param conversationStorage Optional custom conversation storage
+   * @param conversationNoteAdapter Optional custom conversation note adapter
    * @returns A new ConversationToNoteService instance
    */
   public static createFresh(
     noteRepository: NoteRepository,
     embeddingService: NoteEmbeddingService,
     conversationStorage?: ConversationStorage,
+    conversationNoteAdapter?: ConversationNoteAdapter,
   ): ConversationToNoteService {
     const logger = Logger.getInstance();
     logger.debug('Creating fresh ConversationToNoteService instance');
     
-    return new ConversationToNoteService(noteRepository, embeddingService, conversationStorage);
+    return new ConversationToNoteService(
+      noteRepository, 
+      embeddingService, 
+      conversationStorage,
+      conversationNoteAdapter,
+    );
   }
   
   /**
@@ -125,11 +138,13 @@ export class ConversationToNoteService {
    * @param noteRepository Repository for accessing notes
    * @param embeddingService Service for note embeddings
    * @param conversationStorage Optional custom conversation storage
+   * @param conversationNoteAdapter Optional custom conversation note adapter
    */
   constructor(
     noteRepository: NoteRepository, 
     embeddingService: NoteEmbeddingService,
     conversationStorage?: ConversationStorage,
+    conversationNoteAdapter?: ConversationNoteAdapter,
   ) {
     this.logger.debug('Creating ConversationToNoteService instance');
     
@@ -142,8 +157,13 @@ export class ConversationToNoteService {
       throw new Error('NoteEmbeddingService is required for ConversationToNoteService');
     }
     
-    this.noteRepository = noteRepository;
+    this.repository = noteRepository;
     this.embeddingService = embeddingService;
+    
+    // Set the conversation note adapter
+    this.conversationNoteAdapter = conversationNoteAdapter || ConversationNoteAdapter.getInstance({
+      repository: this.repository,
+    });
     
     // Use provided storage or get from ConversationContext
     // Note: In tests, always pass explicit storage for proper isolation
@@ -175,7 +195,7 @@ export class ConversationToNoteService {
     const tags = await this.generateTagsFromContent(content);
     
     // Create new note
-    const newNote: NewNote = {
+    const newNote: Partial<NewNote> = {
       id: `note-${nanoid(8)}`,
       title: noteTitle,
       content,
@@ -191,6 +211,8 @@ export class ConversationToNoteService {
       },
       confidence: 75, // Default confidence score
       verified: false,
+      // Generate empty embedding - will be filled by the embedding service later
+      embedding: [],
     };
     
     // Save note
@@ -201,9 +223,11 @@ export class ConversationToNoteService {
       tags: newNote.tags === null ? undefined : newNote.tags,
     };
     
-    // We need to use insertNote method from NoteRepository
-    const noteId = await this.noteRepository.insertNote(insertData);
-    const note = await this.noteRepository.getNoteById(noteId) as Note;
+    // Create note using repository
+    const note = await this.repository.create(insertData);
+    
+    // Log the created note ID
+    this.logger.debug(`Created note with ID: ${note.id}`);
     
     // Generate embeddings - pass full content for embedding generation
     if (note.id) {
@@ -403,17 +427,33 @@ export class ConversationToNoteService {
   /**
    * Find notes created from conversations
    */
-  async findConversationNotes(_limit = 10, _offset = 0): Promise<Note[]> {
-    // Now we can implement this with the findBySource method
-    return this.noteRepository.findBySource('conversation', _limit, _offset);
+  async findConversationNotes(limit = 10, offset = 0): Promise<Note[]> {
+    // Use the adapter's dedicated method for conversation notes
+    return this.conversationNoteAdapter.findConversationNotes(limit, offset);
   }
   
   /**
    * Find notes linked to a specific conversation
    */
-  async findNotesByConversationId(_conversationId: string): Promise<Note[]> {
-    // This would call a method on NoteRepository that we'll implement
-    return this.noteRepository.findByConversationMetadata('conversationId', _conversationId);
+  async findNotesByConversationId(conversationId: string): Promise<Note[]> {
+    // Use the adapter's dedicated method for finding by conversation ID
+    return this.conversationNoteAdapter.findByConversationId(conversationId);
+  }
+  
+  /**
+   * Find notes by conversation metadata field
+   */
+  async findByMetadataField(field: string, value: string): Promise<Note[]> {
+    // Use the adapter's dedicated method for finding by metadata field
+    return this.conversationNoteAdapter.findByMetadataField(field, value);
+  }
+  
+  /**
+   * Find conversation notes with a specific tag
+   */
+  async findConversationNotesByTag(tag: string): Promise<Note[]> {
+    // Use the adapter's dedicated method for finding by tag
+    return this.conversationNoteAdapter.findConversationNotesByTag(tag);
   }
 
   /**

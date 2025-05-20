@@ -44,7 +44,7 @@ export class MockCommandHandler {
       content,
       createdAt: now,
       updatedAt: now,
-      embedding: null,
+      embedding: [0.1, 0.2, 0.3, 0.4],
       tags,
       source: 'user-created',
       conversationMetadata: null,

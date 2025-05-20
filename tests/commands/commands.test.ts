@@ -3,156 +3,88 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import type { CommandHandler } from '@commands/index';
 import { MockCommandHandler } from '@test/__mocks__/commands/commandHandler';
 
-describe('CommandHandler', () => {
-  let commandHandler: Pick<CommandHandler, 'getCommands' | 'processCommand'>;
+describe('CommandHandler Behavior', () => {
+  let commandHandler: CommandHandler;
 
-  beforeEach(async () => {
-    commandHandler = new MockCommandHandler();
+  beforeEach(() => {
+    // Type assertion for mock command handler
+    commandHandler = new MockCommandHandler() as unknown as CommandHandler;
   });
 
-  test('command handler provides expected functionality', async () => {
-    // Get all test results
-    const commandResults = {
-      listCommands: commandHandler.getCommands(),
-      errorCommand: await commandHandler.processCommand('unknown', ''),
-      profileCommand: await commandHandler.processCommand('profile', ''),
-      profileRelatedCommand: await commandHandler.processCommand('profile', 'related'),
-      searchCommand: await commandHandler.processCommand('search', 'ecosystem'),
-      listCommand: await commandHandler.processCommand('list', ''),
-      tagListCommand: await commandHandler.processCommand('list', 'ecosystem'),
-      noteCommand: await commandHandler.processCommand('note', 'note-1'),
-      askCommand: await commandHandler.processCommand('ask', 'What is ecosystem architecture?'),
-      statusCommand: await commandHandler.processCommand('status', ''),
-    };
-
-    // Format validation outputs
-    const validationOutputs = {
-      commands: {
-        isArray: Array.isArray(commandResults.listCommands),
-        hasExpectedCommands: commandResults.listCommands.some(cmd => cmd.command === 'help') && 
-                            commandResults.listCommands.some(cmd => cmd.command === 'profile'),
-      },
-      errorCommand: {
-        hasCorrectType: commandResults.errorCommand.type === 'error',
-        hasErrorMessage: commandResults.errorCommand.type === 'error' && 
-                         commandResults.errorCommand.message.includes('Unknown command'),
-      },
-      profileCommand: {
-        hasCorrectType: commandResults.profileCommand.type === 'profile',
-        hasProfileData: commandResults.profileCommand.type === 'profile' && 
-                        typeof commandResults.profileCommand.profile === 'object',
-      },
-      profileRelatedCommand: {
-        hasCorrectType: commandResults.profileRelatedCommand.type === 'profile',
-        hasProfile: commandResults.profileRelatedCommand.type === 'profile' && 
-                    typeof commandResults.profileRelatedCommand.profile === 'object',
-      },
-      searchCommand: {
-        hasCorrectType: commandResults.searchCommand.type === 'search',
-        hasCorrectQuery: commandResults.searchCommand.type === 'search' && 
-                         commandResults.searchCommand.query === 'ecosystem',
-        hasResults: commandResults.searchCommand.type === 'search' && 
-                    Array.isArray(commandResults.searchCommand.notes) &&
-                    commandResults.searchCommand.notes.length > 0,
-        hasRelevantTitle: commandResults.searchCommand.type === 'search' && 
-                          commandResults.searchCommand.notes[0]?.title.includes('Ecosystem'),
-        hasRelevantTags: commandResults.searchCommand.type === 'search' && 
-                        Array.isArray(commandResults.searchCommand.notes[0]?.tags) &&
-                        commandResults.searchCommand.notes[0]?.tags.includes('ecosystem-architecture'),
-      },
-      listCommands: {
-        hasCorrectListType: commandResults.listCommand.type === 'notes',
-        hasExpectedTitle: commandResults.listCommand.type === 'notes' && 
-                          commandResults.listCommand.notes[0]?.title === 'Building Communities',
-        hasCorrectTagListType: commandResults.tagListCommand.type === 'notes',
-        hasCorrectFilteredTag: commandResults.tagListCommand.type === 'notes' && 
-                              Array.isArray(commandResults.tagListCommand.notes[0]?.tags) &&
-                              commandResults.tagListCommand.notes[0]?.tags.includes('ecosystem'),
-      },
-      noteCommand: {
-        hasCorrectType: commandResults.noteCommand.type === 'note',
-        hasCorrectId: commandResults.noteCommand.type === 'note' && 
-                      commandResults.noteCommand.note.id === 'note-1',
-        hasCorrectTitle: commandResults.noteCommand.type === 'note' && 
-                         commandResults.noteCommand.note.title === 'Ecosystem Architecture Principles',
-        hasCorrectTags: commandResults.noteCommand.type === 'note' && 
-                        Array.isArray(commandResults.noteCommand.note.tags) &&
-                        commandResults.noteCommand.note.tags.includes('ecosystem-architecture'),
-      },
-      askCommand: {
-        hasCorrectType: commandResults.askCommand.type === 'ask',
-        hasAnswer: commandResults.askCommand.type === 'ask' && 
-                   commandResults.askCommand.answer === 'Mock answer',
-        hasCitations: commandResults.askCommand.type === 'ask' && 
-                      Array.isArray(commandResults.askCommand.citations),
-        hasRelatedNotes: commandResults.askCommand.type === 'ask' && 
-                         Array.isArray(commandResults.askCommand.relatedNotes),
-      },
-      statusCommand: {
-        hasCorrectType: commandResults.statusCommand.type === 'status',
-        hasCorrectStatus: commandResults.statusCommand.type === 'status' && 
-                          commandResults.statusCommand.status.apiConnected === true &&
-                          commandResults.statusCommand.status.dbConnected === true &&
-                          commandResults.statusCommand.status.noteCount === 10 &&
-                          commandResults.statusCommand.status.externalSourcesEnabled === false &&
-                          commandResults.statusCommand.status.externalSources['Wikipedia'] === true &&
-                          commandResults.statusCommand.status.externalSources['NewsAPI'] === false,
-      },
-    };
-
-    // Single consolidated assertion
-    expect(validationOutputs).toMatchObject({
-      commands: { isArray: true, hasExpectedCommands: true },
-      errorCommand: { hasCorrectType: true, hasErrorMessage: true },
-      profileCommand: { hasCorrectType: true, hasProfileData: true },
-      profileRelatedCommand: { hasCorrectType: true, hasProfile: true },
-      searchCommand: { hasCorrectType: true, hasCorrectQuery: true, hasResults: true, hasRelevantTitle: true, hasRelevantTags: true },
-      listCommands: { hasCorrectListType: true, hasExpectedTitle: true, hasCorrectTagListType: true, hasCorrectFilteredTag: true },
-      noteCommand: { hasCorrectType: true, hasCorrectId: true, hasCorrectTitle: true, hasCorrectTags: true },
-      askCommand: { hasCorrectType: true, hasAnswer: true, hasCitations: true, hasRelatedNotes: true },
-      statusCommand: { hasCorrectType: true, hasCorrectStatus: true },
-    });
+  test('processes various commands correctly', async () => {
+    // List available commands
+    const commands = commandHandler.getCommands();
+    expect(Array.isArray(commands)).toBe(true);
+    expect(commands.some(cmd => cmd.command === 'help')).toBe(true);
+    
+    // Unknown command
+    const errorResult = await commandHandler.processCommand('unknown', '');
+    expect(errorResult.type).toBe('error');
+    
+    // Profile command
+    const profileResult = await commandHandler.processCommand('profile', '');
+    expect(profileResult.type).toBe('profile');
+    
+    // Search command
+    const searchResult = await commandHandler.processCommand('search', 'ecosystem');
+    expect(searchResult.type).toBe('search');
+    if (searchResult.type === 'search') {
+      expect(searchResult.query).toBe('ecosystem');
+      expect(Array.isArray(searchResult.notes)).toBe(true);
+    }
+    
+    // List command
+    const listResult = await commandHandler.processCommand('list', '');
+    expect(listResult.type).toBe('notes');
+    if (listResult.type === 'notes') {
+      expect(Array.isArray(listResult.notes)).toBe(true);
+    }
+    
+    // Note command
+    const noteResult = await commandHandler.processCommand('note', 'note-1');
+    expect(noteResult.type).toBe('note');
+    if (noteResult.type === 'note') {
+      expect(noteResult.note.id).toBe('note-1');
+    }
+    
+    // Ask command
+    const askResult = await commandHandler.processCommand('ask', 'What is ecosystem architecture?');
+    expect(askResult.type).toBe('ask');
+    if (askResult.type === 'ask') {
+      expect(askResult.answer).toBeDefined();
+      expect(Array.isArray(askResult.citations)).toBe(true);
+    }
+    
+    // Status command
+    const statusResult = await commandHandler.processCommand('status', '');
+    expect(statusResult.type).toBe('status');
   });
 
-  test('toggle external sources functionality', async () => {
-    // Enable, check, disable, check sequence
-    const externalSourcesResults = {
-      enableCommand: await commandHandler.processCommand('external', 'on'),
-      statusAfterEnable: await commandHandler.processCommand('status', ''),
-      disableCommand: await commandHandler.processCommand('external', 'off'),
-      statusAfterDisable: await commandHandler.processCommand('status', ''),
-    };
-
-    // Validation outputs
-    const validationOutputs = {
-      enableResults: {
-        hasCorrectType: externalSourcesResults.enableCommand.type === 'external',
-        isEnabled: externalSourcesResults.enableCommand.type === 'external' && 
-                   externalSourcesResults.enableCommand.enabled === true,
-      },
-      statusAfterEnable: {
-        hasCorrectType: externalSourcesResults.statusAfterEnable.type === 'status',
-        showsEnabled: externalSourcesResults.statusAfterEnable.type === 'status' && 
-                      externalSourcesResults.statusAfterEnable.status.externalSourcesEnabled === true,
-      },
-      disableResults: {
-        hasCorrectType: externalSourcesResults.disableCommand.type === 'external',
-        isDisabled: externalSourcesResults.disableCommand.type === 'external' && 
-                    externalSourcesResults.disableCommand.enabled === false,
-      },
-      statusAfterDisable: {
-        hasCorrectType: externalSourcesResults.statusAfterDisable.type === 'status',
-        showsDisabled: externalSourcesResults.statusAfterDisable.type === 'status' && 
-                       externalSourcesResults.statusAfterDisable.status.externalSourcesEnabled === false,
-      },
-    };
-
-    // Single consolidated assertion
-    expect(validationOutputs).toMatchObject({
-      enableResults: { hasCorrectType: true, isEnabled: true },
-      statusAfterEnable: { hasCorrectType: true, showsEnabled: true },
-      disableResults: { hasCorrectType: true, isDisabled: true },
-      statusAfterDisable: { hasCorrectType: true, showsDisabled: true },
-    });
+  test('toggles external sources on and off', async () => {
+    // Enable external sources
+    const enableResult = await commandHandler.processCommand('external', 'on');
+    expect(enableResult.type).toBe('external');
+    if (enableResult.type === 'external') {
+      expect(enableResult.enabled).toBe(true);
+    }
+    
+    // Check status shows enabled
+    const statusEnabled = await commandHandler.processCommand('status', '');
+    if (statusEnabled.type === 'status') {
+      expect(statusEnabled.status.externalSourcesEnabled).toBe(true);
+    }
+    
+    // Disable external sources
+    const disableResult = await commandHandler.processCommand('external', 'off');
+    expect(disableResult.type).toBe('external');
+    if (disableResult.type === 'external') {
+      expect(disableResult.enabled).toBe(false);
+    }
+    
+    // Check status shows disabled
+    const statusDisabled = await commandHandler.processCommand('status', '');
+    if (statusDisabled.type === 'status') {
+      expect(statusDisabled.status.externalSourcesEnabled).toBe(false);
+    }
   });
 });

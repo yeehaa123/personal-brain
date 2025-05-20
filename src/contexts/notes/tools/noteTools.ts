@@ -24,7 +24,7 @@ const CreateNoteSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
-const GenerateEmbeddingsSchema = z.object({});
+// GenerateEmbeddingsSchema removed - Embeddings are now required
 
 const SearchWithEmbeddingSchema = z.object({
   text: z.string().min(1, 'Text must not be empty'),
@@ -62,7 +62,6 @@ const DeleteNoteSchema = z.object({
  */
 export interface NoteToolContext {
   createNote(data: Partial<Note>): Promise<string>;
-  generateEmbeddingsForAllNotes(): Promise<{ updated: number; failed: number }>;
   searchWithEmbedding(text: string, limit: number, tags?: string[]): Promise<Array<Note & { similarity?: number }>>;
   searchNotes(options: {
     query?: string;
@@ -200,8 +199,7 @@ export class NoteToolService {
       // create_note
       this.createNoteTool(context),
       
-      // generate_embeddings
-      this.generateEmbeddingsTool(context),
+      // generate_embeddings tool removed - Embeddings are now required
       
       // search_with_embedding
       this.searchWithEmbeddingTool(context),
@@ -238,7 +236,7 @@ export class NoteToolService {
           const noteId = await context.createNote({
             title: title || '',
             content,
-            tags: tags || null,
+            tags: tags || [],
           });
           
           return { noteId };
@@ -253,35 +251,7 @@ export class NoteToolService {
     };
   }
 
-  /**
-   * Create the generate_embeddings tool
-   */
-  private generateEmbeddingsTool(context: NoteToolContext): ResourceDefinition {
-    return {
-      protocol: 'notes',
-      path: 'generate_embeddings',
-      name: 'generate_embeddings',
-      description: 'Generate or update embeddings for all notes in the database',
-      inputSchema: GenerateEmbeddingsSchema,
-      handler: async (params: Record<string, unknown>) => {
-        try {
-          GenerateEmbeddingsSchema.parse(params); // No parameters expected, just validate
-          const result = await context.generateEmbeddingsForAllNotes();
-          return {
-            success: true,
-            updated: result.updated,
-            failed: result.failed,
-          };
-        } catch (error) {
-          this.logger.error('Error generating embeddings via MCP tool', { error, context: 'NoteContext' });
-          return {
-            isError: true,
-            error: `Failed to generate embeddings: ${error instanceof Error ? error.message : String(error)}`,
-          };
-        }
-      },
-    };
-  }
+  // Generate embeddings tool removed - Embeddings are now required for all notes
 
   /**
    * Create the search_with_embedding tool

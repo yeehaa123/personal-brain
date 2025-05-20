@@ -8,12 +8,14 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 
 import { conversationConfig } from '@/config';
 import type { ConversationStorage } from '@/contexts/conversations/storage/conversationStorage';
+import type { ConversationNoteAdapter } from '@/contexts/notes/adapters/conversationNoteAdapter';
 import type { NewNote, Note } from '@/models/note';
 import type { Conversation, ConversationTurn } from '@/protocol/schemas/conversationSchemas';
 import { ConversationToNoteService } from '@/services/notes/conversationToNoteService';
 import type { NoteEmbeddingService } from '@/services/notes/noteEmbeddingService';
 import type { NoteRepository } from '@/services/notes/noteRepository';
 import { TagExtractor } from '@/utils/tagExtractor';
+import { MockConversationNoteAdapter } from '@test/__mocks__/contexts/notes/adapters/conversationNoteAdapter';
 import { createTestNote } from '@test/__mocks__/models/note';
 import { MockNoteRepository } from '@test/__mocks__/repositories/noteRepository';
 import { MockConversationStorage } from '@test/__mocks__/storage/conversationStorage';
@@ -49,6 +51,9 @@ describe('ConversationToNoteService', () => {
 
   // Use our standardized mock repository implementation
   let mockNoteRepository = MockNoteRepository.createFresh();
+  
+  // Use our standardized mock adapter implementation
+  let mockConversationNoteAdapter = MockConversationNoteAdapter.createFresh();
 
   // Create service instance
   let service: ConversationToNoteService;
@@ -94,8 +99,9 @@ describe('ConversationToNoteService', () => {
     // Clear tracking variables
     insertNoteCalls = [];
 
-    // Reset our standardized repository mock
+    // Reset our standardized mocks
     MockNoteRepository.resetInstance();
+    MockConversationNoteAdapter.resetInstance();
     TagExtractor.resetInstance();
     MockTagExtractor.resetInstance();
     
@@ -134,11 +140,11 @@ describe('ConversationToNoteService', () => {
     // Create a fresh mock repository for testing
     mockNoteRepository = MockNoteRepository.createFresh();
     
-    // Setup getNoteById to return the sample note
-    mockNoteRepository.getNoteById = async () => Promise.resolve(sampleNote);
+    // Setup getById to return the sample note
+    mockNoteRepository.getById = async () => Promise.resolve(sampleNote);
 
-    // Re-implement the custom insertNote method for tracking
-    mockNoteRepository.insertNote = async (data: Partial<NewNote>) => {
+    // Re-implement the custom create method for tracking
+    mockNoteRepository.create = async (data: Partial<NewNote>) => {
       // Store the entire data object for assertions
       const noteData = {
         ...data,
@@ -152,15 +158,30 @@ describe('ConversationToNoteService', () => {
       } as Note;
 
       insertNoteCalls.push(noteData);
-      return 'note-12345678';
+      return noteData;
+    };
+    
+    // Create a fresh mock conversation note adapter
+    mockConversationNoteAdapter = MockConversationNoteAdapter.createFresh();
+    
+    // Set up the adapter to use our test methods
+    mockConversationNoteAdapter.findConversationNotes = async () => {
+      return [sampleNote];
+    };
+    
+    mockConversationNoteAdapter.findByConversationId = async (conversationId: string) => {
+      if (conversationId === 'conv-123') {
+        return [sampleNote];
+      }
+      return [];
     };
 
-    // Create service instance with isolated storage
-    // We're using type assertion here as the test only needs a subset of the methods
+    // Create service instance with isolated storage and adapter
     service = new ConversationToNoteService(
       mockNoteRepository as unknown as NoteRepository,
       mockEmbeddingService as unknown as NoteEmbeddingService,
-      isolatedStorage as unknown as ConversationStorage, // Using type assertion for test simplicity
+      isolatedStorage as unknown as ConversationStorage,
+      mockConversationNoteAdapter as unknown as ConversationNoteAdapter,
     );
   });
   
@@ -758,6 +779,34 @@ This is the final section with some concluding thoughts.`,
         highlightResult: true,
         description: expect.any(String),
       });
+    });
+    
+    test('uses the conversation note adapter for finding conversation notes', async () => {
+      // Create spy for the adapter method
+      const findSpy = mock(() => Promise.resolve([sampleNote]));
+      mockConversationNoteAdapter.findConversationNotes = findSpy;
+      
+      // Call the service method
+      const result = await service.findConversationNotes();
+      
+      // Verify that the adapter method was called
+      expect(findSpy).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(sampleNote.id);
+    });
+    
+    test('uses the conversation note adapter for finding notes by conversation ID', async () => {
+      // Create spy for the adapter method
+      const findByIdSpy = mock((id: string) => Promise.resolve(id === 'conv-123' ? [sampleNote] : []));
+      mockConversationNoteAdapter.findByConversationId = findByIdSpy;
+      
+      // Call the service method
+      const result = await service.findNotesByConversationId('conv-123');
+      
+      // Verify that the adapter method was called
+      expect(findByIdSpy).toHaveBeenCalledWith('conv-123');
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(sampleNote.id);
     });
   });
 
