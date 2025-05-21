@@ -62,6 +62,7 @@ export interface WebsiteToolContext {
     success: boolean;
     message: string;
     output?: string;
+    path?: string;
   }>;
   promoteWebsite(): Promise<{
     success: boolean;
@@ -80,19 +81,6 @@ export interface WebsiteToolContext {
     success: boolean;
     message: string;
     data?: unknown;
-  }>;
-  // TODO: Remove these optional methods after migration is complete
-  // These exist to support the legacy WebsiteContext which uses different method names
-  handleWebsiteBuild?(): Promise<{
-    success: boolean;
-    message: string;
-    path?: string;
-    url?: string;
-  }>;
-  handleWebsitePromote?(): Promise<{
-    success: boolean;
-    message: string;
-    url?: string;
   }>;
 }
 
@@ -336,8 +324,7 @@ export class WebsiteToolService {
         }
 
         // Build and deploy website
-        // TODO: Remove conditional after WebsiteContext migration is complete
-        const result = await (context.handleWebsiteBuild ? context.handleWebsiteBuild() : context.buildWebsite());
+        const result = await context.buildWebsite();
 
         return result;
       },
@@ -354,8 +341,7 @@ export class WebsiteToolService {
       name: 'promote_website',
       description: 'Promotes the preview website to production',
       handler: async (_params: Record<string, unknown>) => {
-        // TODO: Remove conditional after WebsiteContext migration is complete
-        const result = await (context.handleWebsitePromote ? context.handleWebsitePromote() : context.promoteWebsite());
+        const result = await context.promoteWebsite();
 
         return {
           success: result.success,
@@ -378,7 +364,6 @@ export class WebsiteToolService {
       handler: async (params: Record<string, unknown>) => {
         const environment = params['environment'] ? String(params['environment']) : 'preview';
         
-        // TODO: Remove conditional after WebsiteContext migration is complete
         const result = await context.getWebsiteStatus(environment);
 
         return result;

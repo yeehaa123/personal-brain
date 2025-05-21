@@ -21,23 +21,12 @@ import type { MCPConversationContext } from '../MCPConversationContext';
 import type { ConversationHistoryParams } from '../schemas/messageSchemas';
 
 /**
- * Interface for message with common properties
- */
-interface BaseContextMessage {
-  category: string;
-  sourceContext?: string;
-  id?: string;
-}
-
-/**
  * Handler for conversation context messages
  * 
  * Implements the Component Interface Standardization pattern with:
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates an instance with explicit dependencies
- * - createHandler(): Creates a message handler function (original functionality)
  */
 export class ConversationMessageHandler {
   /**
@@ -114,67 +103,6 @@ export class ConversationMessageHandler {
     logger.debug('Creating fresh ConversationMessageHandler instance');
     
     return new ConversationMessageHandler(conversationContext);
-  }
-  
-  /**
-   * Create a new handler instance with explicit dependencies
-   * 
-   * TODO: This method follows the old Component Interface Standardization pattern
-   * and should be removed or simplified for MCP contexts.
-   * 
-   * @param configOrDependencies Configuration or explicit dependencies
-   * @returns A new ConversationMessageHandler instance with the provided dependencies
-   */
-  public static createWithDependencies(
-    configOrDependencies: Record<string, unknown> = {},
-  ): ConversationMessageHandler {
-    const logger = Logger.getInstance();
-    logger.debug('Creating ConversationMessageHandler with dependencies');
-    
-    // Handle the case where dependencies are explicitly provided
-    if ('conversationContext' in configOrDependencies) {
-      const conversationContext = configOrDependencies['conversationContext'] as MCPConversationContext;
-      return new ConversationMessageHandler(conversationContext);
-    }
-    
-    // Cannot create without a conversation context
-    throw new Error('ConversationMessageHandler requires a conversationContext dependency');
-  }
-  
-  /**
-   * Create a message handler function for the conversation context
-   * 
-   * TODO: This method should be updated or removed for MCP contexts.
-   * 
-   * @param conversationContext The conversation context to handle messages for
-   * @returns Message handler function
-   */
-  static createHandler(conversationContext: MCPConversationContext) {
-    return async (message: BaseContextMessage) => {
-      const handler = new ConversationMessageHandler(conversationContext);
-      
-      if (message.category === 'request' && 'dataType' in message) {
-        return handler.handleRequest(message as DataRequestMessage);
-      } else if (message.category === 'notification' && 'notificationType' in message) {
-        await handler.handleNotification(message as NotificationMessage);
-        // Return acknowledgment for notifications
-        return MessageFactory.createAcknowledgment(
-          ContextId.CONVERSATION,
-          message.sourceContext || '*',
-          message.id || 'unknown',
-          'processed',
-        );
-      }
-      
-      // Return error for unrecognized message format
-      return MessageFactory.createErrorResponse(
-        ContextId.CONVERSATION,
-        message.sourceContext || '*',
-        message.id || 'unknown',
-        'INVALID_MESSAGE_FORMAT',
-        'Message format not recognized',
-      );
-    };
   }
   
   /**

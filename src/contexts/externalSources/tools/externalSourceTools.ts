@@ -6,44 +6,26 @@
  * - getInstance(): Returns the singleton instance
  * - resetInstance(): Resets the singleton instance (mainly for testing)
  * - createFresh(): Creates a new instance without affecting the singleton
- * - createWithDependencies(): Creates a new instance with explicit dependencies
  */
 
 import { z } from 'zod';
 
 import type { ResourceDefinition } from '@/contexts/contextInterface';
-// TODO: Remove this import after ExternalSourceContext is fully migrated to MCPExternalSourceContext
-// import type { ExternalSourceContext } from '@/contexts/externalSources/externalSourceContext';
 import type { ExternalSourceResult } from '@/contexts/externalSources/sources/externalSourceInterface';
 import { Logger } from '@/utils/logger';
 
 /**
- * TODO: Remove this interface after ExternalSourceContext is fully migrated to MCPExternalSourceContext
- * 
- * Temporary interface to support both the legacy ExternalSourceContext and the new MCPExternalSourceContext
- * during the migration period. This defines the minimum functionality needed from any
- * external source context for the tool service.
- * 
- * After migration is complete:
- * 1. Remove this interface
- * 2. Update all methods to use MCPExternalSourceContext directly
- * 3. Remove the ExternalSourceContext import
+ * Interface for external source contexts that provide tool functionality
+ * This defines the minimum functionality needed from any external source context
+ * for the tool service to work properly.
  */
-
-// We use `any` here temporarily during migration since both contexts return slightly different types
-// This will be replaced with proper types after migration is complete
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface ExternalSourceToolContext {
-  search(query: string, options?: any): Promise<ExternalSourceResult[]>;
+  search(query: string, options?: { limit?: number; addEmbeddings?: boolean }): Promise<ExternalSourceResult[]>;
   semanticSearch(query: string, limit?: number): Promise<ExternalSourceResult[]>;
-  getEnabledSources(): any[];
-  updateEnabledSources(sourceNames: string[]): Promise<void> | any; // TODO: Remove 'any' after migration
+  getEnabledSources(): { name: string; enabled: boolean }[];
+  updateEnabledSources(sourceNames: string[]): Promise<void>;
   checkSourcesAvailability(): Promise<Record<string, boolean>>;
-  // TODO: Remove getStorage after ExternalSourceContext is fully migrated to MCPExternalSourceContext
-  // This is a temporary compatibility layer during migration
-  getStorage?(): any;
 }
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 /**
  * Configuration options for ExternalSourceToolService
@@ -113,31 +95,6 @@ export class ExternalSourceToolService {
     return new ExternalSourceToolService(config);
   }
   
-  /**
-   * Create a new instance with explicit dependencies
-   * 
-   * @param config Configuration options
-   * @param dependencies External dependencies
-   * @returns A new ExternalSourceToolService instance
-   */
-  public static createWithDependencies(
-    config: Record<string, unknown> = {},
-    dependencies: Record<string, unknown> = {},
-  ): ExternalSourceToolService {
-    // Convert config to typed config
-    const toolServiceConfig: ExternalSourceToolServiceConfig = {
-      includeDebugInfo: config['includeDebugInfo'] as boolean,
-      defaultSearchLimit: config['defaultSearchLimit'] as number,
-    };
-    
-    // Create with typed dependencies
-    return new ExternalSourceToolService(
-      toolServiceConfig,
-      {
-        logger: dependencies['logger'] as Logger,
-      },
-    );
-  }
   
   /**
    * Private constructor to enforce factory methods
@@ -268,18 +225,9 @@ export class ExternalSourceToolService {
           const sourceName = params['sourceName'] as string;
           const enabled = params['enabled'] as boolean;
           
-          // TODO: Remove this compatibility code after migration is complete
-          // For MCPExternalSourceContext, use getEnabledSources() directly  
-          // For ExternalSourceContext, use getStorage().getEnabledSources()
-          let sourceNames: string[] = [];
-          if (context.getStorage) {
-            const adapter = context.getStorage();
-            const sources = adapter.getEnabledSources() as { name: string }[];
-            sourceNames = sources.map((s: { name: string }) => s.name);
-          } else {
-            const sources = context.getEnabledSources();
-            sourceNames = sources.map((s: { name: string }) => s.name);
-          }
+          // Get current enabled sources from the context
+          const sources = context.getEnabledSources();
+          const sourceNames = sources.map(s => s.name);
           
           // Update the enabled sources list based on the toggle
           if (enabled && !sourceNames.includes(sourceName)) {
@@ -293,8 +241,8 @@ export class ExternalSourceToolService {
             }
           }
           
-          // Update the storage adapter with the new enabled sources
-          context.updateEnabledSources(sourceNames);
+          // Update the enabled sources with the new list
+          await context.updateEnabledSources(sourceNames);
           
           return {
             content: [{
