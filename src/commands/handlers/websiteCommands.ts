@@ -200,8 +200,26 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     }
     
     try {
-      // Display current config - configuration is read-only
-      const config = await this.websiteContext.getConfig();
+      // Get capabilities from MCPContext pattern
+      const resources = this.websiteContext.getCapabilities().resources;
+      const configResource = resources.find(r => r.path === 'config');
+      
+      let config;
+      if (configResource) {
+        this.logger.debug('Using config resource from capabilities');
+        try {
+          // Use the resource handler to get the config
+          config = await configResource.handler();
+        } catch (resourceError) {
+          this.logger.warn(`Error using config resource: ${resourceError}. Falling back to direct method call.`);
+          config = await this.websiteContext.getConfig();
+        }
+      } else {
+        // Fall back to direct method call
+        this.logger.debug('Config resource not found in capabilities, using direct method call');
+        config = await this.websiteContext.getConfig();
+      }
+      
       return {
         type: 'website-config',
         config,
@@ -302,6 +320,17 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
               };
             }
             
+            // Use capabilities from MCPContext pattern instead of direct access
+            const tools = this.websiteContext.getCapabilities().tools;
+            const landingPageGenTool = tools.find(t => t.name === 'generate-landing-page');
+            
+            if (!landingPageGenTool) {
+              return {
+                success: false,
+                message: 'Landing page generation tool not found',
+              };
+            }
+            
             // Pass the progress callback to the website context
             return await this.websiteContext.generateLandingPage({
               onProgress: (_step: string, index: number) => {
@@ -352,15 +381,20 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Get CLI interface for status updates with spinner
         const cli = CLIInterface.getInstance();
         
-        // Note: In the future, we could use a progress spinner with steps:
-        // const steps = [
-        //   'Loading current landing page content',
-        //   'Evaluating overall content quality',
-        //   ...etc
-        // ];
-        
         // Start a spinner for quality assessment
         cli.startSpinner('Assessing landing page quality...');
+        
+        // Get capabilities from MCPContext pattern
+        const tools = this.websiteContext.getCapabilities().tools;
+        const assessmentTool = tools.find(t => t.name === 'assess-landing-page');
+        
+        if (!assessmentTool) {
+          cli.stopSpinner('error', 'Assessment tool not available');
+          return {
+            type: 'error',
+            message: 'Landing page assessment tool not available',
+          };
+        }
         
         // Run the actual assessment
         const result = await this.websiteContext.assessLandingPage({ 
@@ -404,15 +438,20 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Get CLI interface for status updates with spinner
         const cli = CLIInterface.getInstance();
         
-        // Note: In the future, we could use a progress spinner with steps:
-        // const steps = [
-        //   'Loading current landing page content',
-        //   'Performing quality assessment',
-        //   ...etc
-        // ];
-        
         // Start a spinner for applying recommendations
         cli.startSpinner('Applying quality recommendations to landing page...');
+        
+        // Get capabilities from MCPContext pattern
+        const tools = this.websiteContext.getCapabilities().tools;
+        const assessmentTool = tools.find(t => t.name === 'assess-landing-page');
+        
+        if (!assessmentTool) {
+          cli.stopSpinner('error', 'Assessment tool not available');
+          return {
+            type: 'error',
+            message: 'Landing page assessment tool not available',
+          };
+        }
         
         // Run the actual operation
         const result = await this.websiteContext.assessLandingPage({ 
@@ -427,12 +466,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           cli.stopSpinner('error', 'Failed to apply quality recommendations');
         }
         
+        // Extract proper data from the result
+        const landingPageData = result.regenerationResult?.data || await this.websiteContext.getLandingPageData();
+        
         return {
           type: 'landing-page',
           success: result.success,
           message: result.message,
-          // Only use regenerationResult data since it's the correct type
-          data: result.regenerationResult?.data,
+          data: landingPageData || undefined,
           assessments: result.qualityAssessment?.sections,
           action: 'apply',
         };
@@ -453,8 +494,19 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     // View landing page content
     else if (action === 'view' || !action) {
       try {
-        // Get landing page data directly from the context
-        const landingPageData = await this.websiteContext.getLandingPageData();
+        // Get capabilities from MCPContext pattern to access resources
+        const resources = this.websiteContext.getCapabilities().resources;
+        const landingPageResource = resources.find(r => r.path === 'landing-page');
+        
+        let landingPageData;
+        
+        if (landingPageResource) {
+          // Use the resource handler to get the data
+          landingPageData = await landingPageResource.handler();
+        } else {
+          // Fallback to direct method call if resource not available
+          landingPageData = await this.websiteContext.getLandingPageData();
+        }
         
         return {
           type: 'landing-page',
@@ -478,6 +530,18 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Start a spinner for regeneration
         cli.startSpinner('Regenerating all failed landing page sections...');
         
+        // Get capabilities from MCPContext pattern
+        const tools = this.websiteContext.getCapabilities().tools;
+        const regenerateTool = tools.find(t => t.name === 'regenerate-failed-sections');
+        
+        if (!regenerateTool) {
+          cli.stopSpinner('error', 'Regeneration tool not available');
+          return {
+            type: 'error',
+            message: 'Regeneration tool not available',
+          };
+        }
+        
         // Run the actual regeneration
         const result = await this.websiteContext.regenerateFailedLandingPageSections();
         
@@ -489,11 +553,14 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
           cli.stopSpinner('error', result.message || 'Failed to regenerate sections');
         }
         
+        // Ensure we return the most up-to-date data
+        const landingPageData = result.data || await this.websiteContext.getLandingPageData();
+        
         return {
           type: 'landing-page',
           success: result.success,
           message: result.message,
-          data: result.data,
+          data: landingPageData || undefined,
           action: 'regenerate-failed',
         };
       } catch (error) {
@@ -513,7 +580,7 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     
     return {
       type: 'error',
-      message: 'Invalid action. Use "landing-page generate", "landing-page edit", "landing-page assess", "landing-page apply", "landing-page regenerate-failed", or "landing-page view".',
+      message: 'Invalid action. Use "landing-page generate", "landing-page assess", "landing-page apply", "landing-page regenerate-failed", or "landing-page view".',
     };
   }
   
@@ -537,8 +604,25 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
       // Provide a clear initial message without the URL
       this.logger.info('Website build starting - check status when complete');
       
-      // Delegate to WebsiteContext implementation
-      const result = await this.websiteContext.handleWebsiteBuild();
+      // Get capabilities from MCPContext pattern
+      const tools = this.websiteContext.getCapabilities().tools;
+      const buildTool = tools.find(t => t.name === 'build-website');
+      
+      let result;
+      if (buildTool) {
+        this.logger.debug('Using build-website tool from capabilities');
+        try {
+          // Use the tool handler to build website
+          result = await buildTool.handler({});
+        } catch (toolError) {
+          this.logger.warn(`Error using build tool: ${toolError}. Falling back to direct method call.`);
+          result = await this.websiteContext.handleWebsiteBuild();
+        }
+      } else {
+        // Fall back to direct method call
+        this.logger.debug('Build-website tool not found in capabilities, using direct method call');
+        result = await this.websiteContext.handleWebsiteBuild();
+      }
       
       // Return a modified message that encourages checking status
       return {
@@ -576,8 +660,25 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
       
-      // Delegate to WebsiteContext implementation
-      const result = await this.websiteContext.handleWebsitePromote();
+      // Get capabilities from MCPContext pattern
+      const tools = this.websiteContext.getCapabilities().tools;
+      const promoteTool = tools.find(t => t.name === 'promote-website');
+      
+      let result;
+      if (promoteTool) {
+        this.logger.debug('Using promote-website tool from capabilities');
+        try {
+          // Use the tool handler to promote website
+          result = await promoteTool.handler({});
+        } catch (toolError) {
+          this.logger.warn(`Error using promote tool: ${toolError}. Falling back to direct method call.`);
+          result = await this.websiteContext.handleWebsitePromote();
+        }
+      } else {
+        // Fall back to direct method call
+        this.logger.debug('Promote-website tool not found in capabilities, using direct method call');
+        result = await this.websiteContext.handleWebsitePromote();
+      }
       
       return {
         type: 'website-promote',
@@ -619,8 +720,25 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         await this.websiteContext.initialize();
       }
       
-      // Use the correct method name
-      const status = await this.websiteContext.getWebsiteStatus(environment);
+      // Look for a tool to check status via capabilities
+      const tools = this.websiteContext.getCapabilities().tools;
+      const statusTool = tools.find(t => t.name === 'get-website-status');
+      
+      let status;
+      if (statusTool) {
+        this.logger.debug('Using website status tool from capabilities');
+        try {
+          // Try to use the tool with the proper parameters
+          status = await statusTool.handler({ environment });
+        } catch (toolError) {
+          this.logger.warn(`Error using status tool: ${toolError}. Falling back to direct method call.`);
+          status = await this.websiteContext.getWebsiteStatus(environment);
+        }
+      } else {
+        // Fall back to direct method call
+        this.logger.debug('Website status tool not found in capabilities, using direct method call');
+        status = await this.websiteContext.getWebsiteStatus(environment);
+      }
       
       // Transform to expected format
       return {
@@ -677,10 +795,31 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
     const parts = args.trim().split(/\s+/);
     const action = parts[0]?.toLowerCase() || 'view';
 
+    // Get capabilities from MCPContext pattern
+    const resources = this.websiteContext.getCapabilities().resources;
+    const tools = this.websiteContext.getCapabilities().tools;
+
     // View identity information
     if (action === 'view' || action === '') {
       try {
-        const identityData = await this.websiteContext.getIdentity();
+        // First try to use the identity resource from capabilities
+        const identityResource = resources.find(r => r.path === 'identity');
+        
+        let identityData;
+        if (identityResource) {
+          this.logger.debug('Using identity resource from capabilities');
+          try {
+            // Use the resource handler to get the data
+            identityData = await identityResource.handler();
+          } catch (resourceError) {
+            this.logger.warn(`Error using identity resource: ${resourceError}. Falling back to direct method call.`);
+            identityData = await this.websiteContext.getIdentity();
+          }
+        } else {
+          // Fall back to direct method call
+          this.logger.debug('Identity resource not found in capabilities, using direct method call');
+          identityData = await this.websiteContext.getIdentity();
+        }
         
         return {
           type: 'website-identity',
@@ -707,8 +846,24 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         // Start a spinner to indicate work in progress
         cli.startSpinner('Generating website identity (this may take a minute)...');
         
-        // Run the actual generation
-        const result = await this.websiteContext.generateIdentity();
+        // First try to use the generate-identity tool from capabilities
+        const identityTool = tools.find(t => t.name === 'generate-identity');
+        
+        let result;
+        if (identityTool) {
+          this.logger.debug('Using generate-identity tool from capabilities');
+          try {
+            // Use the tool handler to generate identity
+            result = await identityTool.handler({});
+          } catch (toolError) {
+            this.logger.warn(`Error using identity tool: ${toolError}. Falling back to direct method call.`);
+            result = await this.websiteContext.generateIdentity();
+          }
+        } else {
+          // Fall back to direct method call
+          this.logger.debug('Generate-identity tool not found in capabilities, using direct method call');
+          result = await this.websiteContext.generateIdentity();
+        }
         
         // Stop the spinner with appropriate status
         if (result.success) {
@@ -738,7 +893,6 @@ export class WebsiteCommandHandler extends BaseCommandHandler {
         };
       }
     }
-    
     
     // Unknown action
     return {
