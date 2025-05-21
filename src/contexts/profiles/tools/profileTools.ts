@@ -105,24 +105,6 @@ export class ProfileToolService {
     return new ProfileToolService(_config);
   }
   
-  /**
-   * Create a new profile tool service with explicit dependencies
-   * 
-   * @param _config Optional configuration (reserved for future use)
-   * @param dependencies External dependencies to inject
-   * @returns A new ProfileToolService instance
-   */
-  public static createWithDependencies(
-    _config?: ProfileToolServiceConfig,
-    dependencies?: Partial<ProfileToolServiceDependencies>,
-  ): ProfileToolService {
-    return new ProfileToolService(
-      _config,
-      {
-        logger: dependencies?.logger,
-      },
-    );
-  }
   
   /**
    * Private constructor to enforce factory methods

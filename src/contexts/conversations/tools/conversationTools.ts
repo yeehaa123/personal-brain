@@ -125,24 +125,6 @@ export class ConversationToolService {
     return new ConversationToolService(_config);
   }
   
-  /**
-   * Create a new conversation tool service with explicit dependencies
-   * 
-   * @param _config Optional configuration (reserved for future use)
-   * @param dependencies External dependencies to inject
-   * @returns A new ConversationToolService instance
-   */
-  public static createWithDependencies(
-    _config?: ConversationToolServiceConfig,
-    dependencies?: Partial<ConversationToolServiceDependencies>,
-  ): ConversationToolService {
-    return new ConversationToolService(
-      _config,
-      {
-        logger: dependencies?.logger,
-      },
-    );
-  }
   
   /**
    * Private constructor to enforce factory methods
